@@ -9,6 +9,6 @@ app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"message": f"{env['APP_NAME']} api root"}
+    return {"message": f"{env['APP_NAME']} {env['APP_ENVIRONMENT']} environment api root"}
 
 app.include_router(examples.router)

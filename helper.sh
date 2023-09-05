@@ -1,7 +1,11 @@
 #!/bin/bash
 
 build() {
-  ./pod.sh;
+  ./local.sh;
+}
+
+test() {
+  pytest
 }
 
 encrypt() {

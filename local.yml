@@ -2,6 +2,14 @@
 # it into Kubernetes.
 #
 # Created with podman-4.6.1
+kind: Secret
+metadata:
+  name: local-secrets
+type: Opaque
+data:
+  APP_NAME: RkVUQ0g=
+  APP_ENVIRONMENT: bG9jYWw=
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -23,5 +31,9 @@ spec:
         secretKeyRef:
           name: local-secrets
           key: APP_NAME
+    - name: APP_ENVIRONMENT
+      valueFrom:
+        secretKeyRef:
+          name: local-secrets
+          key: APP_ENVIRONMENT
   restartPolicy: Always
-
