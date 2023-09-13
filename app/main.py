@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from os import environ as env
 
+from app.config import config
 from app.routers import examples
 
 
@@ -9,6 +9,6 @@ app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"message": f"{env['APP_NAME']} {env['APP_ENVIRONMENT']} environment api root"}
+    return {"message": f"{config.settings.APP_NAME} Inventory Service {config.settings.APP_ENVIRONMENT} environment api root"}
 
 app.include_router(examples.router)

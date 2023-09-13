@@ -6,10 +6,8 @@ An API serving the Findings Environment for Collected Holdings application
 
 This is a containerized application for both local and deployed environments.  Below steps will get you up and running locally. Virtual Environment management is only needed for developers who will be updating the application's dependencies and working with scripts. Otherwise, everything is handled inside Pods / Containers.
 
-## Podman
-This project assumes you have locally setup [Podman](https://podman.io/). It is also beneficial to setup [Podman-Desktop](https://podman-desktop.io/)
-
-If you are on Mac OS or Unix, it is recommended you get these using Homebrew.
+## Docker
+This project assumes you have locally setup [Docker Desktop](https://www.docker.com/products/docker-desktop/). It is posssible to use Homebrew for this. https://formulae.brew.sh/cask/docker 
 
 ## Poetry
 This project's environment and dependencies are managed with Poetry.
@@ -73,8 +71,17 @@ $ poetry remove <package>
 ```
 ./helper.sh build
 ```
-This will build a local pod, add necessary containers to the pod, and finally Podman will launch the Pod from a local kubelet with local environment variables seeded from a base64 encoded secrets kubelet. Simply calling the command again will take care of tear down and rebuild.
-
-The application should now be running on your localhost at http://127.0.0.1:8002/
+Simply calling the command again will take care of tear down and rebuild. The application should now be running on your localhost at http://127.0.0.1:8001/
 
 Under the hood, the image takes the necessary steps to generate the API's package requirements from the pyproject.toml and poetry lock files.
+
+
+# Project
+
+## Settings
+
+Environment variables should be set through the environment. The [Pydantic settings](https://docs.pydantic.dev/latest/usage/pydantic_settings/) system is used to set default values for expected `.env` keys. The application will automatically override these if matching keys are found in the environment.
+
+## Containerization
+
+The Python Slim image is used as a base for the container.  This image itself is based on Debian:Buster, thus any need to interact with the container system should refer to Debian documentation. 

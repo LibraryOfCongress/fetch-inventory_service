@@ -1,7 +1,7 @@
 #!/bin/bash
 
 build() {
-  ./local.sh;
+  ./local-build.sh;
 }
 
 test() {
