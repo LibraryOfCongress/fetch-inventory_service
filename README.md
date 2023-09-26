@@ -69,11 +69,13 @@ $ poetry remove <package>
 # Run
 
 ```
-./helper.sh build
+./helper.sh build local
 ```
 Simply calling the command again will take care of tear down and rebuild. The application should now be running on your localhost at http://127.0.0.1:8001/
 
 Under the hood, the image takes the necessary steps to generate the API's package requirements from the pyproject.toml and poetry lock files.
+
+Additional environments can be built by passing their names, `dev`, `test`, etc.
 
 
 # Project

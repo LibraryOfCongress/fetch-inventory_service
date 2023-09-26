@@ -1,7 +1,15 @@
 #!/bin/bash
 
 build() {
-  ./local-build.sh;
+  if [[ "$1" == "local" ]]; then
+    ./local-build.sh;
+  fi
+  if [[ "$1" == "dev" ]]; then
+    ./dev-build.sh;
+  fi
+  if [[ "$1" == "test" ]]; then
+    ./test-build.sh;
+  fi
 }
 
 test() {
