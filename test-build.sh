@@ -27,14 +27,14 @@ if [ "$IMAGE_IDS" != "" ]; then
 fi
 
 # Test if port is clear
-is_port_blocked="$(lsof -i -P -n | grep ${HOST_PORT})"
-if [[ "${#is_port_blocked}" -gt 0 ]]; then
-    echo "Port ${HOST_PORT} already in use"
-    echo "${is_port_blocked}"
-    echo "Kill process id and try again"
-    echo "You may need to restart the docker machine"
-    exit 1
-fi
+# is_port_blocked="$(lsof -i -P -n | grep ${HOST_PORT})"
+# if [[ "${#is_port_blocked}" -gt 0 ]]; then
+#     echo "Port ${HOST_PORT} already in use"
+#     echo "${is_port_blocked}"
+#     echo "Kill process id and try again"
+#     echo "You may need to restart the docker machine"
+#     exit 1
+# fi
 
 # build images
 docker build \

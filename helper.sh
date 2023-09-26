@@ -12,6 +12,15 @@ build() {
   fi
 }
 
+api() {
+  docker exec -it fetch-inventory-api /bin/bash;
+}
+
+idle() {
+  poetry shell;
+  python;
+}
+
 test() {
   pytest
 }

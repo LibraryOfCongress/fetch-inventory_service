@@ -6,6 +6,8 @@ RUN pip install poetry
 
 COPY ../pyproject.toml ../poetry.lock* /tmp/
 
+COPY ../.env /tmp/
+
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 
 FROM python:3.11.4-slim
@@ -13,6 +15,8 @@ FROM python:3.11.4-slim
 WORKDIR /code
 
 COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
+
+COPY --from=requirements-stage /tmp/.env /code/.env
 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 

@@ -84,6 +84,8 @@ Additional environments can be built by passing their names, `dev`, `test`, etc.
 
 Environment variables should be set through the environment. The [Pydantic settings](https://docs.pydantic.dev/latest/usage/pydantic_settings/) system is used to set default values for expected `.env` keys. The application will automatically override these if matching keys are found in the environment.
 
+For local builds, there is no need to have a `.env` file.  For deployed environments, devops should handle seeding this file into the repository root before building.
+
 ## Containerization
 
 The Python Slim image is used as a base for the container.  This image itself is based on Debian:Buster, thus any need to interact with the container system should refer to Debian documentation. 
