@@ -1,0 +1,19 @@
+build_containter_image:
+    stage: build
+    image: 
+        name: gcr.io/kaniko-project/executor:debug
+        entrypoint: [""]
+    script:
+        - |
+          if [ "$CI_COMMIT_REF_NAME" == "develop" ]; then 
+            IMAGE_TAG="latest"
+          else 
+            IMAGE_TAG="$CI_COMMIT_SHORT_SHA"
+          fi
+        - cp -v images/api.dev.Containerfile Dockerfile
+        - sed -i '/\.env/d' Dockerfile
+        - sed -i 's/\s\.\.\// /g' Dockerfile # Preceded by whitespace
+        - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+        - export IMAGE_DESTINATION="${CI_REGISTRY_IMAGE}:${IMAGE_TAG}"
+        - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $IMAGE_DESTINATION
+        - echo "Image pushed successfully to ${IMAGE_DESTINATION}"
