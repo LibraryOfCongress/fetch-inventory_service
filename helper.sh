@@ -16,6 +16,15 @@ api() {
   docker exec -it fetch-inventory-api /bin/bash;
 }
 
+psql() {
+  docker exec -it -u postgres fetch-postgres psql -a inventory_service
+}
+
+inspect-table() {
+  tablename=$1
+  docker exec -ti -u postgres fetch-postgres psql -a inventory_service -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '${tablename}';"
+}
+
 idle() {
   poetry shell;
   python;

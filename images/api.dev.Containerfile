@@ -18,8 +18,16 @@ COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
 
 COPY --from=requirements-stage /tmp/.env /code/.env
 
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y git
+
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY ../app /code/app
+
+COPY ../migrations /code/migrations
+
+COPY ../alembic.ini /code/alembic.ini
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
