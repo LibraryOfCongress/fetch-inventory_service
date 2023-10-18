@@ -15,6 +15,7 @@ psycopg2-binary = "^2.9.9"
 fastapi = "^0.103.2"
 pydantic-settings = "^2.0.3"
 sqlmodel = {git = "https://github.com/honglei/sqlmodel.git", rev = "main"}
+pytz = "^2023.3.post1"
 
 
 [build-system]

@@ -13,7 +13,12 @@ class ModuleNumberInput(BaseModel):
         }
 
 
-class ModuleNumberListOutput(BaseModel):
+class ModuleNumberBaseOutput(BaseModel):
+    id: int
+    number: int
+
+
+class ModuleNumberListOutput(ModuleNumberBaseOutput):
     id: int
     number: int
 
@@ -26,9 +31,7 @@ class ModuleNumberListOutput(BaseModel):
         }
 
 
-class ModuleNumberDetailOutput(BaseModel):
-    id: int
-    number: int
+class ModuleNumberDetailOutput(ModuleNumberBaseOutput):
     create_dt: datetime
     update_dt: datetime
 

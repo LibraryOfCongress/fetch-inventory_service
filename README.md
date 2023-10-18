@@ -89,3 +89,42 @@ For local builds, there is no need to have a `.env` file.  For deployed environm
 ## Containerization
 
 The Python Slim image is used as a base for the container.  This image itself is based on Debian:Buster, thus any need to interact with the container system should refer to Debian documentation. 
+
+
+## Database Migrations
+
+[Alembic](https://alembic.sqlalchemy.org/en/latest/) is used for migration management. The target database for the Inventory Service is `inventory_service`.
+
+Revision logic has been configured to output with an inverted date format instead of the default random strings Alembic would normally generate. This allows our files to be sequential, and the history command to display reverse chronological order.
+
+```sh
+2023_10_15_06:52:16 -> 2023_10_15_06:54:53 (head), Add Module table
+2023_10_15_06:33:28 -> 2023_10_15_06:52:16, Add Module Number table
+<base> -> 2023_10_15_06:33:28, Add building table
+```
+
+Add models for Alembic tracking in `/migrations/models.py`. The order of import is initially important when first adding new tables, as to satisfy the dependency of foreign key relationships. After a migration file is generated though, it's safe to allow our pre-commit hooks to sort imports however it likes.
+
+Unlike other common migration tools, Alembic only stores the current version in the database.  We should assume that all previous revisions in the dowgrade history have been applied.  A future task may be to add a separate tracking table.
+
+Commands:
+
+```sh
+# Add a new migration file
+alembic revision -m "Update some model field" --autogenerate
+
+# Run all migrations up to the latest
+alembic upgrade head
+
+# Reverse the last migration
+alembic downgrade -1
+
+# Revert to a previous migration
+alembic downgrade [target_version]
+
+# Show the current migration version in the database
+alembic current
+
+# List version migration scripts in order
+alembic history
+```

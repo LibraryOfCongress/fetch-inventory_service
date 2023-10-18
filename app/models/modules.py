@@ -1,7 +1,7 @@
 import uuid
 import sqlalchemy as sa
 
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
@@ -24,15 +24,19 @@ class Module(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
-    barcode: Optional[uuid.UUID] = Field(sa_column=sa.UUID, default=None)
-    building_id: int = Field(foreign_key="buildings.id")
-    module_number_id: int = Field(foreign_key="module_numbers.id")
-    update_dt: datetime = Field(
+    barcode: Optional[uuid.UUID] = Field(sa_column=sa.UUID, nullable=True, default=None)
+    building_id: int = Field(foreign_key="buildings.id", nullable=False)
+    module_number_id: int = Field(
+        foreign_key="module_numbers.id",
+        nullable=False,
+        default=None
+    )
+    create_dt: datetime = Field(
         sa_column=sa.DateTime,
         default=datetime.utcnow(),
         nullable=False
     )
-    create_dt: datetime = Field(
+    update_dt: datetime = Field(
         sa_column=sa.DateTime,
         default=datetime.utcnow(),
         nullable=False
@@ -40,3 +44,6 @@ class Module(SQLModel, table=True):
 
     building: Building = Relationship(back_populates="modules")
     module_number: ModuleNumber = Relationship(back_populates="modules")
+    # aisles in a module
+    aisles: List['Aisle'] = Relationship(back_populates="module")
+

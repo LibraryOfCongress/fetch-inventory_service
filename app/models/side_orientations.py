@@ -3,21 +3,28 @@ import sqlalchemy as sa
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy.schema import UniqueConstraint
 
 
-class ModuleNumber(SQLModel, table=True):
+class SideOrientation(SQLModel, table=True):
     """
-    Model to represent the Module Numbers table.
-    Module Numbers are unique within the table, but may be re-used 
-    by Modules which may be in different buildings from one another.
+    Model to represent the side orientations (Left, Right).
+        SideOrientation is a Side configuration in an Aisle.
 
       id: Optional is declared only for Python's needs before a db object is
           created. This field cannot be null in the database.
     """
-    __tablename__ = "module_numbers"
+    __tablename__ = "side_orientations"
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_side_orientation_name"),
+    )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.SmallInteger, default=None)
-    number: int = Field(sa_column=sa.Column(sa.SmallInteger, nullable=False, unique=True))
+    name: str = Field(
+        max_length=5,
+        sa_column=sa.VARCHAR,
+        nullable=False
+    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime,
         default=datetime.utcnow(),
@@ -29,5 +36,5 @@ class ModuleNumber(SQLModel, table=True):
         nullable=False
     )
 
-    # modules assigned this number
-    modules: List['Module'] = Relationship(back_populates="module_number")
+    # Sides in xyz orientation
+    sides: List['Side'] = Relationship(back_populates="side_orientation")

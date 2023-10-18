@@ -5,16 +5,16 @@ from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
 
-class ModuleNumber(SQLModel, table=True):
+class AisleNumber(SQLModel, table=True):
     """
-    Model to represent the Module Numbers table.
-    Module Numbers are unique within the table, but may be re-used 
-    by Modules which may be in different buildings from one another.
+    Model to represent the Aisle Numbers table.
+    Aisle Numbers are unique within the table, but may be re-used 
+    by different Modules and Buildings.
 
       id: Optional is declared only for Python's needs before a db object is
           created. This field cannot be null in the database.
     """
-    __tablename__ = "module_numbers"
+    __tablename__ = "aisle_numbers"
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.SmallInteger, default=None)
     number: int = Field(sa_column=sa.Column(sa.SmallInteger, nullable=False, unique=True))
@@ -29,5 +29,5 @@ class ModuleNumber(SQLModel, table=True):
         nullable=False
     )
 
-    # modules assigned this number
-    modules: List['Module'] = Relationship(back_populates="module_number")
+    # aisles assigned this aisle number
+    aisles: List['Aisle'] = Relationship(back_populates="aisle_number")

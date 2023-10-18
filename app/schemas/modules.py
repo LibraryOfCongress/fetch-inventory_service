@@ -5,7 +5,7 @@ from pydantic import BaseModel, conint
 from datetime import datetime
 
 from app.schemas.buildings import BuildingDetailWriteOutput
-from app.schemas.module_numbers import ModuleNumberDetailOutput
+from app.schemas.module_numbers import ModuleNumberBaseOutput, ModuleNumberDetailOutput
 
 
 class ModuleInput(BaseModel):
@@ -23,8 +23,11 @@ class ModuleInput(BaseModel):
         }
 
 
-class ModuleListOutput(BaseModel):
+class ModuleBaseOutput(BaseModel):
     id: int
+
+
+class ModuleListOutput(ModuleBaseOutput):
 
     class Config:
         json_schema_extra = {
@@ -34,8 +37,7 @@ class ModuleListOutput(BaseModel):
         }
 
 
-class ModuleDetailWriteOutput(BaseModel):
-    id: int
+class ModuleDetailWriteOutput(ModuleBaseOutput):
     building_id: int
     module_number_id: int
     barcode: uuid.UUID | None
@@ -55,8 +57,7 @@ class ModuleDetailWriteOutput(BaseModel):
         }
 
 
-class ModuleDetailReadOutput(BaseModel):
-    id: int
+class ModuleDetailReadOutput(ModuleBaseOutput):
     building: BuildingDetailWriteOutput
     module_number: ModuleNumberDetailOutput
     barcode: uuid.UUID | None
@@ -83,5 +84,20 @@ class ModuleDetailReadOutput(BaseModel):
                 "barcode": "550e8400-e29b-41d4-a716-446655440001",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
+            }
+        }
+
+
+class ModuleCustomDetailReadOutput(ModuleBaseOutput):
+    module_number: ModuleNumberBaseOutput
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "module_number": {
+                    "id": 1,
+                    "number": 1,
+                },
             }
         }

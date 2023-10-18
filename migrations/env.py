@@ -1,4 +1,7 @@
+import pytz
+
 from logging.config import fileConfig
+from datetime import datetime
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -21,9 +24,8 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from app.models.buildings import Building
-from app.models.module_numbers import ModuleNumber
-from app.models.modules import Module
+from migrations.models import *
+
 # target_metadata = mymodel.Base.metadata
 target_metadata = SQLModel.metadata
 
@@ -64,6 +66,17 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    def process_revision_directives(context, revision, directives):
+        """
+        Labels migration file autogeneration by inverted date
+        # 20230801211024 for a migration generated on Aug 1st, 2023 at 21:10:24
+        """
+        eastern = pytz.timezone('US/Eastern')
+        current_time_et = datetime.now(eastern)
+        rev_id = current_time_et.strftime("%Y_%m_%d_%H:%M:%S")
+        for directive in directives:
+            directive.rev_id = rev_id
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -72,7 +85,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            process_revision_directives=process_revision_directives
         )
 
         with context.begin_transaction():

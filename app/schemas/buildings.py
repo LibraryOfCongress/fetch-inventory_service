@@ -18,10 +18,12 @@ class BuildingInput(BaseModel):
         }
 
 
-class BuildingListOutput(BaseModel):
+class BuildingBaseOutput(BaseModel):
     id: int
     name: str | None
 
+
+class BuildingListOutput(BuildingBaseOutput):
     class Config:
         json_schema_extra = {
             "example": {
@@ -31,9 +33,7 @@ class BuildingListOutput(BaseModel):
         }
 
 
-class BuildingDetailWriteOutput(BaseModel):
-    id: int
-    name: str | None
+class BuildingDetailWriteOutput(BuildingBaseOutput):
     barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
@@ -50,9 +50,7 @@ class BuildingDetailWriteOutput(BaseModel):
         }
 
 
-class BuildingDetailReadOutput(BaseModel):
-    id: int
-    name: str | None
+class BuildingDetailReadOutput(BuildingBaseOutput):
     barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
