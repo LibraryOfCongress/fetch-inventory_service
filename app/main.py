@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.config import get_settings
 from app.routers import (
@@ -8,16 +9,28 @@ from app.routers import (
     aisles,
     aisle_numbers,
     sides,
-    side_orientations
+    side_orientations,
 )
 
-
 app = FastAPI()
+
+# add CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=get_settings().ALLOWED_ORIGINS_REGEX,
+    allow_origins=get_settings().ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
 async def root():
-    return {"message": f"{get_settings().APP_NAME} Inventory Service {get_settings().APP_ENVIRONMENT} environment api root"}
+    return {
+        "message": f"{get_settings().APP_NAME} Inventory Service {get_settings().APP_ENVIRONMENT} environment api root"
+    }
+
 
 # order matters for route matching [nested before base]
 app.include_router(buildings.router)
@@ -27,4 +40,3 @@ app.include_router(aisle_numbers.router)
 app.include_router(aisles.router)
 app.include_router(side_orientations.router)
 app.include_router(sides.router)
-
