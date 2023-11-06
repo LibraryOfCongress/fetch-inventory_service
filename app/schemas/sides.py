@@ -5,15 +5,13 @@ from pydantic import BaseModel, constr
 from datetime import datetime
 
 from app.schemas.aisles import AisleBaseReadOutput
-from app.schemas.modules import ModuleCustomDetailReadOutput
-from app.schemas.buildings import BuildingBaseOutput
 from app.schemas.side_orientations import SideOrientationBaseReadOutput
 
 
 class SideInput(BaseModel):
     aisle_id: int
     side_orientation_id: int
-    barcode: Optional[uuid.UUID]
+    barcode: Optional[uuid.UUID] = None
 
     class Config:
         json_schema_extra = {
@@ -46,7 +44,7 @@ class SideListOutput(SideBaseOutput):
 class SideDetailWriteOutput(SideBaseOutput):
     aisle_id: int
     side_orientation_id: int
-    barcode_id: uuid.UUID | None
+    barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
 
@@ -56,7 +54,7 @@ class SideDetailWriteOutput(SideBaseOutput):
                 "id": 1,
                 "aisle_id": 1,
                 "side_orientation_id": 1,
-                "barcode_id": "550e8400-e29b-41d4-a716-446655440000",
+                "barcode": "550e8400-e29b-41d4-a716-446655440000",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -68,36 +66,41 @@ class SideDetailReadOutput(SideBaseOutput):
     barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
-    building: BuildingBaseOutput
-    module: ModuleCustomDetailReadOutput
     aisle: AisleBaseReadOutput
-
+    ladders: list
 
     class Config:
         json_schema_extra = {
             "example": {
-                "id": 1,
+                "id": 3,
                 "side_orientation": {
                     "id": 1,
                     "name": "Left",
                 },
-                "barcode_id": "550e8400-e29b-41d4-a716-446655440000",
+                "barcode": "550e8400-e29b-41d4-a716-446655440000",
                 "aisle": {
                     "id": 1,
                     "number": 1,
                 },
-                "building": {
-                    "id": 1,
-                    "name": "Southpoint Circle",
-                },
-                "module": {
-                    "id": 1,
-                    "module_number": {
-                        "id": 1,
-                        "number": 1,
-                    },
-                },
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398"
+                "update_dt": "2023-10-08T20:46:56.764398",
+                "ladders": [
+                    {
+                        "id": 1,
+                        "ladder_number_id": 1,
+                        "barcode": "99f3f151-8de0-4207-9529-1403581603c1",
+                        "create_dt": "2023-11-05T21:04:07.718796",
+                        "update_dt": "2023-11-05T21:04:07.718821",
+                        "side_id": 3
+                    },
+                    {
+                        "id": 4,
+                        "ladder_number_id": 2,
+                        "barcode": "550e8400-e29b-41d4-a716-446655440001",
+                        "create_dt": "2023-11-05T21:30:37.842984",
+                        "update_dt": "2023-11-05T21:30:37.843005",
+                        "side_id": 3
+                    }
+                ]
             }
         }

@@ -10,6 +10,8 @@ from app.routers import (
     aisle_numbers,
     sides,
     side_orientations,
+    ladder_numbers,
+    ladders
 )
 
 app = FastAPI()
@@ -40,3 +42,5 @@ app.include_router(aisle_numbers.router)
 app.include_router(aisles.router)
 app.include_router(side_orientations.router)
 app.include_router(sides.router)
+app.include_router(ladder_numbers.router)
+app.include_router(ladders.router)

@@ -67,11 +67,15 @@ def get_side_detail(id: int, session: Session = Depends(get_session)):
 @router.post("/", response_model=SideDetailWriteOutput, status_code=201)
 def create_side(side_input: SideInput, session: Session = Depends(get_session)):
     """
-   Create a new side record.
-   Parameters:
-       - side_input (SideInput): The input data for the new side.
-   Returns:
-       - SideDetailWriteOutput: The newly created side record.
+    Create a side:
+
+    - **aisle_id**: Required integer id for an aisle the side belongs to.
+    - **side_orientation_id**: Required integer id for orientation
+    - **barcode**: Optional uuid for related barcode
+
+    Constraints:
+
+    Aisle and Side Orientation form a unique together constraint. For example, there cannot exist two left sides within one aisle.
    """
     # Check if side_input is empty
     if not side_input:

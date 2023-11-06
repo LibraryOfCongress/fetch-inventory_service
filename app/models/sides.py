@@ -1,9 +1,10 @@
 import uuid
 import sqlalchemy as sa
 
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy.schema import UniqueConstraint
 
 from app.models.aisles import Aisle
 from app.models.side_orientations import SideOrientation
@@ -18,6 +19,9 @@ class Side(SQLModel, table=True):
           created. This field cannot be null in the database.
     """
     __tablename__ = "sides"
+    __table_args__ = (
+        UniqueConstraint("aisle_id", "side_orientation_id", name="uq_aisle_id_side_orientation_id"),
+    )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     barcode: Optional[uuid.UUID] = Field(sa_column=sa.UUID, nullable=True, default=None)
@@ -36,3 +40,5 @@ class Side(SQLModel, table=True):
 
     side_orientation: SideOrientation = Relationship(back_populates="sides")
     aisle: Aisle = Relationship(back_populates="sides")
+    # Ladders on a side (test for plurality on back_populates)
+    ladders: List['Ladder'] = Relationship(back_populates="side")

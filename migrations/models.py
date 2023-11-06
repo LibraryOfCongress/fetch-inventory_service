@@ -8,3 +8,5 @@ from app.models.side_orientations import SideOrientation
 from app.models.aisles import Aisle
 from app.models.sides import Side
 from app.models.aisle_numbers import AisleNumber
+from app.models.ladder_numbers import LadderNumber
+from app.models.ladders import Ladder
