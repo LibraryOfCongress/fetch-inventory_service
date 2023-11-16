@@ -32,5 +32,9 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
+
+    if isinstance(type(settings.ALLOWED_ORIGINS), str):
+        settings.ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS.split(",")
+
     print(f"Loading settings for {settings.APP_ENVIRONMENT}")
     return settings
