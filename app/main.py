@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.config import get_settings
@@ -10,6 +10,8 @@ from app.routers import (
     aisle_numbers,
     sides,
     side_orientations,
+    barcode_types,
+    barcodes,
     ladder_numbers,
     ladders
 )
@@ -42,5 +44,7 @@ app.include_router(aisle_numbers.router)
 app.include_router(aisles.router)
 app.include_router(side_orientations.router)
 app.include_router(sides.router)
+app.include_router(barcode_types.router)
+app.include_router(barcodes.router)
 app.include_router(ladder_numbers.router)
 app.include_router(ladders.router)

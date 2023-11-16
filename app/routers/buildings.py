@@ -35,13 +35,14 @@ def get_building_detail(id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404)
 
 
-@router.post("/", response_model=BuildingDetailWriteOutput)
-def create_building(building_input: BuildingInput, session: Session = Depends(get_session)) -> Building:
+@router.post("/", response_model=BuildingDetailWriteOutput, status_code=201)
+def create_building(
+    building_input: BuildingInput, session: Session = Depends(get_session)
+) -> Building:
     """
     Create a building:
 
     - **name**: Optional string identifier
-    - **barcode**: Optional uuid for related barcode
     """
     new_building = Building(**building_input.model_dump())
     session.add(new_building)
@@ -51,12 +52,13 @@ def create_building(building_input: BuildingInput, session: Session = Depends(ge
 
 
 @router.patch("/{id}", response_model=BuildingDetailWriteOutput)
-def update_building(id: int, building: BuildingInput, session: Session = Depends(get_session)):
+def update_building(
+    id: int, building: BuildingInput, session: Session = Depends(get_session)
+):
     """
     Update a building:
 
     - **name**: Optional string identifier
-    - **barcode**: Optional uuid for related barcode
     """
     try:
         existing_building = session.get(Building, id)

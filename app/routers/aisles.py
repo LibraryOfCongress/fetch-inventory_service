@@ -141,4 +141,3 @@ def delete_aisle(id: int, session: Session = Depends(get_session)):
         return HTTPException(status_code=204, detail=f"Aisle {id} deleted successfully")
     except Exception as e:
         return HTTPException(status_code=500, detail=f"{e}")
-

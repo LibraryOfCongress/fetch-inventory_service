@@ -67,31 +67,31 @@ def get_side_detail(id: int, session: Session = Depends(get_session)):
 @router.post("/", response_model=SideDetailWriteOutput, status_code=201)
 def create_side(side_input: SideInput, session: Session = Depends(get_session)):
     """
-    Create a side:
+    Create a new side record.
 
+    **Parameters**:
+    - side_input (SideInput): The input data for the new side.
+
+    **Returns**:
+    - SideDetailWriteOutput: The newly created side record.
+
+    **Notes**:
     - **aisle_id**: Required integer id for an aisle the side belongs to.
     - **side_orientation_id**: Required integer id for orientation
-    - **barcode**: Optional uuid for related barcode
 
-    Constraints:
-
-    Aisle and Side Orientation form a unique together constraint. For example, there cannot exist two left sides within one aisle.
-   """
+    **Constraints**:
+    - Aisle and Side Orientation form a unique together constraint. For example, there cannot exist two left sides within one aisle.
+    """
     # Check if side_input is empty
     if not side_input:
         raise HTTPException(status_code=400, detail="Side data is required")
 
     # Create a new side
     new_side = Side(**side_input.model_dump())
-
-    try:
-        session.add(new_side)
-        session.commit()
-        session.refresh(new_side)
-
-        return new_side
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    session.add(new_side)
+    session.commit()
+    session.refresh(new_side)
+    return new_side
 
 
 @router.patch("/{id}", response_model=SideDetailWriteOutput)
@@ -103,7 +103,7 @@ def update_side(id: int, side: SideInput, session: Session = Depends(get_session
        - side (SideInput): The updated side data.
     Returns:
        - SideDetailWriteOutput: The updated side record.
-        """
+    """
     # Check if id is provided and is an integer
     if not id or not isinstance(id, int):
         raise HTTPException(status_code=404, detail="Side ID is required")
@@ -158,7 +158,9 @@ def delete_side(id: int, session: Session = Depends(get_session)):
             session.delete(side)
             session.commit()
 
-            return Response(status_code=204, content={"detail": f"Side {id} deleted successfully"})
+            return Response(
+                status_code=204, content={"detail": f"Side {id} deleted successfully"}
+            )
         else:
             raise HTTPException(status_code=404, detail="Side not found")
 

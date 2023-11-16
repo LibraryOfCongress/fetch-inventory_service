@@ -11,14 +11,12 @@ from app.schemas.ladder_numbers import LadderNumberDetailOutput
 class LadderInput(BaseModel):
     side_id: conint(ge=0, le=2147483647)
     ladder_number_id: conint(ge=0, le=32767)
-    barcode: Optional[uuid.UUID] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "side_id": 1,
-                "ladder_number_id": 1,
-                "barcode": "550e8400-e29b-41d4-a716-446655440001"
+                "ladder_number_id": 1
             }
         }
 
@@ -44,7 +42,6 @@ class LadderListOutput(LadderBaseOutput):
 class LadderDetailWriteOutput(LadderBaseOutput):
     side_id: int
     ladder_number_id: int
-    barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
 
@@ -54,7 +51,6 @@ class LadderDetailWriteOutput(LadderBaseOutput):
                 "id": 1,
                 "side_id": 1,
                 "ladder_number_id": 1,
-                "barcode": "550e8400-e29b-41d4-a716-446655440001",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -64,7 +60,6 @@ class LadderDetailWriteOutput(LadderBaseOutput):
 class LadderDetailReadOutput(LadderBaseOutput):
     side: SideDetailWriteOutput
     ladder_number: LadderNumberDetailOutput
-    barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
 
@@ -76,7 +71,6 @@ class LadderDetailReadOutput(LadderBaseOutput):
                     "id": 1,
                     "aisle_id": 1,
                     "side_orientation_id": 1,
-                    "barcode": "550e8400-e29b-41d4-a716-446655440000",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
@@ -86,7 +80,6 @@ class LadderDetailReadOutput(LadderBaseOutput):
                     "create_dt": "2023-10-09T17:04:09.812257",
                     "update_dt": "2023-10-10T01:00:28.576069"
                 },
-                "barcode": "550e8400-e29b-41d4-a716-446655440001",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }

@@ -33,14 +33,15 @@ def get_module_detail(id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404)
 
 
-@router.post("/", response_model=ModuleDetailWriteOutput)
-def create_module(module_input: ModuleInput, session: Session = Depends(get_session)) -> Module:
+@router.post("/", response_model=ModuleDetailWriteOutput, status_code=201)
+def create_module(
+    module_input: ModuleInput, session: Session = Depends(get_session)
+) -> Module:
     """
     Create a module:
 
     - **building_id**: Required integer id for related building
     - **module_number_id**: Required integer id for related module number
-    - **barcode**: Optional uuid for related barcode
     """
     new_module = Module(**module_input.model_dump())
     session.add(new_module)
@@ -50,7 +51,9 @@ def create_module(module_input: ModuleInput, session: Session = Depends(get_sess
 
 
 @router.patch("/{id}", response_model=ModuleDetailWriteOutput)
-def update_module(id: int, module: ModuleInput, session: Session = Depends(get_session)):
+def update_module(
+    id: int, module: ModuleInput, session: Session = Depends(get_session)
+):
     try:
         existing_module = session.get(Module, id)
         if not existing_module:

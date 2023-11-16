@@ -33,8 +33,10 @@ def get_module_number_detail(id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404)
 
 
-@router.post("/numbers", response_model=ModuleNumberDetailOutput)
-def create_module_number(module_number_input: ModuleNumberInput, session: Session = Depends(get_session)) -> ModuleNumber:
+@router.post("/numbers", response_model=ModuleNumberDetailOutput, status_code=201)
+def create_module_number(
+    module_number_input: ModuleNumberInput, session: Session = Depends(get_session)
+) -> ModuleNumber:
     """
     Create a module number:
 
@@ -51,7 +53,9 @@ def create_module_number(module_number_input: ModuleNumberInput, session: Sessio
 
 
 @router.patch("/numbers/{id}", response_model=ModuleNumberDetailOutput)
-def update_module_number(id: int, module_number: ModuleNumberInput, session: Session = Depends(get_session)):
+def update_module_number(
+    id: int, module_number: ModuleNumberInput, session: Session = Depends(get_session)
+):
     try:
         existing_module_number = session.get(ModuleNumber, id)
         if not existing_module_number:

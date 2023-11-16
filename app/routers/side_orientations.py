@@ -59,8 +59,13 @@ def get_side_orientation_detail(id: int, session: Session = Depends(get_session)
         raise HTTPException(status_code=500, detail=f"{e}")
 
 
-@router.post("/orientations", response_model=SideOrientationDetailWriteOutput, status_code=201)
-def create_side_orientation(side_orientation_input: SideOrientationInput, session: Session = Depends(get_session)):
+@router.post(
+    "/orientations", response_model=SideOrientationDetailWriteOutput, status_code=201
+)
+def create_side_orientation(
+    side_orientation_input: SideOrientationInput,
+    session: Session = Depends(get_session),
+):
     """
     Create a new side orientation record.
     Parameters:
@@ -86,7 +91,11 @@ def create_side_orientation(side_orientation_input: SideOrientationInput, sessio
 
 
 @router.patch("/orientations/{id}", response_model=SideOrientationDetailWriteOutput)
-def update_side_orientation(id: int, side_orientation: SideOrientationInput, session: Session = Depends(get_session)):
+def update_side_orientation(
+    id: int,
+    side_orientation: SideOrientationInput,
+    session: Session = Depends(get_session),
+):
     """
     Update a side orientation record by its id.
 

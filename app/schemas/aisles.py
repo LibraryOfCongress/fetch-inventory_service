@@ -13,15 +13,13 @@ class AisleInput(BaseModel):
     aisle_number_id: conint(ge=0, le=2147483647)
     building_id: Optional[conint(ge=0, le=32767)] = None
     module_id: Optional[conint(ge=0, le=32767)] = None
-    barcode: Optional[uuid.UUID] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "aisle_number_id": 1,
                 "building_id": 1,
-                "module_id": 1,
-                "barcode": "550e8400-e29b-41d4-a716-446655440000"
+                "module_id": 1
             }
         }
 
@@ -32,7 +30,6 @@ class AisleBaseReadOutput(BaseModel):
 
 
 class AisleListOutput(AisleBaseReadOutput):
-
     class Config:
         json_schema_extra = {
             "example": {
@@ -47,7 +44,6 @@ class AisleDetailWriteOutput(BaseModel):
     aisle_number_id: int
     building_id: int | None = None
     module_id: int | None = None
-    barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
 
@@ -58,19 +54,14 @@ class AisleDetailWriteOutput(BaseModel):
                 "aisle_number_id": 1,
                 "building_id": 1,
                 "module_id": 1,
-                "barcode": "550e8400-e29b-41d4-a716-446655440000",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
-
             }
         }
 
 
 class AisleDetailReadOutput(BaseModel):
-    # building_id: int
-    # module_id: int
     id: int
-    barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
     building: BuildingBaseOutput | None
@@ -82,9 +73,6 @@ class AisleDetailReadOutput(BaseModel):
             "example": {
                 "id": 1,
                 "number": 1,
-                "building_id": 1,
-                "module_id": 1,
-                "barcode": "550e8400-e29b-41d4-a716-446655440000",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
                 "building": {
@@ -97,7 +85,6 @@ class AisleDetailReadOutput(BaseModel):
                         "id": 1,
                         "number": 1,
                     },
-                }
+                },
             }
         }
-

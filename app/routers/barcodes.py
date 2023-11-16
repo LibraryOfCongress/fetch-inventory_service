@@ -1,0 +1,120 @@
+import uuid
+
+from fastapi import APIRouter, HTTPException, Depends
+from sqlmodel import Session, select
+from datetime import datetime
+
+from app.database.session import get_session
+from app.models.barcodes import Barcode
+from app.schemas.barcodes import (
+    BarcodeInput,
+    BarcodeListOutput,
+    BarcodeDetailWriteOutput,
+    BarcodeDetailReadOutput,
+)
+
+router = APIRouter(
+    prefix="/barcodes",
+    tags=["barcodes"],
+)
+
+
+@router.get("/", response_model=list[BarcodeListOutput])
+def get_barcode_list(session: Session = Depends(get_session)) -> list:
+    """
+    Retrieve a list of barcodes from the database.
+
+    Returns:
+        - list: A list of barcodes.
+    """
+    # Create a query to retrieve all barcodes
+    query = select(Barcode)
+    return session.exec(query).all()
+
+
+@router.get("/{id}", response_model=BarcodeDetailReadOutput)
+def get_barcode_detail(id: int, session: Session = Depends(get_session)):
+    """
+    Retrieve barcode details by ID.
+    Parameters:
+         - id (int): The ID of the barcode to retrieve.
+    Returns:
+         - BarcodeDetailReadOutput: The barcode details.
+    Raises:
+         - HTTPException: If the barcode is not found.
+    """
+    # Retrieve the barcode from the database by ID
+    barcode = session.get(Barcode, id)
+    if barcode:
+        return barcode
+    else:
+        raise HTTPException(status_code=404)
+
+
+@router.post("/", response_model=BarcodeDetailWriteOutput, status_code=201)
+def create_barcode(
+    barcode_input: BarcodeInput, session: Session = Depends(get_session)
+) -> Barcode:
+    """
+    Create a new barcode.
+    """
+    new_barcode = Barcode(**barcode_input.model_dump())
+    session.add(new_barcode)
+    session.commit()
+    session.refresh(new_barcode)
+    return new_barcode
+
+
+@router.patch("/{id}", response_model=BarcodeDetailWriteOutput)
+def update_barcode(
+    id: int, barcode: BarcodeInput, session: Session = Depends(get_session)
+):
+    """
+    Update barcode details.
+    Parameters:
+         - id (int): The ID of the barcode to retrieve.
+    Returns:
+         - BarcodeDetailWriteOutput: The barcode details.
+    Raises:
+         - HTTPException: If the barcode is not found.
+    """
+    try:
+        existing_barcode = session.get(Barcode, id)
+
+        if not existing_barcode:
+            raise HTTPException(status_code=404)
+
+        mutated_data = barcode.model_dump(exclude_unset=True)
+
+        for key, value in mutated_data.items():
+            setattr(existing_barcode, key, value)
+
+        setattr(existing_barcode, "update_dt", datetime.utcnow())
+
+        session.add(existing_barcode)
+        session.commit()
+        session.refresh(existing_barcode)
+
+        return existing_barcode
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"{e}")
+
+
+@router.delete("/{id}", status_code=204)
+def delete_barcode(id: uuid.UUID, session: Session = Depends(get_session)):
+    barcode = session.get(Barcode, id)
+    """
+        Deletes a barcode by its ID.
+        Parameters:
+            - id (int): The ID of the barcode to delete.
+        Returns:
+            None
+        Raises:
+            - HTTPException: If the barcode with the given ID is not found.
+        """
+    # Get the barcode with the given ID from the session
+    if barcode:
+        session.delete(barcode)
+        session.commit()
+    else:
+        raise HTTPException(status_code=404)

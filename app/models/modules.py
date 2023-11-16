@@ -18,32 +18,29 @@ class Module(SQLModel, table=True):
       id: Optional is declared only for Python's needs before a db object is
           created. This field cannot be null in the database.
     """
+
     __tablename__ = "modules"
     __table_args__ = (
-        UniqueConstraint("building_id", "module_number_id", name="uq_building_id_module_number_id"),
+        UniqueConstraint(
+            "building_id", "module_number_id", name="uq_building_id_module_number_id"
+        ),
     )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
-    barcode: Optional[uuid.UUID] = Field(sa_column=sa.UUID, nullable=True, default=None)
     building_id: int = Field(foreign_key="buildings.id", nullable=False)
     module_number_id: int = Field(
-        foreign_key="module_numbers.id",
-        nullable=False,
-        default=None
+        foreign_key="module_numbers.id", nullable=False, default=None
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime,
-        default=datetime.utcnow(),
-        nullable=False
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime,
-        default=datetime.utcnow(),
-        nullable=False
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
 
+    # building in a module
     building: Building = Relationship(back_populates="modules")
+    # module number
     module_number: ModuleNumber = Relationship(back_populates="modules")
     # aisles in a module
-    aisles: List['Aisle'] = Relationship(back_populates="module")
-
+    aisles: List["Aisle"] = Relationship(back_populates="module")

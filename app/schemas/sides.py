@@ -1,7 +1,7 @@
 import uuid
 
 from typing import Optional
-from pydantic import BaseModel, constr
+from pydantic import BaseModel
 from datetime import datetime
 
 from app.schemas.aisles import AisleBaseReadOutput
@@ -11,14 +11,12 @@ from app.schemas.side_orientations import SideOrientationBaseReadOutput
 class SideInput(BaseModel):
     aisle_id: int
     side_orientation_id: int
-    barcode: Optional[uuid.UUID] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "aisle_id": 1,
-                "side_orientation_id": 1,
-                "barcode": "550e8400-e29b-41d4-a716-446655440002"
+                "side_orientation_id": 1
             }
         }
 
@@ -33,18 +31,13 @@ class SideListOutput(SideBaseOutput):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "id": 1,
-                "aisle_id": 1,
-                "side_orientation_id": 1
-            }
+            "example": {"id": 1, "aisle_id": 1, "side_orientation_id": 1}
         }
 
 
 class SideDetailWriteOutput(SideBaseOutput):
     aisle_id: int
     side_orientation_id: int
-    barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
 
@@ -54,7 +47,6 @@ class SideDetailWriteOutput(SideBaseOutput):
                 "id": 1,
                 "aisle_id": 1,
                 "side_orientation_id": 1,
-                "barcode": "550e8400-e29b-41d4-a716-446655440000",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -63,7 +55,6 @@ class SideDetailWriteOutput(SideBaseOutput):
 
 class SideDetailReadOutput(SideBaseOutput):
     side_orientation: SideOrientationBaseReadOutput
-    barcode: uuid.UUID | None
     create_dt: datetime
     update_dt: datetime
     aisle: AisleBaseReadOutput
@@ -77,7 +68,6 @@ class SideDetailReadOutput(SideBaseOutput):
                     "id": 1,
                     "name": "Left",
                 },
-                "barcode": "550e8400-e29b-41d4-a716-446655440000",
                 "aisle": {
                     "id": 1,
                     "number": 1,
@@ -88,7 +78,6 @@ class SideDetailReadOutput(SideBaseOutput):
                     {
                         "id": 1,
                         "ladder_number_id": 1,
-                        "barcode": "99f3f151-8de0-4207-9529-1403581603c1",
                         "create_dt": "2023-11-05T21:04:07.718796",
                         "update_dt": "2023-11-05T21:04:07.718821",
                         "side_id": 3
@@ -96,7 +85,6 @@ class SideDetailReadOutput(SideBaseOutput):
                     {
                         "id": 4,
                         "ladder_number_id": 2,
-                        "barcode": "550e8400-e29b-41d4-a716-446655440001",
                         "create_dt": "2023-11-05T21:30:37.842984",
                         "update_dt": "2023-11-05T21:30:37.843005",
                         "side_id": 3

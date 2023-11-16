@@ -32,11 +32,6 @@ class Ladder(SQLModel, table=True):
         nullable=False,
     )
     side_id: int = Field(foreign_key="sides.id", nullable=False)
-    barcode: Optional[uuid.UUID] = Field(
-        sa_column=sa.UUID,
-        nullable=True,
-        default=None
-    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime,
         default=datetime.utcnow(),

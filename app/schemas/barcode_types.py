@@ -1,22 +1,19 @@
-import uuid
-
-from typing import Optional
-from pydantic import BaseModel, constr
+from pydantic import BaseModel
 from datetime import datetime
 
 
-class SideOrientationInput(BaseModel):
-    name: constr(max_length=5) | None
+class BarcodeTypesInput(BaseModel):
+    name: str
 
     class Config:
         json_schema_extra = {
             "example": {
-                "name": "Right",
+                "name": "qrcode",
             }
         }
 
 
-class SideOrientationBaseReadOutput(BaseModel):
+class BarcodeTypesListOutput(BaseModel):
     id: int
     name: str
 
@@ -24,22 +21,12 @@ class SideOrientationBaseReadOutput(BaseModel):
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "name": "Left",
+                "name": "qrcode",
             }
         }
 
 
-class SideOrientationListOutput(SideOrientationBaseReadOutput):
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "name": "Left",
-            }
-        }
-
-
-class SideOrientationDetailWriteOutput(BaseModel):
+class BarcodeTypesDetailWriteOutput(BaseModel):
     id: int
     name: str
     create_dt: datetime
@@ -49,14 +36,16 @@ class SideOrientationDetailWriteOutput(BaseModel):
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "name": "Left",
+                "name": "qrcode",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
 
 
-class SideOrientationDetailReadOutput(SideOrientationBaseReadOutput):
+class BarcodeTypesDetailReadOutput(BaseModel):
+    id: int
+    name: str
     create_dt: datetime
     update_dt: datetime
 
@@ -64,7 +53,7 @@ class SideOrientationDetailReadOutput(SideOrientationBaseReadOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "name": "Right",
+                "name": "qrcode",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
             }

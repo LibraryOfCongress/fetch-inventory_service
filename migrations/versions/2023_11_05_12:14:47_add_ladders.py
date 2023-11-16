@@ -12,10 +12,9 @@ import sqlalchemy as sa
 import sqlmodel
 
 
-
 # revision identifiers, used by Alembic.
 revision: str = '2023_11_05_12:14:47'
-down_revision: Union[str, None] = '2023_10_18_07:44:56'
+down_revision: Union[str, None] = '2023_10_19_11:37:46'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

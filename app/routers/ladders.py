@@ -40,7 +40,6 @@ def create_ladder(ladder_input: LadderInput, session: Session = Depends(get_sess
 
     - **side_id**: Required integer id for related side
     - **ladder_number_id**: Required integer id for related ladder number
-    - **barcode**: Optional uuid for related barcode
     """
     new_ladder = Ladder(**ladder_input.model_dump())
     session.add(new_ladder)

@@ -12,7 +12,6 @@ import sqlalchemy as sa
 import sqlmodel
 
 
-
 # revision identifiers, used by Alembic.
 revision: str = '2023_11_05_14:57:19'
 down_revision: Union[str, None] = '2023_11_05_12:14:47'

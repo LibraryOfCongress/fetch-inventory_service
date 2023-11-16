@@ -10,3 +10,5 @@ from app.models.sides import Side
 from app.models.aisle_numbers import AisleNumber
 from app.models.ladder_numbers import LadderNumber
 from app.models.ladders import Ladder
+from app.models.barcode_types import BarcodeType
+from app.models.barcodes import Barcode

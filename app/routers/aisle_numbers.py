@@ -10,7 +10,7 @@ from app.models.aisle_numbers import AisleNumber
 from app.schemas.aisle_numbers import (
     AisleNumberInput,
     AisleNumberListOutput,
-    AisleNumberDetailOutput
+    AisleNumberDetailOutput,
 )
 
 router = APIRouter(
@@ -34,8 +34,10 @@ def get_aisle_number_detail(id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404)
 
 
-@router.post("/numbers", response_model=AisleNumberDetailOutput)
-def create_aisle_number(aisle_number_input: AisleNumberInput, session: Session = Depends(get_session)) -> AisleNumber:
+@router.post("/numbers", response_model=AisleNumberDetailOutput, status_code=201)
+def create_aisle_number(
+    aisle_number_input: AisleNumberInput, session: Session = Depends(get_session)
+) -> AisleNumber:
     """
     Create a aisle number:
 
@@ -52,7 +54,9 @@ def create_aisle_number(aisle_number_input: AisleNumberInput, session: Session =
 
 
 @router.patch("/numbers/{id}", response_model=AisleNumberDetailOutput)
-def update_aisle_number(id: int, aisle_number: AisleNumberInput, session: Session = Depends(get_session)):
+def update_aisle_number(
+    id: int, aisle_number: AisleNumberInput, session: Session = Depends(get_session)
+):
     try:
         existing_aisle_number = session.get(AisleNumber, id)
         if not existing_aisle_number:
