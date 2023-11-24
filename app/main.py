@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_pagination import add_pagination
 
 from app.config.config import get_settings
 from app.routers import (
@@ -58,3 +59,5 @@ app.include_router(shelf_position_numbers.router)
 app.include_router(shelf_positions.router)
 app.include_router(shelf_numbers.router)
 app.include_router(shelves.router)
+
+add_pagination(app)

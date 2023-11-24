@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
 from app.models.ladders import Ladder
@@ -18,10 +20,9 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[LadderListOutput])
+@router.get("/", response_model=Page[LadderListOutput])
 def get_ladder_list(session: Session = Depends(get_session)) -> list:
-    query = select(Ladder)
-    return session.exec(query).all()
+    return paginate(session, select(Ladder))
 
 
 @router.get("/{id}", response_model=LadderDetailReadOutput)

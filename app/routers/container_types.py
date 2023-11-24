@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, Response
 from sqlmodel import Session, select
 from datetime import datetime
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
 from app.models.container_types import ContainerType
@@ -18,13 +20,12 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[ContainerTypeListOutput])
+@router.get("/", response_model=Page[ContainerTypeListOutput])
 def get_container_type_list(session: Session = Depends(get_session)) -> list:
     """
     Retrieve a list of container types
     """
-    query = select(ContainerType)
-    return session.exec(query).all()
+    return paginate(session, select(ContainerType))
 
 
 @router.get("/{id}", response_model=ContainerTypeDetailReadOutput)

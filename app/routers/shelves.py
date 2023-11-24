@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
 from app.models.shelves import Shelf
@@ -18,10 +20,9 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[ShelfListOutput])
+@router.get("/", response_model=Page[ShelfListOutput])
 def get_shelf_list(session: Session = Depends(get_session)) -> list:
-    query = select(Shelf)
-    return session.exec(query).all()
+    return paginate(session, select(Shelf))
 
 
 @router.get("/{id}", response_model=ShelfDetailReadOutput)

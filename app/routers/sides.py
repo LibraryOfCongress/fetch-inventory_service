@@ -1,6 +1,6 @@
-from typing import Sequence
-
 from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 
@@ -20,48 +20,33 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[SideListOutput])
+@router.get("/", response_model=Page[SideListOutput])
 def get_side_list(session: Session = Depends(get_session)) -> list:
     """
-    Get a list of all sides.
-    Parameters:
+    Get a paginated list of sides from the database.
     Returns:
-        - A list of SideListOutput objects representing the sides.
+        - list: A paginated list of sides.
     """
     # Create a query to select all sides from the database
-    query = select(Side)
-
-    try:
-        # Execute the query using the session and retrieve all results
-        results = session.exec(query)
-
-        return results.all()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    return paginate(session, select(Side))
 
 
 @router.get("/{id}", response_model=SideDetailReadOutput)
 def get_side_detail(id: int, session: Session = Depends(get_session)):
     """
-    Get side detail by id.
-    Parameters:
-        - id (int): The id of the side.
+    Retrieve the details of a side by its ID.
+    Args:
+        - id (int): The ID of the side.
     Returns:
-        - SideDetailReadOutput: The side detail.
+        - SideDetailReadOutput: The details of the side.
     Raises:
-        - HTTPException: If the side id is invalid or not found.
+        - HTTPException: If the side is not found.
     """
-    if not id or not isinstance(id, int):
-        raise HTTPException(status_code=404, detail="Side ID is required")
-
-    try:
-        side = session.get(Side, id)
-        if side:
-            return side
-        else:
-            raise HTTPException(status_code=404, detail="Side not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    side = session.get(Side, id)
+    if side:
+        return side
+    else:
+        raise HTTPException(status_code=404, detail="Side not found")
 
 
 @router.post("/", response_model=SideDetailWriteOutput, status_code=201)
@@ -166,3 +151,4 @@ def delete_side(id: int, session: Session = Depends(get_session)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
+

@@ -1,6 +1,6 @@
-from typing import Sequence
-
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 
@@ -20,43 +20,33 @@ router = APIRouter(
 )
 
 
-@router.get("/orientations", response_model=list[SideOrientationListOutput])
+@router.get("/orientations", response_model=Page[SideOrientationListOutput])
 def get_side_orientation_list(session: Session = Depends(get_session)) -> list:
     """
-    Retrieve a list of side orientations.
-
+    Retrieve a paginated list of side orientations.
     Returns:
-        - A list of side orientations.
+        - list: A paginated list of side orientations.
     """
-    query = select(SideOrientation)
-    return session.exec(query).all()
+    return paginate(session, select(SideOrientation))
 
 
 @router.get("/orientations/{id}", response_model=SideOrientationDetailReadOutput)
 def get_side_orientation_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve the details of a side orientation by its ID.
-
     Parameters:
         - id (int): The ID of the side orientation to retrieve.
     Returns:
         - SideOrientationDetailReadOutput: The details of the side orientation.
     Raises:
-        - HTTPException: If the ID is not provided or is not an integer.
         - HTTPException: If the side orientation is not found.
-        - HTTPException: If there is an error while retrieving the side orientation.
     """
-    if not id or not isinstance(id, int):
-        raise HTTPException(status_code=404, detail="Side Orientation ID is required")
+    side_orientation = session.get(SideOrientation, id)
 
-    try:
-        side_orientation = session.get(SideOrientation, id)
-        if side_orientation:
-            return side_orientation
-        else:
-            raise HTTPException(status_code=404, detail="Side Orientation not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    if side_orientation:
+        return side_orientation
+    else:
+        raise HTTPException(status_code=404, detail="Side Orientation not found")
 
 
 @router.post(
@@ -73,21 +63,12 @@ def create_side_orientation(
     Returns:
         - SideOrientationDetailWriteOutput: The created side orientation record.
     """
-    if not side_orientation_input:
-        raise HTTPException(status_code=400, detail="Side Orientation data is required")
-
     # Create a new side orientation
     new_side_orientation = SideOrientation(**side_orientation_input.model_dump())
-
-    try:
-        session.add(new_side_orientation)
-        session.commit()
-        session.refresh(new_side_orientation)
-
-        return new_side_orientation
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    session.add(new_side_orientation)
+    session.commit()
+    session.refresh(new_side_orientation)
+    return new_side_orientation
 
 
 @router.patch("/orientations/{id}", response_model=SideOrientationDetailWriteOutput)
@@ -97,21 +78,15 @@ def update_side_orientation(
     session: Session = Depends(get_session),
 ):
     """
-    Update a side orientation record by its id.
-
-    Parameters:
-        - id (int): The id of the side orientation record to update.
+    Update a side orientation by its ID.
+    Args:
+        - id (int): The ID of the side orientation to update.
         - side_orientation (SideOrientationInput): The updated side orientation data.
-
     Returns:
-        - SideOrientationDetailWriteOutput: The updated side orientation record.
-
+        - SideOrientationDetailWriteOutput: The updated side orientation.
     Raises:
-        - HTTPException: If the id is missing or not an integer, or if the side orientation record is not found.
+        - HTTPException: If the side orientation is not found or an error occurs during the update.
     """
-    if not id or not isinstance(id, int):
-        raise HTTPException(status_code=404, detail="Side Orientation ID is required")
-
     try:
         existing_side_orientation = session.get(SideOrientation, id)
 
@@ -136,17 +111,16 @@ def update_side_orientation(
 @router.delete("/orientations/{id}", status_code=204)
 def delete_side_orientation(id: int, session: Session = Depends(get_session)):
     """
-    Delete a side orientation by its ID.
+    Deletes a side orientation with the given ID.
     Parameters:
         - id (int): The ID of the side orientation to delete.
-    Raises:
-        - HTTPException: If the ID is not provided or is not an integer.
-        - HTTPException: If the side orientation is not found.
-        - HTTPException: If there is an error during the deletion process.
     Returns:
-        - Response: A response indicating the success of the deletion.
+        - None
+    Raises:
+        - HTTPException: If no side orientation with the given ID is found.
     """
     side_orientation = session.get(SideOrientation, id)
+
     if side_orientation:
         session.delete(side_orientation)
         session.commit()

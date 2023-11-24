@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
 from app.models.shelf_numbers import ShelfNumber
@@ -18,10 +20,9 @@ router = APIRouter(
 )
 
 
-@router.get("/numbers", response_model=list[ShelfNumberListOutput])
+@router.get("/numbers", response_model=Page[ShelfNumberListOutput])
 def get_shelf_number_list(session: Session = Depends(get_session)) -> list:
-    query = select(ShelfNumber)
-    return session.exec(query).all()
+    return paginate(session, select(ShelfNumber))
 
 
 @router.get("/numbers/{id}", response_model=ShelfNumberDetailOutput)

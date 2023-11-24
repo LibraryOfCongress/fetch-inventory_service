@@ -1,4 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 
@@ -20,14 +22,27 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[BuildingListOutput])
+@router.get("/", response_model=Page[BuildingListOutput])
 def get_building_list(session: Session = Depends(get_session)) -> list:
-    query = select(Building)
-    return session.exec(query).all()
+    """
+    Get a paginated list of buildings.
+    Returns:
+        - list[BuildingListOutput]: The paginated list of buildings.
+    """
+    return paginate(session, select(Building))
 
 
 @router.get("/{id}", response_model=BuildingDetailReadOutput)
 def get_building_detail(id: int, session: Session = Depends(get_session)):
+    """
+    Get building detail by ID.
+    Args:
+       - id (int): The ID of the building.
+    Returns:
+       - BuildingDetailReadOutput: The building detail.
+    Raises:
+       - HTTPException: If the building is not found.
+    """
     building = session.get(Building, id)
     if building:
         return building
@@ -62,15 +77,21 @@ def update_building(
     """
     try:
         existing_building = session.get(Building, id)
+
         if not existing_building:
             raise HTTPException(status_code=404)
+
         mutated_data = building.model_dump(exclude_unset=True)
+
         for key, value in mutated_data.items():
             setattr(existing_building, key, value)
+
         setattr(existing_building, "update_dt", datetime.utcnow())
+
         session.add(existing_building)
         session.commit()
         session.refresh(existing_building)
+
         return existing_building
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
@@ -78,7 +99,17 @@ def update_building(
 
 @router.delete("/{id}", status_code=204)
 def delete_building(id: int, session: Session = Depends(get_session)):
+    """
+    Delete a building by ID.
+    Args:
+        - id (int): The ID of the building to delete.
+    Raises:
+        - HTTPException: If the building with the specified ID is not found.
+    Returns:
+        - None
+    """
     building = session.get(Building, id)
+
     if building:
         session.delete(building)
         session.commit()

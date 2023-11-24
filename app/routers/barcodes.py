@@ -3,6 +3,8 @@ import uuid
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
 from app.models.barcodes import Barcode
@@ -19,7 +21,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[BarcodeListOutput])
+@router.get("/", response_model=Page[BarcodeListOutput])
 def get_barcode_list(session: Session = Depends(get_session)) -> list:
     """
     Retrieve a list of barcodes from the database.
@@ -28,8 +30,7 @@ def get_barcode_list(session: Session = Depends(get_session)) -> list:
         - list: A list of barcodes.
     """
     # Create a query to retrieve all barcodes
-    query = select(Barcode)
-    return session.exec(query).all()
+    return paginate(session, select(Barcode))
 
 
 @router.get("/{id}", response_model=BarcodeDetailReadOutput)

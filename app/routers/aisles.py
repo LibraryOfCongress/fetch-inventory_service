@@ -1,6 +1,6 @@
-from typing import Sequence
-
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 
@@ -19,84 +19,68 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[AisleListOutput])
+@router.get("/", response_model=Page[AisleListOutput])
 def get_aisle_list(session: Session = Depends(get_session)) -> list:
     """
-    Retrieve a list of aisles.
+    Get a paginated list of aisles.
+    Returns:
+        - list[AisleListOutput]: The paginated list of aisles.
     """
-    # Create a query to select all records from the Aisle table
-    query = select(Aisle)
-
-    # Execute the query using the session and return all the results
-    try:
-        results = session.exec(query)
-        return results.all()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    return paginate(session, select(Aisle))
 
 
 @router.get("/{id}", response_model=AisleDetailReadOutput)
 def get_aisle_detail(id: int, session: Session = Depends(get_session)):
     """
-    Retrieve the details of an aisle.
+    Retrieves the details of an aisle from the database using the provided ID.
+    Args:
+        - id (int): The ID of the aisle.
+    Returns:
+        - AisleDetailReadOutput: The details of the aisle.
+    Raises:
+        - HTTPException: If the aisle is not found in the database.
     """
+    # Retrieve the aisle from the database using the provided ID
+    aisle = session.get(Aisle, id)
 
-    # Check if the ID is provided and is an integer
-    if not id or not isinstance(id, int):
-        return HTTPException(status_code=404, detail="Aisle ID is required")
-
-    try:
-        # Retrieve the aisle from the database using the provided ID
-        aisle = session.get(Aisle, id)
-
-        if aisle:
-            return aisle
-        else:
-            return HTTPException(status_code=404, detail="Aisle not found")
-
-    except Exception as e:
-        return HTTPException(status_code=500, detail=f"{e}")
+    if aisle:
+        return aisle
+    else:
+        return HTTPException(status_code=404, detail="Aisle not found")
 
 
 @router.post("/", response_model=AisleDetailWriteOutput, status_code=201)
 def create_aisle(aisle_input: AisleInput, session: Session = Depends(get_session)):
     """
     Create a new aisle.
-
-    building_id and module_id may not both be set. Only one allowed.
+    Args:
+        - aisle_input (AisleInput): The input data for creating a new aisle.
+    Returns:
+        - AisleDetailWriteOutput: The created aisle.
+    Raises:
+        - HTTPException: If building_id and module_id are both set.
+    Notes:
+        - building_id and module_id may not both be set. Only one allowed.
     """
-
-    # Validate the input data
-    if not aisle_input or not isinstance(aisle_input, AisleInput):
-        return HTTPException(status_code=400, detail="Aisle data is required")
-
     # Create a new Aisle object
     new_aisle = Aisle(**aisle_input.model_dump())
+    session.add(new_aisle)
+    session.commit()
+    session.refresh(new_aisle)
 
-    try:
-        session.add(new_aisle)
-        session.commit()
-        session.refresh(new_aisle)
-
-        return new_aisle
-
-    except Exception as e:
-        return HTTPException(status_code=500, detail=f"{e}")
+    return new_aisle
 
 
 @router.patch("/{id}", response_model=AisleDetailWriteOutput)
 def update_aisle(id: int, aisle: AisleInput, session: Session = Depends(get_session)):
     """
-    Update an existing aisle.
+    Updates an aisle with the given ID using the provided aisle data.
+    Args:
+        - id (int): The ID of the aisle to update.
+        - aisle (AisleInput): The updated aisle data.
+    Returns:
+        - AisleDetailWriteOutput: The updated aisle.
     """
-    # Check if the ID is provided and is an integer
-    if not id or not isinstance(id, int):
-        return HTTPException(status_code=404, detail="Aisle ID is required")
-
-    # Validate the input data
-    if not aisle:
-        return HTTPException(status_code=400, detail="Aisle data is required")
-
     # Get the existing aisle
     try:
         existing_aisle = session.get(Aisle, id)
@@ -123,7 +107,12 @@ def update_aisle(id: int, aisle: AisleInput, session: Session = Depends(get_sess
 @router.delete("/{id}", status_code=204)
 def delete_aisle(id: int, session: Session = Depends(get_session)):
     """
-    Delete an aisle by its id.
+    Delete an aisle with the given id.
+    Args:
+        - id (int): The id of the aisle to be deleted.
+    Returns:
+        - HTTPException: If the aisle is not found.
+        - None: If the aisle is deleted successfully.
     """
     # Check if the ID is provided and is an integer
     if not id or not isinstance(id, int):
