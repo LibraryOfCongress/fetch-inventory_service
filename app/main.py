@@ -13,7 +13,12 @@ from app.routers import (
     barcode_types,
     barcodes,
     ladder_numbers,
-    ladders
+    ladders,
+    shelf_numbers,
+    shelf_position_numbers,
+    shelves,
+    container_types,
+    shelf_positions
 )
 
 app = FastAPI()
@@ -48,3 +53,8 @@ app.include_router(barcode_types.router)
 app.include_router(barcodes.router)
 app.include_router(ladder_numbers.router)
 app.include_router(ladders.router)
+app.include_router(container_types.router)
+app.include_router(shelf_position_numbers.router)
+app.include_router(shelf_positions.router)
+app.include_router(shelf_numbers.router)
+app.include_router(shelves.router)

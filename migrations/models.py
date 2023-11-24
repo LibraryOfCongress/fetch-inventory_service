@@ -12,3 +12,8 @@ from app.models.ladder_numbers import LadderNumber
 from app.models.ladders import Ladder
 from app.models.barcode_types import BarcodeType
 from app.models.barcodes import Barcode
+from app.models.container_types import ContainerType
+from app.models.shelf_numbers import ShelfNumber
+from app.models.shelves import Shelf
+from app.models.shelf_position_numbers import ShelfPositionNumber
+from app.models.shelf_positions import ShelfPosition

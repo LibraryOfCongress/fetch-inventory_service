@@ -1,7 +1,7 @@
 import uuid
 import sqlalchemy as sa
 
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
@@ -45,3 +45,4 @@ class Ladder(SQLModel, table=True):
 
     side: Side = Relationship(back_populates="ladders")
     ladder_number: LadderNumber = Relationship(back_populates="ladders")
+    shelves: List['Shelf'] = Relationship(back_populates="ladder")
