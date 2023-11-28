@@ -1,6 +1,13 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
+from alembic.config import Config
+from alembic import command
+
+from alembic.config import Config
+from alembic import command
 
 from app.config.config import get_settings
 from app.routers import (
@@ -19,10 +26,28 @@ from app.routers import (
     shelf_position_numbers,
     shelves,
     container_types,
-    shelf_positions
+    shelf_positions,
 )
 
-app = FastAPI()
+
+def alembic_context():
+    alembic_cfg = Config("alembic.ini")
+    try:
+        print("Migrating...")
+        command.upgrade(alembic_cfg, "head")
+    except Exception as e:
+        print(f"Migration failed: {e}")
+        raise
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    alembic_context()
+    yield
+    print("Shutting down...")
+
+
+app = FastAPI(lifespan=lifespan)
 
 # add CORS
 app.add_middleware(
