@@ -27,6 +27,8 @@ from app.routers import (
     shelves,
     container_types,
     shelf_positions,
+    owner_tiers,
+    owners,
 )
 
 
@@ -84,5 +86,7 @@ app.include_router(shelf_position_numbers.router)
 app.include_router(shelf_positions.router)
 app.include_router(shelf_numbers.router)
 app.include_router(shelves.router)
+app.include_router(owner_tiers.router)
+app.include_router(owners.router)
 
 add_pagination(app)

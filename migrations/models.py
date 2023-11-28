@@ -17,3 +17,5 @@ from app.models.shelf_numbers import ShelfNumber
 from app.models.shelves import Shelf
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
+from app.models.owner_tiers import OwnerTier
+from app.models.owners import Owner

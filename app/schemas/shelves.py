@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, conint, condecimal
 from datetime import datetime
 
+from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.ladders import LadderDetailWriteOutput
 from app.schemas.shelf_numbers import ShelfNumberDetailOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
@@ -13,6 +14,7 @@ class ShelfInput(BaseModel):
     ladder_id: conint(ge=0, le=2147483647)
     container_type_id: conint(ge=0, le=2147483647)
     shelf_number_id: conint(ge=0, le=32767)
+    owner_id: conint(ge=0, le=32767)
     capacity: conint(ge=0, le=32767)
     height: condecimal(decimal_places=2)
     width: condecimal(decimal_places=2)
@@ -25,6 +27,7 @@ class ShelfInput(BaseModel):
                 "ladder_id": 1,
                 "container_type_id": 1,
                 "shelf_number_id": 1,
+                "owner_id": 1,
                 "capacity": 33,
                 "height": 15.7,
                 "width": 30.33,
@@ -54,6 +57,7 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
     ladder_id: int
     container_type_id: int
     shelf_number_id: int
+    owner_id: int
     capacity: int
     height: float
     width: float
@@ -83,7 +87,8 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
 class ShelfDetailReadOutput(ShelfBaseOutput):
     ladder: LadderDetailWriteOutput
     shelf_number: ShelfNumberDetailOutput
-    container_type: ContainerTypeDetailReadOutput 
+    container_type: ContainerTypeDetailReadOutput
+    owner: OwnerDetailReadOutput
     capacity: int
     height: float
     width: float
@@ -113,6 +118,20 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                 "container_type": {
                     "id": 1,
                     "type": "Tray",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "owner": {
+                    "id": 1,
+                    "name": "Special Collection Directorate",
+                    "owner_tier_id": 2,
+                    "owner_tier": {
+                        "id": 1,
+                        "level": 2,
+                        "name": "division",
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    },
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },

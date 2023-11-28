@@ -8,6 +8,7 @@ from pydantic import condecimal
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
 
+from app.models.owners import Owner
 from app.models.ladders import Ladder
 from app.models.container_types import ContainerType
 from app.models.shelf_numbers import ShelfNumber
@@ -54,7 +55,7 @@ class Shelf(SQLModel, table=True):
     )
     shelf_number_id: int = Field(foreign_key="shelf_numbers.id", nullable=False)
     # tray_size_class_id - coming in FETCH-303
-    # owner - coming in FETCH-303
+    owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     ladder_id: int = Field(foreign_key="ladders.id", nullable=False)
     create_dt: datetime = Field(
         sa_column=sa.DateTime,
@@ -68,6 +69,7 @@ class Shelf(SQLModel, table=True):
     )
 
     ladder: Ladder = Relationship(back_populates="shelves")
+    owner: Owner = Relationship(back_populates="shelves")
     shelf_number: ShelfNumber = Relationship(back_populates="shelves")
     container_type: ContainerType = Relationship(back_populates="shelves")
     shelf_positions: List['ShelfPosition'] = Relationship(back_populates="shelf")
