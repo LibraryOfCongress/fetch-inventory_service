@@ -19,7 +19,7 @@ class OwnerTier(SQLModel, table=True):
     id: Optional[int] = Field(
         sa_column=sa.Column(sa.SmallInteger, primary_key=True)
     )
-    level: conint(ge=1, le=4) = Field(
+    level: int = Field(
         sa_column=sa.SmallInteger,
         nullable=False,
         unique=True,

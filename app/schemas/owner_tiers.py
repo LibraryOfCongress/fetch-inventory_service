@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 class OwnerTierInput(BaseModel):
-    level: conint(ge=1, le=4)
+    level: int
     name: str
 
     class Config:

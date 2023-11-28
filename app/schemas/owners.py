@@ -9,7 +9,7 @@ from app.schemas.owner_tiers import OwnerTierDetailOutput
 
 class OwnerInput(BaseModel):
     name: str
-    owner_tier_id: conint(ge=1, le=4)
+    owner_tier_id: int
 
     class Config:
         json_schema_extra = {
