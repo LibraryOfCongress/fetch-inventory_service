@@ -1,0 +1,48 @@
+{
+  "buildings": {
+    "id": 1,
+    "name": "Building 1",
+    "create_dt": "2023-01-01T00:00:00",
+    "update_dt": "2023-01-01T00:00:00"
+  },
+  "modules_numbers": {
+    "number": 1
+  },
+  "modules": {
+    "id": 1,
+    "building_id": 1,
+    "module_number_id": 1
+  },
+  "aisles_numbers": {
+    "number": 1
+  },
+  "aisles": {
+    "aisle_number_id": 1,
+    "building_id": 1
+  },
+  "side_orientations": {
+    "id": 1,
+    "name": "Left"
+  },
+  "sides": {
+    "id": 1,
+    "side_orientation_id": 1
+  },
+  "barcode_types": {
+    "id": 1,
+    "name": "qrcode"
+  },
+  "barcodes": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "barcode_type_id": 1,
+    "barcode": "5901234123457"
+  },
+  "ladder_numbers": {
+    "id": 1,
+    "number": 1
+  },
+  "ladders": {
+    "ladder_number_id": 1,
+    "side_id": 1
+  }
+}
