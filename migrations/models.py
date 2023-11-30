@@ -19,3 +19,4 @@ from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.owner_tiers import OwnerTier
 from app.models.owners import Owner
+from app.models.accession_jobs import AccessionJob

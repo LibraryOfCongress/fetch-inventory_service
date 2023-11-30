@@ -29,6 +29,7 @@ from app.routers import (
     shelf_positions,
     owner_tiers,
     owners,
+    accession_jobs
 )
 
 
@@ -88,5 +89,6 @@ app.include_router(shelf_numbers.router)
 app.include_router(shelves.router)
 app.include_router(owner_tiers.router)
 app.include_router(owners.router)
+app.include_router(accession_jobs.router)
 
 add_pagination(app)

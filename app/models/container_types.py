@@ -45,3 +45,5 @@ class ContainerType(SQLModel, table=True):
 
     # shelves assigned this container type
     shelves: List['Shelf'] = Relationship(back_populates="container_type")
+    # accession jobs for this container type
+    accession_jobs: List['AccessionJob'] = Relationship(back_populates="container_type")

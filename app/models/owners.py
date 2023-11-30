@@ -50,3 +50,4 @@ class Owner(SQLModel, table=True):
 
     owner_tier: OwnerTier = Relationship(back_populates="owners")
     shelves: List['Shelf'] = Relationship(back_populates="owner")
+    accession_jobs: List['AccessionJob'] = Relationship(back_populates="owner")
