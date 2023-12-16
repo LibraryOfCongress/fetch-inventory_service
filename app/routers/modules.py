@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -8,11 +10,13 @@ from app.database.session import get_session
 from app.models.modules import Module
 from app.schemas.modules import (
     ModuleInput,
+    ModuleUpdateInput,
     ModuleListOutput,
     ModuleDetailWriteOutput,
     ModuleDetailReadOutput,
 )
 
+LOGGER = logging.getLogger("router.modules")
 
 router = APIRouter(
     prefix="/modules",
@@ -67,7 +71,7 @@ def create_module(
 
 @router.patch("/{id}", response_model=ModuleDetailWriteOutput)
 def update_module(
-    id: int, module: ModuleInput, session: Session = Depends(get_session)
+    id: int, module: ModuleUpdateInput, session: Session = Depends(get_session)
 ):
     try:
         existing_module = session.get(Module, id)

@@ -32,6 +32,33 @@ class ShelfInput(BaseModel):
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
+                "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+            }
+        }
+
+
+class ShelfUpdateInput(BaseModel):
+    ladder_id: Optional[conint(ge=0, le=2147483647)] = None
+    container_type_id: Optional[conint(ge=0, le=2147483647)] = None
+    shelf_number_id: Optional[conint(ge=0, le=32767)] = None
+    owner_id: Optional[conint(ge=0, le=32767)] = None
+    capacity: Optional[conint(ge=0, le=32767)] = None
+    height: Optional[condecimal(decimal_places=2)] = None
+    width: Optional[condecimal(decimal_places=2)] = None
+    depth: Optional[condecimal(decimal_places=2)] = None
+    barcode_id: Optional[uuid.UUID] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "ladder_id": 1,
+                "container_type_id": 1,
+                "shelf_number_id": 1,
+                "owner_id": 1,
+                "capacity": 33,
+                "height": 15.7,
+                "width": 30.33,
+                "depth": 27,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001"
             }
         }
@@ -45,12 +72,7 @@ class ShelfListOutput(ShelfBaseOutput):
     ladder_id: int
 
     class Config:
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "ladder_id": 1
-            }
-        }
+        json_schema_extra = {"example": {"id": 1, "ladder_id": 1}}
 
 
 class ShelfDetailWriteOutput(ShelfBaseOutput):
@@ -79,7 +101,7 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
                 "depth": 27,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398"
+                "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
 
@@ -107,19 +129,19 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                     "ladder_number_id": 1,
                     "barcode": "550e8400-e29b-41d4-a716-446655440001",
                     "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
+                    "update_dt": "2023-10-08T20:46:56.764398",
                 },
                 "shelf_number": {
                     "id": 1,
                     "number": 1,
                     "create_dt": "2023-10-09T17:04:09.812257",
-                    "update_dt": "2023-10-10T01:00:28.576069"
+                    "update_dt": "2023-10-10T01:00:28.576069",
                 },
                 "container_type": {
                     "id": 1,
                     "type": "Tray",
                     "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
+                    "update_dt": "2023-10-08T20:46:56.764398",
                 },
                 "owner": {
                     "id": 1,
@@ -130,10 +152,10 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                         "level": 2,
                         "name": "division",
                         "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
+                        "update_dt": "2023-10-08T20:46:56.764398",
                     },
                     "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
+                    "update_dt": "2023-10-08T20:46:56.764398",
                 },
                 "capacity": 33,
                 "height": 15.7,
@@ -141,6 +163,6 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                 "depth": 27,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398"
+                "update_dt": "2023-10-08T20:46:56.764398",
             }
         }

@@ -21,6 +21,19 @@ class ModuleInput(BaseModel):
         }
 
 
+class ModuleUpdateInput(BaseModel):
+    building_id: Optional[int] = None
+    module_number_id: Optional[int] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "building_id": 1,
+                "module_number_id": 1
+            }
+        }
+
+
 class ModuleBaseOutput(BaseModel):
     id: int
 
@@ -29,7 +42,7 @@ class ModuleListOutput(ModuleBaseOutput):
     class Config:
         json_schema_extra = {
             "example": {
-                "id": 1,
+                "id": 1
             }
         }
 
@@ -47,7 +60,7 @@ class ModuleDetailWriteOutput(ModuleBaseOutput):
                 "building_id": 1,
                 "module_number_id": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398",
+                "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
 
@@ -66,16 +79,16 @@ class ModuleDetailReadOutput(ModuleBaseOutput):
                     "id": 1,
                     "name": "Southpoint Triangle",
                     "create_dt": "2023-10-09T05:51:20.254535",
-                    "update_dt": "2023-10-09T06:16:13.653205",
+                    "update_dt": "2023-10-09T06:16:13.653205"
                 },
                 "module_number": {
                     "id": 1,
                     "number": 1,
                     "create_dt": "2023-10-09T17:04:09.812257",
-                    "update_dt": "2023-10-10T01:00:28.576069",
+                    "update_dt": "2023-10-10T01:00:28.576069"
                 },
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398",
+                "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
 
@@ -89,7 +102,7 @@ class ModuleCustomDetailReadOutput(ModuleBaseOutput):
                 "id": 1,
                 "module_number": {
                     "id": 1,
-                    "number": 1,
+                    "number": 1
                 },
             }
         }

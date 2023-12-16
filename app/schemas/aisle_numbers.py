@@ -6,7 +6,11 @@ class AisleNumberInput(BaseModel):
     number: conint(ge=0, le=32767)
 
     class Config:
-        json_schema_extra = {"example": {"number": 1}}
+        json_schema_extra = {
+            "example": {
+                "number": 1
+            }
+        }
 
 
 class AisleNumberBaseOutput(BaseModel):
@@ -19,7 +23,12 @@ class AisleNumberListOutput(AisleNumberBaseOutput):
     number: int
 
     class Config:
-        json_schema_extra = {"example": {"id": 1, "number": 1}}
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "number": 1
+            }
+        }
 
 
 class AisleNumberDetailOutput(AisleNumberBaseOutput):
@@ -41,7 +50,7 @@ class AisleNumberDetailOutput(AisleNumberBaseOutput):
                         "create_dt": "2023-10-18T11:46:24.748946",
                         "id": 24,
                         "module_id": None,
-                        "update_dt": "2023-10-18T11:46:24.748962",
+                        "update_dt": "2023-10-18T11:46:24.748962"
                     },
                     {
                         "aisle_number_id": 4,
@@ -49,7 +58,7 @@ class AisleNumberDetailOutput(AisleNumberBaseOutput):
                         "create_dt": "2023-10-18T11:46:24.748946",
                         "id": 26,
                         "module_id": 1,
-                        "update_dt": "2023-10-18T11:46:24.748962",
+                        "update_dt": "2023-10-18T11:46:24.748962"
                     },
                 ],
             }

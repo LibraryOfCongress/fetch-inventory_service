@@ -29,6 +29,29 @@ class AccessionJobInput(BaseModel):
         }
 
 
+class AccessionJobUpdateInput(BaseModel):
+    trayed: Optional[bool] = None
+    status: Optional[str] = None
+    user_id: Optional[int] = None
+    run_time: Optional[timedelta] = None
+    last_transition: Optional[datetime] = None
+    owner_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "trayed": True,
+                "status": "Paused",
+                "user_id": 1,
+                "run_time": "03:25:15",
+                "last_transition": "2023-11-27T12:34:56.789123Z",
+                "owner_id": 1,
+                "container_type_id": 1
+            }
+        }
+
+
 class AccessionJobBaseOutput(BaseModel):
     id: int
     trayed: bool
@@ -36,14 +59,14 @@ class AccessionJobBaseOutput(BaseModel):
 
 
 class AccessionJobListOutput(AccessionJobBaseOutput):
-
     class Config:
         json_schema_extra = {
-            "example": {
-                "id": 1,
-                "trayed": True,
-                "status": "Created"
-            }
+            "example":
+                {
+                    "id": 1,
+                    "trayed": True,
+                    "status": "Created"
+                }
         }
 
 
@@ -90,6 +113,6 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398",
+                "update_dt": "2023-10-08T20:46:56.764398"
             }
         }

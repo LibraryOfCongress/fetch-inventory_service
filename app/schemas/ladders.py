@@ -21,6 +21,19 @@ class LadderInput(BaseModel):
         }
 
 
+class LadderUpdateInput(BaseModel):
+    side_id: Optional[conint(ge=0, le=2147483647)] = None
+    ladder_number_id: Optional[conint(ge=0, le=32767)] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "side_id": 1,
+                "ladder_number_id": 1
+            }
+        }
+
+
 class LadderBaseOutput(BaseModel):
     id: int
 

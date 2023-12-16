@@ -20,6 +20,19 @@ class OwnerInput(BaseModel):
         }
 
 
+class OwnerUpdateInput(BaseModel):
+    name: Optional[str] = None
+    owner_tier_id: Optional[int] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Special Collection Directorate",
+                "owner_tier_id": 2
+            }
+        }
+
+
 class OwnerBaseOutput(BaseModel):
     id: int
     name: str
@@ -27,7 +40,6 @@ class OwnerBaseOutput(BaseModel):
 
 
 class OwnerListOutput(OwnerBaseOutput):
-
     class Config:
         json_schema_extra = {
             "example": {
@@ -58,7 +70,7 @@ class OwnerDetailReadOutput(OwnerBaseOutput):
     owner_tier: OwnerTierDetailOutput
     create_dt: datetime
     update_dt: datetime
-    #TODO serialize shelf list without recursion (don't reuse this class)
+    # TODO serialize shelf list without recursion (don't reuse this class)
 
     class Config:
         json_schema_extra = {

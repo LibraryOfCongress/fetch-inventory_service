@@ -13,6 +13,14 @@ class SideInput(BaseModel):
     side_orientation_id: int
 
     class Config:
+        json_schema_extra = {"example": {"aisle_id": 1, "side_orientation_id": 1}}
+
+
+class SideUpdateInput(BaseModel):
+    aisle_id: Optional[int] = None
+    side_orientation_id: Optional[int] = None
+
+    class Config:
         json_schema_extra = {
             "example": {
                 "aisle_id": 1,
@@ -48,7 +56,7 @@ class SideDetailWriteOutput(SideBaseOutput):
                 "aisle_id": 1,
                 "side_orientation_id": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398"
+                "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
 
@@ -80,15 +88,15 @@ class SideDetailReadOutput(SideBaseOutput):
                         "ladder_number_id": 1,
                         "create_dt": "2023-11-05T21:04:07.718796",
                         "update_dt": "2023-11-05T21:04:07.718821",
-                        "side_id": 3
+                        "side_id": 3,
                     },
                     {
                         "id": 4,
                         "ladder_number_id": 2,
                         "create_dt": "2023-11-05T21:30:37.842984",
                         "update_dt": "2023-11-05T21:30:37.843005",
-                        "side_id": 3
-                    }
-                ]
+                        "side_id": 3,
+                    },
+                ],
             }
         }

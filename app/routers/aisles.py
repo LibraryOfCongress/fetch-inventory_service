@@ -8,6 +8,7 @@ from app.database.session import get_session
 from app.models.aisles import Aisle
 from app.schemas.aisles import (
     AisleInput,
+    AisleUpdateInput,
     AisleListOutput,
     AisleDetailWriteOutput,
     AisleDetailReadOutput,
@@ -23,8 +24,9 @@ router = APIRouter(
 def get_aisle_list(session: Session = Depends(get_session)) -> list:
     """
     Get a paginated list of aisles.
-    Returns:
-        - list[AisleListOutput]: The paginated list of aisles.
+
+    **Returns:**
+    - list Aisle List Output: The paginated list of aisles.
     """
     return paginate(session, select(Aisle))
 
@@ -33,12 +35,15 @@ def get_aisle_list(session: Session = Depends(get_session)) -> list:
 def get_aisle_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieves the details of an aisle from the database using the provided ID.
-    Args:
-        - id (int): The ID of the aisle.
-    Returns:
-        - AisleDetailReadOutput: The details of the aisle.
-    Raises:
-        - HTTPException: If the aisle is not found in the database.
+
+    **Args:**
+    - id (int): The ID of the aisle.
+
+    **Returns:**
+    - Aisle Detail Read Output: The details of the aisle.
+
+    **Raises:**
+    - HTTPException: If the aisle is not found in the database.
     """
     # Retrieve the aisle from the database using the provided ID
     aisle = session.get(Aisle, id)
@@ -53,14 +58,18 @@ def get_aisle_detail(id: int, session: Session = Depends(get_session)):
 def create_aisle(aisle_input: AisleInput, session: Session = Depends(get_session)):
     """
     Create a new aisle.
-    Args:
-        - aisle_input (AisleInput): The input data for creating a new aisle.
-    Returns:
-        - AisleDetailWriteOutput: The created aisle.
-    Raises:
-        - HTTPException: If building_id and module_id are both set.
-    Notes:
-        - building_id and module_id may not both be set. Only one allowed.
+
+    **Args:**
+    - Aisle Input: The input data for creating a new aisle.
+
+    **Returns:**
+    - Aisle Detail Write Output: The created aisle.
+
+    **Raises:**
+    - HTTPException: If building_id and module_id are both set.
+
+    **Notes:**
+    - building_id and module_id may not both be set. Only one allowed.
     """
     # Create a new Aisle object
     new_aisle = Aisle(**aisle_input.model_dump())
@@ -72,14 +81,18 @@ def create_aisle(aisle_input: AisleInput, session: Session = Depends(get_session
 
 
 @router.patch("/{id}", response_model=AisleDetailWriteOutput)
-def update_aisle(id: int, aisle: AisleInput, session: Session = Depends(get_session)):
+def update_aisle(
+    id: int, aisle: AisleUpdateInput, session: Session = Depends(get_session)
+):
     """
     Updates an aisle with the given ID using the provided aisle data.
-    Args:
-        - id (int): The ID of the aisle to update.
-        - aisle (AisleInput): The updated aisle data.
-    Returns:
-        - AisleDetailWriteOutput: The updated aisle.
+
+    **Args:**
+    - id (int): The ID of the aisle to update.
+    - Aisle Update Input: The updated aisle data.
+
+    **Returns:**
+    - Aisle Detail Write Output: The updated aisle.
     """
     # Get the existing aisle
     try:
@@ -108,11 +121,13 @@ def update_aisle(id: int, aisle: AisleInput, session: Session = Depends(get_sess
 def delete_aisle(id: int, session: Session = Depends(get_session)):
     """
     Delete an aisle with the given id.
-    Args:
-        - id (int): The id of the aisle to be deleted.
-    Returns:
-        - HTTPException: If the aisle is not found.
-        - None: If the aisle is deleted successfully.
+
+    **Args:**
+    - id (int): The id of the aisle to be deleted.
+
+    **Returns:**
+    - HTTPException: If the aisle is not found.
+    - None: If the aisle is deleted successfully.
     """
     # Check if the ID is provided and is an integer
     if not id or not isinstance(id, int):

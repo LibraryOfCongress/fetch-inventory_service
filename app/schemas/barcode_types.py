@@ -8,7 +8,7 @@ class BarcodeTypesInput(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "name": "qrcode",
+                "name": "qrcode"
             }
         }
 
@@ -21,7 +21,7 @@ class BarcodeTypesListOutput(BaseModel):
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "name": "qrcode",
+                "name": "qrcode"
             }
         }
 
@@ -38,7 +38,7 @@ class BarcodeTypesDetailWriteOutput(BaseModel):
                 "id": 1,
                 "name": "qrcode",
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398",
+                "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
 
@@ -55,6 +55,6 @@ class BarcodeTypesDetailReadOutput(BaseModel):
                 "id": 1,
                 "name": "qrcode",
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398",
+                "update_dt": "2023-10-08T20:46:56.764398"
             }
         }

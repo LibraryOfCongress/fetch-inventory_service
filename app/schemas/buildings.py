@@ -16,6 +16,17 @@ class BuildingInput(BaseModel):
         }
 
 
+class BuildingUpdateInput(BaseModel):
+    name: Optional[constr(max_length=25, strict=False)] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Southpoint Circle"
+            }
+        }
+
+
 class BuildingBaseOutput(BaseModel):
     id: int
     name: str | None
@@ -26,7 +37,7 @@ class BuildingListOutput(BuildingBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "name": "Southpoint Circle",
+                "name": "Southpoint Circle"
             }
         }
 
@@ -41,7 +52,7 @@ class BuildingDetailWriteOutput(BuildingBaseOutput):
                 "id": 1,
                 "name": "Southpoint Circle",
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398",
+                "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
 
@@ -64,7 +75,7 @@ class BuildingDetailReadOutput(BuildingBaseOutput):
                         "building_id": 1,
                         "module_number_id": 1,
                         "update_dt": "2023-10-09T17:19:23.780752",
-                        "create_dt": "2023-10-09T17:19:23.780771",
+                        "create_dt": "2023-10-09T17:19:23.780771"
                     }
                 ],
             }

@@ -8,6 +8,7 @@ from app.database.session import get_session
 from app.models.buildings import Building
 from app.schemas.buildings import (
     BuildingInput,
+    BuildingUpdateInput,
     BuildingListOutput,
     BuildingDetailWriteOutput,
     BuildingDetailReadOutput,
@@ -26,8 +27,9 @@ router = APIRouter(
 def get_building_list(session: Session = Depends(get_session)) -> list:
     """
     Get a paginated list of buildings.
-    Returns:
-        - list[BuildingListOutput]: The paginated list of buildings.
+
+    **Returns:**
+    - list Building List Output: The paginated list of buildings.
     """
     return paginate(session, select(Building))
 
@@ -36,12 +38,15 @@ def get_building_list(session: Session = Depends(get_session)) -> list:
 def get_building_detail(id: int, session: Session = Depends(get_session)):
     """
     Get building detail by ID.
-    Args:
-       - id (int): The ID of the building.
-    Returns:
-       - BuildingDetailReadOutput: The building detail.
-    Raises:
-       - HTTPException: If the building is not found.
+
+    **Args:**
+    - id (int): The ID of the building.
+
+    **Returns:**
+    - Building Detail Read Output: The building detail.
+
+    **Raises:**
+    - HTTPException: If the building is not found.
     """
     building = session.get(Building, id)
     if building:
@@ -57,7 +62,11 @@ def create_building(
     """
     Create a building:
 
-    - **name**: Optional string identifier
+    **Args:**
+    - Building Input: The input data for creating the building.
+
+    **Returns:**
+    - Building: The newly created building.
     """
     new_building = Building(**building_input.model_dump())
     session.add(new_building)
@@ -68,12 +77,21 @@ def create_building(
 
 @router.patch("/{id}", response_model=BuildingDetailWriteOutput)
 def update_building(
-    id: int, building: BuildingInput, session: Session = Depends(get_session)
+    id: int, building: BuildingUpdateInput, session: Session = Depends(get_session)
 ):
     """
     Update a building:
 
-    - **name**: Optional string identifier
+    **Args:**
+    - id (int): The ID of the building to update.
+    - Building Update Input: The updated building data.
+
+    **Returns:**
+    - Building: The updated building.
+
+    **Raises:**
+    - HTTPException: If the building with the given ID is not found or if there is an
+    internal server error.
     """
     try:
         existing_building = session.get(Building, id)
@@ -101,12 +119,15 @@ def update_building(
 def delete_building(id: int, session: Session = Depends(get_session)):
     """
     Delete a building by ID.
-    Args:
-        - id (int): The ID of the building to delete.
-    Raises:
-        - HTTPException: If the building with the specified ID is not found.
-    Returns:
-        - None
+
+    **Args:**
+    - id (int): The ID of the building to delete.
+
+    **Returns:**
+    - None
+
+    **Raises:**
+    - HTTPException: If the building with the specified ID is not found.
     """
     building = session.get(Building, id)
 

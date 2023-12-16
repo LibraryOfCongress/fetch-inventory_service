@@ -9,6 +9,7 @@ from app.database.session import get_session
 from app.models.accession_jobs import AccessionJob
 from app.schemas.accession_jobs import (
     AccessionJobInput,
+    AccessionJobUpdateInput,
     AccessionJobListOutput,
     AccessionJobDetailOutput,
 )
@@ -23,6 +24,9 @@ router = APIRouter(
 def get_accession_job_list(session: Session = Depends(get_session)) -> list:
     """
     Retrieve a paginated list of accession jobs.
+
+    **Returns:**
+    - list: A paginated list of accession jobs.
     """
     return paginate(session, select(AccessionJob))
 
@@ -31,6 +35,15 @@ def get_accession_job_list(session: Session = Depends(get_session)) -> list:
 def get_accession_job_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieves the accession job detail for the given ID.
+
+    **Args:**
+    - id: The ID of the accession job.
+
+    **Returns:**
+    - Accession Job Detail Output: The accession job detail.
+
+    **Raises:**
+    - HTTPException: If the accession job with the given ID is not found.
     """
     accession_job = session.get(AccessionJob, id)
     if accession_job:
@@ -45,21 +58,47 @@ def create_accession_job(
 ) -> AccessionJob:
     """
     Create a new accession job:
+
+    **Args:**
+    - Accession Job Input: The input data for creating the
+    accession job.
+
+    **Returns:**
+    - Accession Job: The created accession job.
+
+    **Raises:**
+    - HTTPException: If there is an integrity error during the creation of the
+    accession job.
     """
     try:
         new_accession_job = AccessionJob(**accession_job_input.model_dump())
         session.add(new_accession_job)
         session.commit()
         session.refresh(new_accession_job)
+
         return new_accession_job
+
     except IntegrityError as e:
         raise HTTPException(status_code=422, detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=AccessionJobDetailOutput)
 def update_accession_job(
-    id: int, accession_job: AccessionJobInput, session: Session = Depends(get_session)
+    id: int,
+    accession_job: AccessionJobUpdateInput,
+    session: Session = Depends(get_session),
 ):
+    """
+    Update an existing accession job with the provided data.
+
+    ***Parameters:**
+    - id: The ID of the accession job to be updated.
+    - accession job: The data to update the accession job with.
+
+    **Returns:**
+    - HTTPException: If the accession job is not found or if an error occurs during
+    the update.
+    """
     try:
         existing_accession_job = session.get(AccessionJob, id)
 
@@ -86,6 +125,11 @@ def update_accession_job(
 def delete_accession_job(id: int, session: Session = Depends(get_session)):
     """
     Delete an accession job by its ID.
+    **Args:**
+    - id: The ID of the accession job to be deleted.
+
+    **Returns:**
+    - HTTPException: An HTTP exception indicating the result of the deletion.
     """
     accession_job = session.get(AccessionJob, id)
     if accession_job:

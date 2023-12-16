@@ -19,6 +19,19 @@ class ShelfPositionInput(BaseModel):
         }
 
 
+class ShelfPositionUpdateInput(BaseModel):
+    shelf_position_number_id: Optional[conint(ge=0, le=9223372036854775807)] = None
+    shelf_id: Optional[conint(ge=0, le=2147483647)] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "shelf_id": 1,
+                "shelf_position_number_id": 1
+            }
+        }
+
+
 class ShelfPositionBaseReadOutput(BaseModel):
     id: int
     shelf_id: int
@@ -35,7 +48,6 @@ class ShelfPositionBaseReadOutput(BaseModel):
 
 
 class ShelfPositionListOutput(ShelfPositionBaseReadOutput):
-
     class Config:
         json_schema_extra = {
             "example": {
@@ -60,7 +72,7 @@ class ShelfPositionDetailWriteOutput(BaseModel):
                 "shelf_id": 1,
                 "shelf_position_number_id": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398"
+                "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
 
@@ -81,7 +93,7 @@ class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):
                     "id": 1,
                     "number": 1,
                     "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
+                    "update_dt": "2023-10-08T20:46:56.764398",
                 },
                 "shelf": {
                     "id": 1,
@@ -94,9 +106,9 @@ class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):
                     "depth": 27,
                     "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                     "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
+                    "update_dt": "2023-10-08T20:46:56.764398",
                 },
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398"
+                "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
