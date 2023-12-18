@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -22,6 +23,7 @@ router = APIRouter(
     tags=["buildings"],
 )
 
+logger = logging.getLogger(__name__)
 
 @router.get("/", response_model=Page[BuildingListOutput])
 def get_building_list(session: Session = Depends(get_session)) -> list:
@@ -93,29 +95,27 @@ def update_building(
     - HTTPException: If the building with the given ID is not found or if there is an
     internal server error.
     """
-    try:
-        existing_building = session.get(Building, id)
+    existing_building = session.get(Building, id)
 
-        if not existing_building:
-            raise HTTPException(status_code=404)
+    if existing_building is None:
+        print("here")
+        raise HTTPException(status_code=404)
 
-        mutated_data = building.model_dump(exclude_unset=True)
+    mutated_data = building.model_dump(exclude_unset=True)
 
-        for key, value in mutated_data.items():
-            setattr(existing_building, key, value)
+    for key, value in mutated_data.items():
+        setattr(existing_building, key, value)
 
-        setattr(existing_building, "update_dt", datetime.utcnow())
+    setattr(existing_building, "update_dt", datetime.utcnow())
 
-        session.add(existing_building)
-        session.commit()
-        session.refresh(existing_building)
+    session.add(existing_building)
+    session.commit()
+    session.refresh(existing_building)
 
-        return existing_building
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    return existing_building
 
 
-@router.delete("/{id}", status_code=204)
+@router.delete("/{id}")
 def delete_building(id: int, session: Session = Depends(get_session)):
     """
     Delete a building by ID.
@@ -129,10 +129,13 @@ def delete_building(id: int, session: Session = Depends(get_session)):
     **Raises:**
     - HTTPException: If the building with the specified ID is not found.
     """
+
     building = session.get(Building, id)
 
     if building:
         session.delete(building)
         session.commit()
+        return HTTPException(status_code=204)
     else:
-        raise HTTPException(status_code=404)
+        return HTTPException(status_code=404)
+

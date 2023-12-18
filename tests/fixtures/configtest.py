@@ -1,9 +1,9 @@
 import os
 import time
+import logging
 import pytest
 import subprocess
 import json
-import logging
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
@@ -14,21 +14,40 @@ from app.main import app
 
 # Define the Docker command to run the Postgres container
 ROOT_FILE_PATH = os.getcwd()
-DOCKER_RUN_COMMAND = f"docker compose -f {ROOT_FILE_PATH}/tests/test-docker-compose.yml up -d"
-DOCKER_DOWN_COMMAND = f"docker compose -f {ROOT_FILE_PATH}/tests/test-docker-compose.yml down test_db"
+DOCKER_RUN_COMMAND = (
+    f"docker compose -f {ROOT_FILE_PATH}/tests/test-docker-compose.yml up -d"
+)
+DOCKER_DOWN_COMMAND = (
+    f"docker compose -f {ROOT_FILE_PATH}/tests/test-docker-compose.yml down test_db"
+)
 DOCKER_CLEANUP_COMMAND = "docker system prune -fa"
+DOCKER_CLEANUP_VOLUME_COMMAND = "docker volume prune -fa"
 
 ALEMBIC_UPGRADE_COMMAND = "alembic upgrade head"
 TEST_DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/test_database"
 
 # Path to your fixtures file
-FIXTURES_PATH = f'{ROOT_FILE_PATH}/tests/fixtures/data_sampler.json'
+CREATE_DATA_SAMPLER_FIXTURE = (
+    f"{ROOT_FILE_PATH}/tests/fixtures/payloads/create_data_sampler.json"
+)
+DATA_RESPONSE = f"{ROOT_FILE_PATH}/tests/fixtures/payloads/data_response.json"
+UPDATE_DATA_SAMPLER_FIXTURE = (
+    f"{ROOT_FILE_PATH}/tests/fixtures/payloads/update_data_sampler.json"
+)
+EMPTY_RESPONSE = f"{ROOT_FILE_PATH}/tests/fixtures/payloads/empty_response.json"
+PAGE_EMPTY_RESPONSE = (
+    f"{ROOT_FILE_PATH}/tests/fixtures/payloads/page_empty_response.json"
+)
+SIZE_EMPTY_RESPONSE = (
+    f"{ROOT_FILE_PATH}/tests/fixtures/payloads/size_empty_response.json"
+)
+DATA_PAGE_RESPONSE = f"{ROOT_FILE_PATH}/tests/fixtures/payloads/data_page_response.json"
+DATA_SIZE_RESPONSE = f"{ROOT_FILE_PATH}/tests/fixtures/payloads/data_size_response.json"
 
 # Create a new database for testing
 engine = create_engine(TEST_DATABASE_URL)
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("tests.configtest")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -40,8 +59,9 @@ def init_db():
     and waits for the database to be ready before yielding to the test function.
     After the test function finishes, it cleans up the Docker environment.
     """
-    logging.info("Starting Docker container for testing...")
-    result = subprocess.run(DOCKER_RUN_COMMAND.split(), check=True, capture_output=True, text=True)
+    result = subprocess.run(
+        DOCKER_RUN_COMMAND.split(), check=True, capture_output=True, text=True
+    )
 
     if result.returncode != 0:
         logging.error("Failed to start Docker container: %s", result.stderr)
@@ -53,6 +73,7 @@ def init_db():
     yield
     subprocess.run(DOCKER_DOWN_COMMAND.split())
     subprocess.run(DOCKER_CLEANUP_COMMAND.split())
+    subprocess.run(DOCKER_CLEANUP_VOLUME_COMMAND.split())
 
 
 @pytest.fixture(scope="session")
@@ -76,18 +97,21 @@ def test_database(init_db):
     drop_database(engine.url)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def session():
     """
     Fixture that provides a session object for testing.
     Yields:
     - Session: The session object.
     """
-    with Session(engine) as session:
-        yield session
+    session = Session(engine)
+    yield session
+
+    # Close the session after the test is done
+    session.close()
 
 
-@pytest.fixture(name="client", scope="function")
+@pytest.fixture(name="client", scope="session")
 def client(session):
     """
     Fixture that returns a TestClient instance for testing FastAPI application.
@@ -95,7 +119,7 @@ def client(session):
     - session: Session object for dependency injection.
     Returns:
     - TestClient: TestClient instance for testing.
-   """
+    """
 
     # Dependency override for the session
     def get_session_override():
@@ -103,11 +127,23 @@ def client(session):
 
     # Override the dependency with the test session
     app.dependency_overrides[get_session] = get_session_override
-    with TestClient(app) as client:
-        yield client
+    client = TestClient(app)
+    yield client
 
     # Clear overrides after the test is done
     app.dependency_overrides.clear()
+
+
+def get_data_from_file(file_path):
+    if file_path:
+        try:
+            with open(file_path, "r") as file:
+                data = json.load(file)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File not found: {file_path}")
+        return data
+    else:
+        raise ValueError("File path not provided")
 
 
 def populate_record(client, fixtures_path, table):
@@ -128,58 +164,24 @@ def populate_record(client, fixtures_path, table):
         # Code after the yield statement can be used to clean up any resources
         # or undo any changes made during the test.
     """
-    with open(fixtures_path, 'r') as file:
-        data = json.load(file)
-    client.post(f"/{table}", json=data.get(f"{table}"))
+    data = get_data_from_file(fixtures_path)
 
+    if table:
+        try:
+            if table == "modules_numbers":
+                return client.post("/modules/numbers", json=data.get(table))
+            elif table == "aisles_numbers":
+                return client.post("/aisles/numbers", json=data.get(table))
+            elif table == "side_orientations":
+                return client.post("/side_orientations", json=data.get(table))
+            elif table == "barcode_types":
+                return client.post("/barcode_types", json=data.get(table))
+            elif table == "ladder_numbers":
+                return client.post("/ladder_numbers", json=data.get(table))
+            else:
+                return client.post(f"/{table}", json=data.get(table))
 
-@pytest.fixture
-def populate_building_record(client):
-    """
-    Fixture to populate a single building record for testing purposes.
-    This fixture sends a POST request to the "/buildings/" endpoint
-    with the JSON data of a sample building record. It then yields to the
-    test function so that the building record can be used for testing. After
-    the test function finishes, it sends a DELETE request to the
-    "/buildings/1" endpoint to clean up the created record.
-
-    Usage:
-    @pytest.fixture
-    def populate_building_single_record():
-        # Code before the yield statement can be used to set up any necessary
-        # preconditions for the test.
-        yield
-        # Code after the yield statement can be used to clean up any resources
-        # or undo any changes made during the test.
-    """
-    populate_record(client, FIXTURES_PATH, "buildings")
-    yield
-    client.delete("/buildings/1")
-
-
-@pytest.fixture
-def populate_module_number_record(client):
-    populate_record(client, FIXTURES_PATH, "module_numbers")
-    yield
-    client.delete("/module_numbers/1")
-
-
-@pytest.fixture
-def populate_module_record(client):
-    """
-    Fixture to populate module records in the database.
-    This fixture populates the database with records for buildings, module numbers, and modules.
-    After the test is executed, it deletes the records created during the test.
-    Args:
-        client (TestClient): The test client.
-    Yields:
-        None
-    """
-    populate_record(client, FIXTURES_PATH, "buildings")
-    populate_record(client, FIXTURES_PATH, "module_numbers")
-    populate_record(client, FIXTURES_PATH, "modules")
-
-    yield
-    client.delete("/modules/1")
-    client.delete("/module_numbers/1")
-    client.delete("/buildings/1")
+        except Exception as e:
+            raise e
+    else:
+        raise ValueError("Table name not provided")

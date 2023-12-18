@@ -72,29 +72,26 @@ def create_module_number(
 def update_module_number(
     id: int, module_number: ModuleNumberInput, session: Session = Depends(get_session)
 ):
-    try:
-        existing_module_number = session.get(ModuleNumber, id)
+    existing_module_number = session.get(ModuleNumber, id)
 
-        if not existing_module_number:
-            raise HTTPException(status_code=404)
+    if existing_module_number is None:
+        raise HTTPException(status_code=404)
 
-        mutated_data = module_number.model_dump(exclude_unset=True)
+    mutated_data = module_number.model_dump(exclude_unset=True)
 
-        for key, value in mutated_data.items():
-            setattr(existing_module_number, key, value)
+    for key, value in mutated_data.items():
+        setattr(existing_module_number, key, value)
 
-        setattr(existing_module_number, "update_dt", datetime.utcnow())
+    setattr(existing_module_number, "update_dt", datetime.utcnow())
 
-        session.add(existing_module_number)
-        session.commit()
-        session.refresh(existing_module_number)
+    session.add(existing_module_number)
+    session.commit()
+    session.refresh(existing_module_number)
 
-        return existing_module_number
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    return existing_module_number
 
 
-@router.delete("/numbers/{id}", status_code=204)
+@router.delete("/numbers/{id}")
 def delete_module_number(id: int, session: Session = Depends(get_session)):
     """
     Delete a module number by its ID.
@@ -109,5 +106,6 @@ def delete_module_number(id: int, session: Session = Depends(get_session)):
     if module_number:
         session.delete(module_number)
         session.commit()
+        return HTTPException(status_code=204)
     else:
         raise HTTPException(status_code=404)

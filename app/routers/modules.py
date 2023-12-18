@@ -62,6 +62,7 @@ def create_module(
     - **building_id**: Required integer id for related building
     - **module_number_id**: Required integer id for related module number
     """
+
     new_module = Module(**module_input.model_dump())
     session.add(new_module)
     session.commit()
@@ -73,29 +74,26 @@ def create_module(
 def update_module(
     id: int, module: ModuleUpdateInput, session: Session = Depends(get_session)
 ):
-    try:
-        existing_module = session.get(Module, id)
+    existing_module = session.get(Module, id)
 
-        if not existing_module:
-            raise HTTPException(status_code=404)
+    if not existing_module:
+        raise HTTPException(status_code=404)
 
-        mutated_data = module.model_dump(exclude_unset=True)
+    mutated_data = module.model_dump(exclude_unset=True)
 
-        for key, value in mutated_data.items():
-            setattr(existing_module, key, value)
+    for key, value in mutated_data.items():
+        setattr(existing_module, key, value)
 
-        setattr(existing_module, "update_dt", datetime.utcnow())
+    setattr(existing_module, "update_dt", datetime.utcnow())
 
-        session.add(existing_module)
-        session.commit()
-        session.refresh(existing_module)
+    session.add(existing_module)
+    session.commit()
+    session.refresh(existing_module)
 
-        return existing_module
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    return existing_module
 
 
-@router.delete("/{id}", status_code=204)
+@router.delete("/{id}")
 def delete_module(id: int, session: Session = Depends(get_session)):
     """
     Delete a module by its ID.
@@ -110,5 +108,6 @@ def delete_module(id: int, session: Session = Depends(get_session)):
     if module:
         session.delete(module)
         session.commit()
+        return HTTPException(status_code=204)
     else:
         raise HTTPException(status_code=404)

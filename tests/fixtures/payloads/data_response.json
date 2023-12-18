@@ -1,0 +1,128 @@
+{
+  "buildings": {
+    "items": [
+      {
+        "id": 1,
+        "name": "Building 1"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "modules_numbers": {
+    "items": [
+      {
+        "id": 1,
+        "number": 1
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "modules": {
+    "items": [
+      {
+        "id": 1
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "aisles_numbers": {
+    "items": [
+      {
+        "id": 1,
+        "number": 1
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "aisles": {
+    "items": [
+      {
+        "id": 1,
+        "aisle_number_id": 1,
+        "building_id": 1
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "side_orientations": {
+    "items": [
+      {
+        "id": 1,
+        "name": "Left"
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "sides": {
+    "items": [
+      {
+        "id": 1,
+        "side_orientation_id": 1
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "barcode_types": {
+    "items": [
+      {
+        "id": 1,
+        "name": "qrcode"
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "barcodes": {
+    "items": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "barcode_type_id": 1,
+        "barcode": "5901234123457"
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "ladder_numbers": {
+    "items": [
+      {
+        "id": 1,
+        "number": 1
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "ladders": {
+    "items": [
+      {
+        "id": 1,
+        "ladder_number_id": 1,
+        "side_id": 1
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  }
+}
