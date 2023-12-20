@@ -48,6 +48,11 @@ DATA_SIZE_RESPONSE = f"{ROOT_FILE_PATH}/tests/fixtures/payloads/data_size_respon
 engine = create_engine(TEST_DATABASE_URL)
 
 logger = logging.getLogger("tests.configtest")
+<<<<<<< HEAD
+
+
+@pytest.fixture(scope="session")
+=======
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -98,6 +103,7 @@ def test_database(init_db):
 
 
 @pytest.fixture(scope="session")
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
 def session():
     """
     Fixture that provides a session object for testing.
@@ -165,6 +171,38 @@ def populate_record(client, fixtures_path, table):
         # or undo any changes made during the test.
     """
     data = get_data_from_file(fixtures_path)
+<<<<<<< HEAD
+
+    if table:
+        try:
+            logger.info(f"Populating table: {table}")
+            logger.info(f"Data: {data.get(table)}")
+
+            if table == "module_numbers":
+                return client.post("/modules/numbers", json=data.get(table))
+            elif table == "aisle_numbers":
+                return client.post("/aisles/numbers", json=data.get(table))
+            elif table == "side_orientations":
+                return client.post("/sides/orientations", json=data.get(table))
+            elif table == "barcode_types":
+                return client.post("/barcodes/types", json=data.get(table))
+            elif table == "ladder_numbers":
+                return client.post("/ladders/numbers", json=data.get(table))
+            else:
+                logger.info("\nHERE\n")
+
+                results = client.post(f"/{table}", json=data.get(table))
+                logger.info(f"Response Code: {results.status_code}")
+                logger.info(f"Response Data: {results.json()}")
+                return results
+
+        except Exception as e:
+            logger.error(f"\nError: {e}\n")
+            raise e
+    else:
+        raise ValueError("Table name not provided")
+=======
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
 
     if table:
         try:
@@ -181,7 +219,66 @@ def populate_record(client, fixtures_path, table):
             else:
                 return client.post(f"/{table}", json=data.get(table))
 
+<<<<<<< HEAD
+@pytest.fixture(scope="session", autouse=True)
+def init_db():
+    """
+    Fixture to initialize and cleanup Docker Compose environment.
+
+    This fixture runs the necessary commands to start and stop Docker Compose,
+    and waits for the database to be ready before yielding to the test function.
+    After the test function finishes, it cleans up the Docker environment.
+    """
+    result = subprocess.run(
+        DOCKER_RUN_COMMAND.split(), check=True, capture_output=True, text=True
+    )
+
+    if result.returncode != 0:
+        logging.error("Failed to start Docker container: %s", result.stderr)
+    else:
+        logging.info("Docker container started successfully.")
+
+    time.sleep(10)  # Wait for the database to be ready
+
+    yield
+    subprocess.run(DOCKER_DOWN_COMMAND.split())
+    subprocess.run(DOCKER_CLEANUP_COMMAND.split())
+    subprocess.run(DOCKER_CLEANUP_VOLUME_COMMAND.split())
+
+
+@pytest.fixture(scope="session")
+def test_database(client, init_db):
+    """
+    Initialize and test the database.
+
+    Args :
+    - init_db: A boolean indicating whether to initialize the database.
+
+    Return:
+    - None
+    """
+    if not database_exists(engine.url):
+        create_database(engine.url)
+
+    SQLModel.metadata.create_all(engine)
+
+    subprocess.run(ALEMBIC_UPGRADE_COMMAND.split())
+
+    # Populate the database with sample data
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "buildings")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "module_numbers")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "modules")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "aisle_numbers")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "aisles")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "side_orientations")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "sides")
+
+    yield
+
+    drop_database(engine.url)
+=======
         except Exception as e:
             raise e
     else:
         raise ValueError("Table name not provided")
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937

@@ -3,6 +3,15 @@ from fastapi import status
 from tests.fixtures.configtest import client, session
 from tests.fixtures.module_numbers_fixture import (
     MODULE_NUMBERS_SINGLE_RECORD_RESPONSE,
+<<<<<<< HEAD
+    MODULE_NUMBERS_PAGE_DATA_RESPONSE,
+    MODULE_NUMBERS_SIZE_DATA_RESPONSE,
+    UPDATED_MODULE_NUMBERS_SINGLE_RECORD,
+)
+
+
+def test_get_all_module_numbers(client):
+=======
     MODULE_NUMBERS_EMPTY_RESPONSE,
     MODULE_NUMBERS_PAGE_EMPTY_RESPONSE,
     MODULE_NUMBERS_SIZE_EMPTY_RESPONSE,
@@ -32,6 +41,7 @@ def test_get_empty_module_numbers_by_page_size(client):
 
 
 def test_get_all_module_numbers(client, populate_module_numbers_record):
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
     response = client.get("/modules/numbers/")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == MODULE_NUMBERS_SINGLE_RECORD_RESPONSE

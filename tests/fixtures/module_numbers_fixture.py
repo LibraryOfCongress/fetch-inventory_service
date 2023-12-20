@@ -18,6 +18,16 @@ from tests.fixtures.configtest import (
 LOGGER = logging.getLogger("tests.fixtures.module_numbers_fixture")
 
 MODULE_NUMBERS_SINGLE_RECORD_RESPONSE = get_data_from_file(DATA_RESPONSE).get(
+<<<<<<< HEAD
+    "module_numbers"
+)
+CREATE_MODULE_NUMBERS_SINGLE_RECORD = get_data_from_file(
+    CREATE_DATA_SAMPLER_FIXTURE
+).get("module_numbers")
+UPDATED_MODULE_NUMBERS_SINGLE_RECORD = get_data_from_file(
+    UPDATE_DATA_SAMPLER_FIXTURE
+).get("module_numbers")
+=======
     "modules_numbers"
 )
 CREATE_MODULE_NUMBERS_SINGLE_RECORD = get_data_from_file(
@@ -26,14 +36,22 @@ CREATE_MODULE_NUMBERS_SINGLE_RECORD = get_data_from_file(
 UPDATED_MODULE_NUMBERS_SINGLE_RECORD = get_data_from_file(
     UPDATE_DATA_SAMPLER_FIXTURE
 ).get("modules_numbers")
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
 MODULE_NUMBERS_EMPTY_RESPONSE = get_data_from_file(EMPTY_RESPONSE)
 MODULE_NUMBERS_PAGE_EMPTY_RESPONSE = get_data_from_file(PAGE_EMPTY_RESPONSE)
 MODULE_NUMBERS_SIZE_EMPTY_RESPONSE = get_data_from_file(SIZE_EMPTY_RESPONSE)
 MODULE_NUMBERS_PAGE_DATA_RESPONSE = get_data_from_file(DATA_PAGE_RESPONSE).get(
+<<<<<<< HEAD
+    "module_numbers"
+)
+MODULE_NUMBERS_SIZE_DATA_RESPONSE = get_data_from_file(DATA_SIZE_RESPONSE).get(
+    "module_numbers"
+=======
     "modules_numbers"
 )
 MODULE_NUMBERS_SIZE_DATA_RESPONSE = get_data_from_file(DATA_SIZE_RESPONSE).get(
     "modules_numbers"
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
 )
 
 
@@ -50,4 +68,8 @@ def populate_module_numbers_record(client):
     **Yields:**
     - None
     """
+<<<<<<< HEAD
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "module_numbers")
+=======
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "modules_numbers")
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937

@@ -2,25 +2,42 @@
   "buildings": {
     "name": "Updated Building 1"
   },
+<<<<<<< HEAD
+  "module_numbers": {
+=======
   "modules_numbers": {
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
     "number": 6
   },
   "modules": {
     "building_id": 1,
     "module_number_id": 8
   },
+<<<<<<< HEAD
+  "aisle_numbers": {
+    "number": 4
+=======
   "aisles_numbers": {
     "number": 1
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
   },
   "aisles": {
     "aisle_number_id": 1,
     "building_id": 1
   },
   "side_orientations": {
+<<<<<<< HEAD
+    "name": "down"
+  },
+  "sides": {
+    "aisle_id": 1,
+    "side_orientation_id": 2
+=======
     "name": "Left"
   },
   "sides": {
     "side_orientation_id": 1
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
   },
   "barcode_types": {
     "name": "qrcode"

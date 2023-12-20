@@ -1,4 +1,3 @@
-import logging
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -23,7 +22,6 @@ router = APIRouter(
     tags=["buildings"],
 )
 
-logger = logging.getLogger(__name__)
 
 @router.get("/", response_model=Page[BuildingListOutput])
 def get_building_list(session: Session = Depends(get_session)) -> list:
@@ -42,7 +40,7 @@ def get_building_detail(id: int, session: Session = Depends(get_session)):
     Get building detail by ID.
 
     **Args:**
-    - id (int): The ID of the building.
+    - id: The ID of the building.
 
     **Returns:**
     - Building Detail Read Output: The building detail.
@@ -50,6 +48,7 @@ def get_building_detail(id: int, session: Session = Depends(get_session)):
     **Raises:**
     - HTTPException: If the building is not found.
     """
+
     building = session.get(Building, id)
     if building:
         return building
@@ -68,7 +67,7 @@ def create_building(
     - Building Input: The input data for creating the building.
 
     **Returns:**
-    - Building: The newly created building.
+    - Building Detail Write Output: The newly created building.
     """
     new_building = Building(**building_input.model_dump())
     session.add(new_building)
@@ -89,7 +88,7 @@ def update_building(
     - Building Update Input: The updated building data.
 
     **Returns:**
-    - Building: The updated building.
+    - Building Detail Write Output: The updated building.
 
     **Raises:**
     - HTTPException: If the building with the given ID is not found or if there is an
@@ -121,7 +120,7 @@ def delete_building(id: int, session: Session = Depends(get_session)):
     Delete a building by ID.
 
     **Args:**
-    - id (int): The ID of the building to delete.
+    - id: The ID of the building to delete.
 
     **Returns:**
     - None

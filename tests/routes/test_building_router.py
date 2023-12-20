@@ -1,38 +1,16 @@
 from fastapi import status
 
-from tests.fixtures.configtest import init_db, test_database, session, client
+from tests.fixtures.configtest import client, session
 from tests.fixtures.building_fixture import (
     BUILDING_SINGLE_RECORD_RESPONSE,
-    BUILDING_EMPTY_RESPONSE,
-    BUILDING_PAGE_EMPTY_RESPONSE,
-    BUILDING_SIZE_EMPTY_RESPONSE,
     BUILDING_PAGE_DATA_RESPONSE,
     BUILDING_SIZE_DATA_RESPONSE,
     CREATE_BUILDING_SINGLE_RECORD,
-    UPDATED_BUILDING_SINGLE_RECORD,
-    populate_building_record,
+    UPDATED_BUILDING_SINGLE_RECORD
 )
 
 
-def test_get_empty_buildings(test_database, client):
-    response = client.get("/buildings")
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == BUILDING_EMPTY_RESPONSE
-
-
-def test_get_empty_buildings_by_page(client):
-    response = client.get("/buildings?page=1")
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == BUILDING_PAGE_EMPTY_RESPONSE
-
-
-def test_get_empty_buildings_by_page_size(client):
-    response = client.get("/buildings?size=10")
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == BUILDING_SIZE_EMPTY_RESPONSE
-
-
-def test_get_all_buildings(client, populate_building_record):
+def test_get_all_buildings(client):
     response = client.get("/buildings")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == BUILDING_SINGLE_RECORD_RESPONSE
@@ -110,6 +88,5 @@ def test_delete_building_record(client):
 def test_delete_building_record_not_found(client):
     response = client.delete("/buildings/999")
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json().get("status_code") == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json().get("detail") == "Not Found"

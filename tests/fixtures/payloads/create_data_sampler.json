@@ -2,14 +2,14 @@
   "buildings": {
     "name": "Building 1"
   },
-  "modules_numbers": {
+  "module_numbers": {
     "number": 1
   },
   "modules": {
     "building_id": 1,
     "module_number_id": 1
   },
-  "aisles_numbers": {
+  "aisle_numbers": {
     "number": 1
   },
   "aisles": {
@@ -20,6 +20,10 @@
     "name": "Left"
   },
   "sides": {
+<<<<<<< HEAD
+    "aisle_id": 1,
+=======
+>>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
     "side_orientation_id": 1
   },
   "barcode_types": {

@@ -23,8 +23,9 @@ router = APIRouter(
 def get_aisle_number_list(session: Session = Depends(get_session)) -> list:
     """
     Retrieve a paginated list of aisle numbers.
-    Returns:
-        - list[AisleNumberListOutput]: The paginated list of aisle numbers.
+
+    **Returns**:
+    - Aisle Number List Output: The paginated list of aisle numbers.
     """
     return paginate(session, select(AisleNumber))
 
@@ -33,12 +34,15 @@ def get_aisle_number_list(session: Session = Depends(get_session)) -> list:
 def get_aisle_number_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieves the aisle number detail for the given ID.
-    Parameters:
-        - id (int): The ID of the aisle number.
-    Returns:
-        - AisleNumberDetailOutput: The aisle number detail if found.
-    Raises:
-        - HTTPException: If the aisle number is not found.
+
+    **Parameters**:
+    - id: The ID of the aisle number.
+
+    **Returns**:
+    - Aisle Number Detail Output: The aisle number detail if found.
+
+    **Raises**:
+    - HTTPException: If the aisle number is not found.
     """
     aisle_number = session.get(AisleNumber, id)
     if aisle_number:
@@ -53,69 +57,72 @@ def create_aisle_number(
 ) -> AisleNumber:
     """
     Create a new aisle number:
-    Args:
-        - aisle_number_input (AisleNumberInput): The input data for the aisle number.
-    Returns:
-        - AisleNumber: The created aisle number.
-    Raises:
-        - HTTPException: If there is an integrity error.
-    Notes:
-        - **number**: Required unique integer that represents a aisle number
+
+    **Args**:
+    - Aisle Number Input: The input data for the aisle number.
+
+    **Returns**:
+    - Aisle Number: The created aisle number.
+
+    **Raises**:
+    - HTTPException: If there is an integrity error.
+
+    **Notes**:
+    - **number**: Required unique integer that represents a aisle number
     """
-    try:
-        new_aisle_number = AisleNumber(**aisle_number_input.model_dump())
-        session.add(new_aisle_number)
-        session.commit()
-        session.refresh(new_aisle_number)
-        return new_aisle_number
-    except IntegrityError as e:
-        raise HTTPException(status_code=422, detail=f"{e}")
+
+    new_aisle_number = AisleNumber(**aisle_number_input.model_dump())
+    session.add(new_aisle_number)
+    session.commit()
+    session.refresh(new_aisle_number)
+    return new_aisle_number
 
 
 @router.patch("/numbers/{id}", response_model=AisleNumberDetailOutput)
 def update_aisle_number(
     id: int, aisle_number: AisleNumberInput, session: Session = Depends(get_session)
 ):
-    try:
-        existing_aisle_number = session.get(AisleNumber, id)
 
-        if not existing_aisle_number:
-            raise HTTPException(status_code=404)
+    existing_aisle_number = session.get(AisleNumber, id)
 
-        mutated_data = aisle_number.model_dump(exclude_unset=True)
+    if not existing_aisle_number:
+        raise HTTPException(status_code=404)
 
-        for key, value in mutated_data.items():
-            setattr(existing_aisle_number, key, value)
+    mutated_data = aisle_number.model_dump(exclude_unset=True)
 
-        setattr(existing_aisle_number, "update_dt", datetime.utcnow())
+    for key, value in mutated_data.items():
+        setattr(existing_aisle_number, key, value)
 
-        session.add(existing_aisle_number)
-        session.commit()
-        session.refresh(existing_aisle_number)
+    setattr(existing_aisle_number, "update_dt", datetime.utcnow())
 
-        return existing_aisle_number
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    session.add(existing_aisle_number)
+    session.commit()
+    session.refresh(existing_aisle_number)
+
+    return existing_aisle_number
 
 
-@router.delete("/numbers/{id}", status_code=204)
+@router.delete("/numbers/{id}")
 def delete_aisle_number(id: int, session: Session = Depends(get_session)):
     """
     Delete an aisle number by its ID.
-    Args:
-        - id (int): The ID of the aisle number to delete.
-    Raises:
-        - HTTPException: If the aisle number with the given ID does not exist.
-    Returns:
-        None
+
+    **Args**:
+    - id: The ID of the aisle number to delete.
+
+    **Raises**:
+    - HTTPException: If the aisle number with the given ID does not exist.
+
+    **Returns**:
+    - None
     """
     aisle_number = session.get(AisleNumber, id)
+
     if aisle_number:
         session.delete(aisle_number)
         session.commit()
+        return HTTPException(status_code=204)
     else:
         raise HTTPException(status_code=404)
 
-    return HTTPException(
-        status_code=204, detail=f"Aisle number id {id} deleted successfully"
-    )
+
