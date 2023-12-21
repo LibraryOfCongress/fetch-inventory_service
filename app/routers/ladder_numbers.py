@@ -35,7 +35,9 @@ def get_ladder_number_detail(id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/numbers", response_model=LadderNumberDetailOutput)
-def create_ladder_number(ladder_number_input: LadderNumberInput, session: Session = Depends(get_session)) -> LadderNumber:
+def create_ladder_number(
+    ladder_number_input: LadderNumberInput, session: Session = Depends(get_session)
+) -> LadderNumber:
     """
     Create a ladder number:
 
@@ -52,7 +54,9 @@ def create_ladder_number(ladder_number_input: LadderNumberInput, session: Sessio
 
 
 @router.patch("/numbers/{id}", response_model=LadderNumberDetailOutput)
-def update_ladder_number(id: int, ladder_number: LadderNumberInput, session: Session = Depends(get_session)):
+def update_ladder_number(
+    id: int, ladder_number: LadderNumberInput, session: Session = Depends(get_session)
+):
     try:
         existing_ladder_number = session.get(LadderNumber, id)
         if not existing_ladder_number:

@@ -25,10 +25,10 @@ router = APIRouter(
 @router.get("/", response_model=Page[ShelfPositionListOutput])
 def get_shelf_position_list(session: Session = Depends(get_session)) -> list:
     """
-    Retrieve a paginated list of shelf positions.
+    Retrieve a list of shelf positions.
 
     **Returns:**
-    - list: A paginated list of shelf positions.
+    - Shelf Position List Output: The paginated list of shelf positions.
     """
     return paginate(session, select(ShelfPosition))
 
@@ -36,13 +36,13 @@ def get_shelf_position_list(session: Session = Depends(get_session)) -> list:
 @router.get("/{id}", response_model=ShelfPositionDetailReadOutput)
 def get_shelf_position_detail(id: int, session: Session = Depends(get_session)):
     """
-    Retrieves the details of a shelf position by its ID.
+    Retrieve a shelf position detail by its ID.
 
-    **Args:**
-    - id (int): The ID of the shelf position.
+    **Parameters:**
+    - id: The ID of the shelf position.
 
     **Returns:**
-    - Shelf Position Detail Read Output: The details of the shelf position.
+    - Shelf Position Detail Read Output: The shelf position detail.
 
     **Raises:**
     - HTTPException: If the shelf position is not found.
@@ -54,18 +54,22 @@ def get_shelf_position_detail(id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404)
 
 
-@router.post("/", response_model=ShelfPositionDetailWriteOutput)
+@router.post("/", response_model=ShelfPositionDetailWriteOutput, status_code=201)
 def create_shelf_position(
     shelf_position_input: ShelfPositionInput, session: Session = Depends(get_session)
 ) -> ShelfPosition:
     """
-    Create a shelf position
+    Create a new shelf position.
 
     **Args:**
-    - Shelf Position Input: The input data for the shelf position.
+    - Shelf Position Input: Input data for creating a shelf position.
 
     **Returns:**
     - Shelf Position: The newly created shelf position.
+
+    **Raises:**
+    - HTTPException: If there is an integrity error when adding the shelf position to
+    the database.
     """
     new_shelf_position = ShelfPosition(**shelf_position_input.model_dump())
     session.add(new_shelf_position)
@@ -81,57 +85,56 @@ def update_shelf_position(
     session: Session = Depends(get_session),
 ):
     """
-    Update a shelf position in the database.
+    Update a shelf position with the given ID.
 
     **Args:**
-    - id (int): The ID of the shelf position to update.
+    - id: The ID of the shelf position to update.
     - Shelf Position Update Input: The updated shelf position data.
 
-    **Returns:**
-    - Shelf Position: The updated shelf position.
-
     **Raises:**
-    - HTTPException: If the shelf position is not found or an error occurs during the
-    update.
+    - HTTPException: If the shelf position with the given ID does not exist or if
+    there is an internal server error.
+
+    **Returns:**
+    - Shelf Position Detail WriteOutput: The updated shelf position.
     """
-    try:
-        existing_shelf_position = session.get(ShelfPosition, id)
 
-        if not existing_shelf_position:
-            raise HTTPException(status_code=404)
+    existing_shelf_position = session.get(ShelfPosition, id)
 
-        mutated_data = shelf_position.model_dump(exclude_unset=True)
+    if existing_shelf_position is None:
+        raise HTTPException(status_code=404)
 
-        for key, value in mutated_data.items():
-            setattr(existing_shelf_position, key, value)
+    mutated_data = shelf_position.model_dump(exclude_unset=True)
 
-        setattr(existing_shelf_position, "update_dt", datetime.utcnow())
-        session.add(existing_shelf_position)
-        session.commit()
-        session.refresh(existing_shelf_position)
+    for key, value in mutated_data.items():
+        setattr(existing_shelf_position, key, value)
 
-        return existing_shelf_position
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    setattr(existing_shelf_position, "update_dt", datetime.utcnow())
+    session.add(existing_shelf_position)
+    session.commit()
+    session.refresh(existing_shelf_position)
+    return existing_shelf_position
 
 
-@router.delete("/{id}", status_code=204)
+@router.delete("/{id}")
 def delete_shelf_position(id: int, session: Session = Depends(get_session)):
     """
     Delete a shelf position by its ID.
 
-    Args:
-    - id (int): The ID of the shelf position to be deleted.
+    **Args:**
+    - id: The ID of the shelf position to delete.
+
+    **Raises:**
+    - HTTPException: If the shelf position does not exist.
 
     **Returns:**
     - None
-
-    **Raises:**
-    - HTTPException: If the shelf position is not found.
     """
     shelf_position = session.get(ShelfPosition, id)
+
     if shelf_position:
         session.delete(shelf_position)
         session.commit()
+        return HTTPException(status_code=204)
     else:
         raise HTTPException(status_code=404)

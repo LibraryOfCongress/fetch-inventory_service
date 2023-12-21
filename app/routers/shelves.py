@@ -29,10 +29,10 @@ LOGGER = logging.getLogger("app.routers.shelves")
 @router.get("/", response_model=Page[ShelfListOutput])
 def get_shelf_list(session: Session = Depends(get_session)) -> list:
     """
-    Retrieve a paginated list of shelves.
+    Get a list of shelves.
 
     **Returns:**
-    - List of shelves
+    - Shelf List Output: The paginated list of shelves.
     """
     return paginate(session, select(Shelf))
 
@@ -40,10 +40,10 @@ def get_shelf_list(session: Session = Depends(get_session)) -> list:
 @router.get("/{id}", response_model=ShelfDetailReadOutput)
 def get_shelf_detail(id: int, session: Session = Depends(get_session)):
     """
-    Retrieves the details of a shelf given its ID.
+    Retrieves the details of a shelf with the given ID.
 
     **Args:**
-    - id (int): The ID of the shelf to retrieve.
+    - id: The ID of the shelf to retrieve.
 
     **Returns:**
     - Shelf Detail Read Output: The details of the retrieved shelf.
@@ -52,13 +52,14 @@ def get_shelf_detail(id: int, session: Session = Depends(get_session)):
     - HTTPException: If the shelf with the specified ID is not found.
     """
     shelf = session.get(Shelf, id)
+
     if shelf:
         return shelf
     else:
         raise HTTPException(status_code=404)
 
 
-@router.post("/", response_model=ShelfDetailWriteOutput)
+@router.post("/", response_model=ShelfDetailWriteOutput, status_code=201)
 def create_shelf(
     shelf_input: ShelfInput, session: Session = Depends(get_session)
 ) -> Shelf:
@@ -69,7 +70,7 @@ def create_shelf(
     - Shelf Input: The input data for creating the shelf.
 
     **Returns:**
-    - Shelf: The newly created shelf.
+    - Shelf Detail Write Output: The newly created shelf.
 
     **Notes:**
     - **ladder_id**: Required integer id for parent ladder
@@ -81,14 +82,11 @@ def create_shelf(
     - **width**: Required numeric (scale 4, precision 2) width in inches
     - **depth**: Required numeric (scale 4, precision 2) depth in inches
     """
-    try:
-        new_shelf = Shelf(**shelf_input.model_dump())
-        session.add(new_shelf)
-        session.commit()
-        session.refresh(new_shelf)
-        return new_shelf
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    new_shelf = Shelf(**shelf_input.model_dump())
+    session.add(new_shelf)
+    session.commit()
+    session.refresh(new_shelf)
+    return new_shelf
 
 
 @router.patch("/{id}", response_model=ShelfDetailWriteOutput)
@@ -96,49 +94,44 @@ def update_shelf(
     id: int, shelf: ShelfUpdateInput, session: Session = Depends(get_session)
 ):
     """
-    Update a shelf with the given ID using the provided shelf data.
+    Update a shelf with the given ID.
 
     **Args:**
-    - id (int): The ID of the shelf to update.
+    - id: The ID of the shelf to update.
     - Shelf Update Input: The updated shelf data.
+
+    **Raises:**
+    - HTTPException: If the shelf with the given ID does not exist or if there is a
+    server error.
 
     **Returns:**
     - Shelf Detail Write Output: The updated shelf.
-
-    **Raises:**
-    - HTTPException: If the shelf with the given ID does not exist or if there is
-        a server error.
     """
-    try:
-        existing_shelf = session.get(Shelf, id)
 
-        if not existing_shelf:
-            raise HTTPException(status_code=404)
+    existing_shelf = session.get(Shelf, id)
 
-        mutated_data = shelf.model_dump(exclude_unset=True)
+    if existing_shelf is None:
+        raise HTTPException(status_code=404)
 
-        for key, value in mutated_data.items():
-            setattr(existing_shelf, key, value)
+    mutated_data = shelf.model_dump(exclude_unset=True)
 
-        setattr(existing_shelf, "update_dt", datetime.utcnow())
+    for key, value in mutated_data.items():
+        setattr(existing_shelf, key, value)
 
-        LOGGER.info(f"\nExisting Shelf: {existing_shelf}\n")
-
-        session.add(existing_shelf)
-        session.commit()
-        session.refresh(existing_shelf)
-        return existing_shelf
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    setattr(existing_shelf, "update_dt", datetime.utcnow())
+    session.add(existing_shelf)
+    session.commit()
+    session.refresh(existing_shelf)
+    return existing_shelf
 
 
-@router.delete("/{id}", status_code=204)
+@router.delete("/{id}")
 def delete_shelf(id: int, session: Session = Depends(get_session)):
     """
-    Delete a shelf with the given id.
+    Delete a shelf by its ID.
 
     **Args:**
-    - id (int): The id of the shelf to delete.
+    - id: The ID of the shelf to delete.
 
     **Raises:**
     - HTTPException: If the shelf with the given id is not found.
@@ -147,8 +140,10 @@ def delete_shelf(id: int, session: Session = Depends(get_session)):
     - None
     """
     shelf = session.get(Shelf, id)
+
     if shelf:
         session.delete(shelf)
         session.commit()
+        return HTTPException(status_code=204)
     else:
         raise HTTPException(status_code=404)

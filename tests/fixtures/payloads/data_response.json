@@ -11,11 +11,7 @@
     "size": 50,
     "pages": 1
   },
-<<<<<<< HEAD
   "module_numbers": {
-=======
-  "modules_numbers": {
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
     "items": [
       {
         "id": 1,
@@ -38,11 +34,7 @@
     "size": 50,
     "pages": 1
   },
-<<<<<<< HEAD
   "aisle_numbers": {
-=======
-  "aisles_numbers": {
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
     "items": [
       {
         "id": 1,
@@ -57,12 +49,7 @@
     "items": [
       {
         "id": 1,
-<<<<<<< HEAD
         "aisle_number_id": 1
-=======
-        "aisle_number_id": 1,
-        "building_id": 1
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
       }],
     "total": 1,
     "page": 1,
@@ -84,12 +71,8 @@
     "items": [
       {
         "id": 1,
-<<<<<<< HEAD
         "side_orientation_id": 1,
         "aisle_id": 1
-=======
-        "side_orientation_id": 1
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
       }],
     "total": 1,
     "page": 1,
@@ -136,6 +119,51 @@
         "id": 1,
         "ladder_number_id": 1,
         "side_id": 1
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+    "shelf_numbers": {
+    "items": [
+      {
+        "id": 1,
+        "number": 1
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "shelf_position_numbers": {
+    "items": [
+      {
+        "id": 1,
+        "number": 1
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "shelf_positions": {
+    "items": [
+      {
+        "id": 1,
+        "shelf_id": 1,
+        "shelf_position_number_id": 1
+      }],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "shelves": {
+    "items": [
+      {
+        "id": 1,
+        "ladder_id": 1
       }],
     "total": 1,
     "page": 1,

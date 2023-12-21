@@ -23,13 +23,14 @@ router = APIRouter(
 )
 
 
+
 @router.get("/", response_model=Page[BuildingListOutput])
 def get_building_list(session: Session = Depends(get_session)) -> list:
     """
     Get a paginated list of buildings.
 
     **Returns:**
-    - list Building List Output: The paginated list of buildings.
+    - Building List Output: The paginated list of buildings.
     """
     return paginate(session, select(Building))
 

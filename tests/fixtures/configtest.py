@@ -48,14 +48,9 @@ DATA_SIZE_RESPONSE = f"{ROOT_FILE_PATH}/tests/fixtures/payloads/data_size_respon
 engine = create_engine(TEST_DATABASE_URL)
 
 logger = logging.getLogger("tests.configtest")
-<<<<<<< HEAD
 
 
 @pytest.fixture(scope="session")
-=======
-
-
-@pytest.fixture(scope="session", autouse=True)
 def init_db():
     """
     Fixture to initialize and cleanup Docker Compose environment.
@@ -76,34 +71,14 @@ def init_db():
     time.sleep(10)  # Wait for the database to be ready
 
     yield
+
+    drop_database(engine.url)
     subprocess.run(DOCKER_DOWN_COMMAND.split())
     subprocess.run(DOCKER_CLEANUP_COMMAND.split())
     subprocess.run(DOCKER_CLEANUP_VOLUME_COMMAND.split())
 
 
 @pytest.fixture(scope="session")
-def test_database(init_db):
-    """
-    Initialize and test the database.
-
-    Args :
-    - init_db: A boolean indicating whether to initialize the database.
-
-    Return:
-    - None
-    """
-    if not database_exists(engine.url):
-        create_database(engine.url)
-
-    SQLModel.metadata.create_all(engine)
-
-    subprocess.run(ALEMBIC_UPGRADE_COMMAND.split())
-    yield
-    drop_database(engine.url)
-
-
-@pytest.fixture(scope="session")
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
 def session():
     """
     Fixture that provides a session object for testing.
@@ -171,12 +146,11 @@ def populate_record(client, fixtures_path, table):
         # or undo any changes made during the test.
     """
     data = get_data_from_file(fixtures_path)
-<<<<<<< HEAD
 
     if table:
         try:
             logger.info(f"Populating table: {table}")
-            logger.info(f"Data: {data.get(table)}")
+            logger.info(f"table: {data.get(table)}")
 
             if table == "module_numbers":
                 return client.post("/modules/numbers", json=data.get(table))
@@ -188,62 +162,32 @@ def populate_record(client, fixtures_path, table):
                 return client.post("/barcodes/types", json=data.get(table))
             elif table == "ladder_numbers":
                 return client.post("/ladders/numbers", json=data.get(table))
+            elif table == "shelf_numbers":
+                return client.post("/shelves/numbers", json=data.get(table))
+            elif table == "shelf_positions":
+                return client.post("/shelves/positions/", json=data.get(table))
+            elif table == "shelf_position_numbers":
+                return client.post(f"/shelves/positions/numbers", json=data.get(table))
+            elif table == "container_types":
+                return client.post("/container-types", json=data.get(table))
+            elif table == "owner_tiers":
+                return client.post("/owners/tiers", json=data.get(table))
             else:
-                logger.info("\nHERE\n")
+                if table == "shelves":
+                    results = client.post(
+                        "/barcodes", json={"type_id": 1, "value": "5901234123458"}
+                    )
 
-                results = client.post(f"/{table}", json=data.get(table))
-                logger.info(f"Response Code: {results.status_code}")
-                logger.info(f"Response Data: {results.json()}")
-                return results
+                    if results.status_code == 201:
+                        data[table]["barcode_id"] = results.json().get("id")
 
-        except Exception as e:
-            logger.error(f"\nError: {e}\n")
-            raise e
-    else:
-        raise ValueError("Table name not provided")
-=======
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
-
-    if table:
-        try:
-            if table == "modules_numbers":
-                return client.post("/modules/numbers", json=data.get(table))
-            elif table == "aisles_numbers":
-                return client.post("/aisles/numbers", json=data.get(table))
-            elif table == "side_orientations":
-                return client.post("/side_orientations", json=data.get(table))
-            elif table == "barcode_types":
-                return client.post("/barcode_types", json=data.get(table))
-            elif table == "ladder_numbers":
-                return client.post("/ladder_numbers", json=data.get(table))
-            else:
                 return client.post(f"/{table}", json=data.get(table))
 
-<<<<<<< HEAD
-@pytest.fixture(scope="session", autouse=True)
-def init_db():
-    """
-    Fixture to initialize and cleanup Docker Compose environment.
+        except Exception as e:
+            raise e
 
-    This fixture runs the necessary commands to start and stop Docker Compose,
-    and waits for the database to be ready before yielding to the test function.
-    After the test function finishes, it cleans up the Docker environment.
-    """
-    result = subprocess.run(
-        DOCKER_RUN_COMMAND.split(), check=True, capture_output=True, text=True
-    )
-
-    if result.returncode != 0:
-        logging.error("Failed to start Docker container: %s", result.stderr)
     else:
-        logging.info("Docker container started successfully.")
-
-    time.sleep(10)  # Wait for the database to be ready
-
-    yield
-    subprocess.run(DOCKER_DOWN_COMMAND.split())
-    subprocess.run(DOCKER_CLEANUP_COMMAND.split())
-    subprocess.run(DOCKER_CLEANUP_VOLUME_COMMAND.split())
+        raise ValueError("Table name not provided")
 
 
 @pytest.fixture(scope="session")
@@ -272,13 +216,13 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "aisles")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "side_orientations")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "sides")
-
-    yield
-
-    drop_database(engine.url)
-=======
-        except Exception as e:
-            raise e
-    else:
-        raise ValueError("Table name not provided")
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "barcode_types")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_numbers")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_position_numbers")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "ladder_numbers")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "ladders")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "owner_tiers")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "owners")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "container_types")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelves")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_positions")

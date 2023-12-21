@@ -24,10 +24,10 @@ router = APIRouter(
 @router.get("/", response_model=Page[OwnerListOutput])
 def get_owner_list(session: Session = Depends(get_session)) -> list:
     """
-    Retrieve a paginated list of owners.
+    Get a list of owners.
 
     **Returns:**
-    - A list of Owner List Output objects representing the owners.
+    - Owner List Output: The paginated list of owners.
     """
     return paginate(session, select(Owner))
 
@@ -35,16 +35,16 @@ def get_owner_list(session: Session = Depends(get_session)) -> list:
 @router.get("/{id}", response_model=OwnerDetailReadOutput)
 def get_owner_detail(id: int, session: Session = Depends(get_session)):
     """
-    Retrieve owner details by ID
+    Retrieve owner details by ID.
 
     **Args:**
-    - id (int): The ID of the owner
+    - id: The ID of the owner to retrieve.
 
     **Returns:**
-    - Owner Detail Read Output: The owner details
+    - Owner Detail Read Output: The owner details.
 
     **Raises:**
-    - HTTPException: If the owner is not found
+    - HTTPException: If the owner is not found.
     """
     owner = session.get(Owner, id)
     if owner:
@@ -53,19 +53,21 @@ def get_owner_detail(id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404)
 
 
-@router.post("/", response_model=OwnerDetailWriteOutput)
+@router.post("/", response_model=OwnerDetailWriteOutput, status_code=201)
 def create_owner(
     owner_input: OwnerInput, session: Session = Depends(get_session)
 ) -> Owner:
     """
-    Create a owner:
+    Create an owner:
 
     **Args:**
-    - Owner Input: An instance of OwnerInput, containing the input data for creating
-    the owner.
+    - Owner Input: The input data for creating the owner.
 
     **Returns:**
-    - Owner Detail Write Output: The newly created owner.
+    - Owner Detail Write Output: The created owner.
+
+    **Raises:**
+    - None
 
     **Notes:**
     - **name**: Required string
@@ -83,56 +85,55 @@ def update_owner(
     id: int, owner: OwnerUpdateInput, session: Session = Depends(get_session)
 ):
     """
-    Update an existing owner with the provided data.
+    Update an existing owner.
 
     **Args:**
-    - id (int): The ID of the owner to update.
-    - Owner Update Input: The data to update the owner with.
+    - id: The ID of the owner to be updated.
+    - Owner Update Input: The updated owner information.
 
     **Returns:**
-    - Owner Detail Write Output: The updated owner.
+    - Owner Detail Write Output: The updated owner object.
 
-    **Raises:**
-    - HTTPException: If the owner is not found.
+    Raises:
+    - HTTPException: If the owner with the given ID is not found.
+    - HTTPException: If an error occurs during the update process.
     """
-    try:
-        existing_owner = session.get(Owner, id)
+    existing_owner = session.get(Owner, id)
 
-        if not existing_owner:
-            raise HTTPException(status_code=404)
+    if existing_owner is None:
+        raise HTTPException(status_code=404)
 
-        mutated_data = owner.model_dump(exclude_unset=True)
+    mutated_data = owner.model_dump(exclude_unset=True)
 
-        for key, value in mutated_data.items():
-            setattr(existing_owner, key, value)
+    for key, value in mutated_data.items():
+        setattr(existing_owner, key, value)
 
-        setattr(existing_owner, "update_dt", datetime.utcnow())
-        session.add(existing_owner)
-        session.commit()
-        session.refresh(existing_owner)
-
-        return existing_owner
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    setattr(existing_owner, "update_dt", datetime.utcnow())
+    session.add(existing_owner)
+    session.commit()
+    session.refresh(existing_owner)
+    return existing_owner
 
 
-@router.delete("/{id}", status_code=204)
+@router.delete("/{id}")
 def delete_owner(id: int, session: Session = Depends(get_session)):
     """
-    Delete an owner by ID.
+    Delete an owner by their ID.
 
     **Args:**
-    - id (int): The ID of the owner to delete.
+    - id: The ID of the owner to delete.
 
     **Returns:**
     - None
 
     **Raises:**
-    - HTTPException: If the owner is not found.
+    - HTTPException: If the owner with the given ID does not exist.
     """
     owner = session.get(Owner, id)
+
     if owner:
         session.delete(owner)
         session.commit()
+        return HTTPException(status_code=204)
     else:
         raise HTTPException(status_code=404)

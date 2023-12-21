@@ -8,6 +8,7 @@ from app.database.session import get_session
 from app.models.sides import Side
 from app.schemas.sides import (
     SideInput,
+    SideUpdateInput,
     SideListOutput,
     SideDetailWriteOutput,
     SideDetailReadOutput,
@@ -82,13 +83,15 @@ def create_side(side_input: SideInput, session: Session = Depends(get_session)):
 
 
 @router.patch("/{id}", response_model=SideDetailWriteOutput)
-def update_side(id: int, side: SideInput, session: Session = Depends(get_session)):
+def update_side(
+    id: int, side: SideUpdateInput, session: Session = Depends(get_session)
+):
     """
     Update a side record in the database.
 
     **Parameters**:
     - id: The ID of the side record to update.
-    - Side Input: The updated side data.
+    - Side Update Input: The updated side data.
 
     **Returns**:
     - Side Detail Write Output: The updated side record.

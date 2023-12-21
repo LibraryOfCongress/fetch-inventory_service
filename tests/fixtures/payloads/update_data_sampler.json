@@ -2,42 +2,49 @@
   "buildings": {
     "name": "Updated Building 1"
   },
-<<<<<<< HEAD
   "module_numbers": {
-=======
-  "modules_numbers": {
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
     "number": 6
   },
   "modules": {
     "building_id": 1,
     "module_number_id": 8
   },
-<<<<<<< HEAD
   "aisle_numbers": {
     "number": 4
-=======
-  "aisles_numbers": {
-    "number": 1
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
   },
   "aisles": {
     "aisle_number_id": 1,
     "building_id": 1
   },
   "side_orientations": {
-<<<<<<< HEAD
     "name": "down"
   },
   "sides": {
     "aisle_id": 1,
     "side_orientation_id": 2
-=======
-    "name": "Left"
   },
-  "sides": {
-    "side_orientation_id": 1
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
+  "shelves": {
+    "capacity": 35,
+    "container_type_id": 1,
+    "depth": 30,
+    "height": 18,
+    "ladder_id": 1,
+    "owner_id": 1,
+    "shelf_number_id": 1,
+    "width": 33
+  },
+  "shelf_numbers": {
+    "number": 1
+  },
+  "shelf_positions": {
+    "shelf_id": 1,
+    "shelf_position_number_id": 1
+  },
+  "shelf_position_numbers": {
+    "number": 1
+  },
+  "container_types": {
+    "type": "Tray"
   },
   "barcode_types": {
     "name": "qrcode"
@@ -53,5 +60,13 @@
   "ladders": {
     "ladder_number_id": 1,
     "side_id": 1
+  },
+  "owner_tiers": {
+    "level": 2,
+    "name": "organization"
+  },
+  "owners": {
+    "name": "Special Collection Assistant Directorate",
+    "owner_tier_id": 1
   }
 }

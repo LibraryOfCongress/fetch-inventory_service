@@ -54,7 +54,7 @@ def get_ladder_detail(id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404)
 
 
-@router.post("/", response_model=LadderDetailWriteOutput)
+@router.post("/", response_model=LadderDetailWriteOutput, status_code=201)
 def create_ladder(
     ladder_input: LadderInput, session: Session = Depends(get_session)
 ) -> Ladder:
@@ -62,10 +62,10 @@ def create_ladder(
     Create a ladder:
 
     **Args:**
-    - ladder_input (LadderInput): The input data for creating a ladder.
+    - Ladder Input: The input data for creating a ladder.
 
     **Returns:**
-    - Ladder: The created ladder.
+    - Ladder Detail Write Output: The created ladder.
 
     **Raises:**
     - HTTPException: If the ladder already exists.

@@ -4,48 +4,15 @@ from fastapi import status
 from tests.fixtures.configtest import client, session
 from tests.fixtures.modules_fixture import (
     MODULES_SINGLE_RECORD_RESPONSE,
-<<<<<<< HEAD
     MODULES_PAGE_DATA_RESPONSE,
     MODULES_SIZE_DATA_RESPONSE,
     UPDATED_MODULES_SINGLE_RECORD,
-=======
-    MODULES_EMPTY_RESPONSE,
-    MODULES_PAGE_EMPTY_RESPONSE,
-    MODULES_SIZE_EMPTY_RESPONSE,
-    MODULES_PAGE_DATA_RESPONSE,
-    MODULES_SIZE_DATA_RESPONSE,
-    CREATE_MODULES_SINGLE_RECORD,
-    UPDATED_MODULES_SINGLE_RECORD,
-    populate_module_record,
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
 )
 
 LOGGER = logging.getLogger("tests.routes.test_modules_router")
 
 
-<<<<<<< HEAD
 def test_get_all_modules(client):
-=======
-def test_get_empty_modules(client):
-    response = client.get("/modules")
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == MODULES_EMPTY_RESPONSE
-
-
-def test_get_empty_modules_by_page(client):
-    response = client.get("/modules?page=1")
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == MODULES_PAGE_EMPTY_RESPONSE
-
-
-def test_get_empty_modules_by_page_size(client):
-    response = client.get("/modules?size=10")
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == MODULES_SIZE_EMPTY_RESPONSE
-
-
-def test_get_all_modules(client, populate_module_record):
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
     response = client.get("/modules")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == MODULES_SINGLE_RECORD_RESPONSE
@@ -77,11 +44,7 @@ def test_get_module_by_id(client):
     ].get("id")
 
 
-<<<<<<< HEAD
 def test_create_module_record(client):
-=======
-def test_create_building_record(client):
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
     response = client.post("/modules/numbers/", json={"number": 7})
 
     assert response.status_code == status.HTTP_201_CREATED

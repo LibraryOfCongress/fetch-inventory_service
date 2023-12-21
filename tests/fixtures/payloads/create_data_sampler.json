@@ -20,19 +20,38 @@
     "name": "Left"
   },
   "sides": {
-<<<<<<< HEAD
     "aisle_id": 1,
-=======
->>>>>>> 06f29a0ec7f04d98e5623cd0113b7934b0435937
     "side_orientation_id": 1
+  },
+  "shelves": {
+    "capacity": 33,
+    "container_type_id": 1,
+    "depth": 27,
+    "height": 15.7,
+    "ladder_id": 1,
+    "owner_id": 1,
+    "shelf_number_id": 1,
+    "width": 30.33
+  },
+  "shelf_numbers": {
+    "number": 1
+  },
+  "shelf_positions": {
+    "shelf_id": 1,
+    "shelf_position_number_id": 1
+  },
+  "shelf_position_numbers": {
+    "number": 1
+  },
+  "container_types": {
+    "type": "Tray"
   },
   "barcode_types": {
     "name": "qrcode"
   },
   "barcodes": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "barcode_type_id": 1,
-    "barcode": "5901234123457"
+    "type_id": 1,
+    "value": "5901234123457"
   },
   "ladder_numbers": {
     "number": 1
@@ -40,5 +59,13 @@
   "ladders": {
     "ladder_number_id": 1,
     "side_id": 1
+  },
+  "owner_tiers": {
+    "level": 1,
+    "name": "organization"
+  },
+  "owners": {
+    "name": "Special Collection Directorate",
+    "owner_tier_id": 1
   }
 }
