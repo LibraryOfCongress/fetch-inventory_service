@@ -98,34 +98,32 @@ def update_ladder(
     **Raises:**
     - HTTPException: If the ladder with the given ID is not found.
     """
-    try:
-        existing_ladder = session.get(Ladder, id)
 
-        if not existing_ladder:
-            raise HTTPException(status_code=404)
+    existing_ladder = session.get(Ladder, id)
 
-        mutated_data = ladder.model_dump(exclude_unset=True)
+    if not existing_ladder:
+        raise HTTPException(status_code=404)
 
-        for key, value in mutated_data.items():
-            setattr(existing_ladder, key, value)
+    mutated_data = ladder.model_dump(exclude_unset=True)
 
-        setattr(existing_ladder, "update_dt", datetime.utcnow())
+    for key, value in mutated_data.items():
+        setattr(existing_ladder, key, value)
 
-        session.add(existing_ladder)
-        session.commit()
-        session.refresh(existing_ladder)
-        return existing_ladder
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    setattr(existing_ladder, "update_dt", datetime.utcnow())
+
+    session.add(existing_ladder)
+    session.commit()
+    session.refresh(existing_ladder)
+    return existing_ladder
 
 
-@router.delete("/{id}", status_code=204)
+@router.delete("/{id}")
 def delete_ladder(id: int, session: Session = Depends(get_session)):
     """
     Delete a ladder with the given ID.
 
     **Args:**
-    - id (int): The ID of the ladder to delete.
+    - id: The ID of the ladder to delete.
 
     **Returns:**
     - None
@@ -134,8 +132,10 @@ def delete_ladder(id: int, session: Session = Depends(get_session)):
     - HTTPException: If the ladder with the given ID is not found.
     """
     ladder = session.get(Ladder, id)
+
     if ladder:
         session.delete(ladder)
         session.commit()
+        return HTTPException(status_code=204)
     else:
         raise HTTPException(status_code=404)
