@@ -1,3 +1,4 @@
+# Stage 1: Requirements stage
 FROM python:3.11.4-slim as requirements-stage
 
 WORKDIR /tmp
@@ -10,24 +11,45 @@ COPY ../.env /tmp/
 
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 
+# Stage 2: Build the actual image
 FROM python:3.11.4-slim
+
+# Install Java, Graphviz, pg tools
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y git && \
+    apt-get install -y default-jdk graphviz && \
+    apt-get install -y postgresql-client && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /code
 
+# Copy Python requirements from the first stage
 COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
 
 COPY --from=requirements-stage /tmp/.env /code/.env
 
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y git
-
+# Install dependencies
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
+# Copy your application code
 COPY ../app /code/app
-
 COPY ../migrations /code/migrations
-
 COPY ../alembic.ini /code/alembic.ini
+
+# Add SchemaSpy
+ADD schemaspy/schemaspy-6.2.4.jar /code/schemaspy.jar
+ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
+
+# Ready check could be used in the future. Not needed in deployed atm
+# COPY schemaspy/db-ready-check.sh /code/db-ready-check.sh
+# RUN chmod +x /code/db-ready-check.sh
+
+# Generate the database schema documentation
+RUN java -jar /code/schemaspy.jar -t pgsql -dp /code/postgresql.jar -o /code/schema-docs -u postgres -p postgres -db inventory_service -s public -host c2vltimsdb01.loctest.gov -port 5432
+
+# Expose the application port
+EXPOSE 8001
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

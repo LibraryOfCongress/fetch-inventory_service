@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
 from alembic.config import Config
@@ -68,6 +69,10 @@ async def root():
     return {
         "message": f"{get_settings().APP_NAME} Inventory Service {get_settings().APP_ENVIRONMENT} environment api root"
     }
+
+
+# Serve the schema documentation
+app.mount("/schema", StaticFiles(directory="/code/schema-docs", html=True), name="schema-docs")
 
 
 # order matters for route matching [nested before base]
