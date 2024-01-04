@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.orm import backref
 
 from app.models.owner_tiers import OwnerTier
 
@@ -26,6 +27,11 @@ class Owner(SQLModel, table=True):
 
     id: Optional[int] = Field(
         sa_column=sa.Column(sa.SmallInteger, primary_key=True)
+    )
+    parent_owner_id: Optional[int] = Field(
+        default=None,
+        foreign_key="owners.id",
+        nullable=True
     )
     name: str = Field(
         max_length=150,
@@ -51,3 +57,9 @@ class Owner(SQLModel, table=True):
     owner_tier: OwnerTier = Relationship(back_populates="owners")
     shelves: List['Shelf'] = Relationship(back_populates="owner")
     accession_jobs: List['AccessionJob'] = Relationship(back_populates="owner")
+    children: List["Owner"] = Relationship(
+        sa_relationship_kwargs=dict(
+        cascade="all",
+        backref=backref("parent_owner", remote_side="Owner.id"),
+        )
+    )

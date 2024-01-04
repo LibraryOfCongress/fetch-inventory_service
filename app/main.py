@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
@@ -70,7 +72,17 @@ async def root():
         "message": f"{get_settings().APP_NAME} Inventory Service {get_settings().APP_ENVIRONMENT} environment api root"
     }
 
+# app fallback exception handling
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse({"detail": str(exc.detail)}, status_code=exc.status_code)
 
+@app.exception_handler(Exception)
+async def exception_handler(request: Request, exc: Exception):
+    return JSONResponse({"detail": str(exc)}, status_code=500)
+
+
+# Route registration. Order matters for route matching [nested before base]
 # Serve the schema documentation
 app.mount("/schema", StaticFiles(directory="/code/schema-docs", html=True), name="schema-docs")
 

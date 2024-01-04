@@ -12,6 +12,18 @@ build() {
   fi
 }
 
+makemigrations() {
+  USE_MIGRATION_URL=true alembic revision --autogenerate -m $1
+}
+
+migrate() {
+  USE_MIGRATION_URL=true alembic upgrade head
+}
+
+current() {
+  USE_MIGRATION_URL=true alembic current
+}
+
 api() {
   docker exec -it fetch-inventory-api /bin/bash;
 }

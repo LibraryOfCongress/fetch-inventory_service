@@ -1,4 +1,4 @@
-import pytz
+import pytz, os
 
 from logging.config import fileConfig
 from datetime import datetime
@@ -15,9 +15,17 @@ from app.config.config import get_settings
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-# the below lets migrations external from container run, but breaks startup migrations
-# config.set_main_option("sqlalchemy.url", get_settings().MIGRATION_URL)
-config.set_main_option("sqlalchemy.url", get_settings().DATABASE_URL)
+
+# Check for an environment variable
+use_migration_url = os.getenv('USE_MIGRATION_URL', 'False').lower() == 'true'
+
+# Set the database URL based on the environment variable
+if use_migration_url:
+    # migrations external from container
+    config.set_main_option("sqlalchemy.url", get_settings().MIGRATION_URL)
+else:
+    # ORM url within running container
+    config.set_main_option("sqlalchemy.url", get_settings().DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

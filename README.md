@@ -128,3 +128,9 @@ alembic current
 # List version migration scripts in order
 alembic history
 ```
+
+Helper commands have been created to allow CLI migration management from outside a running container on local only (future support may be added for other environments by simply updating the MIGRATION_URL environment variable for those environments).
+
+* `./helper.sh makemigrations "Your Message Here"` - generates a new migration
+* `./helper.sh migrate` - runs alembic upgrade head
+* `./helper.sh current` - Reports the current db migration.
