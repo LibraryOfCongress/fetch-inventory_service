@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     MIGRATION_URL: str = (
         "postgresql://postgres:postgres@localhost:5432/inventory_service"
     )
-    ENABLE_ORM_SQL_LOGGING: bool = True
+    ENABLE_ORM_SQL_LOGGING: bool = False
     # Allowed origins for CORS
     ALLOWED_ORIGINS_REGEX: str = "https://*\.loctest\.gov, http://*\.loctest\.gov"
     ALLOWED_ORIGINS: str = "http://127.0.0.1:8080,https://127.0.0.1:8080,http://localhost:8080,https://localhost:8080"

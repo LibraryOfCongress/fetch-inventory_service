@@ -1,5 +1,7 @@
+import subprocess
 from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -12,6 +14,7 @@ from alembic import command
 from alembic.config import Config
 from alembic import command
 
+from app.middlware import log_middleware
 from app.config.config import get_settings
 from app.routers import (
     buildings,
@@ -39,23 +42,54 @@ from app.routers import (
 def alembic_context():
     alembic_cfg = Config("alembic.ini")
     try:
+        # Run migrations
         print("Migrating...")
         command.upgrade(alembic_cfg, "head")
+
+        if get_settings().APP_ENVIRONMENT not in ["debug"]:
+            # Create Schema-Docs
+            print("Updating Schema Docs...")
+            at_pos = get_settings().DATABASE_URL.find('@') + 1
+            last_colon_pos = get_settings().DATABASE_URL.rfind(':')
+            db_host = get_settings().DATABASE_URL[at_pos:last_colon_pos]
+            create_schemaspy = [
+                "java",
+                "-jar",
+                "/code/schemaspy.jar",
+                "-t", "pgsql11",
+                "-dp", "/code/postgresql.jar",
+                "-o", "/code/schema-docs",
+                "-u", "postgres",
+                "-p", "postgres",
+                "-db", "inventory_service",
+                "-s", "public",
+                "-host", f"{db_host}",
+                "-port", "5432"
+            ]
+            subprocess.run(create_schemaspy)
     except Exception as e:
-        print(f"Migration failed: {e}")
+        print(f"{e}")
         raise
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     alembic_context()
+    if get_settings().APP_ENVIRONMENT not in ["debug"]:
+        app.mount(
+            "/schema",
+            StaticFiles(directory="/code/schema-docs", html=True),
+            name="schema-docs"
+        )
     yield
     print("Shutting down...")
 
-
 app = FastAPI(lifespan=lifespan)
 
-# add CORS
+# add log middleware
+app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
+
+# add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=get_settings().ALLOWED_ORIGINS_REGEX,
@@ -64,7 +98,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 @app.get("/")
 async def root():
@@ -80,12 +113,6 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
     return JSONResponse({"detail": str(exc)}, status_code=500)
-
-
-# Route registration. Order matters for route matching [nested before base]
-# Serve the schema documentation
-app.mount("/schema", StaticFiles(directory="/code/schema-docs", html=True), name="schema-docs")
-
 
 # order matters for route matching [nested before base]
 app.include_router(buildings.router)

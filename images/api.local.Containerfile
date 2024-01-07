@@ -38,11 +38,11 @@ COPY alembic.ini /code/alembic.ini
 ADD schemaspy/schemaspy-6.2.4.jar /code/schemaspy.jar
 ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
 
-# Wait for db container
+# Wait for db container before starting api
 COPY schemaspy/db-ready-check.sh /code/db-ready-check.sh
 RUN chmod +x /code/db-ready-check.sh
 
 # Expose the application port
 EXPOSE 8001
 
-CMD ["/bin/sh", "-c", "/code/db-ready-check.sh pgdatabase && java -jar /code/schemaspy.jar -t pgsql -dp /code/postgresql.jar -o /code/schema-docs -u postgres -p postgres -db inventory_service -host pgdatabase -port 5432 && uvicorn app.main:app --host 0.0.0.0 --port 8001"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

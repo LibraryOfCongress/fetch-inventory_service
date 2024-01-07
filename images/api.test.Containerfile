@@ -46,9 +46,6 @@ ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
 # COPY schemaspy/db-ready-check.sh /code/db-ready-check.sh
 # RUN chmod +x /code/db-ready-check.sh
 
-# Generate the database schema documentation
-RUN java -jar /code/schemaspy.jar -t pgsql -dp /code/postgresql.jar -o /code/schema-docs -u postgres -p postgres -db inventory_service -s public -host c2vltimsdb01.loctest.gov -port 5432
-
 # Expose the application port
 EXPOSE 8001
 
