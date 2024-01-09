@@ -19,31 +19,22 @@ class ContainerType(SQLModel, table=True):
       id: Optional is declared only for Python's needs before a db object is
           created. This field cannot be null in the database.
     """
+
     __tablename__ = "container_types"
 
-    id: Optional[int] = Field(
-        primary_key=True,
-        sa_column=sa.Integer, 
-        default=None
-    )
-    type: str = Field(
-        max_length=25,
-        sa_column=sa.VARCHAR,
-        nullable=False,
-        unique=True
-    )
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
+    type: str = Field(max_length=25, sa_column=sa.VARCHAR, nullable=False, unique=True)
     create_dt: datetime = Field(
-        sa_column=sa.DateTime,
-        default=datetime.utcnow(),
-        nullable=False
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime,
-        default=datetime.utcnow(),
-        nullable=False
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
 
     # shelves assigned this container type
-    shelves: List['Shelf'] = Relationship(back_populates="container_type")
+    shelves: List["Shelf"] = Relationship(back_populates="container_type")
     # accession jobs for this container type
-    accession_jobs: List['AccessionJob'] = Relationship(back_populates="container_type")
+    accession_jobs: List["AccessionJob"] = Relationship(back_populates="container_type")
+    verification_jobs: List["VerificationJob"] = Relationship(
+        back_populates="container_type"
+    )

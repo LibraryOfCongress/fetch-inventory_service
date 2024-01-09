@@ -35,7 +35,8 @@ from app.routers import (
     shelf_positions,
     owner_tiers,
     owners,
-    accession_jobs
+    accession_jobs,
+    verification_jobs,
 )
 
 
@@ -134,5 +135,6 @@ app.include_router(shelves.router)
 app.include_router(owner_tiers.router)
 app.include_router(owners.router)
 app.include_router(accession_jobs.router)
+app.include_router(verification_jobs.router)
 
 add_pagination(app)

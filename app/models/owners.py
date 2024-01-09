@@ -16,15 +16,15 @@ class Owner(SQLModel, table=True):
           id: Optional is declared only for Python's needs before a db object is
           created. This field cannot be null in the database.
     """
+
     __tablename__ = "owners"
     __table_args__ = (
-        UniqueConstraint(
-            "name",
-            "owner_tier_id",
-            name="uq_name_owner_tier_id"
-        ),
+        UniqueConstraint("name", "owner_tier_id", name="uq_name_owner_tier_id"),
     )
 
+<<<<<<< HEAD
+    id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True))
+=======
     id: Optional[int] = Field(
         sa_column=sa.Column(sa.SmallInteger, primary_key=True)
     )
@@ -33,28 +33,27 @@ class Owner(SQLModel, table=True):
         foreign_key="owners.id",
         nullable=True
     )
+>>>>>>> 55b6ffa547e06dcc2ff97b19fc373ce54a4d6a14
     name: str = Field(
-        max_length=150,
-        sa_column=sa.VARCHAR,
-        nullable=False,
-        default=None
+        max_length=150, sa_column=sa.VARCHAR, nullable=False, default=None
     )
     owner_tier_id: int = Field(
         foreign_key="owner_tiers.id",
         nullable=False,
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime,
-        default=datetime.utcnow(),
-        nullable=False
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime,
-        default=datetime.utcnow(),
-        nullable=False
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
 
     owner_tier: OwnerTier = Relationship(back_populates="owners")
+<<<<<<< HEAD
+    shelves: List["Shelf"] = Relationship(back_populates="owner")
+    accession_jobs: List["AccessionJob"] = Relationship(back_populates="owner")
+    verification_jobs: List["VerificationJob"] = Relationship(back_populates="owner")
+=======
     shelves: List['Shelf'] = Relationship(back_populates="owner")
     accession_jobs: List['AccessionJob'] = Relationship(back_populates="owner")
     children: List["Owner"] = Relationship(
@@ -63,3 +62,4 @@ class Owner(SQLModel, table=True):
         backref=backref("parent_owner", remote_side="Owner.id"),
         )
     )
+>>>>>>> 55b6ffa547e06dcc2ff97b19fc373ce54a4d6a14
