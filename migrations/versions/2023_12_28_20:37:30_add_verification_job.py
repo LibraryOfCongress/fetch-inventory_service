@@ -14,7 +14,7 @@ import sqlmodel
 
 # revision identifiers, used by Alembic.
 revision: str = "2023_12_28_20:37:30"
-down_revision: Union[str, None] = "2023_11_29_04:56:53"
+down_revision: Union[str, None] = "2023_12_27_12:13:12"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
