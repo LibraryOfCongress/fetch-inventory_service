@@ -21,3 +21,7 @@ from app.models.owner_tiers import OwnerTier
 from app.models.owners import Owner
 from app.models.accession_jobs import AccessionJob
 from app.models.verification_jobs import VerificationJob
+from app.models.trays import Tray
+from app.models.media_types import MediaType
+from app.models.tray_size_class import TraySizeClass
+from app.models.conveyance_bins import ConveyanceBin

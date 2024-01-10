@@ -31,7 +31,7 @@ class Shelf(SQLModel, table=True):
 
     id: Optional[int] = Field(
         primary_key=True,
-        sa_column=sa.Integer, 
+        sa_column=sa.Integer,
         default=None
     )
     barcode_id: uuid.UUID = Field(
@@ -54,7 +54,10 @@ class Shelf(SQLModel, table=True):
         nullable=False
     )
     shelf_number_id: int = Field(foreign_key="shelf_numbers.id", nullable=False)
-    # tray_size_class_id - coming in FETCH-303
+    tray_size_class_id: int = Field(
+        foreign_key="tray_size_class.id",
+        nullable=False
+    )
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     ladder_id: int = Field(foreign_key="ladders.id", nullable=False)
     create_dt: datetime = Field(
@@ -73,3 +76,4 @@ class Shelf(SQLModel, table=True):
     shelf_number: ShelfNumber = Relationship(back_populates="shelves")
     container_type: ContainerType = Relationship(back_populates="shelves")
     shelf_positions: List['ShelfPosition'] = Relationship(back_populates="shelf")
+    tray_size_class: Optional["TraySizeClass"] = Relationship(sa_relationship_kwargs={"uselist": False})

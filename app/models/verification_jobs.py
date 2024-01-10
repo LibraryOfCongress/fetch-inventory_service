@@ -1,10 +1,11 @@
 import sqlalchemy as sa
 
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.owners import Owner
+from app.models.trays import Tray
 from app.models.container_types import ContainerType
 
 
@@ -64,9 +65,8 @@ class VerificationJob(SQLModel, table=True):
 
     owner: Owner = Relationship(back_populates="verification_jobs")
     container_type: ContainerType = Relationship(back_populates="verification_jobs")
+    trays: List[Tray] = Relationship(back_populates="verification_job")
 
 
-# TODO: Tray, Non-Tray, and Item models to be add relationships to the
-#  VerificationJob model
-# Tray.verification_job_id (big integer) nullable foreign key relationship to VerificationJob.id
+# TODO:
 # Item.verification_job_id (big integer) nullable foreign key relationship to VerificationJob.id
