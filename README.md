@@ -135,6 +135,9 @@ Helper commands have been created to allow CLI migration management from outside
 * `./helper.sh migrate` - runs alembic upgrade head
 * `./helper.sh current` - Reports the current db migration.
 
+## Deployment
+
+Containerfiles are used in deployment. For deployed environments, Kubernetes / Terraform uses the repository root for the build context. In local environments, we use either a build script or a compose file in the `fetch-local` repository, which assumes a different build context.  This is why pathing is different between the images.
 
 # Editor Configuration
 

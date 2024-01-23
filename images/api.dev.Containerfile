@@ -5,9 +5,9 @@ WORKDIR /tmp
 
 RUN pip install poetry
 
-COPY ../pyproject.toml ../poetry.lock* /tmp/
+COPY pyproject.toml poetry.lock* /tmp/
 
-COPY ../.env /tmp/
+COPY .env /tmp/
 
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 
@@ -34,9 +34,9 @@ COPY --from=requirements-stage /tmp/.env /code/.env
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 # Copy your application code
-COPY ../app /code/app
-COPY ../migrations /code/migrations
-COPY ../alembic.ini /code/alembic.ini
+COPY app /code/app
+COPY migrations /code/migrations
+COPY alembic.ini /code/alembic.ini
 
 # Add SchemaSpy
 ADD schemaspy/schemaspy-6.2.4.jar /code/schemaspy.jar
