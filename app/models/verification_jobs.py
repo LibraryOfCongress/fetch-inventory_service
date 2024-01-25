@@ -6,6 +6,8 @@ from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.owners import Owner
 from app.models.trays import Tray
+from app.models.items import Item
+from app.models.non_tray_items import NonTrayItem
 from app.models.container_types import ContainerType
 
 
@@ -66,6 +68,8 @@ class VerificationJob(SQLModel, table=True):
     owner: Owner = Relationship(back_populates="verification_jobs")
     container_type: ContainerType = Relationship(back_populates="verification_jobs")
     trays: List[Tray] = Relationship(back_populates="verification_job")
+    items: List[Item] = Relationship(back_populates="verification_job")
+    non_tray_items: List[NonTrayItem] = Relationship(back_populates="verification_job")
 
 
 # TODO:

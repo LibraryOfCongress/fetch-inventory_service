@@ -37,6 +37,10 @@ from app.routers import (
     owners,
     accession_jobs,
     verification_jobs,
+    trays,
+    media_types,
+    tray_size_class,
+    conveyance_bins
 )
 
 
@@ -136,5 +140,9 @@ app.include_router(owner_tiers.router)
 app.include_router(owners.router)
 app.include_router(accession_jobs.router)
 app.include_router(verification_jobs.router)
+app.include_router(trays.router)
+app.include_router(media_types.router)
+app.include_router(tray_size_class.router)
+app.include_router(conveyance_bins.router)
 
 add_pagination(app)

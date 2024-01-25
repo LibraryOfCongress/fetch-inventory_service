@@ -8,6 +8,7 @@ from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.ladders import LadderDetailWriteOutput
 from app.schemas.shelf_numbers import ShelfNumberDetailOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
+from app.schemas.barcodes import BarcodeDetailReadOutput
 
 
 class ShelfInput(BaseModel):
@@ -116,6 +117,7 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
     width: float
     depth: float
     barcode_id: uuid.UUID
+    barcode: BarcodeDetailReadOutput
     create_dt: datetime
     update_dt: datetime
 
@@ -127,7 +129,6 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                     "id": 1,
                     "side_id": 1,
                     "ladder_number_id": 1,
-                    "barcode": "550e8400-e29b-41d4-a716-446655440001",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398",
                 },
@@ -156,6 +157,13 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                     },
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398",
+                },
+                "barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
                 },
                 "capacity": 33,
                 "height": 15.7,

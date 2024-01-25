@@ -6,6 +6,8 @@ from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.owners import Owner
 from app.models.trays import Tray
+from app.models.items import Item
+from app.models.non_tray_items import NonTrayItem
 from app.models.container_types import ContainerType
 
 
@@ -81,7 +83,10 @@ class AccessionJob(SQLModel, table=True):
     container_type: ContainerType = Relationship(back_populates="accession_jobs")
     owner: Owner = Relationship(back_populates="accession_jobs")
     trays: List[Tray] = Relationship(back_populates="accession_job")
+    items: List[Item] = Relationship(back_populates="accession_job")
+    non_tray_items: List[NonTrayItem] = Relationship(back_populates="accession_job")
     #TODO add item_count (Returns a count of related items)
     #TODO add tray_count (Returns a count of related trays)
     #TODO determine if non_tray_count needed
     #TODO return the above ordered by (item.create_dt) (tray.create_dt)
+    #TODO ^ all of that in the schema

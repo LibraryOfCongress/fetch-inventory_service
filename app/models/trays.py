@@ -4,6 +4,8 @@ import sqlalchemy as sa
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
+
+from app.models.items import Item
 # from sqlalchemy.schema import UniqueConstraint
 
 
@@ -82,8 +84,6 @@ class Tray(SQLModel, table=True):
 
     # derived item count
     # derived item out count
-    # make a model for conveyance
-
 
     barcode: Optional["Barcode"] = Relationship(sa_relationship_kwargs={"uselist": False})
     media_type: Optional["MediaType"] = Relationship(sa_relationship_kwargs={"uselist": False})
@@ -91,3 +91,4 @@ class Tray(SQLModel, table=True):
     conveyance_bin: Optional["ConveyanceBin"] = Relationship(back_populates="trays")
     accession_job: Optional["AccessionJob"] = Relationship(back_populates="trays")
     verification_job: Optional["VerificationJob"] = Relationship(back_populates="trays")
+    items: List[Item] = Relationship(back_populates="tray")

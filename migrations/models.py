@@ -25,3 +25,6 @@ from app.models.trays import Tray
 from app.models.media_types import MediaType
 from app.models.tray_size_class import TraySizeClass
 from app.models.conveyance_bins import ConveyanceBin
+from app.models.subcollection import Subcollection
+from app.models.items import Item
+from app.models.non_tray_items import NonTrayItem
