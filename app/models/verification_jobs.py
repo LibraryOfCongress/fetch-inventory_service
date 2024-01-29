@@ -70,7 +70,3 @@ class VerificationJob(SQLModel, table=True):
     trays: List[Tray] = Relationship(back_populates="verification_job")
     items: List[Item] = Relationship(back_populates="verification_job")
     non_tray_items: List[NonTrayItem] = Relationship(back_populates="verification_job")
-
-
-# TODO:
-# Item.verification_job_id (big integer) nullable foreign key relationship to VerificationJob.id

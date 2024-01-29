@@ -82,6 +82,9 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
     container_type_id: Optional[int] = None
     owner: Optional[OwnerDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None
+    items: list
+    trays: list
+    non_tray_items: list
     create_dt: datetime
     update_dt: datetime
 
@@ -128,6 +131,15 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398",
                 },
+                "items": [
+                    "..."
+                ],
+                "trays": [
+                    "..."
+                ],
+                "non_tray_items": [
+                    "..."
+                ],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
             }

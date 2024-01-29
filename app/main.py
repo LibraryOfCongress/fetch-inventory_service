@@ -40,7 +40,10 @@ from app.routers import (
     trays,
     media_types,
     tray_size_class,
-    conveyance_bins
+    conveyance_bins,
+    items,
+    subcollection,
+    non_tray_items
 )
 
 
@@ -144,5 +147,8 @@ app.include_router(trays.router)
 app.include_router(media_types.router)
 app.include_router(tray_size_class.router)
 app.include_router(conveyance_bins.router)
+app.include_router(items.router)
+app.include_router(subcollection.router)
+app.include_router(non_tray_items.router)
 
 add_pagination(app)

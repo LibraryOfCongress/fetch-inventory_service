@@ -78,6 +78,9 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
     container_type_id: Optional[int] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
+    items: list
+    trays: list
+    non_tray_items: list
     create_dt: datetime
     update_dt: datetime
 
@@ -112,6 +115,15 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
+                "items": [
+                    "..."
+                ],
+                "trays": [
+                    "..."
+                ],
+                "non_tray_items": [
+                    "..."
+                ],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
