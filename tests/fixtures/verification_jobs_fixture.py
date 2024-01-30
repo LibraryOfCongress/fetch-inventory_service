@@ -38,7 +38,7 @@ VERIFICATION_JOBS_SIZE_DATA_RESPONSE = get_data_from_file(DATA_SIZE_RESPONSE).ge
 
 
 @pytest.fixture(scope="session")
-def populate_aisle_record(client):
+def populate_verification_record(client):
     """
     Fixture to populate verification jobs records in the database.
     This fixture populates the database with records for buildings, module numbers,

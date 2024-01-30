@@ -64,13 +64,7 @@ class VerificationJobBaseOutput(BaseModel):
 
 class VerificationJobListOutput(VerificationJobBaseOutput):
     class Config:
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "trayed": True,
-                "status": "Created"
-            }
-        }
+        json_schema_extra = {"example": {"id": 1, "trayed": True, "status": "Created"}}
 
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
@@ -85,6 +79,7 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
     items: list
     trays: list
     non_tray_items: list
+    shelving_job_id: Optional[int] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -111,6 +106,7 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                 "accession_job_id": 1,
                 "owner_id": 1,
                 "container_type_id": 1,
+                "shelving_job_id": 1,
                 "owner": {
                     "id": 1,
                     "name": "Special Collection Directorate",

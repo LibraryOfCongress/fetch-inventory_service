@@ -104,6 +104,27 @@
         "size": 50,
         "pages": 1,
     },
+    "shelving_jobs": {
+        "items": [{"id": 1, "status": "Created"}],
+        "total": 1,
+        "page": 1,
+        "size": 50,
+        "pages": 1,
+    },
+    "shelving_jobs_item_association": {
+        "items": [{"id": 1, "verified": true}],
+        "total": 1,
+        "page": 1,
+        "size": 50,
+        "pages": 1,
+    },
+    "shelving_jobs_tray_association": {
+        "items": [{"id": 1, "verified": true}],
+        "total": 1,
+        "page": 1,
+        "size": 50,
+        "pages": 1,
+    },
     "accession_jobs": {
         "items": [{"id": 1, "trayed": true, "status": "Created"}],
         "total": 1,

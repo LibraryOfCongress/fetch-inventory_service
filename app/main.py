@@ -43,7 +43,10 @@ from app.routers import (
     conveyance_bins,
     items,
     subcollection,
-    non_tray_items
+    non_tray_items,
+    shelving_jobs,
+    shelving_jobs_tray_association,
+    shelving_jobs_item_association,
 )
 
 
@@ -57,22 +60,31 @@ def alembic_context():
         if get_settings().APP_ENVIRONMENT not in ["debug"]:
             # Create Schema-Docs
             print("Updating Schema Docs...")
-            at_pos = get_settings().DATABASE_URL.find('@') + 1
-            last_colon_pos = get_settings().DATABASE_URL.rfind(':')
+            at_pos = get_settings().DATABASE_URL.find("@") + 1
+            last_colon_pos = get_settings().DATABASE_URL.rfind(":")
             db_host = get_settings().DATABASE_URL[at_pos:last_colon_pos]
             create_schemaspy = [
                 "java",
                 "-jar",
                 "/code/schemaspy.jar",
-                "-t", "pgsql11",
-                "-dp", "/code/postgresql.jar",
-                "-o", "/code/schema-docs",
-                "-u", "postgres",
-                "-p", "postgres",
-                "-db", "inventory_service",
-                "-s", "public",
-                "-host", f"{db_host}",
-                "-port", "5432"
+                "-t",
+                "pgsql11",
+                "-dp",
+                "/code/postgresql.jar",
+                "-o",
+                "/code/schema-docs",
+                "-u",
+                "postgres",
+                "-p",
+                "postgres",
+                "-db",
+                "inventory_service",
+                "-s",
+                "public",
+                "-host",
+                f"{db_host}",
+                "-port",
+                "5432",
             ]
             subprocess.run(create_schemaspy)
     except Exception as e:
@@ -87,10 +99,11 @@ async def lifespan(app: FastAPI):
         app.mount(
             "/schema",
             StaticFiles(directory="/code/schema-docs", html=True),
-            name="schema-docs"
+            name="schema-docs",
         )
     yield
     print("Shutting down...")
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -107,20 +120,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     return {
         "message": f"{get_settings().APP_NAME} Inventory Service {get_settings().APP_ENVIRONMENT} environment api root"
     }
 
+
 # app fallback exception handling
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse({"detail": str(exc.detail)}, status_code=exc.status_code)
 
+
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
     return JSONResponse({"detail": str(exc)}, status_code=500)
+
 
 # order matters for route matching [nested before base]
 app.include_router(buildings.router)
@@ -150,5 +167,8 @@ app.include_router(conveyance_bins.router)
 app.include_router(items.router)
 app.include_router(subcollection.router)
 app.include_router(non_tray_items.router)
+app.include_router(shelving_jobs.router)
+app.include_router(shelving_jobs_tray_association.router)
+app.include_router(shelving_jobs_item_association.router)
 
 add_pagination(app)

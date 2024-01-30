@@ -9,6 +9,7 @@ from app.models.trays import Tray
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.container_types import ContainerType
+from app.models.shelving_jobs import ShelvingJob
 
 
 class VerificationJob(SQLModel, table=True):
@@ -58,6 +59,9 @@ class VerificationJob(SQLModel, table=True):
     container_type_id: Optional[int] = Field(
         foreign_key="container_types.id", nullable=True
     )
+    shelving_job_id: Optional[int] = Field(
+        foreign_key="shelving_jobs.id", nullable=True
+    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
@@ -70,3 +74,4 @@ class VerificationJob(SQLModel, table=True):
     trays: List[Tray] = Relationship(back_populates="verification_job")
     items: List[Item] = Relationship(back_populates="verification_job")
     non_tray_items: List[NonTrayItem] = Relationship(back_populates="verification_job")
+    shelving_job: ShelvingJob = Relationship(back_populates="verification_jobs")
