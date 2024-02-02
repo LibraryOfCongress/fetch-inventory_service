@@ -23,21 +23,18 @@ class Shelf(SQLModel, table=True):
       id: Optional is declared only for Python's needs before a db object is
           created. This field cannot be null in the database.
     """
+
     __tablename__ = "shelves"
     __table_args__ = (
-        UniqueConstraint("ladder_id", "shelf_number_id", name="uq_ladder_id_shelf_number_id"),
-        UniqueConstraint('barcode_id'),
+        UniqueConstraint(
+            "ladder_id", "shelf_number_id", name="uq_ladder_id_shelf_number_id"
+        ),
+        UniqueConstraint("barcode_id"),
     )
 
-    id: Optional[int] = Field(
-        primary_key=True,
-        sa_column=sa.Integer,
-        default=None
-    )
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id",
-        nullable=False,
-        default=None
+        foreign_key="barcodes.id", nullable=False, default=None
     )
     capacity: int = Field(sa_column=sa.Column(sa.SmallInteger, nullable=False))
     height: condecimal(decimal_places=2) = Field(
@@ -49,31 +46,26 @@ class Shelf(SQLModel, table=True):
     depth: condecimal(decimal_places=2) = Field(
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
     )
-    container_type_id: int = Field(
-        foreign_key="container_types.id",
-        nullable=False
-    )
+    container_type_id: int = Field(foreign_key="container_types.id", nullable=False)
     shelf_number_id: int = Field(foreign_key="shelf_numbers.id", nullable=False)
-    tray_size_class_id: int = Field(
-        foreign_key="tray_size_class.id",
-        nullable=False
-    )
+    tray_size_class_id: int = Field(foreign_key="tray_size_class.id", nullable=False)
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     ladder_id: int = Field(foreign_key="ladders.id", nullable=False)
     create_dt: datetime = Field(
-        sa_column=sa.DateTime,
-        default=datetime.utcnow(),
-        nullable=False
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime,
-        default=datetime.utcnow(),
-        nullable=False
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
 
     ladder: Ladder = Relationship(back_populates="shelves")
     owner: Owner = Relationship(back_populates="shelves")
+    barcode: Optional["Barcode"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
     shelf_number: ShelfNumber = Relationship(back_populates="shelves")
     container_type: ContainerType = Relationship(back_populates="shelves")
-    shelf_positions: List['ShelfPosition'] = Relationship(back_populates="shelf")
-    tray_size_class: Optional["TraySizeClass"] = Relationship(sa_relationship_kwargs={"uselist": False})
+    shelf_positions: List["ShelfPosition"] = Relationship(back_populates="shelf")
+    tray_size_class: Optional["TraySizeClass"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )

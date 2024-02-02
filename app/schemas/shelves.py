@@ -41,6 +41,7 @@ class ShelfInput(BaseModel):
         }
 
 
+
 class ShelfUpdateInput(BaseModel):
     ladder_id: Optional[conint(ge=0, le=2147483647)] = None
     container_type_id: Optional[conint(ge=0, le=2147483647)] = None

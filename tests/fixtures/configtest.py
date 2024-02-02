@@ -148,10 +148,11 @@ def populate_record(client, fixtures_path, table):
     data = get_data_from_file(fixtures_path)
 
     if table:
-        try:
-            logger.info(f"Populating table: {table}")
-            logger.info(f"table: {data.get(table)}")
 
+        logger.info(f"Populating table: {table}")
+        logger.info(f"Request Data : {data.get(table)}")
+
+        try:
             if table == "module_numbers":
                 return client.post("/modules/numbers", json=data.get(table))
             elif table == "aisle_numbers":
@@ -176,6 +177,12 @@ def populate_record(client, fixtures_path, table):
                 return client.post("/accession-jobs", json=data.get(table))
             elif table == "verification_jobs":
                 return client.post("/verification-jobs", json=data.get(table))
+            elif table == "media_types":
+                return client.post("/media-types", json=data.get(table))
+            elif table == "conveyance_bins":
+                return client.post("/conveyance-bins", json=data.get(table))
+            elif table == "tray_size_class":
+                return client.post("/size_class", json=data.get(table))
             else:
                 if table == "shelves":
                     results = client.post(
@@ -184,6 +191,20 @@ def populate_record(client, fixtures_path, table):
 
                     if results.status_code == 201:
                         data[table]["barcode_id"] = results.json().get("id")
+                if table == "trays":
+                    barcode_results = client.post(
+                        "/barcodes", json={"type_id": 1, "value": "5901234123459"}
+                    )
+
+                    if barcode_results.status_code == 201:
+                        data[table]["barcode_id"] = barcode_results.json().get("id")
+
+                    conveyance_bins_results =client.post(
+                        "/conveyance-bins", json={"barcode_id": barcode_results.json().get("id")}
+                    )
+
+                    if conveyance_bins_results.status_code == 201:
+                        data[table]["conveyance_bin_id"] = conveyance_bins_results.json().get("id")
 
                 return client.post(f"/{table}", json=data.get(table))
 
@@ -228,7 +249,10 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "owner_tiers")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "owners")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "container_types")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "tray_size_class")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelves")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_positions")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "accession_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "verification_jobs")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "media_types")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "trays")

@@ -70,7 +70,7 @@ class VerificationJobListOutput(VerificationJobBaseOutput):
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
     user_id: Optional[int] = None
     last_transition: Optional[datetime]
-    run_time: Optional[str]
+    run_time: Optional[timedelta]
     accession_job_id: Optional[int]
     owner_id: Optional[int] = None
     container_type_id: Optional[int] = None

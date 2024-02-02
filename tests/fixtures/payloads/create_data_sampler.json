@@ -1,70 +1,132 @@
 {
-    "buildings": {"name": "Building 1"},
-    "module_numbers": {"number": 1},
-    "modules": {"building_id": 1, "module_number_id": 1},
-    "aisle_numbers": {"number": 1},
-    "aisles": {"aisle_number_id": 1, "building_id": 1},
-    "side_orientations": {"name": "Left"},
-    "sides": {"aisle_id": 1, "side_orientation_id": 1},
-    "shelves": {
-        "capacity": 33,
-        "container_type_id": 1,
-        "depth": 27,
-        "height": 15.7,
-        "ladder_id": 1,
-        "owner_id": 1,
-        "shelf_number_id": 1,
-        "width": 30.33,
-    },
-    "shelf_numbers": {"number": 1},
-    "shelf_positions": {"shelf_id": 1, "shelf_position_number_id": 1},
-    "shelf_position_numbers": {"number": 1},
-    "shelving_jobs": {
-        "status": "Created",
-        "user_id": 1,
-        "last_transition": "2023-11-27T12:34:56.789123Z",
-        "run_time": "03:25:15",
-        "verification_job_id": 1,
-    },
-    "shelving_jobs_item_association": {
-        "verified": true,
-        "shelving_job_id": 1,
-        "shelf_id": 1,
-        "shelf_position_id": 1,
-        "item_id": 1,
-    },
-    "shelving_jobs_tray_association": {
-        "verified": true,
-        "shelving_job_id": 1,
-        "shelf_id": 1,
-        "shelf_position_id": 1,
-        "tray_id": 1,
-    },
-    "container_type_numbers": {"number": 1},
-    "container_types": {"type": "Tray"},
-    "barcode_types": {"name": "qrcode"},
-    "barcodes": {"type_id": 1, "value": "5901234123457"},
-    "ladder_numbers": {"number": 1},
-    "ladders": {"ladder_number_id": 1, "side_id": 1},
-    "owner_tiers": {"level": 1, "name": "organization"},
-    "owners": {"name": "Special Collection Directorate", "owner_tier_id": 1},
-    "accession_jobs": {
-        "container_type_id": 1,
-        "last_transition": "2023-11-27T12:34:56.789123Z",
-        "owner_id": 1,
-        "run_time": "03:25:15",
-        "status": "Created",
-        "trayed": true,
-        "user_id": 1,
-    },
-    "verification_jobs": {
-        "accession_job_id": 1,
-        "container_type_id": 1,
-        "last_transition": "2023-11-27T12:34:56.789123Z",
-        "owner_id": 1,
-        "run_time": "03:25:15",
-        "status": "Created",
-        "trayed": true,
-        "user_id": 1,
-    },
+  "shelving_jobs": {
+      "status": "Created",
+      "user_id": 1,
+      "last_transition": "2023-11-27T12:34:56.789123Z",
+      "run_time": "03:25:15",
+      "verification_job_id": 1
+  },
+  "shelving_jobs_item_association": {
+      "verified": true,
+      "shelving_job_id": 1,
+      "shelf_id": 1,
+      "shelf_position_id": 1,
+      "item_id": 1
+  },
+  "shelving_jobs_tray_association": {
+      "verified": true,
+      "shelving_job_id": 1,
+      "shelf_id": 1,
+      "shelf_position_id": 1,
+      "tray_id": 1
+  },
+  "container_type_numbers": {"number": 1},
+  "buildings": {
+    "name": "Building 1"
+  },
+  "module_numbers": {
+    "number": 1
+  },
+  "modules": {
+    "building_id": 1,
+    "module_number_id": 1
+  },
+  "aisle_numbers": {
+    "number": 1
+  },
+  "aisles": {
+    "aisle_number_id": 1,
+    "building_id": 1
+  },
+  "side_orientations": {
+    "name": "Left"
+  },
+  "sides": {
+    "aisle_id": 1,
+    "side_orientation_id": 1
+  },
+  "shelves": {
+    "capacity": 33,
+    "container_type_id": 1,
+    "depth": 27,
+    "height": 15.7,
+    "ladder_id": 1,
+    "owner_id": 1,
+    "shelf_number_id": 1,
+    "tray_size_class_id": 1,
+    "width": 30.33
+  },
+  "shelf_numbers": {
+    "number": 1
+  },
+  "shelf_positions": {
+    "shelf_id": 1,
+    "shelf_position_number_id": 1
+  },
+  "shelf_position_numbers": {
+    "number": 1
+  },
+  "container_types": {
+    "type": "Tray"
+  },
+  "barcode_types": {
+    "name": "qrcode"
+  },
+  "barcodes": {
+    "type_id": 1,
+    "value": "5901234123457"
+  },
+  "ladder_numbers": {
+    "number": 1
+  },
+  "ladders": {
+    "ladder_number_id": 1,
+    "side_id": 1
+  },
+  "owner_tiers": {
+    "level": 1,
+    "name": "organization"
+  },
+  "owners": {
+    "name": "Special Collection Directorate",
+    "owner_tier_id": 1
+  },
+  "accession_jobs": {
+    "container_type_id": 1,
+    "last_transition": "2023-11-27T12:34:56.789123Z",
+    "owner_id": 1,
+    "run_time": "03:25:15",
+    "status": "Created",
+    "trayed": true,
+    "user_id": 1
+  },
+  "verification_jobs": {
+    "accession_job_id": 1,
+    "container_type_id": 1,
+    "last_transition": "2023-11-27T12:34:56.789123Z",
+    "owner_id": 1,
+    "run_time": "03:25:15",
+    "status": "Created",
+    "trayed": true,
+    "user_id": 1
+  },
+  "tray_size_class": {
+    "name": "Small"
+  },
+  "media_types": {
+    "name": "Paper"
+  },
+  "trays": {
+    "accession_job_id": 1,
+    "verification_job_id": 1,
+    "container_type_id": 1,
+    "tray_size_class_id": 1,
+    "owner_id": 1,
+    "media_type_id": 1,
+    "shelf_position_id": 1,
+    "conveyance_bin_id": 1,
+    "accession_dt": "2024-01-01T00:00:00.000000",
+    "shelved_dt": "2024-01-01T00:00:00.000000",
+    "withdrawal_dt": "2024-01-01T00:00:00.000000"
+  }
 }

@@ -44,7 +44,17 @@ class Tray(SQLModel, table=True):
         foreign_key="shelf_positions.id", nullable=True
     )
     conveyance_bin_id: Optional[int] = Field(
-        foreign_key="conveyance_bins.id", nullable=True
+        foreign_key="conveyance_bins.id",
+        nullable=True
+    )
+    accession_dt: datetime = Field(
+        sa_column=sa.DateTime, default=None, nullable=True
+    )
+    shelved_dt:  datetime = Field(
+        sa_column=sa.DateTime, default=None, nullable=True
+    )
+    withdrawal_dt: datetime = Field(
+        sa_column=sa.DateTime, default=None, nullable=True
     )
     accession_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
     shelved_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
