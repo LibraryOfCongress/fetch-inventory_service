@@ -6,6 +6,8 @@ from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.items import Item
+from app.models.shelving_jobs import ShelvingJobTrayAssociation
+
 # from sqlalchemy.schema import UniqueConstraint
 
 
@@ -22,59 +24,31 @@ class Tray(SQLModel, table=True):
     # __table_args__ = (
     # )
 
-    id: Optional[int] = Field(
-        primary_key=True,
-        sa_column=sa.BigInteger,
-        default=None
-    )
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
     accession_job_id: Optional[int] = Field(
-        default=None,
-        nullable=True,
-        foreign_key="accession_jobs.id"
+        default=None, nullable=True, foreign_key="accession_jobs.id"
     )
     verification_job_id: Optional[int] = Field(
-        default=None,
-        nullable=True,
-        foreign_key="verification_jobs.id"
+        default=None, nullable=True, foreign_key="verification_jobs.id"
     )
     container_type_id: Optional[int] = Field(
-        foreign_key="container_types.id",
-        nullable=True
+        foreign_key="container_types.id", nullable=True
     )
     barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id",
-        nullable=False,
-        default=None
+        foreign_key="barcodes.id", nullable=False, default=None
     )
-    tray_size_class_id: int = Field(
-        foreign_key="tray_size_class.id",
-        nullable=False
-    )
-    owner_id: Optional[int] = Field(
-        foreign_key="owners.id",
-        nullable=True
-    )
-    media_type_id: Optional[int] = Field(
-        foreign_key="media_types.id",
-        nullable=True
-    )
+    tray_size_class_id: int = Field(foreign_key="tray_size_class.id", nullable=False)
+    owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
+    media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     shelf_position_id: Optional[int] = Field(
-        foreign_key="shelf_positions.id",
-        nullable=True
+        foreign_key="shelf_positions.id", nullable=True
     )
-    conveyance_bin_id:Optional[int] = Field(
-        foreign_key="conveyance_bins.id",
-        nullable=True
+    conveyance_bin_id: Optional[int] = Field(
+        foreign_key="conveyance_bins.id", nullable=True
     )
-    accession_dt: datetime = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
-    shelved_dt:  datetime = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
-    withdrawal_dt: datetime = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
+    accession_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    shelved_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    withdrawal_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
@@ -85,10 +59,19 @@ class Tray(SQLModel, table=True):
     # derived item count
     # derived item out count
 
-    barcode: Optional["Barcode"] = Relationship(sa_relationship_kwargs={"uselist": False})
-    media_type: Optional["MediaType"] = Relationship(sa_relationship_kwargs={"uselist": False})
-    tray_size_class: Optional["TraySizeClass"] = Relationship(sa_relationship_kwargs={"uselist": False})
+    barcode: Optional["Barcode"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
+    media_type: Optional["MediaType"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
+    tray_size_class: Optional["TraySizeClass"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
     conveyance_bin: Optional["ConveyanceBin"] = Relationship(back_populates="trays")
     accession_job: Optional["AccessionJob"] = Relationship(back_populates="trays")
     verification_job: Optional["VerificationJob"] = Relationship(back_populates="trays")
     items: List[Item] = Relationship(back_populates="tray")
+    shelving_jobs: List["ShelvingJob"] = Relationship(
+        back_populates="trays", link_model=ShelvingJobTrayAssociation
+    )

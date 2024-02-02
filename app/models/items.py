@@ -4,7 +4,10 @@ import sqlalchemy as sa
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
+
 # from sqlalchemy.schema import UniqueConstraint
+
+from app.models.shelving_jobs import ShelvingJobItemAssociation
 
 
 class Item(SQLModel, table=True):
@@ -20,82 +23,40 @@ class Item(SQLModel, table=True):
     # __table_args__ = (
     # )
 
-    id: Optional[int] = Field(
-        primary_key=True,
-        sa_column=sa.BigInteger,
-        default=None
-    )
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
     barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id",
-        nullable=False,
-        default=None
+        foreign_key="barcodes.id", nullable=False, default=None
     )
-    owner_id: Optional[int] = Field(
-        foreign_key="owners.id",
-        nullable=True
-    )
-    tray_size_class_id: int = Field(
-        foreign_key="tray_size_class.id",
-        nullable=True
-    )
-    tray_id: Optional[int] = Field(
-        default=None,
-        nullable=True,
-        foreign_key="trays.id"
-    )
+    owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
+    tray_size_class_id: int = Field(foreign_key="tray_size_class.id", nullable=True)
+    tray_id: Optional[int] = Field(default=None, nullable=True, foreign_key="trays.id")
     container_type_id: Optional[int] = Field(
-        foreign_key="container_types.id",
-        nullable=True
+        foreign_key="container_types.id", nullable=True
     )
     title: str = Field(
-        max_length=4000,
-        sa_column=sa.VARCHAR,
-        nullable=True,
-        unique=False
+        max_length=4000, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
     volume: str = Field(
-        max_length=15,
-        sa_column=sa.VARCHAR,
-        nullable=True,
-        unique=False
+        max_length=15, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
     condition: str = Field(
-        max_length=30,
-        sa_column=sa.VARCHAR,
-        nullable=True,
-        unique=False
+        max_length=30, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
     arbitrary_data: str = Field(
-        max_length=255,
-        sa_column=sa.VARCHAR,
-        nullable=True,
-        unique=False
+        max_length=255, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
     subcollection_id: Optional[int] = Field(
-        default=None,
-        nullable=True,
-        foreign_key="subcollections.id"
+        default=None, nullable=True, foreign_key="subcollections.id"
     )
     accession_job_id: Optional[int] = Field(
-        default=None,
-        nullable=True,
-        foreign_key="accession_jobs.id"
+        default=None, nullable=True, foreign_key="accession_jobs.id"
     )
     verification_job_id: Optional[int] = Field(
-        default=None,
-        nullable=True,
-        foreign_key="verification_jobs.id"
+        default=None, nullable=True, foreign_key="verification_jobs.id"
     )
-    accession_dt: datetime = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
-    withdrawal_dt: datetime = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
-    media_type_id: Optional[int] = Field(
-        foreign_key="media_types.id",
-        nullable=True
-    )
+    accession_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    withdrawal_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
@@ -103,8 +64,13 @@ class Item(SQLModel, table=True):
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
 
-    barcode: Optional["Barcode"] = Relationship(sa_relationship_kwargs={"uselist": False})
+    barcode: Optional["Barcode"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
     accession_job: Optional["AccessionJob"] = Relationship(back_populates="items")
     verification_job: Optional["VerificationJob"] = Relationship(back_populates="items")
     subcollection: Optional["Subcollection"] = Relationship(back_populates="items")
     tray: Optional["Tray"] = Relationship(back_populates="items")
+    shelving_jobs: List["ShelvingJob"] = Relationship(
+        back_populates="items", link_model=ShelvingJobItemAssociation
+    )
