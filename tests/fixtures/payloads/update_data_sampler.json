@@ -49,9 +49,17 @@
     "barcode_types": {
       "name": "qrcode"
     },
-    "shelving_jobs": {"trayed": true, "run_time": "04:00:00", "status": "Paused"},
-    "shelving_jobs_tray_association": {"verified": false},
-    "shelving_jobs_item_association": {"verified": false},
+    "shelving_jobs": {
+      "trayed": true,
+      "run_time": "04:00:00",
+      "status": "Paused"
+    },
+    "shelving_jobs_tray_association": {
+      "verified": false
+    },
+    "shelving_jobs_item_association": {
+      "verified": false
+    },
     "barcodes": {
         "id": "550e8400-e29b-41d4-a716-446655440000",
         "barcode_type_id": 1,
@@ -81,6 +89,9 @@
       "trayed": false,
       "run_time": "04:00:00",
       "status": "Paused"
+    },
+    "items": {
+      "id": 1
     },
     "tray_size_class": {
       "name": "Extra Large"

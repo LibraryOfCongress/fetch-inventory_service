@@ -31,6 +31,16 @@ class Subcollection(SQLModel, table=True):
         nullable=False,
         unique=True
     )
+    create_dt: datetime = Field(
+        sa_column=sa.DateTime,
+        default=datetime.utcnow(),
+        nullable=False
+    )
+    update_dt: datetime = Field(
+        sa_column=sa.DateTime,
+        default=datetime.utcnow(),
+        nullable=False
+    )
 
     items: List[Item] = Relationship(back_populates="subcollection")
     non_tray_items: List[NonTrayItem] = Relationship(back_populates="subcollection")

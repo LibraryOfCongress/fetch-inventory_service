@@ -101,5 +101,9 @@ class AisleDetailReadOutput(BaseModel):
                         "number": 1
                     },
                 },
+                "aisle_number": {
+                    "id": 1,
+                    "number": 1
+                }
             }
         }

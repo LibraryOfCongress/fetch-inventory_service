@@ -13,6 +13,7 @@ class ShelvingJobTrayAssociation(SQLModel, table=True):
 
     __tablename__ = "shelving_job_tray_associations"
 
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     verified: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
     shelf_position_proposed_id: int = Field(
         foreign_key="shelf_positions.id",
@@ -31,6 +32,7 @@ class ShelvingJobItemAssociation(SQLModel, table=True):
 
     __tablename__ = "shelving_job_item_associations"
 
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     verified: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
     shelf_position_proposed_id: int = Field(
         foreign_key="shelf_positions.id",

@@ -127,6 +127,16 @@ def get_data_from_file(file_path):
         raise ValueError("File path not provided")
 
 
+def generate_barcode_id(client, type_id, value):
+    results = client.post(
+        "/barcodes", json={"type_id": type_id, "value": value}
+    )
+
+    if results.status_code == 201:
+        return results.json().get("id")
+    return None
+
+
 def populate_record(client, fixtures_path, table):
     """
     Fixture to populate a single building record for testing purposes.
@@ -185,26 +195,29 @@ def populate_record(client, fixtures_path, table):
                 return client.post("/size_class", json=data.get(table))
             else:
                 if table == "shelves":
-                    results = client.post(
-                        "/barcodes", json={"type_id": 1, "value": "5901234123458"}
-                    )
+                    barcode_id = generate_barcode_id(client, 1, "5901234123458")
 
-                    if results.status_code == 201:
-                        data[table]["barcode_id"] = results.json().get("id")
+                    if barcode_id is not None:
+                        data[table]["barcode_id"] = barcode_id
+
                 if table == "trays":
-                    barcode_results = client.post(
-                        "/barcodes", json={"type_id": 1, "value": "5901234123459"}
-                    )
+                    barcode_id = generate_barcode_id(client, 1, "5901234123459")
 
-                    if barcode_results.status_code == 201:
-                        data[table]["barcode_id"] = barcode_results.json().get("id")
+                    if barcode_id is not None:
+                        data[table]["barcode_id"] = barcode_id
 
                     conveyance_bins_results =client.post(
-                        "/conveyance-bins", json={"barcode_id": barcode_results.json().get("id")}
+                        "/conveyance-bins", json={"barcode_id": barcode_id}
                     )
 
                     if conveyance_bins_results.status_code == 201:
                         data[table]["conveyance_bin_id"] = conveyance_bins_results.json().get("id")
+
+                if table == "items":
+                    barcode_id = generate_barcode_id(client, 1, "5901234123460")
+
+                    if barcode_id is not None:
+                        data[table]["barcode_id"] = barcode_id
 
                 return client.post(f"/{table}", json=data.get(table))
 
@@ -254,5 +267,8 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_positions")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "accession_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "verification_jobs")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "subcollections")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "media_types")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "trays")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "items")
+

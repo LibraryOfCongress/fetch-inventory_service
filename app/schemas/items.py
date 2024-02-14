@@ -136,8 +136,8 @@ class ItemDetailWriteOutput(ItemBaseOutput):
 
 class ItemDetailReadOutput(ItemDetailWriteOutput):
     barcode: BarcodeDetailReadOutput
-    media_type: MediaTypeDetailReadOutput
-    tray_size_class: TraySizeClassDetailReadOutput
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    tray_size_class: Optional[TraySizeClassDetailReadOutput] = None
     accession_job: AccessionJobBaseOutput
     verification_job: VerificationJobBaseOutput
     subcollection: SubcollectionDetailWriteOutput

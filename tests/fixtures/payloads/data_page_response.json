@@ -14,7 +14,8 @@
     "module_numbers": {
         "items": [
           {
-            "id": 1, "number": 1
+            "id": 1,
+            "number": 1
           }
         ],
         "total": 1,
@@ -36,7 +37,8 @@
     "aisle_numbers": {
         "items": [
           {
-            "id": 1, "number": 1
+            "id": 1,
+            "number": 1
           }
         ],
         "total": 1,
@@ -181,25 +183,40 @@
         "pages": 1
     },
     "shelving_jobs": {
-        "items": [{"id": 1, "status": "Created"}],
+        "items": [
+          {
+            "id": 1,
+            "status": "Created"
+          }
+        ],
         "total": 1,
         "page": 1,
         "size": 50,
-        "pages": 1,
+        "pages": 1
     },
     "shelving_jobs_item_association": {
-        "items": [{"id": 1, "verified": true}],
+        "items": [
+          {
+            "id": 1,
+            "verified": true
+          }
+        ],
         "total": 1,
         "page": 1,
         "size": 50,
-        "pages": 1,
+        "pages": 1
     },
     "shelving_jobs_tray_association": {
-        "items": [{"id": 1, "verified": true}],
+        "items": [
+          {
+            "id": 1,
+            "verified": true
+          }
+        ],
         "total": 1,
         "page": 1,
         "size": 50,
-        "pages": 1,
+        "pages": 1
     },
     "accession_jobs": {
         "items": [
@@ -226,6 +243,9 @@
         "page": 1,
         "size": 50,
         "pages": 1
+    },
+    "items": {
+      "id": 1
     },
     "tray_size_class": {
       "items": [

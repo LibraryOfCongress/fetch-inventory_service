@@ -1,8 +1,6 @@
 from pydantic import BaseModel, field_validator
 from datetime import datetime, timedelta
-from typing import Optional, List
-
-from app.schemas.verification_jobs import VerificationJobDetailOutput
+from typing import Optional
 
 
 class ShelvingJobInput(BaseModel):
@@ -61,8 +59,8 @@ class ShelvingJobListOutput(ShelvingJobBaseOutput):
 class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
     user_id: Optional[int] = None
     last_transition: Optional[datetime]
-    run_time: Optional[str]
-    verification_jobs: List[Optional[VerificationJobDetailOutput]]
+    run_time: Optional[timedelta]
+    verification_jobs: list
     create_dt: datetime
     update_dt: datetime
 

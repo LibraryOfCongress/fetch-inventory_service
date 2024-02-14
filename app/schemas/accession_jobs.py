@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -83,6 +83,17 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
     non_tray_items: list
     create_dt: datetime
     update_dt: datetime
+
+    @field_validator("run_time")
+    @classmethod
+    def format_run_time(cls, v) -> str:
+        if isinstance(v, timedelta):
+            total_seconds = int(v.total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        return v
 
     class Config:
         json_schema_extra = {

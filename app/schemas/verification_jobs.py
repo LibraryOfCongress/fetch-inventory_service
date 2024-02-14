@@ -4,6 +4,7 @@ from typing import Optional
 
 from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
+from app.schemas.shelving_jobs import ShelvingJobDetailOutput
 
 
 class VerificationJobInput(BaseModel):
@@ -64,7 +65,13 @@ class VerificationJobBaseOutput(BaseModel):
 
 class VerificationJobListOutput(VerificationJobBaseOutput):
     class Config:
-        json_schema_extra = {"example": {"id": 1, "trayed": True, "status": "Created"}}
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "trayed": True,
+                "status": "Created"
+            }
+        }
 
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
@@ -76,6 +83,7 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
     container_type_id: Optional[int] = None
     owner: Optional[OwnerDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None
+    shelving_job: Optional[ShelvingJobDetailOutput] = None
     items: list
     trays: list
     non_tray_items: list
@@ -128,13 +136,60 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                     "update_dt": "2023-10-08T20:46:56.764398",
                 },
                 "items": [
-                    "..."
+                    {
+                        "id": 1,
+                        "accession_job_id": 1,
+                        "verification_job_id": 1,
+                        "container_type_id": 1,
+                        "tray_id": 1,
+                        "owner_id": 1,
+                        "title": "Lord of The Rings",
+                        "volume": "I",
+                        "condition": "Good",
+                        "arbitrary_data": "Signed copy",
+                        "subcollection_id": 1,
+                        "media_type_id": 1,
+                        "tray_size_class_id": 1,
+                        "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                        "accession_dt": "2023-10-08T20:46:56.764426",
+                        "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    }
                 ],
                 "trays": [
-                    "..."
+                    {
+                        "id": 1,
+                        "accession_job_id": 1,
+                        "verification_job_id": 1,
+                        "container_type_id": 1,
+                        "owner_id": 1,
+                        "shelf_position_id": 1,
+                        "media_type_id": 1,
+                        "conveyance_bin_id": 1,
+                        "tray_size_class_id": 1,
+                        "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                        "accession_dt": "2023-10-08T20:46:56.764426",
+                        "shelved_dt": "2023-10-08T20:46:56.764426",
+                        "withdrawal_dt": "2023-10-08T20:46:56.764426"
+                    }
                 ],
                 "non_tray_items": [
-                    "..."
+                    {
+                        "id": 1,
+                        "accession_job_id": 1,
+                        "verification_job_id": 1,
+                        "container_type_id": 1,
+                        "owner_id": 1,
+                        "subcollection_id": 1,
+                        "media_type_id": 1,
+                        "tray_size_class_id": 1,
+                        "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                        "accession_dt": "2023-10-08T20:46:56.764426",
+                        "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    }
                 ],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
