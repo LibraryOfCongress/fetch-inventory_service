@@ -9,10 +9,10 @@ from app.schemas.shelving_jobs import ShelvingJobDetailOutput
 
 class VerificationJobInput(BaseModel):
     trayed: bool
-    status: Optional[str]
+    status: Optional[str] = None
     user_id: Optional[int] = None
-    last_transition: Optional[datetime]
-    run_time: Optional[timedelta]
+    last_transition: Optional[datetime] = None
+    run_time: Optional[timedelta] = None
     accession_job_id: Optional[int] = None
     owner_id: Optional[int] = None
     container_type_id: Optional[int] = None

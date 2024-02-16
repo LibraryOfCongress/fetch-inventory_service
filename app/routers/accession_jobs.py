@@ -1,18 +1,21 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
-from app.database.session import get_session
+from app.database.session import get_session, commit_record
 from app.models.accession_jobs import AccessionJob
+from app.tasks import generate_verification_job
+
 from app.schemas.accession_jobs import (
     AccessionJobInput,
     AccessionJobUpdateInput,
     AccessionJobListOutput,
     AccessionJobDetailOutput,
 )
+from app.schemas.verification_jobs import VerificationJobInput
 
 router = APIRouter(
     prefix="/accession-jobs",
@@ -87,6 +90,7 @@ def update_accession_job(
     id: int,
     accession_job: AccessionJobUpdateInput,
     session: Session = Depends(get_session),
+    background_tasks: BackgroundTasks = None,
 ):
     """
     Update an existing accession job with the provided data.
@@ -107,14 +111,17 @@ def update_accession_job(
 
         mutated_data = accession_job.model_dump(exclude_unset=True)
 
+        if mutated_data.get("status") == "Completed":
+            # Automatically create a related Verification Job.
+            background_tasks.add_task(
+                generate_verification_job, session, existing_accession_job
+            )
+
         for key, value in mutated_data.items():
             setattr(existing_accession_job, key, value)
 
         setattr(existing_accession_job, "update_dt", datetime.utcnow())
-
-        session.add(existing_accession_job)
-        session.commit()
-        session.refresh(existing_accession_job)
+        existing_accession_job = commit_record(session, existing_accession_job)
 
         return existing_accession_job
     except Exception as e:
