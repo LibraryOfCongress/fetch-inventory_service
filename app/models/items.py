@@ -74,3 +74,6 @@ class Item(SQLModel, table=True):
     shelving_jobs: List["ShelvingJob"] = Relationship(
         back_populates="items", link_model=ShelvingJobItemAssociation
     )
+    media_type: Optional["MediaType"] = Relationship(back_populates="items")
+    tray_size_class: Optional["TraySizeClass"] = Relationship(back_populates="items")
+    owner: Optional["Owner"] = Relationship(back_populates="items")

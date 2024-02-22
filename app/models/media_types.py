@@ -1,8 +1,10 @@
 import sqlalchemy as sa
 
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+
+from app.models.items import Item
 
 
 class MediaType(SQLModel, table=True):
@@ -15,9 +17,7 @@ class MediaType(SQLModel, table=True):
 
     __tablename__ = "media_types"
 
-    id: Optional[int] = Field(
-        sa_column=sa.Column(sa.SmallInteger, primary_key=True)
-    )
+    id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True))
     name: str = Field(max_length=25, sa_column=sa.VARCHAR, nullable=False, unique=True)
     update_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
@@ -25,3 +25,5 @@ class MediaType(SQLModel, table=True):
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
+
+    items: List[Item] = Relationship(back_populates="media_type")
