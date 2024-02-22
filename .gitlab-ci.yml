@@ -65,7 +65,7 @@ build_image_test:
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
   rules:
-    - if: $CI_COMMIT_BRANCH == 'test'
+    - if: $CI_COMMIT_BRANCH == 'test' || $CI_COMMIT_BRANCH == 'develop'
 
 build_image_staging:
   stage: build
