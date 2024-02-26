@@ -84,4 +84,4 @@ build_image_staging:
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
   rules:
-    - if: $CI_COMMIT_BRANCH == 'staging'
+    - if: $CI_COMMIT_BRANCH == 'staging' || $CI_PIPELINE_SOURCE == "merge_request_event"
