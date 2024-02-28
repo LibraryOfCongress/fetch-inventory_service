@@ -28,8 +28,9 @@ router = APIRouter(
 def get_module_list(session: Session = Depends(get_session)) -> list:
     """
     Retrieve a paginated list of modules.
-    Returns:
-        - List[ModuleListOutput]: The paginated list of modules.
+
+    **Returns:**
+    - Module List Output: The paginated list of modules.
     """
     return paginate(session, select(Module))
 
@@ -38,12 +39,15 @@ def get_module_list(session: Session = Depends(get_session)) -> list:
 def get_module_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve module details by ID.
-    Parameters:
-        - id: int - The ID of the module to retrieve.
-    Returns:
-        - ModuleDetailReadOutput: The module details.
-    Raises:
-        - HTTPException: If the module with the specified ID is not found.
+
+    **Parameters:**
+    - id: The ID of the module to retrieve.
+
+    **Returns:**
+    - Module Detail Read Output: The module details.
+
+    **Raises:**
+    - HTTPException: If the module with the specified ID is not found.
     """
     module = session.get(Module, id)
     if module:
@@ -59,6 +63,16 @@ def create_module(
     """
     Create a module:
 
+    **Args:**
+    - ModuleInput: Input data for the new module.
+
+    **Returns:**
+    - Module: The newly created module.
+
+    **Raises:**
+    - HTTPException: If an error occurs during module creation.
+
+    **Notes:**
     - **building_id**: Required integer id for related building
     - **module_number_id**: Required integer id for related module number
     """
@@ -97,12 +111,15 @@ def update_module(
 def delete_module(id: int, session: Session = Depends(get_session)):
     """
     Delete a module by its ID.
-    Args:
-        - id (int): The ID of the module.
-    Raises:
-        - HTTPException: If the module is not found.
-    Returns:
-        - None
+
+    **Args:**
+    - id: The ID of the module.
+
+    **Raises:**
+    - HTTPException: If the module is not found.
+
+    **Returns:**
+    - None
     """
     module = session.get(Module, id)
     if module:

@@ -23,7 +23,6 @@ router = APIRouter(
 )
 
 
-
 @router.get("/", response_model=Page[BuildingListOutput])
 def get_building_list(session: Session = Depends(get_session)) -> list:
     """
@@ -138,4 +137,3 @@ def delete_building(id: int, session: Session = Depends(get_session)):
         return HTTPException(status_code=204)
     else:
         return HTTPException(status_code=404)
-

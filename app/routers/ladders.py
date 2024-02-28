@@ -27,7 +27,7 @@ def get_ladder_list(session: Session = Depends(get_session)) -> list:
     Retrieve a paginated list of ladders.
 
     **Returns:**
-    - list: A list of ladders.
+    - Ladder List Output: A list of ladders.
     """
     return paginate(session, select(Ladder))
 
@@ -38,7 +38,7 @@ def get_ladder_detail(id: int, session: Session = Depends(get_session)):
     Retrieve the details of a ladder by its ID.
 
     **Args:**
-    - id (int): The ID of the ladder to retrieve.
+    - id: The ID of the ladder to retrieve.
 
     **Returns:**
     - Ladder Detail Read Output: The details of the ladder.
@@ -89,7 +89,7 @@ def update_ladder(
     Update a ladder with the given ID.
 
     **Args:**
-    - id (int): The ID of the ladder to update.
+    - id: The ID of the ladder to update.
     - Ladder Update Input: The updated ladder data.
 
     **Returns:**

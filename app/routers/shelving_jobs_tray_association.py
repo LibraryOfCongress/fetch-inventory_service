@@ -36,16 +36,18 @@ def get_shelving_job_tray_association_list(
 
 
 @router.get(
-    "/tray-association/{id}", response_model=ShelvingJobTrayAssociationDetailOutput
+    "/tray-association/{shelving_job_id}/{tray_id}",
+    response_model=ShelvingJobTrayAssociationDetailOutput,
 )
 def get_shelving_job_tray_association_detail(
-    id: int, session: Session = Depends(get_session)
+    shelving_job_id: int, tray_id: int, session: Session = Depends(get_session)
 ):
     """
     Retrieves the shelving job detail tray association for the given ID.
 
     **Args:**
-    - id: The ID of the shelving job tray association.
+    - shelving job id: The ID of the shelving job association.
+    - tray id: The ID of the tray association.
 
     **Returns:**
     - Shelving Job Tray Association Detail Output: The shelving job tray association
@@ -54,7 +56,14 @@ def get_shelving_job_tray_association_detail(
     **Raises:**
     - HTTPException: If the shelving job tray association with the given ID is not found.
     """
-    shelving_job_tray_association = session.get(ShelvingJobTrayAssociation, id)
+    statement = (
+        select(ShelvingJobTrayAssociation)
+        .where(ShelvingJobTrayAssociation.shelving_job_id == shelving_job_id)
+        .where(ShelvingJobTrayAssociation.tray_id == tray_id)
+    )
+
+    shelving_job_tray_association = session.exec(statement).first()
+
     if shelving_job_tray_association:
         return shelving_job_tray_association
     else:
@@ -96,10 +105,12 @@ def create_shelving_job_tray_association(
 
 
 @router.patch(
-    "/tray-association/{id}", response_model=ShelvingJobTrayAssociationDetailOutput
+    "/tray-association/{shelving_job_id}/{tray_id}",
+    response_model=ShelvingJobTrayAssociationDetailOutput,
 )
 def update_shelving_job_tray_association(
-    id: int,
+    shelving_job_id: int,
+    tray_id: int,
     shelving_job_tray_association: ShelvingJobTrayAssociationUpdateInput,
     session: Session = Depends(get_session),
 ):
@@ -107,7 +118,8 @@ def update_shelving_job_tray_association(
     Update an existing shelving job tray association with the provided data.
 
     ***Parameters:**
-    - id: The ID of the shelving job tray association to be updated.
+    - shelving job id: The ID of the shelving job association to be updated.
+    - tray id: The ID of the tray association to be updated.
     - shelving job tray association: The data to update the shelving job tray
     association with.
 
@@ -116,7 +128,13 @@ def update_shelving_job_tray_association(
     occurs during the update.
     """
 
-    existing_shelving_job_tray_association = session.get(ShelvingJobTrayAssociation, id)
+    statement = (
+        select(ShelvingJobTrayAssociation)
+        .where(ShelvingJobTrayAssociation.shelving_job_id == shelving_job_id)
+        .where(ShelvingJobTrayAssociation.tray_id == tray_id)
+    )
+
+    existing_shelving_job_tray_association = session.exec(statement).first()
 
     if not existing_shelving_job_tray_association:
         raise HTTPException(status_code=404)
@@ -135,26 +153,34 @@ def update_shelving_job_tray_association(
     return existing_shelving_job_tray_association
 
 
-@router.delete("/tray-association/{id}", status_code=204)
+@router.delete("/tray-association/{shelving_job_id}/{tray_id}", status_code=204)
 def delete_shelving_job_tray_association(
-    id: int, session: Session = Depends(get_session)
+    shelving_job_id: int, tray_id: int, session: Session = Depends(get_session)
 ):
     """
     Delete a shelving job tray association by its ID.
     **Args:**
-    - id: The ID of the shelving job tray association to be deleted.
+    - shelving job id: The ID of the shelving job association to be deleted.
+    - tray id: The ID of the tray association to be deleted.
 
     **Returns:**
     - HTTPException: An HTTP exception indicating the result of the deletion.
     """
-    shelving_job_tray_association = session.get(ShelvingJobTrayAssociation, id)
+    statement = (
+        select(ShelvingJobTrayAssociation)
+        .where(ShelvingJobTrayAssociation.shelving_job_id == shelving_job_id)
+        .where(ShelvingJobTrayAssociation.tray_id == tray_id)
+    )
+
+    shelving_job_tray_association = session.exec(statement).first()
+
     if shelving_job_tray_association:
         session.delete(shelving_job_tray_association)
         session.commit()
-    else:
-        raise HTTPException(status_code=404)
 
-    return HTTPException(
-        status_code=204,
-        detail=f"Shelving Job Tray Association id {id} deleted " f"successfully",
-    )
+        return HTTPException(
+            status_code=204,
+            detail=f"Shelving Job Tray Association id {id} deleted " f"successfully",
+        )
+
+    raise HTTPException(status_code=404)

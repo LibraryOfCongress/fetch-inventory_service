@@ -23,7 +23,10 @@ router = APIRouter(
 @router.get("/", response_model=Page[ContainerTypeListOutput])
 def get_container_type_list(session: Session = Depends(get_session)) -> list:
     """
-    Retrieve a list of container types
+    Retrieve a list of container types.
+
+    **Returns:**
+    - Container Type List Output: A list of container types.
     """
     return paginate(session, select(ContainerType))
 
@@ -31,7 +34,16 @@ def get_container_type_list(session: Session = Depends(get_session)) -> list:
 @router.get("/{id}", response_model=ContainerTypeDetailReadOutput)
 def get_container_type_detail(id: int, session: Session = Depends(get_session)):
     """
-    Retrieve the details of a container type by its ID.
+    Retrieve details of a specific container type by ID.
+
+    **Args:**
+    - id: The ID of the container type to retrieve.
+
+    **Returns:**
+    - Container Type Detail Read Output: The details of the container type.
+
+    **Raises:**
+    - HTTPException: If the container type with the specified ID is not found.
     """
     container_type = session.get(ContainerType, id)
     if container_type is None:
@@ -40,9 +52,17 @@ def get_container_type_detail(id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/", response_model=ContainerTypeDetailWriteOutput, status_code=201)
-def create_container_type(container_type_input: ContainerTypeInput, session: Session = Depends(get_session)):
+def create_container_type(
+    container_type_input: ContainerTypeInput, session: Session = Depends(get_session)
+):
     """
-    Create a new container type record.
+    Create a new container type record.'
+
+    **Args:**
+    - Container Type Input: The input data for the new container type.
+
+    **Returns:**
+    - Container Type: The newly created container type.
 
     **type**: Required varchar 25
     """
@@ -56,9 +76,18 @@ def create_container_type(container_type_input: ContainerTypeInput, session: Ses
 
 
 @router.patch("/{id}", response_model=ContainerTypeDetailWriteOutput)
-def update_container_type(id: int, container_type: ContainerTypeInput, session: Session = Depends(get_session)):
+def update_container_type(
+    id: int, container_type: ContainerTypeInput, session: Session = Depends(get_session)
+):
     """
-    Update a container type record by its id.
+    Update an existing container type in the database.
+
+    **Parameters:**
+    - id: The id of the container type to update.
+    - Container Type Input: The updated container type data.
+
+    **Returns:**
+    - Container Type Detail Write Output: The updated container type.
     """
     existing_container_type = session.get(ContainerType, id)
 
@@ -81,7 +110,13 @@ def update_container_type(id: int, container_type: ContainerTypeInput, session: 
 @router.delete("/{id}", status_code=204)
 def delete_container_type(id: int, session: Session = Depends(get_session)):
     """
-    Delete a container type by its ID.
+    Deletes a container type from the database by its ID.
+
+    **Args:**
+    - id: The ID of the container type to delete.
+
+    **Raises:**
+    - HTTPException: If the container type with the given ID is not found.
     """
     container_type = session.get(ContainerType, id)
     if container_type:

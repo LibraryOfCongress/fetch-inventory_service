@@ -24,8 +24,9 @@ router = APIRouter(
 def get_module_number_list(session: Session = Depends(get_session)) -> list:
     """
     Get a paginated list of module numbers.
-    Returns:
-        List[ModuleNumberListOutput]: The paginated list of module numbers.
+
+    **Returns:**
+    - Module Number List Output: The paginated list of module numbers.
     """
     return paginate(session, select(ModuleNumber))
 
@@ -34,12 +35,15 @@ def get_module_number_list(session: Session = Depends(get_session)) -> list:
 def get_module_number_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve the details of a module number.
-    Args:
-        - id (int): The ID of the module number.
-    Returns:
-        - ModuleNumberDetailOutput: The details of the module number.
-    Raises:
-        - HTTPException: If the module number is not found.
+
+    **Args:**
+    - id: The ID of the module number.
+
+    **Returns:**
+    - Module Number Detail Output: The details of the module number.
+
+    **Raises:**
+    - HTTPException: If the module number is not found.
     """
     module_number = session.get(ModuleNumber, id)
     if module_number:
@@ -54,12 +58,15 @@ def create_module_number(
 ) -> ModuleNumber:
     """
     Create a new module number:
-    Args:
-        - module_number_input (ModuleNumberInput): The input data for creating a module number.
-    Returns:
-        - ModuleNumber: The newly created module number.
-    Notes:
-        - **number**: Required unique integer that represents a module number
+
+    **Args:**
+    - Module Number Input: The input data for creating a module number.
+
+    **Returns:**
+    - Module Number: The newly created module number.
+
+    **Notes:**
+    - **number**: Required unique integer that represents a module number
     """
     new_module_number = ModuleNumber(**module_number_input.model_dump())
     session.add(new_module_number)
@@ -72,6 +79,16 @@ def create_module_number(
 def update_module_number(
     id: int, module_number: ModuleNumberInput, session: Session = Depends(get_session)
 ):
+    """
+    Update a module number in the database.
+
+    **Args:**
+    - id: The id of the module number to update.
+    - Module Number Input: The updated module number data.
+
+    **Returns:**
+    - Module Number Detail Output: The updated module number.
+    """
     existing_module_number = session.get(ModuleNumber, id)
 
     if existing_module_number is None:
@@ -95,10 +112,12 @@ def update_module_number(
 def delete_module_number(id: int, session: Session = Depends(get_session)):
     """
     Delete a module number by its ID.
-    Args:
-        - id (int): The ID of the module number to delete.
-    Raises:
-        - HTTPException: If the module number with the specified ID does not exist.
+
+    **Args:**
+    - id: The ID of the module number to delete.
+
+    **Raises:**
+    - HTTPException: If the module number with the specified ID does not exist.
     """
     # Retrieve the module number from the database
     module_number = session.get(ModuleNumber, id)

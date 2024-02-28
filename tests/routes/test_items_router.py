@@ -86,24 +86,9 @@ def test_get_item_by_id(client):
     ].get("id")
 
 
+# TODO: Add test for get_item_by_id_not_found
 def test_create_item_record(client):
     pass
-    # client.post("/items", json={
-    #     "accession_dt": "2023-10-08T20:46:56.764426",
-    #     "accession_job_id": 1,
-    #     "arbitrary_data": "Signed copy",
-    #     "condition": "Good",
-    #     "container_type_id": 1,
-    #     "media_type_id": 1,
-    #     "owner_id": 2,
-    #     "subcollection_id": 1,
-    #     "title": "Lord of The Rings",
-    #     "tray_id": 1,
-    #     "size_class_id": 1,
-    #     "verification_job_id": 1,
-    #     "volume": "I",
-    #     "withdrawal_dt": "2023-10-08T20:46:56.764426"
-    # })
 
 
 def test_update_item_record(client):

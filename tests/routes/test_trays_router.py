@@ -42,7 +42,7 @@ def test_get_tray_by_id(client):
 
 def test_create_tray_record(client):
     barcodes_response = client.post(
-        "/barcodes", json={"type_id": 1, "value": "5901234123460"}
+        "/barcodes", json={"type_id": 1, "value": "5901234123601"}
     )
 
     assert barcodes_response.status_code == status.HTTP_201_CREATED

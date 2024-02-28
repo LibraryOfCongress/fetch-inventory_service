@@ -17,7 +17,7 @@
       "building_id": 1
     },
     "side_orientations": {
-      "name": "down"
+      "name": "down down"
     },
     "sides": {
       "aisle_id": 1,
@@ -47,7 +47,7 @@
       "type": "Tray"
     },
     "barcode_types": {
-      "name": "qrcode"
+      "name": "barcode"
     },
     "shelving_jobs": {
       "trayed": true,

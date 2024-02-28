@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class ShelvingJobItemAssociationInput(BaseModel):
-    verified: Optional[bool] = None
+    verified: bool
     shelf_position_proposed_id: Optional[int] = None
     shelf_position_id: Optional[int] = None
     shelving_job_id: Optional[int] = None
@@ -41,26 +41,29 @@ class ShelvingJobItemAssociationUpdateInput(BaseModel):
 
 
 class ShelvingJobItemAssociationBaseOutput(BaseModel):
-    id: int
-    verified: Optional[int]
+    verified: bool
+    shelving_job_id: int
+    item_id: int
 
 
 class ShelvingJobItemAssociationListOutput(ShelvingJobItemAssociationBaseOutput):
     class Config:
-        json_schema_extra = {"example": {"id": 1, "verified": True}}
+        json_schema_extra = {
+            "example": {
+                "verified": True,
+                "shelving_job_id": 1,
+                "item_id": 1
+            }
+        }
 
 
 class ShelvingJobItemAssociationDetailOutput(ShelvingJobItemAssociationBaseOutput):
-    verified: Optional[bool] = None
     shelf_position_proposed_id: Optional[int] = None
     shelf_position_id: Optional[int] = None
-    shelving_job_id: Optional[int] = None
-    item_id: Optional[int] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "id": 1,
                 "verified": True,
                 "shelf_position_proposed_id": 1,
                 "shelf_position_id": 1,

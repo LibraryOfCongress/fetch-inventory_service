@@ -16,6 +16,17 @@ class SideOrientationInput(BaseModel):
         }
 
 
+class SideOrientationUpdateInput(BaseModel):
+    name: Optional[constr(max_length=5)] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Right",
+            }
+        }
+
+
 class SideOrientationBaseReadOutput(BaseModel):
     id: int
     name: str

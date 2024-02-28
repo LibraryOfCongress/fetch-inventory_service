@@ -35,25 +35,35 @@ def get_shelving_job_item_association_list(
 
 
 @router.get(
-    "/item-association/{id}", response_model=ShelvingJobItemAssociationDetailOutput
+    "/item-association/{shelving_job_id}/{item_id}",
+    response_model=ShelvingJobItemAssociationDetailOutput,
 )
 def get_shelving_job_item_association_detail(
-    id: int, session: Session = Depends(get_session)
+    shelving_job_id: int, item_id: int, session: Session = Depends(get_session)
 ):
     """
     Retrieves the shelving job detail item association for the given ID.
 
     **Args:**
-    - id: The ID of the shelving job item association.
+    - shelving job id: The ID of the shelving job item association.
+    - item id: The ID of the item association.
 
     **Returns:**
     - Shelving Job Item Association Detail Output: The shelving job item association
     detail.
 
     **Raises:**
-    - HTTPException: If the shelving job item association with the given ID is not found.
+    - HTTPException: If the shelving job item association with the given ID is not
+    found.
     """
-    shelving_job_item_association = session.get(ShelvingJobItemAssociation, id)
+    statement = (
+        select(ShelvingJobItemAssociation)
+        .where(ShelvingJobItemAssociation.shelving_job_id == shelving_job_id)
+        .where(ShelvingJobItemAssociation.item_id == item_id)
+    )
+
+    shelving_job_item_association = session.exec(statement).first()
+
     if shelving_job_item_association:
         return shelving_job_item_association
     else:
@@ -95,10 +105,12 @@ def create_shelving_job_item_association(
 
 
 @router.patch(
-    "/item-association/{id}", response_model=ShelvingJobItemAssociationDetailOutput
+    "/item-association/{shelving_job_id}/{item_id}",
+    response_model=ShelvingJobItemAssociationDetailOutput,
 )
 def update_shelving_job_item_association(
-    id: int,
+    shelving_job_id: int,
+    item_id: int,
     shelving_job_item_association: ShelvingJobItemAssociationUpdateInput,
     session: Session = Depends(get_session),
 ):
@@ -106,7 +118,8 @@ def update_shelving_job_item_association(
     Update an existing shelving job item association with the provided data.
 
     ***Parameters:**
-    - id: The ID of the shelving job item association to be updated.
+    - shelving job id: The ID of the shelving job association to be updated.
+    - item id: The ID of the item association to be updated.
     - shelving job item association: The data to update the shelving job item
     association with.
 
@@ -115,7 +128,13 @@ def update_shelving_job_item_association(
     occurs during the update.
     """
 
-    existing_shelving_job_item_association = session.get(ShelvingJobItemAssociation, id)
+    statement = (
+        select(ShelvingJobItemAssociation)
+        .where(ShelvingJobItemAssociation.shelving_job_id == shelving_job_id)
+        .where(ShelvingJobItemAssociation.item_id == item_id)
+    )
+
+    existing_shelving_job_item_association = session.exec(statement).first()
 
     if not existing_shelving_job_item_association:
         raise HTTPException(status_code=404)
@@ -134,26 +153,34 @@ def update_shelving_job_item_association(
     return existing_shelving_job_item_association
 
 
-@router.delete("/item-association/{id}", status_code=204)
+@router.delete("/item-association/{shelving_job_id}/{item_id}", status_code=204)
 def delete_shelving_job_item_association(
-    id: int, session: Session = Depends(get_session)
+    shelving_job_id: int, item_id: int, session: Session = Depends(get_session)
 ):
     """
     Delete a shelving job item association by its ID.
     **Args:**
-    - id: The ID of the shelving job item association to be deleted.
+    - shelving job id: The ID of the shelving job association to be deleted.
+    - item id: The ID of the item association to be deleted.
 
     **Returns:**
     - HTTPException: An HTTP exception indicating the result of the deletion.
     """
-    shelving_job_item_association = session.get(ShelvingJobItemAssociation, id)
+    statement = (
+        select(ShelvingJobItemAssociation)
+        .where(ShelvingJobItemAssociation.shelving_job_id == shelving_job_id)
+        .where(ShelvingJobItemAssociation.item_id == item_id)
+    )
+
+    shelving_job_item_association = session.exec(statement).first()
+
     if shelving_job_item_association:
         session.delete(shelving_job_item_association)
         session.commit()
-    else:
-        raise HTTPException(status_code=404)
 
-    return HTTPException(
-        status_code=204,
-        detail=f"Shelving Job Item Association id {id} deleted " f"successfully",
-    )
+        return HTTPException(
+            status_code=204,
+            detail=f"Shelving Job Item Association id {id} deleted " f"successfully",
+        )
+
+    raise HTTPException(status_code=404)

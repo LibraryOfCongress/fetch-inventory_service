@@ -108,8 +108,6 @@ def update_ladder_number(
     return existing_ladder_number
 
 
-
-
 @router.delete("/numbers/{id}")
 def delete_ladder_number(id: int, session: Session = Depends(get_session)):
     """

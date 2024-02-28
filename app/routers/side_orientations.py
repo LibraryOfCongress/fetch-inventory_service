@@ -12,6 +12,7 @@ from app.schemas.side_orientations import (
     SideOrientationListOutput,
     SideOrientationDetailWriteOutput,
     SideOrientationDetailReadOutput,
+    SideOrientationUpdateInput
 )
 
 router = APIRouter(
@@ -79,7 +80,7 @@ def create_side_orientation(
 @router.patch("/orientations/{id}", response_model=SideOrientationDetailWriteOutput)
 def update_side_orientation(
     id: int,
-    side_orientation: SideOrientationInput,
+    side_orientation: SideOrientationUpdateInput,
     session: Session = Depends(get_session),
 ):
     """
@@ -87,7 +88,7 @@ def update_side_orientation(
 
     **Args**:
     - id: The ID of the side orientation to update.
-    - Side Orientation Input: The updated side orientation data.
+    - Side Orientation Update Input: The updated side orientation data.
 
     **Returns**:
     - Side Orientation Detail Write Output: The updated side orientation.

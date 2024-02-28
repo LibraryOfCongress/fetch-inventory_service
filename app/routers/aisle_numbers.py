@@ -82,7 +82,6 @@ def create_aisle_number(
 def update_aisle_number(
     id: int, aisle_number: AisleNumberInput, session: Session = Depends(get_session)
 ):
-
     existing_aisle_number = session.get(AisleNumber, id)
 
     if not existing_aisle_number:
@@ -124,5 +123,3 @@ def delete_aisle_number(id: int, session: Session = Depends(get_session)):
         return HTTPException(status_code=204)
     else:
         raise HTTPException(status_code=404)
-
-

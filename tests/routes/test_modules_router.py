@@ -88,7 +88,24 @@ def test_update_module_record_not_found(client):
 
 
 def test_delete_module_record_success(client):
-    response = client.post("/modules/", json={"building_id": 1, "module_number_id": 2})
+    # Create new building
+    response = client.post("/buildings/", json={"name": "New Building 3"})
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json().get("name") == "New Building 3"
+
+    building_id = response.json().get("id")
+
+    # Create new module number
+    response = client.post("/modules/numbers/", json={"number": 9})
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json().get("number") == 9
+
+    module_number_id = response.json().get("id")
+
+    response = client.post(
+        "/modules/",
+        json={"building_id": building_id, "module_number_id": module_number_id},
+    )
     assert response.status_code == status.HTTP_201_CREATED
 
     response = client.delete(f"/modules/{response.json().get('id')}")

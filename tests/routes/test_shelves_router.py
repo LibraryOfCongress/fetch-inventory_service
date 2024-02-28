@@ -6,8 +6,6 @@ from tests.fixtures.shelves_fixture import (
     SHELVES_SINGLE_RECORD_RESPONSE,
     SHELVES_PAGE_DATA_RESPONSE,
     SHELVES_SIZE_DATA_RESPONSE,
-    CREATE_SHELVES_SINGLE_RECORD,
-    UPDATED_SHELVES_SINGLE_RECORD,
     create_shelf_record_data,
 )
 

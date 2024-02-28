@@ -80,18 +80,27 @@ def create_owner(
     # Check if the parent_owner_id is set
     if new_owner.parent_owner_id is not None:
         # Retrieve the parent owner
-        parent_owner = session.exec(select(Owner).where(Owner.id == new_owner.parent_owner_id)).first()
+        parent_owner = session.exec(
+            select(Owner).where(Owner.id == new_owner.parent_owner_id)
+        ).first()
         if parent_owner is None:
             raise HTTPException(status_code=404, detail="Parent owner not found")
 
         # query new_owner.owner_tier to get proposed tier level
-        new_owner_tier_level = session.exec(select(OwnerTier).where(
-            OwnerTier.id == new_owner.owner_tier_id
-        )).first().level
+        new_owner_tier_level = (
+            session.exec(
+                select(OwnerTier).where(OwnerTier.id == new_owner.owner_tier_id)
+            )
+            .first()
+            .level
+        )
 
         # Check if the owner_tier is greater than the parent's owner_tier
         if new_owner_tier_level <= parent_owner.owner_tier.level:
-            raise HTTPException(status_code=400, detail="Owner tier must be lower level (higher value) than parent owner's tier")
+            raise HTTPException(
+                status_code=400,
+                detail="Owner tier must be lower level (higher value) than parent owner's tier",
+            )
 
     # Add the new owner to the database
     session.add(new_owner)
@@ -131,13 +140,18 @@ def update_owner(
     # Check if the parent_owner_id is set
     if existing_owner.parent_owner_id is not None:
         # Retrieve the parent owner
-        parent_owner = session.exec(select(Owner).where(Owner.id == existing_owner.parent_owner_id)).first()
+        parent_owner = session.exec(
+            select(Owner).where(Owner.id == existing_owner.parent_owner_id)
+        ).first()
         if parent_owner is None:
             raise HTTPException(status_code=404, detail="Parent owner not found")
 
         # Check if the owner_tier is greater than the parent's owner_tier
         if existing_owner.owner_tier.level <= parent_owner.owner_tier.level:
-            raise HTTPException(status_code=400, detail="Owner tier must be lower level (higher value) than parent owner's tier")
+            raise HTTPException(
+                status_code=400,
+                detail="Owner tier must be lower level (higher value) than parent owner's tier",
+            )
 
     setattr(existing_owner, "update_dt", datetime.utcnow())
     session.add(existing_owner)

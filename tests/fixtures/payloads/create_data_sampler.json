@@ -76,18 +76,18 @@
       "run_time": "03:25:15",
       "verification_job_id": 1
   },
-  "shelving_jobs_item_association": {
+  "shelving_job_item_associations": {
       "verified": true,
-      "shelving_job_id": 1,
-      "shelf_id": 1,
+      "shelf_position_proposed_id": 1,
       "shelf_position_id": 1,
+      "shelving_job_id": 1,
       "item_id": 1
   },
-  "shelving_jobs_tray_association": {
+  "shelving_job_tray_associations": {
       "verified": true,
-      "shelving_job_id": 1,
-      "shelf_id": 1,
+      "shelf_position_proposed_id": 1,
       "shelf_position_id": 1,
+      "shelving_job_id": 1,
       "tray_id": 1
   },
   "accession_jobs": {

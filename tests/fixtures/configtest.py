@@ -78,7 +78,7 @@ def init_db():
     subprocess.run(DOCKER_CLEANUP_VOLUME_COMMAND.split())
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def session():
     """
     Fixture that provides a session object for testing.
@@ -92,7 +92,7 @@ def session():
     session.close()
 
 
-@pytest.fixture(name="client", scope="session")
+@pytest.fixture(name="client", scope="module")
 def client(session):
     """
     Fixture that returns a TestClient instance for testing FastAPI application.
@@ -193,6 +193,14 @@ def populate_record(client, fixtures_path, table):
                 return client.post("/conveyance-bins", json=data.get(table))
             elif table == "size_class":
                 return client.post("/size_class", json=data.get(table))
+            elif table == "shelving_job_tray_associations":
+                return client.post("/shelving-jobs/tray-association", json=data.get(
+                    table))
+            elif table == "shelving_job_item_associations":
+                return client.post("/shelving-jobs/item-association", json=data.get(
+                    table))
+            elif table == "shelving_jobs":
+                return client.post("/shelving-jobs", json=data.get(table))
             else:
                 if table == "shelves":
                     barcode_id = generate_barcode_id(client, 1, "5901234123458")
@@ -228,7 +236,7 @@ def populate_record(client, fixtures_path, table):
         raise ValueError("Table name not provided")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def test_database(client, init_db):
     """
     Initialize and test the database.
@@ -255,6 +263,7 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "side_orientations")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "sides")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "barcode_types")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "barcodes")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_numbers")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_position_numbers")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "ladder_numbers")
@@ -271,4 +280,7 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "media_types")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "trays")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "items")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_jobs")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_item_associations")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_tray_associations")
 

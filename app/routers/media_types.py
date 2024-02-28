@@ -40,7 +40,9 @@ def get_media_type_detail(id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/", response_model=MediaTypeDetailWriteOutput, status_code=201)
-def create_media_type(media_type_input: MediaTypeInput, session: Session = Depends(get_session)):
+def create_media_type(
+    media_type_input: MediaTypeInput, session: Session = Depends(get_session)
+):
     """
     Create a new media type record.
 
@@ -56,7 +58,9 @@ def create_media_type(media_type_input: MediaTypeInput, session: Session = Depen
 
 
 @router.patch("/{id}", response_model=MediaTypeDetailWriteOutput)
-def update_media_type(id: int, media_type: MediaTypeInput, session: Session = Depends(get_session)):
+def update_media_type(
+    id: int, media_type: MediaTypeInput, session: Session = Depends(get_session)
+):
     """
     Update a media type record by its id.
     """

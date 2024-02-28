@@ -43,7 +43,9 @@ def get_non_tray_item_detail(id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/", response_model=NonTrayItemDetailWriteOutput, status_code=201)
-def create_non_tray_item(item_input: NonTrayItemInput, session: Session = Depends(get_session)):
+def create_non_tray_item(
+    item_input: NonTrayItemInput, session: Session = Depends(get_session)
+):
     """
     Create a new non_tray_item record
     """
@@ -58,7 +60,9 @@ def create_non_tray_item(item_input: NonTrayItemInput, session: Session = Depend
 
 @router.patch("/{id}", response_model=NonTrayItemDetailWriteOutput)
 def update_non_tray_item(
-    id: int, non_tray_item: NonTrayItemUpdateInput, session: Session = Depends(get_session)
+    id: int,
+    non_tray_item: NonTrayItemUpdateInput,
+    session: Session = Depends(get_session),
 ):
     """
     Update a non_tray_item record in the database

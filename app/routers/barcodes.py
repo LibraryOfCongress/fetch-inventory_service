@@ -35,7 +35,7 @@ def get_barcode_list(session: Session = Depends(get_session)) -> list:
 
 
 @router.get("/{id}", response_model=BarcodeDetailReadOutput)
-def get_barcode_detail(id: int, session: Session = Depends(get_session)):
+def get_barcode_detail(id: uuid.UUID, session: Session = Depends(get_session)):
     """
     Retrieve barcode details by ID.
 
@@ -52,8 +52,8 @@ def get_barcode_detail(id: int, session: Session = Depends(get_session)):
     barcode = session.get(Barcode, id)
     if barcode:
         return barcode
-    else:
-        raise HTTPException(status_code=404)
+
+    raise HTTPException(status_code=404)
 
 
 @router.post("/", response_model=BarcodeDetailWriteOutput, status_code=201)
@@ -78,7 +78,7 @@ def create_barcode(
 
 @router.patch("/{id}", response_model=BarcodeDetailWriteOutput)
 def update_barcode(
-    id: int, barcode: BarcodeUpdateInput, session: Session = Depends(get_session)
+    id: uuid.UUID, barcode: BarcodeUpdateInput, session: Session = Depends(get_session)
 ):
     """
     Update barcode details.
@@ -93,29 +93,26 @@ def update_barcode(
     **Raises:**
     - HTTPException: If the barcode is not found.
     """
-    try:
-        existing_barcode = session.get(Barcode, id)
+    existing_barcode = session.get(Barcode, id)
 
-        if not existing_barcode:
-            raise HTTPException(status_code=404)
+    if not existing_barcode:
+        raise HTTPException(status_code=404)
 
-        mutated_data = barcode.model_dump(exclude_unset=True)
+    mutated_data = barcode.model_dump(exclude_unset=True)
 
-        for key, value in mutated_data.items():
-            setattr(existing_barcode, key, value)
+    for key, value in mutated_data.items():
+        setattr(existing_barcode, key, value)
 
-        setattr(existing_barcode, "update_dt", datetime.utcnow())
+    setattr(existing_barcode, "update_dt", datetime.utcnow())
 
-        session.add(existing_barcode)
-        session.commit()
-        session.refresh(existing_barcode)
+    session.add(existing_barcode)
+    session.commit()
+    session.refresh(existing_barcode)
 
-        return existing_barcode
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    return existing_barcode
 
 
-@router.delete("/{id}", status_code=204)
+@router.delete("/{id}")
 def delete_barcode(id: uuid.UUID, session: Session = Depends(get_session)):
     """
     Deletes a barcode by its ID.
@@ -135,5 +132,6 @@ def delete_barcode(id: uuid.UUID, session: Session = Depends(get_session)):
     if barcode:
         session.delete(barcode)
         session.commit()
-    else:
-        raise HTTPException(status_code=404)
+        return HTTPException(status_code=204)
+
+    raise HTTPException(status_code=404)

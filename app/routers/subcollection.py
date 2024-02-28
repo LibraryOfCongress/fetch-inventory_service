@@ -44,7 +44,9 @@ def get_subcollection_detail(id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/", response_model=SubcollectionDetailWriteOutput, status_code=201)
-def create_subcollection(subcollection_input: SubcollectionInput, session: Session = Depends(get_session)):
+def create_subcollection(
+    subcollection_input: SubcollectionInput, session: Session = Depends(get_session)
+):
     """
     Create a new subcollection
     """
@@ -59,7 +61,9 @@ def create_subcollection(subcollection_input: SubcollectionInput, session: Sessi
 
 @router.patch("/{id}", response_model=SubcollectionDetailWriteOutput)
 def update_subcollection(
-    id: int, subcollection: SubcollectionUpdateInput, session: Session = Depends(get_session)
+    id: int,
+    subcollection: SubcollectionUpdateInput,
+    session: Session = Depends(get_session),
 ):
     """
     Updates an subcollection with the given ID using the provided subcollection data

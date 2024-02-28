@@ -60,7 +60,7 @@ def test_create_aisle_record(client):
     assert response.json().get("aisle_number_id") == aisle_number_id
 
 
-def test_patch_aisle_record(client):
+def test_update_aisle_record(client):
     response = client.post("/aisles/numbers/", json={"number": 8})
 
     assert response.status_code == status.HTTP_201_CREATED
@@ -88,7 +88,7 @@ def test_update_aisle_record_not_found(client):
 
 
 def test_delete_aisle_record_success(client):
-    response = client.post("/aisles/", json={"building_id": 1, "aisle_number_id": 2})
+    response = client.post("/aisles/", json={"building_id": 1, "aisle_number_id": 1})
     assert response.status_code == status.HTTP_201_CREATED
 
     response = client.delete(f"/aisles/{response.json().get('id')}")
