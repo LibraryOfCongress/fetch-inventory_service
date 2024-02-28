@@ -37,7 +37,7 @@ class Tray(SQLModel, table=True):
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id", nullable=False, default=None
     )
-    tray_size_class_id: int = Field(foreign_key="tray_size_class.id", nullable=False)
+    size_class_id: int = Field(foreign_key="size_class.id", nullable=False)
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     shelf_position_id: Optional[int] = Field(
@@ -75,7 +75,7 @@ class Tray(SQLModel, table=True):
     media_type: Optional["MediaType"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
-    tray_size_class: Optional["TraySizeClass"] = Relationship(
+    size_class: Optional["SizeClass"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
     conveyance_bin: Optional["ConveyanceBin"] = Relationship(back_populates="trays")

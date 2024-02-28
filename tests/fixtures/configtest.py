@@ -191,7 +191,7 @@ def populate_record(client, fixtures_path, table):
                 return client.post("/media-types", json=data.get(table))
             elif table == "conveyance_bins":
                 return client.post("/conveyance-bins", json=data.get(table))
-            elif table == "tray_size_class":
+            elif table == "size_class":
                 return client.post("/size_class", json=data.get(table))
             else:
                 if table == "shelves":
@@ -262,7 +262,7 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "owner_tiers")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "owners")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "container_types")
-    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "tray_size_class")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "size_class")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelves")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_positions")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "accession_jobs")

@@ -28,7 +28,7 @@ class Item(SQLModel, table=True):
         foreign_key="barcodes.id", nullable=False, default=None
     )
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
-    tray_size_class_id: int = Field(foreign_key="tray_size_class.id", nullable=True)
+    size_class_id: int = Field(foreign_key="size_class.id", nullable=True)
     tray_id: Optional[int] = Field(default=None, nullable=True, foreign_key="trays.id")
     container_type_id: Optional[int] = Field(
         foreign_key="container_types.id", nullable=True

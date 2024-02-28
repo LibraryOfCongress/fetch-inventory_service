@@ -35,8 +35,8 @@ class NonTrayItem(SQLModel, table=True):
         foreign_key="owners.id",
         nullable=True
     )
-    tray_size_class_id: int = Field(
-        foreign_key="tray_size_class.id",
+    size_class_id: int = Field(
+        foreign_key="size_class.id",
         nullable=True
     )
     container_type_id: Optional[int] = Field(

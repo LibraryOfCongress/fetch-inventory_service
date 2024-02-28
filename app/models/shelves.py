@@ -48,7 +48,7 @@ class Shelf(SQLModel, table=True):
     )
     container_type_id: int = Field(foreign_key="container_types.id", nullable=False)
     shelf_number_id: int = Field(foreign_key="shelf_numbers.id", nullable=False)
-    tray_size_class_id: int = Field(foreign_key="tray_size_class.id", nullable=False)
+    size_class_id: int = Field(foreign_key="size_class.id", nullable=False)
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     ladder_id: int = Field(foreign_key="ladders.id", nullable=False)
     create_dt: datetime = Field(
@@ -66,6 +66,6 @@ class Shelf(SQLModel, table=True):
     shelf_number: ShelfNumber = Relationship(back_populates="shelves")
     container_type: ContainerType = Relationship(back_populates="shelves")
     shelf_positions: List["ShelfPosition"] = Relationship(back_populates="shelf")
-    tray_size_class: Optional["TraySizeClass"] = Relationship(
+    size_class: Optional["SizeClass"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )

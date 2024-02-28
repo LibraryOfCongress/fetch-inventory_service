@@ -93,7 +93,7 @@
     "items": {
       "id": 1
     },
-    "tray_size_class": {
+    "size_class": {
       "name": "Extra Large"
     },
     "trays": {

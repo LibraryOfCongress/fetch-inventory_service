@@ -3,7 +3,7 @@ from pydantic import BaseModel, constr
 from datetime import datetime
 
 
-class TraySizeClassInput(BaseModel):
+class SizeClassInput(BaseModel):
     name: Optional[constr(max_length=25)] = None
 
     class Config:
@@ -14,7 +14,7 @@ class TraySizeClassInput(BaseModel):
         }
 
 
-class TraySizeClassUpdateInput(TraySizeClassInput):
+class SizeClassUpdateInput(SizeClassInput):
 
     class Config:
         json_schema_extra = {
@@ -24,7 +24,7 @@ class TraySizeClassUpdateInput(TraySizeClassInput):
         }
 
 
-class TraySizeClassBaseOutput(TraySizeClassInput):
+class SizeClassBaseOutput(SizeClassInput):
     id: int
 
     class Config:
@@ -36,7 +36,7 @@ class TraySizeClassBaseOutput(TraySizeClassInput):
         }
 
 
-class TraySizeClassListOutput(TraySizeClassBaseOutput):
+class SizeClassListOutput(SizeClassBaseOutput):
 
     class Config:
         json_schema_extra = {
@@ -47,7 +47,7 @@ class TraySizeClassListOutput(TraySizeClassBaseOutput):
         }
 
 
-class TraySizeClassDetailWriteOutput(TraySizeClassBaseOutput):
+class SizeClassDetailWriteOutput(SizeClassBaseOutput):
     create_dt: datetime
     update_dt: datetime
 
@@ -62,7 +62,7 @@ class TraySizeClassDetailWriteOutput(TraySizeClassBaseOutput):
         }
 
 
-class TraySizeClassDetailReadOutput(TraySizeClassDetailWriteOutput):
+class SizeClassDetailReadOutput(SizeClassDetailWriteOutput):
 
     class Config:
         json_schema_extra = {

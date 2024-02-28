@@ -9,13 +9,13 @@ from app.schemas.ladders import LadderDetailWriteOutput
 from app.schemas.shelf_numbers import ShelfNumberDetailOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
 from app.schemas.barcodes import BarcodeDetailReadOutput
-from app.schemas.tray_size_class import TraySizeClassDetailReadOutput
+from app.schemas.size_class import SizeClassDetailReadOutput
 
 
 class ShelfInput(BaseModel):
     ladder_id: conint(ge=0, le=2147483647)
     container_type_id: conint(ge=0, le=2147483647)
-    tray_size_class_id: conint(ge=0, le=32767)
+    size_class_id: conint(ge=0, le=32767)
     shelf_number_id: conint(ge=0, le=32767)
     owner_id: conint(ge=0, le=32767)
     capacity: conint(ge=0, le=32767)
@@ -29,7 +29,7 @@ class ShelfInput(BaseModel):
             "example": {
                 "ladder_id": 1,
                 "container_type_id": 1,
-                "tray_size_class_id": 1,
+                "size_class_id": 1,
                 "shelf_number_id": 1,
                 "owner_id": 1,
                 "capacity": 33,
@@ -45,7 +45,7 @@ class ShelfInput(BaseModel):
 class ShelfUpdateInput(BaseModel):
     ladder_id: Optional[conint(ge=0, le=2147483647)] = None
     container_type_id: Optional[conint(ge=0, le=2147483647)] = None
-    tray_size_class_id: Optional[conint(ge=0, le=32767)] = None
+    size_class_id: Optional[conint(ge=0, le=32767)] = None
     shelf_number_id: Optional[conint(ge=0, le=32767)] = None
     owner_id: Optional[conint(ge=0, le=32767)] = None
     capacity: Optional[conint(ge=0, le=32767)] = None
@@ -59,7 +59,7 @@ class ShelfUpdateInput(BaseModel):
             "example": {
                 "ladder_id": 1,
                 "container_type_id": 1,
-                "tray_size_class_id":1,
+                "size_class_id": 1,
                 "shelf_number_id": 1,
                 "owner_id": 1,
                 "capacity": 33,
@@ -85,7 +85,7 @@ class ShelfListOutput(ShelfBaseOutput):
 class ShelfDetailWriteOutput(ShelfBaseOutput):
     ladder_id: int
     container_type_id: int
-    tray_size_class_id: int
+    size_class_id: int
     shelf_number_id: int
     owner_id: int
     capacity: int
@@ -104,7 +104,7 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
                 "capacity": 33,
                 "shelf_number_id": 1,
                 "container_type_id": 1,
-                "tray_size_class_id": 1,
+                "size_class_id": 1,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
@@ -119,7 +119,7 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
     ladder: LadderDetailWriteOutput
     shelf_number: ShelfNumberDetailOutput
     container_type: ContainerTypeDetailReadOutput
-    tray_size_class: TraySizeClassDetailReadOutput
+    size_class: SizeClassDetailReadOutput
     owner: OwnerDetailReadOutput
     capacity: int
     height: float
@@ -153,7 +153,7 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398",
                 },
-                "tray_size_class": {
+                "size_class": {
                     "id": 1,
                     "name": "C-Low",
                     "create_dt": "2023-10-08T20:46:56.764426",

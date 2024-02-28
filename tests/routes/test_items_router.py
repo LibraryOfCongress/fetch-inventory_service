@@ -43,9 +43,9 @@ def test_get_all_items(client):
         "tray_id"
     )
     assert response.json().get(
-        "tray_size_class_id"
+        "size_class_id"
         ) == ITEMS_SINGLE_RECORD_RESPONSE.get(
-        "tray_size_class_id"
+        "size_class_id"
     )
     assert response.json().get(
         "verification_job_id"
@@ -99,7 +99,7 @@ def test_create_item_record(client):
     #     "subcollection_id": 1,
     #     "title": "Lord of The Rings",
     #     "tray_id": 1,
-    #     "tray_size_class_id": 1,
+    #     "size_class_id": 1,
     #     "verification_job_id": 1,
     #     "volume": "I",
     #     "withdrawal_dt": "2023-10-08T20:46:56.764426"

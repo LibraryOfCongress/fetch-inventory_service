@@ -54,7 +54,7 @@ def test_create_tray_record(client):
             "verification_job_id": 1,
             "container_type_id": 1,
             "barcode_id": barcodes_response.json().get("id"),
-            "tray_size_class_id": 1,
+            "size_class_id": 1,
             "owner_id": 1,
             "media_type_id": 1,
             "shelf_position_id": 1,
@@ -69,7 +69,7 @@ def test_create_tray_record(client):
     assert response.json().get("verification_job_id") == 1
     assert response.json().get("container_type_id") == 1
     assert response.json().get("barcode_id") == barcodes_response.json().get("id")
-    assert response.json().get("tray_size_class_id") == 1
+    assert response.json().get("size_class_id") == 1
     assert response.json().get("owner_id") == 1
     assert response.json().get("media_type_id") == 1
     assert response.json().get("shelf_position_id") == 1
@@ -109,7 +109,7 @@ def test_delete_tray_record_success(client):
             "verification_job_id": 1,
             "container_type_id": 1,
             "barcode_id": response.json().get("id"),
-            "tray_size_class_id": 1,
+            "size_class_id": 1,
             "owner_id": 1,
             "media_type_id": 1,
             "shelf_position_id": 1,

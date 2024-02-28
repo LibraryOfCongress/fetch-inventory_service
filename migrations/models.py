@@ -23,7 +23,7 @@ from app.models.accession_jobs import AccessionJob
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
 from app.models.media_types import MediaType
-from app.models.tray_size_class import TraySizeClass
+from app.models.size_class import SizeClass
 from app.models.conveyance_bins import ConveyanceBin
 from app.models.subcollection import Subcollection
 from app.models.items import Item

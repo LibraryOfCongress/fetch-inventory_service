@@ -8,7 +8,7 @@ from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.accession_jobs import AccessionJobBaseOutput
 from app.schemas.verification_jobs import VerificationJobBaseOutput
 from app.schemas.media_types import MediaTypeDetailReadOutput
-from app.schemas.tray_size_class import TraySizeClassDetailReadOutput
+from app.schemas.size_class import SizeClassDetailReadOutput
 from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.subcollection import SubcollectionDetailWriteOutput
 
@@ -20,7 +20,7 @@ class NonTrayItemInput(BaseModel):
     owner_id: Optional[int] = None
     subcollection_id: Optional[int] = None
     media_type_id: Optional[int] = None
-    tray_size_class_id: Optional[int] = None
+    size_class_id: Optional[int] = None
     barcode_id: Optional[uuid.UUID] = None
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
@@ -34,7 +34,7 @@ class NonTrayItemInput(BaseModel):
                 "owner_id": 1,
                 "subcollection_id": 1,
                 "media_type_id": 1,
-                "tray_size_class_id": 1,
+                "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
@@ -53,7 +53,7 @@ class NonTrayItemUpdateInput(NonTrayItemInput):
                 "owner_id": 1,
                 "subcollection_id": 1,
                 "media_type_id": 1,
-                "tray_size_class_id": 1,
+                "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
@@ -77,7 +77,7 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
                 "owner_id": 1,
                 "subcollection_id": 1,
                 "media_type_id": 1,
-                "tray_size_class_id": 1,
+                "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
@@ -99,7 +99,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                 "owner_id": 1,
                 "subcollection_id": 1,
                 "media_type_id": 1,
-                "tray_size_class_id": 1,
+                "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426",
@@ -112,7 +112,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
 class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
     barcode: BarcodeDetailReadOutput
     media_type: MediaTypeDetailReadOutput
-    tray_size_class: TraySizeClassDetailReadOutput
+    size_class: SizeClassDetailReadOutput
     accession_job: AccessionJobBaseOutput
     verification_job: VerificationJobBaseOutput
     subcollection: SubcollectionDetailWriteOutput
@@ -128,7 +128,7 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                 "owner_id": 1,
                 "subcollection_id": 1,
                 "media_type_id": 1,
-                "tray_size_class_id": 1,
+                "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "barcode": {
                     "id": "550e8400-e29b-41d4-a716-446655440001",
@@ -143,7 +143,7 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
-                "tray_size_class": {
+                "size_class": {
                     "id": 1,
                     "name": "C-Low",
                     "create_dt": "2023-10-08T20:46:56.764426",

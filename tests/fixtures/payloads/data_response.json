@@ -243,7 +243,7 @@
             "subcollection_id": 1,
             "title": "Lord of The Rings",
             "tray_id": 1,
-            "tray_size_class_id": 1,
+            "size_class_id": 1,
             "verification_job_id": 1,
             "volume": "I",
             "withdrawal_dt": "2023-10-08T20:46:56.764426"
@@ -254,7 +254,7 @@
         "size": 50,
         "pages": 1
     },
-    "tray_size_class": {
+    "size_class": {
       "items": [
         {
           "id": 1,
@@ -273,7 +273,7 @@
           "verification_job_id": 1,
           "container_type_id": 1,
           "barcode_id": 1,
-          "tray_size_class_id": 1,
+          "size_class_id": 1,
           "owner_id": 1,
           "media_type_id": 1,
           "shelf_position_id": 1,

@@ -39,7 +39,7 @@ from app.routers import (
     verification_jobs,
     trays,
     media_types,
-    tray_size_class,
+    size_class,
     conveyance_bins,
     items,
     subcollection,
@@ -162,7 +162,7 @@ app.include_router(accession_jobs.router)
 app.include_router(verification_jobs.router)
 app.include_router(trays.router)
 app.include_router(media_types.router)
-app.include_router(tray_size_class.router)
+app.include_router(size_class.router)
 app.include_router(conveyance_bins.router)
 app.include_router(items.router)
 app.include_router(subcollection.router)
