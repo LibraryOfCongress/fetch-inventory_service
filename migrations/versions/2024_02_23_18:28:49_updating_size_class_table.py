@@ -14,8 +14,8 @@ import sqlmodel
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "2024_02_23_18:28:49"
-down_revision: Union[str, None] = "2024_02_17_21:05:55"
+revision: str = '2024_02_23_18:28:49'
+down_revision: Union[str, None] = '2024_02_17_21:05:55'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

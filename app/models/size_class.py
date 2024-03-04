@@ -16,7 +16,7 @@ class SizeClass(SQLModel, table=True):
     __tablename__ = "size_class"
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True))
-    name: str = Field(max_length=25, sa_column=sa.VARCHAR, nullable=False, unique=True)
+    name: str = Field(max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=True)
     short_name: str = Field(
         max_length=10, sa_column=sa.VARCHAR, nullable=False, unique=True
     )
@@ -26,4 +26,4 @@ class SizeClass(SQLModel, table=True):
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
-    items: List["Item"] = Relationship(back_populates="tray_size_class")
+    items: List["Item"] = Relationship(back_populates="size_class")

@@ -51,21 +51,25 @@ def get_size_class_detail(id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/", response_model=SizeClassDetailWriteOutput, status_code=201)
-def create_size_class(size_class_input: SizeClassInput, session: Session = Depends(get_session)):
+def create_size_class(
+    size_class_input: SizeClassInput, session: Session = Depends(get_session)
+):
     """
     Create a new size class record.
     """
 
-    size_class = SizeClass(**size_class_input.model_dump())
-    session.add(size_class)
+    new_size_class = SizeClass(**size_class_input.model_dump())
+    session.add(new_size_class)
     session.commit()
-    session.refresh(size_class)
-    return size_class
+    session.refresh(new_size_class)
+    return new_size_class
 
 
 @router.patch("/{id}", response_model=SizeClassDetailWriteOutput)
 def update_size_class(
-    id: int, size_class: SizeClassUpdateInput, session: Session = Depends(get_session)
+    id: int,
+    size_class: SizeClassUpdateInput,
+    session: Session = Depends(get_session),
 ):
     """
     Update a size class record in the database
