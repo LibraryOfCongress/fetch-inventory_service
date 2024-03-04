@@ -32,7 +32,6 @@ class VerificationJob(SQLModel, table=True):
                 "Created",
                 "Paused",
                 "Running",
-                "Cancelled",
                 "Completed",
                 name="verification_status",
             )
