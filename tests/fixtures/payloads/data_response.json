@@ -250,6 +250,7 @@
       "items": [
           {
             "id": 1,
+            "status": "In",
             "accession_dt": "2023-10-08T20:46:56.764426",
             "accession_job_id": 1,
             "arbitrary_data": "Signed copy",

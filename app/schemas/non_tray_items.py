@@ -14,6 +14,7 @@ from app.schemas.subcollection import SubcollectionDetailWriteOutput
 
 
 class NonTrayItemInput(BaseModel):
+    status: Optional[str] = None
     accession_job_id: Optional[int] = None
     verification_job_id: Optional[int] = None
     container_type_id: Optional[int] = None
@@ -28,6 +29,7 @@ class NonTrayItemInput(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,
@@ -47,6 +49,7 @@ class NonTrayItemUpdateInput(NonTrayItemInput):
     class Config:
         json_schema_extra = {
             "example": {
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,
@@ -71,6 +74,7 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,
@@ -93,6 +97,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,
@@ -122,6 +127,7 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,

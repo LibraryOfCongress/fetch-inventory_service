@@ -14,6 +14,7 @@ from app.schemas.subcollection import SubcollectionDetailWriteOutput
 
 
 class ItemInput(BaseModel):
+    status: Optional[str] = None
     accession_job_id: Optional[int] = None
     verification_job_id: Optional[int] = None
     tray_id: Optional[int] = None
@@ -30,9 +31,11 @@ class ItemInput(BaseModel):
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
 
+
     class Config:
         json_schema_extra = {
             "example": {
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,
@@ -57,6 +60,7 @@ class ItemUpdateInput(ItemInput):
     class Config:
         json_schema_extra = {
             "example": {
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,
@@ -86,6 +90,7 @@ class ItemListOutput(ItemBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,
@@ -113,6 +118,7 @@ class ItemDetailWriteOutput(ItemBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,
@@ -147,6 +153,7 @@ class ItemDetailReadOutput(ItemDetailWriteOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "In",
                 "accession_job_id": 1,
                 "verification_job_id": 1,
                 "container_type_id": 1,

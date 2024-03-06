@@ -24,6 +24,17 @@ class Item(SQLModel, table=True):
     # )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    status: str = Field(
+        sa_column=sa.Column(
+            sa.Enum(
+                "In",
+                "Out",
+                name="item_status",
+            )
+        ),
+        default="In",
+        nullable=False,
+    )
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id", nullable=False, default=None
     )
