@@ -38,7 +38,7 @@ def test_get_side_orientations_by_id(client):
 def test_get_side_orientations_by_id_not_found(client):
     response = client.get("/sides/orientations/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Side Orientation ID 999 Not Found"}
 
 
 def test_create_side_orientations_record(client):
@@ -68,7 +68,7 @@ def test_update_side_orientations_record(client):
 def test_update_side_orientations_record_not_found(client):
     response = client.patch("/sides/orientations/999", json={"name": "left"})
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Side Orientation ID 999 Not Found"}
 
 
 def test_delete_side_orientations_record(client):
@@ -76,15 +76,18 @@ def test_delete_side_orientations_record(client):
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    response = client.delete(f"/sides/orientations/{response.json().get('id')}")
+    side_orientation_id = response.json().get("id")
+
+    response = client.delete(f"/sides/orientations/{side_orientation_id}")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == (f"Side Orientation ID "
+                                             f"{side_orientation_id} Deleted Successfully")
 
 
 def test_delete_side_orientations_record_not_found(client):
     response = client.delete("/sides/orientations/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Side Orientation ID 999 Not Found"}

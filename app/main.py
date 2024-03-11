@@ -16,6 +16,20 @@ from alembic import command
 
 from app.middlware import log_middleware
 from app.config.config import get_settings
+from app.config.exceptions import (
+    BadRequest,
+    NotFound,
+    ValidationException,
+    InternalServerError,
+    NotAuthorized,
+    Forbidden,
+    bad_request_exception_handler,
+    not_found_exception_handler,
+    validation_exception_handler,
+    internal_server_error_exception_handler,
+    not_authorized_exception_handler,
+    forbidden_exception_handler,
+)
 from app.routers import (
     buildings,
     modules,
@@ -138,6 +152,13 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 async def exception_handler(request: Request, exc: Exception):
     return JSONResponse({"detail": str(exc)}, status_code=500)
 
+# Register custom exception handlers
+app.exception_handler(BadRequest)(bad_request_exception_handler)
+app.exception_handler(NotFound)(not_found_exception_handler)
+app.exception_handler(ValidationException)(validation_exception_handler)
+app.exception_handler(InternalServerError)(internal_server_error_exception_handler)
+app.exception_handler(NotAuthorized)(not_authorized_exception_handler)
+app.exception_handler(Forbidden)(forbidden_exception_handler)
 
 # order matters for route matching [nested before base]
 app.include_router(buildings.router)

@@ -4,6 +4,11 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 
 from app.database.session import get_session
 from app.models.aisle_numbers import AisleNumber
@@ -48,7 +53,7 @@ def get_aisle_number_detail(id: int, session: Session = Depends(get_session)):
     if aisle_number:
         return aisle_number
     else:
-        raise HTTPException(status_code=404)
+        raise NotFound(detail=f"Aisle Number ID {id} Not Found")
 
 
 @router.post("/numbers", response_model=AisleNumberDetailOutput, status_code=201)
@@ -70,35 +75,44 @@ def create_aisle_number(
     **Notes**:
     - **number**: Required unique integer that represents a aisle number
     """
+    try:
+        new_aisle_number = AisleNumber(**aisle_number_input.model_dump())
+        session.add(new_aisle_number)
+        session.commit()
+        session.refresh(new_aisle_number)
 
-    new_aisle_number = AisleNumber(**aisle_number_input.model_dump())
-    session.add(new_aisle_number)
-    session.commit()
-    session.refresh(new_aisle_number)
-    return new_aisle_number
+        return new_aisle_number
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/numbers/{id}", response_model=AisleNumberDetailOutput)
 def update_aisle_number(
     id: int, aisle_number: AisleNumberInput, session: Session = Depends(get_session)
 ):
-    existing_aisle_number = session.get(AisleNumber, id)
 
-    if not existing_aisle_number:
-        raise HTTPException(status_code=404)
+    try:
+        existing_aisle_number = session.get(AisleNumber, id)
 
-    mutated_data = aisle_number.model_dump(exclude_unset=True)
+        if not existing_aisle_number:
+            raise NotFound(detail=f"Aisle Number ID {id} Not Found")
 
-    for key, value in mutated_data.items():
-        setattr(existing_aisle_number, key, value)
+        mutated_data = aisle_number.model_dump(exclude_unset=True)
 
-    setattr(existing_aisle_number, "update_dt", datetime.utcnow())
+        for key, value in mutated_data.items():
+            setattr(existing_aisle_number, key, value)
 
-    session.add(existing_aisle_number)
-    session.commit()
-    session.refresh(existing_aisle_number)
+        setattr(existing_aisle_number, "update_dt", datetime.utcnow())
 
-    return existing_aisle_number
+        session.add(existing_aisle_number)
+        session.commit()
+        session.refresh(existing_aisle_number)
+
+        return existing_aisle_number
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/numbers/{id}")
@@ -120,6 +134,9 @@ def delete_aisle_number(id: int, session: Session = Depends(get_session)):
     if aisle_number:
         session.delete(aisle_number)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(status_code=204, detail=f"Aisle Number ID {id} Deleted "
+                                                     f"Successfully")
+
+    raise NotFound(detail=f"Aisle Number ID {id} Not Found")
+

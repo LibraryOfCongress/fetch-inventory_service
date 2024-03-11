@@ -33,7 +33,7 @@ def test_get_sides_by_page_size(client):
 def test_get_all_sides_not_found(client):
     response = client.get("/sides/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Side ID 999 Not Found"}
 
 
 def test_get_side_by_id(client):
@@ -75,15 +75,17 @@ def test_delete_side_record_success(client):
     assert response.json().get("aisle_id") == 1
     assert response.json().get("side_orientation_id") == side_orientation_id
 
-    response = client.delete(f"/sides/{response.json().get('id')}")
+    side_id = response.json().get("id")
+
+    response = client.delete(f"/sides/{side_id}")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == f"Side ID {side_id} Deleted Successfully"
 
 
 def test_delete_side_record_not_found(client):
     response = client.delete("/sides/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Side ID 999 Not Found"

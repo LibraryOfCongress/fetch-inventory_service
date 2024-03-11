@@ -5,6 +5,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.modules import Module
@@ -15,6 +16,12 @@ from app.schemas.modules import (
     ModuleDetailWriteOutput,
     ModuleDetailReadOutput,
 )
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
+
 
 LOGGER = logging.getLogger("router.modules")
 
@@ -50,10 +57,11 @@ def get_module_detail(id: int, session: Session = Depends(get_session)):
     - HTTPException: If the module with the specified ID is not found.
     """
     module = session.get(Module, id)
+
     if module:
         return module
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Module ID {id} Not Found")
 
 
 @router.post("/", response_model=ModuleDetailWriteOutput, status_code=201)
@@ -76,35 +84,43 @@ def create_module(
     - **building_id**: Required integer id for related building
     - **module_number_id**: Required integer id for related module number
     """
+    try:
+        new_module = Module(**module_input.model_dump())
+        session.add(new_module)
+        session.commit()
+        session.refresh(new_module)
 
-    new_module = Module(**module_input.model_dump())
-    session.add(new_module)
-    session.commit()
-    session.refresh(new_module)
-    return new_module
+        return new_module
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=ModuleDetailWriteOutput)
 def update_module(
     id: int, module: ModuleUpdateInput, session: Session = Depends(get_session)
 ):
-    existing_module = session.get(Module, id)
+    try:
+        existing_module = session.get(Module, id)
 
-    if not existing_module:
-        raise HTTPException(status_code=404)
+        if not existing_module:
+            raise NotFound(detail=f"Module ID {id} Not Found")
 
-    mutated_data = module.model_dump(exclude_unset=True)
+        mutated_data = module.model_dump(exclude_unset=True)
 
-    for key, value in mutated_data.items():
-        setattr(existing_module, key, value)
+        for key, value in mutated_data.items():
+            setattr(existing_module, key, value)
 
-    setattr(existing_module, "update_dt", datetime.utcnow())
+        setattr(existing_module, "update_dt", datetime.utcnow())
 
-    session.add(existing_module)
-    session.commit()
-    session.refresh(existing_module)
+        session.add(existing_module)
+        session.commit()
+        session.refresh(existing_module)
 
-    return existing_module
+        return existing_module
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}")
@@ -125,6 +141,10 @@ def delete_module(id: int, session: Session = Depends(get_session)):
     if module:
         session.delete(module)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Module ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Module ID {id} Not Found")

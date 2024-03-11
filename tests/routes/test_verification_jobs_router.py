@@ -34,7 +34,7 @@ def test_get_verification_jobs_by_page_size(client):
 def test_get_all_verification_jobs_not_found(client):
     response = client.get("/verification-jobs/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Verification Job ID 999 Not Found"}
 
 
 def test_get_verification_job_by_id(client):
@@ -95,7 +95,7 @@ def test_update_verification_job_record_not_found(client):
         "/verification-jobs/999", json=UPDATED_VERIFICATION_JOBS_SINGLE_RECORD
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Verification Job ID 999 Not Found"
 
 
 def test_delete_verification_job_record_success(client):
@@ -104,15 +104,18 @@ def test_delete_verification_job_record_success(client):
     )
     assert response.status_code == status.HTTP_201_CREATED
 
-    response = client.delete(f"/verification-jobs/{response.json().get('id')}")
+    verification_job_id = response.json().get("id")
+
+    response = client.delete(f"/verification-jobs/{verification_job_id}")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == (f"Verification Job ID {verification_job_id} Deleted "
+                                             f"Successfully")
 
 
 def test_delete_verification_job_record_not_found(client):
     response = client.delete("/verification-jobs/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Verification Job ID 999 Not Found"

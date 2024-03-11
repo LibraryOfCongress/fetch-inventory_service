@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.owners import Owner
@@ -13,6 +14,12 @@ from app.schemas.owners import (
     OwnerListOutput,
     OwnerDetailWriteOutput,
     OwnerDetailReadOutput,
+)
+from app.config.exceptions import (
+    BadRequest,
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 
 
@@ -50,8 +57,8 @@ def get_owner_detail(id: int, session: Session = Depends(get_session)):
     owner = session.get(Owner, id)
     if owner:
         return owner
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Owner ID {id} Not Found")
 
 
 @router.post("/", response_model=OwnerDetailWriteOutput, status_code=201)
@@ -75,38 +82,33 @@ def create_owner(
     - **owner_tier_id**: Required integer id for related owner tier
     - **parent_owner_id**: Optional integer id for parent_owner
     """
-    new_owner = Owner(**owner_input.model_dump())
+    try:
+        new_owner = Owner(**owner_input.model_dump())
 
-    # Check if the parent_owner_id is set
-    if new_owner.parent_owner_id is not None:
-        # Retrieve the parent owner
-        parent_owner = session.exec(
-            select(Owner).where(Owner.id == new_owner.parent_owner_id)
-        ).first()
-        if parent_owner is None:
-            raise HTTPException(status_code=404, detail="Parent owner not found")
+        # Check if the parent_owner_id is set
+        if new_owner.parent_owner_id is not None:
+            # Retrieve the parent owner
+            parent_owner = session.exec(select(Owner).where(Owner.id == new_owner.parent_owner_id)).first()
+            if parent_owner is None:
+                raise NotFound(detail=f"Owner ID {id} Not Found")
 
-        # query new_owner.owner_tier to get proposed tier level
-        new_owner_tier_level = (
-            session.exec(
-                select(OwnerTier).where(OwnerTier.id == new_owner.owner_tier_id)
-            )
-            .first()
-            .level
-        )
+            # query new_owner.owner_tier to get proposed tier level
+            new_owner_tier_level = session.exec(select(OwnerTier).where(
+                OwnerTier.id == new_owner.owner_tier_id
+            )).first().level
 
-        # Check if the owner_tier is greater than the parent's owner_tier
-        if new_owner_tier_level <= parent_owner.owner_tier.level:
-            raise HTTPException(
-                status_code=400,
-                detail="Owner tier must be lower level (higher value) than parent owner's tier",
-            )
+            # Check if the owner_tier is greater than the parent's owner_tier
+            if new_owner_tier_level <= parent_owner.owner_tier.level:
+                raise BadRequest(detail="Owner tier must be lower level (higher value) than parent owner's tier")
 
-    # Add the new owner to the database
-    session.add(new_owner)
-    session.commit()
-    session.refresh(new_owner)
-    return new_owner
+        # Add the new owner to the database
+        session.add(new_owner)
+        session.commit()
+        session.refresh(new_owner)
+        return new_owner
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=OwnerDetailWriteOutput)
@@ -127,37 +129,37 @@ def update_owner(
     - HTTPException: If the owner with the given ID is not found.
     - HTTPException: If an error occurs during the update process.
     """
-    existing_owner = session.get(Owner, id)
+    try:
+        existing_owner = session.get(Owner, id)
 
-    if existing_owner is None:
-        raise HTTPException(status_code=404)
+        if existing_owner is None:
+            raise NotFound(detail=f"Owner ID {id} Not Found")
 
-    mutated_data = owner.model_dump(exclude_unset=True)
+        mutated_data = owner.model_dump(exclude_unset=True)
 
-    for key, value in mutated_data.items():
-        setattr(existing_owner, key, value)
+        for key, value in mutated_data.items():
+            setattr(existing_owner, key, value)
 
-    # Check if the parent_owner_id is set
-    if existing_owner.parent_owner_id is not None:
-        # Retrieve the parent owner
-        parent_owner = session.exec(
-            select(Owner).where(Owner.id == existing_owner.parent_owner_id)
-        ).first()
-        if parent_owner is None:
-            raise HTTPException(status_code=404, detail="Parent owner not found")
+        # Check if the parent_owner_id is set
+        if existing_owner.parent_owner_id is not None:
+            # Retrieve the parent owner
+            parent_owner = session.exec(select(Owner).where(Owner.id == existing_owner.parent_owner_id)).first()
+            if parent_owner is None:
+                raise NotFound(detail="Parent Owner Not Found")
 
-        # Check if the owner_tier is greater than the parent's owner_tier
-        if existing_owner.owner_tier.level <= parent_owner.owner_tier.level:
-            raise HTTPException(
-                status_code=400,
-                detail="Owner tier must be lower level (higher value) than parent owner's tier",
-            )
+            # Check if the owner_tier is greater than the parent's owner_tier
+            if existing_owner.owner_tier.level <= parent_owner.owner_tier.level:
+                raise BadRequest(detail="Owner tier must be lower level (higher value) than parent owner's tier")
 
-    setattr(existing_owner, "update_dt", datetime.utcnow())
-    session.add(existing_owner)
-    session.commit()
-    session.refresh(existing_owner)
-    return existing_owner
+        setattr(existing_owner, "update_dt", datetime.utcnow())
+        session.add(existing_owner)
+        session.commit()
+        session.refresh(existing_owner)
+
+        return existing_owner
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}")
@@ -179,6 +181,10 @@ def delete_owner(id: int, session: Session = Depends(get_session)):
     if owner:
         session.delete(owner)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Owner ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Owner ID {id} Not Found")

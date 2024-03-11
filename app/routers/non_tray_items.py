@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.non_tray_items import NonTrayItem
@@ -12,6 +13,11 @@ from app.schemas.non_tray_items import (
     NonTrayItemListOutput,
     NonTrayItemDetailWriteOutput,
     NonTrayItemDetailReadOutput,
+)
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 
 
@@ -36,10 +42,11 @@ def get_non_tray_item_detail(id: int, session: Session = Depends(get_session)):
     Retrieve the details of a non_tray_item by its ID
     """
     non_tray_item = session.get(NonTrayItem, id)
+
     if non_tray_item:
         return non_tray_item
-    else:
-        raise HTTPException(status_code=404, detail="Not Found")
+
+    raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
 
 
 @router.post("/", response_model=NonTrayItemDetailWriteOutput, status_code=201)
@@ -50,12 +57,17 @@ def create_non_tray_item(
     Create a new non_tray_item record
     """
 
-    # Create a new non_tray_item
-    new_non_tray_item = NonTrayItem(**item_input.model_dump())
-    session.add(new_non_tray_item)
-    session.commit()
-    session.refresh(new_non_tray_item)
-    return new_non_tray_item
+    try:
+        # Create a new non_tray_item
+        new_non_tray_item = NonTrayItem(**item_input.model_dump())
+        session.add(new_non_tray_item)
+        session.commit()
+        session.refresh(new_non_tray_item)
+
+        return new_non_tray_item
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=NonTrayItemDetailWriteOutput)
@@ -67,27 +79,31 @@ def update_non_tray_item(
     """
     Update a non_tray_item record in the database
     """
-    # Get the existing non_tray_item record from the database
-    existing_non_tray_item = session.get(NonTrayItem, id)
 
-    # Check if the non_tray_item record exists
-    if not existing_non_tray_item:
-        raise HTTPException(status_code=404, detail="Not Found")
+    try:
+        # Get the existing non_tray_item record from the database
+        existing_non_tray_item = session.get(NonTrayItem, id)
 
-    # Update the non_tray_item record with the mutated data
-    mutated_data = non_tray_item.model_dump(exclude_unset=True)
+        # Check if the non_tray_item record exists
+        if not existing_non_tray_item:
+            raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
 
-    for key, value in mutated_data.items():
-        setattr(existing_non_tray_item, key, value)
-    setattr(existing_non_tray_item, "update_dt", datetime.utcnow())
+        # Update the non_tray_item record with the mutated data
+        mutated_data = non_tray_item.model_dump(exclude_unset=True)
 
-    # Commit the changes to the database
-    session.add(existing_non_tray_item)
-    session.commit()
-    session.refresh(existing_non_tray_item)
+        for key, value in mutated_data.items():
+            setattr(existing_non_tray_item, key, value)
+        setattr(existing_non_tray_item, "update_dt", datetime.utcnow())
 
-    return existing_non_tray_item
+        # Commit the changes to the database
+        session.add(existing_non_tray_item)
+        session.commit()
+        session.refresh(existing_non_tray_item)
 
+        return existing_non_tray_item
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 @router.delete("/{id}")
 def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
@@ -99,6 +115,11 @@ def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
     if non_tray_item:
         session.delete(non_tray_item)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Non Tray Item ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+
+    raise NotFound(detail=f"Non Tray Item ID {id} Not Found")

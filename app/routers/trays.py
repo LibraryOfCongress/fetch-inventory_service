@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.trays import Tray
@@ -12,6 +13,11 @@ from app.schemas.trays import (
     TrayListOutput,
     TrayDetailWriteOutput,
     TrayDetailReadOutput,
+)
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 
 
@@ -36,10 +42,11 @@ def get_tray_detail(id: int, session: Session = Depends(get_session)):
     Retrieve the details of a tray by its ID
     """
     tray = session.get(Tray, id)
+
     if tray:
         return tray
-    else:
-        raise HTTPException(status_code=404, detail="Not Found")
+
+    raise NotFound(detail=f"Tray ID {id} Not Found")
 
 
 @router.post("/", response_model=TrayDetailWriteOutput, status_code=201)
@@ -47,13 +54,17 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
     """
     Create a new tray record
     """
+    try:
+        # Create a new tray
+        new_tray = Tray(**tray_input.model_dump())
+        session.add(new_tray)
+        session.commit()
+        session.refresh(new_tray)
 
-    # Create a new tray
-    new_tray = Tray(**tray_input.model_dump())
-    session.add(new_tray)
-    session.commit()
-    session.refresh(new_tray)
-    return new_tray
+        return new_tray
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=TrayDetailWriteOutput)
@@ -63,26 +74,30 @@ def update_tray(
     """
     Update a tray record in the database
     """
-    # Get the existing tray record from the database
-    existing_tray = session.get(Tray, id)
+    try:
+        # Get the existing tray record from the database
+        existing_tray = session.get(Tray, id)
 
-    # Check if the tray record exists
-    if not existing_tray:
-        raise HTTPException(status_code=404, detail="Not Found")
+        # Check if the tray record exists
+        if not existing_tray:
+            raise NotFound(detail=f"Tray ID {id} Not Found")
 
-    # Update the tray record with the mutated data
-    mutated_data = tray.model_dump(exclude_unset=True)
+        # Update the tray record with the mutated data
+        mutated_data = tray.model_dump(exclude_unset=True)
 
-    for key, value in mutated_data.items():
-        setattr(existing_tray, key, value)
-    setattr(existing_tray, "update_dt", datetime.utcnow())
+        for key, value in mutated_data.items():
+            setattr(existing_tray, key, value)
+        setattr(existing_tray, "update_dt", datetime.utcnow())
 
-    # Commit the changes to the database
-    session.add(existing_tray)
-    session.commit()
-    session.refresh(existing_tray)
+        # Commit the changes to the database
+        session.add(existing_tray)
+        session.commit()
+        session.refresh(existing_tray)
 
-    return existing_tray
+        return existing_tray
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}")
@@ -95,6 +110,10 @@ def delete_tray(id: int, session: Session = Depends(get_session)):
     if tray:
         session.delete(tray)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204,
+            detail=f"Tray id {id} Deleted Successfully",
+        )
+
+    raise NotFound(detail=f"Tray ID {id} Not Found")

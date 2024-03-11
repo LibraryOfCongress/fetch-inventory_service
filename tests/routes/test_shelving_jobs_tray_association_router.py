@@ -69,4 +69,5 @@ def test_delete_shelving_job_tray_association_record_not_found(client):
     response = client.delete("/shelving-jobs/tray-association/999/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == ("Shelving Job Tray Association ID 999 Not "
+                                             "Found")

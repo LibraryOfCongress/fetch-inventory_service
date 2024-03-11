@@ -12,7 +12,11 @@ from app.schemas.owner_tiers import (
     OwnerTierListOutput,
     OwnerTierDetailOutput,
 )
-
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 
 router = APIRouter(
     prefix="/owners",
@@ -48,8 +52,8 @@ def get_owner_tier_detail(id: int, session: Session = Depends(get_session)):
     owner_tier = session.get(OwnerTier, id)
     if owner_tier:
         return owner_tier
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Owner Tier ID {id} Not Found")
 
 
 @router.post("/tiers", response_model=OwnerTierDetailOutput, status_code=201)
@@ -73,11 +77,16 @@ def create_owner_tier(
     - **level**: Required unique integer that represents a tier
     - **name**: Required unique string that names a tier (category)
     """
-    new_owner_tier = OwnerTier(**owner_tier_input.model_dump())
-    session.add(new_owner_tier)
-    session.commit()
-    session.refresh(new_owner_tier)
-    return new_owner_tier
+    try:
+        new_owner_tier = OwnerTier(**owner_tier_input.model_dump())
+        session.add(new_owner_tier)
+        session.commit()
+        session.refresh(new_owner_tier)
+
+        return new_owner_tier
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/tiers/{id}", response_model=OwnerTierDetailOutput)
@@ -94,21 +103,26 @@ def update_owner_tier(
     **Returns:**
     - OwnerTierDetailOutput: The updated owner tier.
     """
-    existing_owner_tier = session.get(OwnerTier, id)
+    try:
+        existing_owner_tier = session.get(OwnerTier, id)
 
-    if existing_owner_tier is None:
-        raise HTTPException(status_code=404)
+        if existing_owner_tier is None:
+            raise NotFound(detail=f"Owner Tier ID {id} Not Found")
 
-    mutated_data = owner_tier.model_dump(exclude_unset=True)
+        mutated_data = owner_tier.model_dump(exclude_unset=True)
 
-    for key, value in mutated_data.items():
-        setattr(existing_owner_tier, key, value)
+        for key, value in mutated_data.items():
+            setattr(existing_owner_tier, key, value)
 
-    setattr(existing_owner_tier, "update_dt", datetime.utcnow())
-    session.add(existing_owner_tier)
-    session.commit()
-    session.refresh(existing_owner_tier)
-    return existing_owner_tier
+        setattr(existing_owner_tier, "update_dt", datetime.utcnow())
+        session.add(existing_owner_tier)
+        session.commit()
+        session.refresh(existing_owner_tier)
+
+        return existing_owner_tier
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/tiers/{id}")
@@ -130,6 +144,10 @@ def delete_owner_tier(id: int, session: Session = Depends(get_session)):
     if owner_tier:
         session.delete(owner_tier)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Owner Tier ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Owner Tier ID {id} Not Found")

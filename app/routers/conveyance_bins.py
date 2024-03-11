@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.conveyance_bins import ConveyanceBin
@@ -13,6 +14,12 @@ from app.schemas.conveyance_bins import (
     ConveyanceBinDetailWriteOutput,
     ConveyanceBinDetailReadOutput,
 )
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
+
 
 router = APIRouter(
     prefix="/conveyance-bins",
@@ -44,9 +51,11 @@ def get_conveyance_bin_detail(id: int, session: Session = Depends(get_session)):
     """
 
     conveyance_bin = session.get(ConveyanceBin, id)
-    if conveyance_bin is None:
-        raise HTTPException(status_code=404, detail="Not Found")
-    return conveyance_bin
+    if conveyance_bin:
+        return conveyance_bin
+
+    raise NotFound(detail=f"Container Type ID {id} Not Found")
+
 
 
 @router.post("/", response_model=ConveyanceBinDetailWriteOutput, status_code=201)
@@ -63,13 +72,17 @@ def create_conveyance_bin(
     **Returns:**
     - Conveyance Bin: The newly created conveyance bin.
     """
-    new_conveyance_bin = ConveyanceBin(**conveyance_bin_input.model_dump())
+    try:
+        new_conveyance_bin = ConveyanceBin(**conveyance_bin_input.model_dump())
 
-    session.add(new_conveyance_bin)
-    session.commit()
-    session.refresh(new_conveyance_bin)
+        session.add(new_conveyance_bin)
+        session.commit()
+        session.refresh(new_conveyance_bin)
 
-    return new_conveyance_bin
+        return new_conveyance_bin
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=ConveyanceBinDetailWriteOutput)
@@ -86,23 +99,27 @@ def update_conveyance_bin(
     **Returns:**
     - Conveyance Bin Detail Write Output: The updated conveyance bin details.
     """
+    try:
+        existing_conveyance_bin = session.get(ConveyanceBin, id)
 
-    existing_conveyance_bin = session.get(ConveyanceBin, id)
+        if not existing_conveyance_bin:
+            raise NotFound(detail=f"Conveyance Bin ID {id} Not Found")
 
-    if not existing_conveyance_bin:
-        raise HTTPException(status_code=404, detail="Not found")
+        mutated_data = conveyance_bin.model_dump(exclude_unset=True)
 
-    mutated_data = conveyance_bin.model_dump(exclude_unset=True)
+        for key, value in mutated_data.items():
+            setattr(existing_conveyance_bin, key, value)
 
-    for key, value in mutated_data.items():
-        setattr(existing_conveyance_bin, key, value)
+        setattr(existing_conveyance_bin, "update_dt", datetime.utcnow())
 
-    setattr(existing_conveyance_bin, "update_dt", datetime.utcnow())
+        session.add(existing_conveyance_bin)
+        session.commit()
+        session.refresh(existing_conveyance_bin)
 
-    session.add(existing_conveyance_bin)
-    session.commit()
-    session.refresh(existing_conveyance_bin)
-    return existing_conveyance_bin
+        return existing_conveyance_bin
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}", status_code=204)
@@ -121,5 +138,10 @@ def delete_conveyance_bin(id: int, session: Session = Depends(get_session)):
     if conveyance_bin:
         session.delete(conveyance_bin)
         session.commit()
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Conveyance Bin ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Conveyance Bin ID {id} Not Found")

@@ -38,7 +38,7 @@ def test_get_aisle_numbers_by_id(client):
 def test_get_aisle_numbers_by_id_not_found(client):
     response = client.get("/aisles/numbers/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Aisle Number ID 999 Not Found"}
 
 
 def test_create_aisle_numbers_record(client):
@@ -65,7 +65,7 @@ def test_update_aisle_numbers_record(client):
 def test_update_aisle_numbers_record_not_found(client):
     response = client.patch("/aisles/numbers/999", json={"number": 4})
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Aisle Number ID 999 Not Found"}
 
 
 def test_delete_aisle_numbers_record(client):
@@ -73,15 +73,18 @@ def test_delete_aisle_numbers_record(client):
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    response = client.delete(f"/aisles/numbers/{response.json().get('id')}")
+    aisle_number_id = response.json().get("id")
+
+    response = client.delete(f"/aisles/numbers/{aisle_number_id}")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == (f"Aisle Number ID {aisle_number_id} "
+                                             f"Deleted  Successfully")
 
 
 def test_delete_aisle_numbers_record_not_found(client):
     response = client.delete("/aisles/numbers/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Aisle Number ID 999 Not Found"}

@@ -12,6 +12,11 @@ from app.schemas.shelf_position_numbers import (
     ShelfPositionNumberListOutput,
     ShelfPositionNumberDetailOutput,
 )
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 
 
 router = APIRouter(
@@ -47,10 +52,11 @@ def get_shelf_position_number_detail(id: int, session: Session = Depends(get_ses
         HTTPException: If the shelf position number is not found.
     """
     shelf_position_number = session.get(ShelfPositionNumber, id)
+
     if shelf_position_number:
         return shelf_position_number
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Shelf Position Number ID {id} Not Found")
 
 
 @router.post(
@@ -77,13 +83,18 @@ def create_shelf_position_number(
     **Notes:**
     - **number**: Required unique integer that represents a shelf position number
     """
-    new_shelf_position_number = ShelfPositionNumber(
-        **shelf_position_number_input.model_dump()
-    )
-    session.add(new_shelf_position_number)
-    session.commit()
-    session.refresh(new_shelf_position_number)
-    return new_shelf_position_number
+    try:
+        new_shelf_position_number = ShelfPositionNumber(
+            **shelf_position_number_input.model_dump()
+        )
+        session.add(new_shelf_position_number)
+        session.commit()
+        session.refresh(new_shelf_position_number)
+
+        return new_shelf_position_number
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/numbers/{id}", response_model=ShelfPositionNumberDetailOutput)
@@ -107,22 +118,26 @@ def update_shelf_position_number(
     - HTTPException: If the shelf position number with the given ID is not found or
     an error occurs during the update.
     """
+    try:
+        existing_shelf_position_number = session.get(ShelfPositionNumber, id)
 
-    existing_shelf_position_number = session.get(ShelfPositionNumber, id)
+        if existing_shelf_position_number is None:
+            raise NotFound(detail=f"Shelf Position Number ID {id} Not Found")
 
-    if existing_shelf_position_number is None:
-        raise HTTPException(status_code=404)
+        mutated_data = shelf_position_number.model_dump(exclude_unset=True)
 
-    mutated_data = shelf_position_number.model_dump(exclude_unset=True)
+        for key, value in mutated_data.items():
+            setattr(existing_shelf_position_number, key, value)
 
-    for key, value in mutated_data.items():
-        setattr(existing_shelf_position_number, key, value)
+        setattr(existing_shelf_position_number, "update_dt", datetime.utcnow())
+        session.add(existing_shelf_position_number)
+        session.commit()
+        session.refresh(existing_shelf_position_number)
 
-    setattr(existing_shelf_position_number, "update_dt", datetime.utcnow())
-    session.add(existing_shelf_position_number)
-    session.commit()
-    session.refresh(existing_shelf_position_number)
-    return existing_shelf_position_number
+        return existing_shelf_position_number
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/numbers/{id}")
@@ -143,6 +158,10 @@ def delete_shelf_position_number(id: int, session: Session = Depends(get_session
     if shelf_position_number:
         session.delete(shelf_position_number)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Shelf Position Number ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Shelf Position Number ID {id} Not Found")

@@ -33,7 +33,7 @@ def test_get_shelves_by_page_size(client):
 def test_get_all_shelves_not_found(client):
     response = client.get("/shelves/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelf ID 999 Not Found"}
 
 
 def test_get_shelf_by_id(client):
@@ -73,7 +73,7 @@ def test_update_shelf_record_not_found(client):
         "/shelves/999/", json={"capacity": 35, "depth": 30, "height": 18, "width": 33}
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Shelf ID 999 Not Found"
 
 
 def test_delete_shelf_record_success(client):
@@ -82,12 +82,14 @@ def test_delete_shelf_record_success(client):
     response = client.post("/shelves", json=data)
     assert response.status_code == status.HTTP_201_CREATED
 
+    shelve_id = response.json().get("id")
+
     # Delete newly created shelf
-    response = client.delete(f"/shelves/{response.json().get('id')}/")
+    response = client.delete(f"/shelves/{shelve_id}/")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == f"Shelf ID {shelve_id} Deleted Successfully"
 
 
 def test_delete_shelf_record_not_found(client):

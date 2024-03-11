@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.ladders import Ladder
@@ -12,6 +13,11 @@ from app.schemas.ladders import (
     LadderListOutput,
     LadderDetailWriteOutput,
     LadderDetailReadOutput,
+)
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 
 
@@ -50,8 +56,8 @@ def get_ladder_detail(id: int, session: Session = Depends(get_session)):
 
     if ladder:
         return ladder
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Ladder ID {id} Not Found")
 
 
 @router.post("/", response_model=LadderDetailWriteOutput, status_code=201)
@@ -74,11 +80,16 @@ def create_ladder(
     - **side_id**: Required integer id for related side
     - **ladder_number_id**: Required integer id for related ladder number
     """
-    new_ladder = Ladder(**ladder_input.model_dump())
-    session.add(new_ladder)
-    session.commit()
-    session.refresh(new_ladder)
-    return new_ladder
+    try:
+        new_ladder = Ladder(**ladder_input.model_dump())
+        session.add(new_ladder)
+        session.commit()
+        session.refresh(new_ladder)
+
+        return new_ladder
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=LadderDetailWriteOutput)
@@ -99,22 +110,27 @@ def update_ladder(
     - HTTPException: If the ladder with the given ID is not found.
     """
 
-    existing_ladder = session.get(Ladder, id)
+    try:
+        existing_ladder = session.get(Ladder, id)
 
-    if not existing_ladder:
-        raise HTTPException(status_code=404)
+        if not existing_ladder:
+            raise NotFound(detail=f"Ladder ID {id} Not Found")
 
-    mutated_data = ladder.model_dump(exclude_unset=True)
+        mutated_data = ladder.model_dump(exclude_unset=True)
 
-    for key, value in mutated_data.items():
-        setattr(existing_ladder, key, value)
+        for key, value in mutated_data.items():
+            setattr(existing_ladder, key, value)
 
-    setattr(existing_ladder, "update_dt", datetime.utcnow())
+        setattr(existing_ladder, "update_dt", datetime.utcnow())
 
-    session.add(existing_ladder)
-    session.commit()
-    session.refresh(existing_ladder)
-    return existing_ladder
+        session.add(existing_ladder)
+        session.commit()
+        session.refresh(existing_ladder)
+
+        return existing_ladder
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}")
@@ -136,6 +152,10 @@ def delete_ladder(id: int, session: Session = Depends(get_session)):
     if ladder:
         session.delete(ladder)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Ladder ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Ladder ID {id} Not Found")

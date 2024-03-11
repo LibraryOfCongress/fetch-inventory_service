@@ -13,6 +13,11 @@ from app.schemas.shelving_jobs_tray_association import (
     ShelvingJobTrayAssociationListOutput,
     ShelvingJobTrayAssociationDetailOutput,
 )
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 
 router = APIRouter(
     prefix="/shelving-jobs",
@@ -56,18 +61,19 @@ def get_shelving_job_tray_association_detail(
     **Raises:**
     - HTTPException: If the shelving job tray association with the given ID is not found.
     """
-    statement = (
+
+    statements = (
         select(ShelvingJobTrayAssociation)
         .where(ShelvingJobTrayAssociation.shelving_job_id == shelving_job_id)
         .where(ShelvingJobTrayAssociation.tray_id == tray_id)
     )
 
-    shelving_job_tray_association = session.exec(statement).first()
+    shelving_job_tray_association = session.exec(statements).first()
 
     if shelving_job_tray_association:
         return shelving_job_tray_association
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Shelving Job Tray Association ID {id} Not Found")
 
 
 @router.post(
@@ -93,15 +99,18 @@ def create_shelving_job_tray_association(
     - HTTPException: If there is an integrity error during the creation of the
     shelving job tray association.
     """
+    try:
+        new_shelving_job_tray_association = ShelvingJobTrayAssociation(
+            **shelving_job_input.model_dump()
+        )
+        session.add(new_shelving_job_tray_association)
+        session.commit()
+        session.refresh(new_shelving_job_tray_association)
 
-    new_shelving_job_tray_association = ShelvingJobTrayAssociation(
-        **shelving_job_input.model_dump()
-    )
-    session.add(new_shelving_job_tray_association)
-    session.commit()
-    session.refresh(new_shelving_job_tray_association)
+        return new_shelving_job_tray_association
 
-    return new_shelving_job_tray_association
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch(
@@ -127,30 +136,33 @@ def update_shelving_job_tray_association(
     - HTTPException: If the shelving job tray association is not found or if an error
     occurs during the update.
     """
+    try:
+        statements = (
+            select(ShelvingJobTrayAssociation)
+            .where(ShelvingJobTrayAssociation.shelving_job_id == shelving_job_id)
+            .where(ShelvingJobTrayAssociation.tray_id == tray_id)
+        )
 
-    statement = (
-        select(ShelvingJobTrayAssociation)
-        .where(ShelvingJobTrayAssociation.shelving_job_id == shelving_job_id)
-        .where(ShelvingJobTrayAssociation.tray_id == tray_id)
-    )
+        existing_shelving_job_tray_association = session.exec(statements).first()
 
-    existing_shelving_job_tray_association = session.exec(statement).first()
+        if not existing_shelving_job_tray_association:
+            raise NotFound(detail=f"Shelving Job Tray Association ID {id} Not Found")
 
-    if not existing_shelving_job_tray_association:
-        raise HTTPException(status_code=404)
+        mutated_data = shelving_job_tray_association.model_dump(exclude_unset=True)
 
-    mutated_data = shelving_job_tray_association.model_dump(exclude_unset=True)
+        for key, value in mutated_data.items():
+            setattr(existing_shelving_job_tray_association, key, value)
 
-    for key, value in mutated_data.items():
-        setattr(existing_shelving_job_tray_association, key, value)
+        setattr(existing_shelving_job_tray_association, "update_dt", datetime.utcnow())
 
-    setattr(existing_shelving_job_tray_association, "update_dt", datetime.utcnow())
+        session.add(existing_shelving_job_tray_association)
+        session.commit()
+        session.refresh(existing_shelving_job_tray_association)
 
-    session.add(existing_shelving_job_tray_association)
-    session.commit()
-    session.refresh(existing_shelving_job_tray_association)
+        return existing_shelving_job_tray_association
 
-    return existing_shelving_job_tray_association
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/tray-association/{shelving_job_id}/{tray_id}", status_code=204)
@@ -180,7 +192,7 @@ def delete_shelving_job_tray_association(
 
         return HTTPException(
             status_code=204,
-            detail=f"Shelving Job Tray Association id {id} deleted " f"successfully",
+            detail=f"Shelving Job Tray Association id {id} Deleted Successfully",
         )
 
-    raise HTTPException(status_code=404)
+    raise NotFound(detail=f"Shelving Job Tray Association ID {id} Not Found")

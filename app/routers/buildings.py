@@ -1,8 +1,9 @@
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.buildings import Building
@@ -12,6 +13,11 @@ from app.schemas.buildings import (
     BuildingListOutput,
     BuildingDetailWriteOutput,
     BuildingDetailReadOutput,
+)
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 
 # For future circular imports
@@ -52,8 +58,8 @@ def get_building_detail(id: int, session: Session = Depends(get_session)):
     building = session.get(Building, id)
     if building:
         return building
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Building ID {id} Not Found")
 
 
 @router.post("/", response_model=BuildingDetailWriteOutput, status_code=201)
@@ -69,11 +75,15 @@ def create_building(
     **Returns:**
     - Building Detail Write Output: The newly created building.
     """
-    new_building = Building(**building_input.model_dump())
-    session.add(new_building)
-    session.commit()
-    session.refresh(new_building)
-    return new_building
+    try:
+        new_building = Building(**building_input.model_dump())
+        session.add(new_building)
+        session.commit()
+        session.refresh(new_building)
+        return new_building
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=BuildingDetailWriteOutput)
@@ -94,24 +104,27 @@ def update_building(
     - HTTPException: If the building with the given ID is not found or if there is an
     internal server error.
     """
-    existing_building = session.get(Building, id)
+    try:
+        existing_building = session.get(Building, id)
 
-    if existing_building is None:
-        print("here")
-        raise HTTPException(status_code=404)
+        if existing_building is None:
+            raise NotFound(detail=f"Building ID {id} Not Found")
 
-    mutated_data = building.model_dump(exclude_unset=True)
+        mutated_data = building.model_dump(exclude_unset=True)
 
-    for key, value in mutated_data.items():
-        setattr(existing_building, key, value)
+        for key, value in mutated_data.items():
+            setattr(existing_building, key, value)
 
-    setattr(existing_building, "update_dt", datetime.utcnow())
+        setattr(existing_building, "update_dt", datetime.utcnow())
 
-    session.add(existing_building)
-    session.commit()
-    session.refresh(existing_building)
+        session.add(existing_building)
+        session.commit()
+        session.refresh(existing_building)
 
-    return existing_building
+        return existing_building
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}")
@@ -134,6 +147,10 @@ def delete_building(id: int, session: Session = Depends(get_session)):
     if building:
         session.delete(building)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        return HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Building ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Building ID {id} Not Found")

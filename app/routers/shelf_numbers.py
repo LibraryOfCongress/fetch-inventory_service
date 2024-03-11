@@ -12,6 +12,11 @@ from app.schemas.shelf_numbers import (
     ShelfNumberListOutput,
     ShelfNumberDetailOutput,
 )
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 
 
 router = APIRouter(
@@ -49,8 +54,8 @@ def get_shelf_number_detail(id: int, session: Session = Depends(get_session)):
 
     if shelf_number:
         return shelf_number
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Shelf Number ID {id} Not Found")
 
 
 @router.post("/numbers", response_model=ShelfNumberDetailOutput, status_code=201)
@@ -69,11 +74,16 @@ def create_shelf_number(
     **Notes:**
     - **number**: Required unique integer that represents a shelf number
     """
-    new_shelf_number = ShelfNumber(**shelf_number_input.model_dump())
-    session.add(new_shelf_number)
-    session.commit()
-    session.refresh(new_shelf_number)
-    return new_shelf_number
+    try:
+        new_shelf_number = ShelfNumber(**shelf_number_input.model_dump())
+        session.add(new_shelf_number)
+        session.commit()
+        session.refresh(new_shelf_number)
+
+        return new_shelf_number
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/numbers/{id}", response_model=ShelfNumberDetailOutput)
@@ -94,23 +104,26 @@ def update_shelf_number(
     - HTTPException: If the shelf number does not exist (404) or if there is a server
     error (500).
     """
+    try:
+        existing_shelf_number = session.get(ShelfNumber, id)
 
-    existing_shelf_number = session.get(ShelfNumber, id)
+        if existing_shelf_number is None:
+            raise NotFound(detail=f"Shelf Number ID {id} Not Found")
 
-    if existing_shelf_number is None:
-        raise HTTPException(status_code=404)
+        mutated_data = shelf_number.model_dump(exclude_unset=True)
 
-    mutated_data = shelf_number.model_dump(exclude_unset=True)
+        for key, value in mutated_data.items():
+            setattr(existing_shelf_number, key, value)
 
-    for key, value in mutated_data.items():
-        setattr(existing_shelf_number, key, value)
+        setattr(existing_shelf_number, "update_dt", datetime.utcnow())
+        session.add(existing_shelf_number)
+        session.commit()
+        session.refresh(existing_shelf_number)
 
-    setattr(existing_shelf_number, "update_dt", datetime.utcnow())
-    session.add(existing_shelf_number)
-    session.commit()
-    session.refresh(existing_shelf_number)
+        return existing_shelf_number
 
-    return existing_shelf_number
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/numbers/{id}")
@@ -132,6 +145,10 @@ def delete_shelf_number(id: int, session: Session = Depends(get_session)):
     if shelf_number:
         session.delete(shelf_number)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Shelf Number ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Shelf Number ID {id} Not Found")

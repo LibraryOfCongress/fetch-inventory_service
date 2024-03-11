@@ -33,7 +33,7 @@ def test_get_shelf_positions_by_page_size(client):
 def test_get_all_shelf_positions_not_found(client):
     response = client.get("/shelves/positions/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelf Position ID 999 Not Found"}
 
 
 def test_get_shelf_position_by_id(client):
@@ -86,7 +86,7 @@ def test_update_shelf_position_record_not_found(client):
         "/shelves/positions/999", json=UPDATED_SHELF_POSITIONS_SINGLE_RECORD
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Shelf Position ID 999 Not Found"
 
 
 # TODO: Fix this testing
@@ -98,4 +98,4 @@ def test_delete_shelf_position_record_not_found(client):
     response = client.delete("/shelves/positions/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Shelf Position ID 999 Not Found"

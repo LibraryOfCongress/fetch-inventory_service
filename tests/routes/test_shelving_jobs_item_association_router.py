@@ -34,7 +34,7 @@ def test_get_shelving_jobs_item_association_by_page_size(client):
 def test_get_all_shelving_jobs_item_association_not_found(client):
     response = client.get("/shelving-jobs/item-association/999/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelving Job Item Association ID 999 Not Found"}
 
 
 def test_get_shelving_job_item_association_by_id(client):
@@ -64,7 +64,7 @@ def test_update_shelving_job_item_association_record_not_found(client):
         json=UPDATED_SHELVING_JOBS_ITEM_ASSOCIATION_SINGLE_RECORD,
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Shelving Job Item Association ID 999 Not Found"
 
 
 def test_delete_shelving_job_item_association_record_success(client):
@@ -75,4 +75,4 @@ def test_delete_shelving_job_item_association_record_not_found(client):
     response = client.delete("/shelving-jobs/item-association/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Shelving Job Item Association ID 999 Not Found"

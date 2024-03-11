@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
@@ -15,7 +16,11 @@ from app.schemas.shelves import (
     ShelfDetailWriteOutput,
     ShelfDetailReadOutput,
 )
-
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 
 router = APIRouter(
     prefix="/shelves",
@@ -55,8 +60,8 @@ def get_shelf_detail(id: int, session: Session = Depends(get_session)):
 
     if shelf:
         return shelf
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Shelf ID {id} Not Found")
 
 
 @router.post("/", response_model=ShelfDetailWriteOutput, status_code=201)
@@ -82,11 +87,16 @@ def create_shelf(
     - **width**: Required numeric (scale 4, precision 2) width in inches
     - **depth**: Required numeric (scale 4, precision 2) depth in inches
     """
-    new_shelf = Shelf(**shelf_input.model_dump())
-    session.add(new_shelf)
-    session.commit()
-    session.refresh(new_shelf)
-    return new_shelf
+    try:
+        new_shelf = Shelf(**shelf_input.model_dump())
+        session.add(new_shelf)
+        session.commit()
+        session.refresh(new_shelf)
+
+        return new_shelf
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=ShelfDetailWriteOutput)
@@ -107,22 +117,26 @@ def update_shelf(
     **Returns:**
     - Shelf Detail Write Output: The updated shelf.
     """
+    try:
+        existing_shelf = session.get(Shelf, id)
 
-    existing_shelf = session.get(Shelf, id)
+        if existing_shelf is None:
+            raise NotFound(detail=f"Shelf ID {id} Not Found")
 
-    if existing_shelf is None:
-        raise HTTPException(status_code=404)
+        mutated_data = shelf.model_dump(exclude_unset=True)
 
-    mutated_data = shelf.model_dump(exclude_unset=True)
+        for key, value in mutated_data.items():
+            setattr(existing_shelf, key, value)
 
-    for key, value in mutated_data.items():
-        setattr(existing_shelf, key, value)
+        setattr(existing_shelf, "update_dt", datetime.utcnow())
+        session.add(existing_shelf)
+        session.commit()
+        session.refresh(existing_shelf)
 
-    setattr(existing_shelf, "update_dt", datetime.utcnow())
-    session.add(existing_shelf)
-    session.commit()
-    session.refresh(existing_shelf)
-    return existing_shelf
+        return existing_shelf
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}")
@@ -144,6 +158,10 @@ def delete_shelf(id: int, session: Session = Depends(get_session)):
     if shelf:
         session.delete(shelf)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Shelf ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Shelf ID {id} Not Found")

@@ -41,7 +41,7 @@ def test_get_shelf_numbers_by_id(client):
 def test_get_shelf_numbers_by_id_not_found(client):
     response = client.get("/shelves/numbers/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelf Number ID 999 Not Found"}
 
 
 def test_create_shelf_numbers_record(client):
@@ -66,7 +66,7 @@ def test_update_shelf_numbers_record(client):
 def test_update_shelf_numbers_record_not_found(client):
     response = client.patch("/shelves/numbers/999", json={"number": 5})
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelf Number ID 999 Not Found"}
 
 
 def test_delete_shelf_numbers_record(client):
@@ -76,16 +76,14 @@ def test_delete_shelf_numbers_record(client):
 
     shelves_numbers_id = response.json().get("id")
 
-    logging.info(f"shelves_numbers_id: {shelves_numbers_id}")
-
     response = client.delete(f"/shelves/numbers/{shelves_numbers_id}")
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == f"Shelf Number ID {shelves_numbers_id} Deleted Successfully"
 
 
 def test_delete_shelf_numbers_record_not_found(client):
     response = client.delete("/shelves/numbers/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelf Number ID 999 Not Found"}

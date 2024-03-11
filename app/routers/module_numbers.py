@@ -12,6 +12,11 @@ from app.schemas.module_numbers import (
     ModuleNumberListOutput,
     ModuleNumberDetailOutput,
 )
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 
 
 router = APIRouter(
@@ -46,10 +51,11 @@ def get_module_number_detail(id: int, session: Session = Depends(get_session)):
     - HTTPException: If the module number is not found.
     """
     module_number = session.get(ModuleNumber, id)
+
     if module_number:
         return module_number
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Module Number ID {id} Not Found")
 
 
 @router.post("/numbers", response_model=ModuleNumberDetailOutput, status_code=201)
@@ -68,11 +74,18 @@ def create_module_number(
     **Notes:**
     - **number**: Required unique integer that represents a module number
     """
-    new_module_number = ModuleNumber(**module_number_input.model_dump())
-    session.add(new_module_number)
-    session.commit()
-    session.refresh(new_module_number)
-    return new_module_number
+    try:
+        new_module_number = ModuleNumber(**module_number_input.model_dump())
+
+        session.add(new_module_number)
+        session.commit()
+        session.refresh(new_module_number)
+
+        return new_module_number
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
+
 
 
 @router.patch("/numbers/{id}", response_model=ModuleNumberDetailOutput)
@@ -89,23 +102,28 @@ def update_module_number(
     **Returns:**
     - Module Number Detail Output: The updated module number.
     """
-    existing_module_number = session.get(ModuleNumber, id)
 
-    if existing_module_number is None:
-        raise HTTPException(status_code=404)
+    try:
+        existing_module_number = session.get(ModuleNumber, id)
 
-    mutated_data = module_number.model_dump(exclude_unset=True)
+        if existing_module_number is None:
+            raise NotFound(detail=f"Module Number ID {id} Not Found")
 
-    for key, value in mutated_data.items():
-        setattr(existing_module_number, key, value)
+        mutated_data = module_number.model_dump(exclude_unset=True)
 
-    setattr(existing_module_number, "update_dt", datetime.utcnow())
+        for key, value in mutated_data.items():
+            setattr(existing_module_number, key, value)
 
-    session.add(existing_module_number)
-    session.commit()
-    session.refresh(existing_module_number)
+        setattr(existing_module_number, "update_dt", datetime.utcnow())
 
-    return existing_module_number
+        session.add(existing_module_number)
+        session.commit()
+        session.refresh(existing_module_number)
+
+        return existing_module_number
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/numbers/{id}")
@@ -125,6 +143,10 @@ def delete_module_number(id: int, session: Session = Depends(get_session)):
     if module_number:
         session.delete(module_number)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204, detail=f"Module Number ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Module Number ID {id} Not Found")

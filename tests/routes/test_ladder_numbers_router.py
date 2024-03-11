@@ -38,7 +38,7 @@ def test_get_ladder_numbers_by_id(client):
 def test_get_ladder_numbers_by_id_not_found(client):
     response = client.get("/ladders/numbers/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Ladder Number ID 999 Not Found"}
 
 
 def test_create_ladder_numbers_record(client):
@@ -65,7 +65,7 @@ def test_update_ladder_numbers_record(client):
 def test_update_ladder_numbers_record_not_found(client):
     response = client.patch("/ladders/numbers/999", json={"number": 5})
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Ladder Number ID 999 Not Found"}
 
 
 def test_delete_ladder_numbers_record(client):
@@ -73,15 +73,17 @@ def test_delete_ladder_numbers_record(client):
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    response = client.delete(f"/ladders/numbers/{response.json().get('id')}")
+    ladder_number_id = response.json().get("id")
+
+    response = client.delete(f"/ladders/numbers/{ladder_number_id}")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == f"Ladder Number ID {ladder_number_id} Deleted Successfully"
 
 
 def test_delete_ladder_numbers_record_not_found(client):
     response = client.delete("/ladders/numbers/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Ladder Number ID 999 Not Found"}

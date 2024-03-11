@@ -30,7 +30,7 @@ def test_get_trays_by_page_size(client):
 def test_get_all_trays_not_found(client):
     response = client.get("/trays/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Tray ID 999 Not Found"}
 
 
 def test_get_tray_by_id(client):
@@ -94,7 +94,7 @@ def test_update_tray_record(client):
 def test_update_tray_record_not_found(client):
     response = client.patch("/trays/999", json=UPDATED_TRAYS_SINGLE_RECORD)
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Tray ID 999 Not Found"
 
 
 def test_delete_tray_record_success(client):
@@ -122,15 +122,17 @@ def test_delete_tray_record_success(client):
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    response = client.delete(f"/trays/{response.json().get('id')}")
+    tray_id = response.json().get("id")
+
+    response = client.delete(f"/trays/{tray_id}")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == f"Tray ID {tray_id} Deleted Successfully"
 
 
 def test_delete_tray_record_not_found(client):
     response = client.delete("/trays/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Tray ID 999 Not Found"

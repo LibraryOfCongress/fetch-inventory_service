@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.sides import Side
@@ -12,6 +13,11 @@ from app.schemas.sides import (
     SideListOutput,
     SideDetailWriteOutput,
     SideDetailReadOutput,
+)
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 
 
@@ -48,10 +54,11 @@ def get_side_detail(id: int, session: Session = Depends(get_session)):
     - HTTPException: If the side is not found.
     """
     side = session.get(Side, id)
+
     if side:
         return side
-    else:
-        raise HTTPException(status_code=404, detail="Not Found")
+
+    raise NotFound(detail=f"Side ID {id} Not Found")
 
 
 @router.post("/", response_model=SideDetailWriteOutput, status_code=201)
@@ -73,13 +80,17 @@ def create_side(side_input: SideInput, session: Session = Depends(get_session)):
     - Aisle and Side Orientation form a unique together constraint. For example, there
     cannot exist two left sides within one aisle.
     """
+    try:
+        # Create a new side
+        new_side = Side(**side_input.model_dump())
+        session.add(new_side)
+        session.commit()
+        session.refresh(new_side)
 
-    # Create a new side
-    new_side = Side(**side_input.model_dump())
-    session.add(new_side)
-    session.commit()
-    session.refresh(new_side)
-    return new_side
+        return new_side
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=SideDetailWriteOutput)
@@ -96,26 +107,30 @@ def update_side(
     **Returns**:
     - Side Detail Write Output: The updated side record.
     """
-    # Get the existing side record from the database
-    existing_side = session.get(Side, id)
+    try:
+        # Get the existing side record from the database
+        existing_side = session.get(Side, id)
 
-    # Check if the side record exists
-    if not existing_side:
-        raise HTTPException(status_code=404, detail="Not Found")
+        # Check if the side record exists
+        if not existing_side:
+            raise NotFound(detail=f"Side ID {id} Not Found")
 
-    # Update the side record with the mutated data
-    mutated_data = side.model_dump(exclude_unset=True)
+        # Update the side record with the mutated data
+        mutated_data = side.model_dump(exclude_unset=True)
 
-    for key, value in mutated_data.items():
-        setattr(existing_side, key, value)
-    setattr(existing_side, "update_dt", datetime.utcnow())
+        for key, value in mutated_data.items():
+            setattr(existing_side, key, value)
+        setattr(existing_side, "update_dt", datetime.utcnow())
 
-    # Commit the changes to the database
-    session.add(existing_side)
-    session.commit()
-    session.refresh(existing_side)
+        # Commit the changes to the database
+        session.add(existing_side)
+        session.commit()
+        session.refresh(existing_side)
 
-    return existing_side
+        return existing_side
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}")
@@ -138,6 +153,10 @@ def delete_side(id: int, session: Session = Depends(get_session)):
     if side:
         session.delete(side)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204,
+            detail=f"Side id {id} Deleted Successfully",
+        )
+
+    raise NotFound(detail=f"Side ID {id} Not Found")

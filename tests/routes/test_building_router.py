@@ -38,7 +38,7 @@ def test_get_building_by_id(client):
 def test_get_buildings_by_id_not_found(client):
     response = client.get("/buildings/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Building ID 999 Not Found"}
 
 
 def test_get_building_by_name(client):
@@ -69,20 +69,22 @@ def test_update_building_record_not_found(client):
     response = client.patch("/buildings/999", json=UPDATED_BUILDING_SINGLE_RECORD)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Building ID 999 Not Found"}
 
 
 def test_delete_building_record(client):
-    data = client.post("/buildings/", json=CREATE_BUILDING_SINGLE_RECORD)
+    response = client.post("/buildings/", json=CREATE_BUILDING_SINGLE_RECORD)
 
-    assert data.status_code == status.HTTP_201_CREATED
-    assert data.json().get("name") == CREATE_BUILDING_SINGLE_RECORD.get("name")
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json().get("name") == CREATE_BUILDING_SINGLE_RECORD.get("name")
 
-    response = client.delete(f"/buildings/{data.json().get('id')}")
+    building_id = response.json().get('id')
+
+    response = client.delete(f"/buildings/{building_id}/")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == f"Building ID {building_id} Deleted Successfully"
 
 
 def test_delete_building_record_not_found(client):

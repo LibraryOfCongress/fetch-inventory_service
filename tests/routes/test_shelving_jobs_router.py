@@ -34,7 +34,7 @@ def test_get_shelving_jobs_by_page_size(client):
 def test_get_all_shelving_jobs_not_found(client):
     response = client.get("/shelving-jobs/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelving Job ID 999 Not Found"}
 
 
 def test_get_shelving_job_by_id(client):
@@ -60,7 +60,7 @@ def test_update_shelving_job_record_not_found(client):
         "/shelving-jobs/999", json=UPDATED_SHELVING_JOBS_SINGLE_RECORD
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Shelving Job ID 999 Not Found"
 
 
 # TODO: Add test cases for delete
@@ -72,4 +72,4 @@ def test_delete_shelving_job_record_not_found(client):
     response = client.delete("/shelving-jobs/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Shelving Job ID 999 Not Found"

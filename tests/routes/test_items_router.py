@@ -75,7 +75,7 @@ def test_get_items_by_page_size(client):
 def test_get_all_items_not_found(client):
     response = client.get("/items/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Item ID 999 Not Found"}
 
 
 def test_get_item_by_id(client):
@@ -106,7 +106,7 @@ def test_update_item_record(client):
 def test_update_item_record_not_found(client):
     response = client.patch("/items/999", json=UPDATED_ITEMS_SINGLE_RECORD)
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Item ID 999 Not Found"
 
 
 def test_delete_item_record_success(client):
@@ -117,4 +117,4 @@ def test_delete_item_record_not_found(client):
     response = client.delete("/items/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Item ID 999 Not Found"

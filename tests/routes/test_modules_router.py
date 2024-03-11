@@ -33,7 +33,7 @@ def test_get_modules_by_page_size(client):
 def test_get_all_modules_not_found(client):
     response = client.get("/modules/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Module ID 999 Not Found"}
 
 
 def test_get_module_by_id(client):
@@ -84,7 +84,7 @@ def test_patch_module_record(client):
 def test_update_module_record_not_found(client):
     response = client.patch("/modules/999", json=UPDATED_MODULES_SINGLE_RECORD)
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Module ID 999 Not Found"
 
 
 def test_delete_module_record_success(client):
@@ -108,15 +108,17 @@ def test_delete_module_record_success(client):
     )
     assert response.status_code == status.HTTP_201_CREATED
 
-    response = client.delete(f"/modules/{response.json().get('id')}")
+    module_id = response.json().get("id")
+
+    response = client.delete(f"/modules/{module_id}")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == f"Module ID {module_id} Deleted Successfully"
 
 
 def test_delete_module_record_not_found(client):
     response = client.delete("/modules/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("detail") == "Not Found"
+    assert response.json().get("detail") == "Module ID 999 Not Found"

@@ -38,7 +38,7 @@ def test_get_shelf_position_numbers_by_id(client):
 def test_get_shelf_position_numbers_by_id_not_found(client):
     response = client.get("/shelves/positions/numbers/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelf Position Number ID 999 Not Found"}
 
 
 def test_create_shelf_position_numbers_record(client):
@@ -63,7 +63,7 @@ def test_update_shelf_position_numbers_record(client):
 def test_update_shelf_position_numbers_record_not_found(client):
     response = client.patch("/shelves/positions/numbers/999", json={"number": 5})
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelf Position Number ID 999 Not Found"}
 
 
 def test_delete_shelf_position_numbers_record(client):
@@ -71,15 +71,17 @@ def test_delete_shelf_position_numbers_record(client):
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    response = client.delete(f"/shelves/positions/numbers/{response.json().get('id')}")
+    shelf_position_number_id = response.json().get("id")
+
+    response = client.delete(f"/shelves/positions/numbers/{shelf_position_number_id}")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == "No Content"
+    assert response.json().get("detail") == f"Shelf Position Number ID {shelf_position_number_id} Deleted Successfully"
 
 
 def test_delete_shelf_position_numbers_record_not_found(client):
     response = client.delete("/shelves/positions/numbers/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Shelf Position Number ID 999 Not Found"}

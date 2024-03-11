@@ -3,6 +3,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.verification_jobs import VerificationJob
@@ -11,6 +12,11 @@ from app.schemas.verification_jobs import (
     VerificationJobUpdateInput,
     VerificationJobListOutput,
     VerificationJobDetailOutput,
+)
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 
 router = APIRouter(
@@ -45,10 +51,11 @@ def get_verification_job_detail(id: int, session: Session = Depends(get_session)
     - HTTPException: If the verification job with the given ID is not found.
     """
     verification_job = session.get(VerificationJob, id)
+
     if verification_job:
         return verification_job
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Verification Job ID {id} Not Found")
 
 
 @router.post("/", response_model=VerificationJobDetailOutput, status_code=201)
@@ -66,11 +73,16 @@ def create_verification_job(
     **Returns:**
     - Verification Job Detail Output: The created verification job.
     """
-    verification_job = VerificationJob(**verification_job_input.model_dump())
-    session.add(verification_job)
-    session.commit()
-    session.refresh(verification_job)
-    return verification_job
+    try:
+        verification_job = VerificationJob(**verification_job_input.model_dump())
+        session.add(verification_job)
+        session.commit()
+        session.refresh(verification_job)
+
+        return verification_job
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=VerificationJobDetailOutput)
@@ -92,9 +104,14 @@ def update_verification_job(
     **Raises:**
     - HTTPException: If the verification job with the given ID does not exist.
     """
-    existing_verification_job = session.get(VerificationJob, id)
+    try:
+        existing_verification_job = session.get(VerificationJob, id)
 
-    if existing_verification_job:
+        # Check if the tray record exists
+        if not existing_verification_job:
+            raise NotFound(detail=f"Verification Job ID {id} Not Found")
+
+        # Update the tray record with the mutated data
         mutated_data = verification_job.model_dump(exclude_unset=True)
 
         for key, value in mutated_data.items():
@@ -104,9 +121,12 @@ def update_verification_job(
 
         session.commit()
         session.refresh(existing_verification_job)
+        session.refresh(existing_verification_job)
+
         return existing_verification_job
-    else:
-        raise HTTPException(status_code=404)
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}")
@@ -121,9 +141,14 @@ def delete_verification_job(id: int, session: Session = Depends(get_session)):
     - HTTPException: An HTTP exception indicating the result of the deletion.
     """
     verification_job = session.get(VerificationJob, id)
+
     if verification_job:
         session.delete(verification_job)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+        return HTTPException(
+            status_code=204,
+            detail=f"Verification Job id {id} Deleted Successfully",
+        )
+
+    raise NotFound(detail=f"Verification Job ID {id} Not Found")

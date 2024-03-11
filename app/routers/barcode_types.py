@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.barcode_types import BarcodeType
@@ -11,6 +12,11 @@ from app.schemas.barcode_types import (
     BarcodeTypesListOutput,
     BarcodeTypesDetailWriteOutput,
     BarcodeTypesDetailReadOutput,
+)
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 
 router = APIRouter(
@@ -51,7 +57,7 @@ def get_barcode_types_detail(id: int, session: Session = Depends(get_session)):
     if barcode_types:
         return barcode_types
 
-    raise HTTPException(status_code=404)
+    raise NotFound(detail=f"Barcode Type ID {id} Not Found")
 
 
 @router.post("/types", response_model=BarcodeTypesDetailWriteOutput, status_code=201)
@@ -67,13 +73,17 @@ def create_barcode_types(
     **Returns:**
     - Barcode Types: The newly created barcode type.
     """
-    # Create a new instance of BarcodeTypes using the input data
-    new_barcode_types = BarcodeType(**barcode_types_input.model_dump())
-    session.add(new_barcode_types)
-    session.commit()
-    session.refresh(new_barcode_types)
+    try:
+        # Create a new instance of BarcodeTypes using the input data
+        new_barcode_types = BarcodeType(**barcode_types_input.model_dump())
+        session.add(new_barcode_types)
+        session.commit()
+        session.refresh(new_barcode_types)
 
-    return new_barcode_types
+        return new_barcode_types
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/types/{id}", response_model=BarcodeTypesDetailWriteOutput)
@@ -89,23 +99,27 @@ def update_barcode_types(
     **Returns:**
     - Barcode Types Detail Write Output: The updated barcode type.
     """
-    existing_barcode_types = session.get(BarcodeType, id)
+    try:
+        existing_barcode_types = session.get(BarcodeType, id)
 
-    if not existing_barcode_types:
-        raise HTTPException(status_code=404)
+        if not existing_barcode_types:
+            raise NotFound(detail=f"Barcode Type ID {id} Not Found")
 
-    mutated_data = barcode_types.model_dump(exclude_unset=True)
 
-    for key, value in mutated_data.items():
-        setattr(existing_barcode_types, key, value)
+        mutated_data = barcode_types.model_dump(exclude_unset=True)
 
-    setattr(existing_barcode_types, "update_dt", datetime.utcnow())
+        for key, value in mutated_data.items():
+            setattr(existing_barcode_types, key, value)
 
-    session.add(existing_barcode_types)
-    session.commit()
-    session.refresh(existing_barcode_types)
+        setattr(existing_barcode_types, "update_dt", datetime.utcnow())
 
-    return existing_barcode_types
+        session.add(existing_barcode_types)
+        session.commit()
+        session.refresh(existing_barcode_types)
+
+        return existing_barcode_types
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/types/{id}")
@@ -125,6 +139,10 @@ def delete_barcode_types(id: int, session: Session = Depends(get_session)):
     if barcode_types:
         session.delete(barcode_types)
         session.commit()
-        return HTTPException(status_code=204)
 
-    raise HTTPException(status_code=404)
+        return HTTPException(
+            status_code=204, detail=f"Barcode Type ID {id} Deleted "
+                                    f"Successfully"
+            )
+
+    raise NotFound(detail=f"Barcode Type ID {id} Not Found")

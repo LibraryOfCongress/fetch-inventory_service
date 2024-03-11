@@ -4,6 +4,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 
 from app.database.session import get_session
@@ -14,6 +15,11 @@ from app.schemas.aisles import (
     AisleListOutput,
     AisleDetailWriteOutput,
     AisleDetailReadOutput,
+)
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 
 import traceback
@@ -55,8 +61,8 @@ def get_aisle_detail(id: int, session: Session = Depends(get_session)):
 
     if aisle:
         return aisle
-    else:
-        raise HTTPException(status_code=404, detail="Not Found")
+
+    raise NotFound(detail=f"Aisle ID {id} Not Found")
 
 
 @router.post("/", response_model=AisleDetailWriteOutput, status_code=201)
@@ -76,13 +82,17 @@ def create_aisle(aisle_input: AisleInput, session: Session = Depends(get_session
     **Notes**:
     - building id and module id may not both be set. Only one allowed.
     """
-    # Create a new Aisle object
-    new_aisle = Aisle(**aisle_input.model_dump())
-    session.add(new_aisle)
-    session.commit()
-    session.refresh(new_aisle)
+    try:
+        # Create a new Aisle object
+        new_aisle = Aisle(**aisle_input.model_dump())
+        session.add(new_aisle)
+        session.commit()
+        session.refresh(new_aisle)
 
-    return new_aisle
+        return new_aisle
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=AisleDetailWriteOutput)
@@ -99,24 +109,28 @@ def update_aisle(
     **Returns**:
     - Aisle Detail Write Output: The updated aisle.
     """
-    # Get the existing aisle
-    existing_aisle = session.get(Aisle, id)
+    try:
+        # Get the existing aisle
+        existing_aisle = session.get(Aisle, id)
 
-    if not existing_aisle:
-        raise HTTPException(status_code=404)
+        if not existing_aisle:
+            raise NotFound(detail=f"Aisle ID {id} Not Found")
 
-    mutated_data = aisle.model_dump(exclude_unset=True)
+        mutated_data = aisle.model_dump(exclude_unset=True)
 
-    for key, value in mutated_data.items():
-        setattr(existing_aisle, key, value)
+        for key, value in mutated_data.items():
+            setattr(existing_aisle, key, value)
 
-    setattr(existing_aisle, "update_dt", datetime.utcnow())
+        setattr(existing_aisle, "update_dt", datetime.utcnow())
 
-    session.add(existing_aisle)
-    session.commit()
-    session.refresh(existing_aisle)
+        session.add(existing_aisle)
+        session.commit()
+        session.refresh(existing_aisle)
 
-    return existing_aisle
+        return existing_aisle
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}")
@@ -138,6 +152,7 @@ def delete_aisle(id: int, session: Session = Depends(get_session)):
     if aisle:
         session.delete(aisle)
         session.commit()
-        return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+        return HTTPException(status_code=204, detail=f"Aisle ID {id} Deleted "
+                                                     f"Successfully")
+
+    raise NotFound(detail=f"Aisle ID {id} Not Found")

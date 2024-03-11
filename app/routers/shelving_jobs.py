@@ -13,6 +13,11 @@ from app.schemas.shelving_jobs import (
     ShelvingJobListOutput,
     ShelvingJobDetailOutput,
 )
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 
 router = APIRouter(
     prefix="/shelving-jobs",
@@ -46,10 +51,11 @@ def get_shelving_job_detail(id: int, session: Session = Depends(get_session)):
     - HTTPException: If the shelving job with the given ID is not found.
     """
     shelving_job = session.get(ShelvingJob, id)
+
     if shelving_job:
         return shelving_job
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"Shelving Job ID {id} Not Found")
 
 
 @router.post("/", response_model=ShelvingJobDetailOutput, status_code=201)
@@ -71,12 +77,16 @@ def create_shelving_job(
     shelving job.
     """
 
-    new_shelving_job = ShelvingJob(**shelving_job_input.model_dump())
-    session.add(new_shelving_job)
-    session.commit()
-    session.refresh(new_shelving_job)
+    try:
+        new_shelving_job = ShelvingJob(**shelving_job_input.model_dump())
+        session.add(new_shelving_job)
+        session.commit()
+        session.refresh(new_shelving_job)
 
-    return new_shelving_job
+        return new_shelving_job
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
 
 
 @router.patch("/{id}", response_model=ShelvingJobDetailOutput)
@@ -96,24 +106,27 @@ def update_shelving_job(
     - HTTPException: If the shelving job is not found or if an error occurs during
     the update.
     """
+    try:
+        existing_shelving_job = session.get(ShelvingJob, id)
 
-    existing_shelving_job = session.get(ShelvingJob, id)
+        if not existing_shelving_job:
+            raise NotFound(detail=f"Shelving Job ID {id} Not Found")
 
-    if not existing_shelving_job:
-        raise HTTPException(status_code=404)
+        mutated_data = shelving_job.model_dump(exclude_unset=True)
 
-    mutated_data = shelving_job.model_dump(exclude_unset=True)
+        for key, value in mutated_data.items():
+            setattr(existing_shelving_job, key, value)
 
-    for key, value in mutated_data.items():
-        setattr(existing_shelving_job, key, value)
+        setattr(existing_shelving_job, "update_dt", datetime.utcnow())
 
-    setattr(existing_shelving_job, "update_dt", datetime.utcnow())
+        session.add(existing_shelving_job)
+        session.commit()
+        session.refresh(existing_shelving_job)
 
-    session.add(existing_shelving_job)
-    session.commit()
-    session.refresh(existing_shelving_job)
+        return existing_shelving_job
 
-    return existing_shelving_job
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.delete("/{id}", status_code=204)
@@ -130,9 +143,11 @@ def delete_shelving_job(id: int, session: Session = Depends(get_session)):
     if shelving_job:
         session.delete(shelving_job)
         session.commit()
-    else:
-        raise HTTPException(status_code=404)
 
-    return HTTPException(
-        status_code=204, detail=f"Shelving Job id {id} deleted successfully"
-    )
+        return HTTPException(
+            status_code=204, detail=f"Shelving Job id {id} Deleted Successfully"
+        )
+
+    raise NotFound(detail=f"Shelving Job ID {id} Not Found")
+
+
