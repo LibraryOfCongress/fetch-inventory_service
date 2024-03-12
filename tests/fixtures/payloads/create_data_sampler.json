@@ -96,7 +96,7 @@
       "owner_id": 1,
       "run_time": "03:25:15",
       "status": "Created",
-      "trayed": true,
+      "trayed": false,
       "user_id": 1
   },
   "verification_jobs": {
@@ -130,7 +130,8 @@
     "withdrawal_dt": "2023-10-08T20:46:56.764426"
   },
   "size_class": {
-    "name": "Small"
+    "name": "Small",
+    "short_name": "S"
   },
   "media_types": {
     "name": "Paper"

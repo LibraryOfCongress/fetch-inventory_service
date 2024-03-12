@@ -2,6 +2,7 @@ from pydantic import BaseModel, field_validator
 from datetime import datetime, timedelta
 from typing import Optional
 
+from app.schemas.accession_jobs import AccessionJobDetailOutput
 from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
 from app.schemas.shelving_jobs import ShelvingJobDetailOutput
@@ -65,13 +66,7 @@ class VerificationJobBaseOutput(BaseModel):
 
 class VerificationJobListOutput(VerificationJobBaseOutput):
     class Config:
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "trayed": True,
-                "status": "Created"
-            }
-        }
+        json_schema_extra = {"example": {"id": 1, "trayed": True, "status": "Created"}}
 
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
@@ -84,6 +79,7 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
     owner: Optional[OwnerDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None
     shelving_job: Optional[ShelvingJobDetailOutput] = None
+    accession_job: Optional[AccessionJobDetailOutput] = None
     items: list
     trays: list
     non_tray_items: list
@@ -135,6 +131,31 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398",
                 },
+                "shelving_job": {
+                    "id": 1,
+                    "shelving_dt": "2023-10-08T20:46:56.764426",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398",
+                },
+                "accession_job": {
+                    "id": 1,
+                    "accession_dt": "2023-10-08T20:46:56.764426",
+                    "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                    "title": "Lord of The Rings",
+                    "volume": "I",
+                    "condition": "Good",
+                    "arbitrary_data": "Signed copy",
+                    "subcollection_id": 1,
+                    "media_type_id": 1,
+                    "size_class_id": 1,
+                    "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                    "owner_id": 1,
+                    "container_type_id": 1,
+                    "tray_id": 1,
+                    "shelving_job_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398",
+                },
                 "items": [
                     {
                         "id": 1,
@@ -154,7 +175,7 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                         "accession_dt": "2023-10-08T20:46:56.764426",
                         "withdrawal_dt": "2023-10-08T20:46:56.764426",
                         "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
+                        "update_dt": "2023-10-08T20:46:56.764398",
                     }
                 ],
                 "trays": [
@@ -171,7 +192,7 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                         "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                         "accession_dt": "2023-10-08T20:46:56.764426",
                         "shelved_dt": "2023-10-08T20:46:56.764426",
-                        "withdrawal_dt": "2023-10-08T20:46:56.764426"
+                        "withdrawal_dt": "2023-10-08T20:46:56.764426",
                     }
                 ],
                 "non_tray_items": [
@@ -188,7 +209,7 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                         "accession_dt": "2023-10-08T20:46:56.764426",
                         "withdrawal_dt": "2023-10-08T20:46:56.764426",
                         "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
+                        "update_dt": "2023-10-08T20:46:56.764398",
                     }
                 ],
                 "create_dt": "2023-10-08T20:46:56.764426",

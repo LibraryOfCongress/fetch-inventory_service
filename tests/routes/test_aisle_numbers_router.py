@@ -1,6 +1,6 @@
 from fastapi import status
 
-from tests.fixtures.configtest import init_db, test_database, client, session
+from tests.fixtures.configtest import client, session
 from tests.fixtures.aisle_numbers_fixture import (
     AISLE_NUMBERS_SINGLE_RECORD_RESPONSE,
     AISLE_NUMBERS_PAGE_DATA_RESPONSE,
@@ -9,7 +9,7 @@ from tests.fixtures.aisle_numbers_fixture import (
 )
 
 
-def test_get_all_aisle_numbers(client, test_database):
+def test_get_all_aisle_numbers(client):
     response = client.get("/aisles/numbers/")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == AISLE_NUMBERS_SINGLE_RECORD_RESPONSE

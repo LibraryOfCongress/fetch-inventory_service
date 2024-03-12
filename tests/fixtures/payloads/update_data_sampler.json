@@ -81,7 +81,7 @@
       "owner_tier_id": 1
     },
     "accession_jobs": {
-      "trayed": false,
+      "trayed": true,
       "run_time": "04:00:00",
       "status": "Paused"
     },

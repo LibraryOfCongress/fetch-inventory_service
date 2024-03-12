@@ -1,12 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy import not_, and_, or_
 from sqlmodel import Session, select
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
 from app.models.accession_jobs import AccessionJob
+from app.models.verification_jobs import VerificationJob
 from app.tasks import generate_verification_job
 from app.config.exceptions import (
     NotFound,
@@ -29,14 +31,40 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[AccessionJobListOutput])
-def get_accession_job_list(session: Session = Depends(get_session)) -> list:
+def get_accession_job_list(
+    queue: bool = Query(default=False), session: Session = Depends(get_session)
+) -> list:
     """
     Retrieve a paginated list of accession jobs.
 
     **Returns:**
     - list: A paginated list of accession jobs.
     """
-    return paginate(session, select(AccessionJob))
+    try:
+        query = select(AccessionJob)
+
+        if queue:
+            # Filter to exclude Accession Jobs with a related Verification Job not in
+            # 'Created' status
+            subquery = (
+                select(VerificationJob.accession_job_id)
+                .where(VerificationJob.status != "Created")
+                .distinct()
+            )
+
+            # Construct the main query
+            query = select(AccessionJob).where(
+                # Use NOT EXISTS to exclude AccessionJobs with related VerificationJobs not in 'created' status
+                or_(
+                    AccessionJob.id.not_in(subquery),
+                    # AccessionJobs without related VerificationJobs not in 'created' status
+                    not_(subquery.exists()),  # Or no related VerificationJobs at all
+                )
+            )
+
+        return paginate(session, query)
+    except IntegrityError as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.get("/{id}", response_model=AccessionJobDetailOutput)
@@ -109,31 +137,28 @@ def update_accession_job(
     - HTTPException: If the accession job is not found or if an error occurs during
     the update.
     """
-    try:
-        existing_accession_job = session.get(AccessionJob, id)
+    existing_accession_job = session.get(AccessionJob, id)
 
-        if not existing_accession_job:
-            raise NotFound(detail=f"Accession Job ID {id} Not Found")
+    if not existing_accession_job:
+        raise NotFound(detail=f"Accession Job ID {id} Not Found")
 
-        mutated_data = accession_job.model_dump(exclude_unset=True)
+    mutated_data = accession_job.model_dump(exclude_unset=True)
 
-        for key, value in mutated_data.items():
-            setattr(existing_accession_job, key, value)
+    for key, value in mutated_data.items():
+        setattr(existing_accession_job, key, value)
 
-        # setting the update_dt to now
-        setattr(existing_accession_job, "update_dt", datetime.utcnow())
+    # setting the update_dt to now
+    setattr(existing_accession_job, "update_dt", datetime.utcnow())
 
-        existing_accession_job = commit_record(session, existing_accession_job)
+    existing_accession_job = commit_record(session, existing_accession_job)
 
-        if mutated_data.get("status") == "Completed":
-            # Automatically create a related Verification Job.
-            background_tasks.add_task(
-                generate_verification_job, session, existing_accession_job
-            )
+    if mutated_data.get("status") == "Completed":
+        # Automatically create a related Verification Job.
+        background_tasks.add_task(
+            generate_verification_job, session, existing_accession_job
+        )
 
-        return existing_accession_job
-    except Exception as e:
-        raise InternalServerError(detail=f"{e}")
+    return existing_accession_job
 
 
 @router.delete("/{id}", status_code=204)

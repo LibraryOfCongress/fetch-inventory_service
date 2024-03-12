@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.models.accession_jobs import AccessionJob
 from app.models.owners import Owner
 from app.models.trays import Tray
 from app.models.items import Item
@@ -74,3 +75,4 @@ class VerificationJob(SQLModel, table=True):
     items: List[Item] = Relationship(back_populates="verification_job")
     non_tray_items: List[NonTrayItem] = Relationship(back_populates="verification_job")
     shelving_job: ShelvingJob = Relationship(back_populates="verification_jobs")
+    accession_job: AccessionJob = Relationship(back_populates="verification_jobs")

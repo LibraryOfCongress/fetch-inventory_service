@@ -61,12 +61,11 @@ class AccessionJobBaseOutput(BaseModel):
 class AccessionJobListOutput(AccessionJobBaseOutput):
     class Config:
         json_schema_extra = {
-            "example":
-                {
-                    "id": 1,
-                    "trayed": True,
-                    "status": "Created"
-                }
+            "example": {
+                "id": 1,
+                "trayed": True,
+                "status": "Created"
+            }
         }
 
 
@@ -78,6 +77,7 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
     container_type_id: Optional[int] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
+    verification_job: Optional[list] = None
     items: list
     trays: list
     non_tray_items: list
@@ -126,15 +126,21 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
-                "items": [
-                    "..."
+                "verification_job": [
+                    {
+                        "id": 1,
+                        "status": "Created",
+                        "user_id": 1,
+                        "last_transition": "2023-11-27T12:34:56.789123Z",
+                        "run_time": "03:25:15",
+                        "accession_job_id": 1,
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    }
                 ],
-                "trays": [
-                    "..."
-                ],
-                "non_tray_items": [
-                    "..."
-                ],
+                "items": ["..."],
+                "trays": ["..."],
+                "non_tray_items": ["..."],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
