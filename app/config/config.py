@@ -2,7 +2,10 @@ from typing import List
 
 from pydantic import Json
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
 from functools import lru_cache
+
+load_dotenv()
 
 
 class Settings(BaseSettings):
