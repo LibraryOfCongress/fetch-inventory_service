@@ -12,7 +12,14 @@ build_image:
   script:
     - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
     - cp -v images/api.dev.Containerfile Dockerfile
-    - echo $DEVELOP_ENV > .env
+    - echo $DEVELOP_APP_NAME > .env
+    - echo $DEVELOP_APP_ENVIRONMENT >> .env
+    - echo $DEVELOP_TIMEZONE >> .env
+    - echo $DEVELOP_DATABASE_URL >> .env
+    - echo $DEVELOP_MIGRATION_URL >> .env
+    - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS >> .env
     - cat .env
     - /kaniko/executor
       --context $CI_PROJECT_DIR
@@ -32,7 +39,14 @@ build_mr:
     - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
     - echo CI_COMMIT_BRANCH $CI_COMMIT_BRANCH
     - cp -v images/api.dev.Containerfile Dockerfile
-    - echo $DEVELOP_ENV > .env
+    - echo $DEVELOP_APP_NAME > .env
+    - echo $DEVELOP_APP_ENVIRONMENT >> .env
+    - echo $DEVELOP_TIMEZONE >> .env
+    - echo $DEVELOP_DATABASE_URL >> .env
+    - echo $DEVELOP_MIGRATION_URL >> .env
+    - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS >> .env
     - cat .env
     - /kaniko/executor
       --context $CI_PROJECT_DIR
@@ -58,7 +72,14 @@ build_image_test:
   script:
     - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
     - cp -v images/api.test.Containerfile Dockerfile
-    - echo $TEST_ENV > .env
+    - echo $TEST_APP_NAME > .env
+    - echo $TEST_APP_ENVIRONMENT >> .env
+    - echo $TEST_TIMEZONE >> .env
+    - echo $TEST_DATABASE_URL >> .env
+    - echo $TEST_MIGRATION_URL >> .env
+    - echo $TEST_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $TEST_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $TEST_ALLOWED_ORIGINS >> .env
     - cat .env
     - /kaniko/executor
       --context $CI_PROJECT_DIR
@@ -77,7 +98,14 @@ build_image_staging:
   script:
     - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
     - cp -v images/api.stage.Containerfile Dockerfile
-    - echo $STAGING_ENV > .env
+    - echo $STAGING_APP_NAME > .env
+    - echo $STAGING_APP_ENVIRONMENT >> .env
+    - echo $STAGING_TIMEZONE >> .env
+    - echo $STAGING_DATABASE_URL >> .env
+    - echo $STAGING_MIGRATION_URL >> .env
+    - echo $STAGING_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $STAGING_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $STAGING_ALLOWED_ORIGINS >> .env
     - cat .env
     - /kaniko/executor
       --context $CI_PROJECT_DIR
