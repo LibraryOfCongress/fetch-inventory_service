@@ -28,13 +28,14 @@ WORKDIR /code
 # Copy Python requirements from the first stage
 COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
 
-COPY --from=requirements-stage /tmp/.env /code/.env
+# COPY --from=requirements-stage /tmp/.env /code/.env
 
 # Install dependencies
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 # Copy your application code
 COPY app /code/app
+COPY --from=requirements-stage /tmp/.env /code/app/config/.env
 COPY migrations /code/migrations
 COPY alembic.ini /code/alembic.ini
 
