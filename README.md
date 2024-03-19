@@ -86,6 +86,8 @@ Environment variables should be set through the environment. The [Pydantic setti
 
 For local builds, there is no need to have a `.env` file.  For deployed environments, devops should handle seeding this file into the repository root before building.
 
+The container images then move `.env` into the config directory at build, and `python-dotenv` is used to ensure parsing occurs prior to building the Pydantic Settings class.
+
 ## Containerization
 
 The Python Slim image is used as a base for the container.  This image itself is based on Debian:Buster, thus any need to interact with the container system should refer to Debian documentation.
