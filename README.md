@@ -84,7 +84,7 @@ Additional environments can be built by passing their names, `dev`, `test`, etc.
 
 Environment variables should be set through the environment. The [Pydantic settings](https://docs.pydantic.dev/latest/usage/pydantic_settings/) system is used to set default values for expected `.env` keys. The application will automatically override these if matching keys are found in the environment.
 
-For local builds, there is no need to have a `.env` file.  For deployed environments, devops should handle seeding this file into the repository root before building.
+For local builds there is no need to have a `.env` file.  For deployed environments, devops should handle seeding this file into the repository root before building.
 
 The container images then move `.env` into the config directory at build, and `python-dotenv` is used to ensure parsing occurs prior to building the Pydantic Settings class.
 
