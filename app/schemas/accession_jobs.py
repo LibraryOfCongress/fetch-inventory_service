@@ -1,13 +1,19 @@
+import uuid
+
 from pydantic import BaseModel, field_validator
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 
 from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
+from app.schemas.media_types import MediaTypeDetailReadOutput
+from app.schemas.size_class import SizeClassDetailReadOutput
+from app.schemas.barcodes import BarcodeDetailReadOutput
 
 
 class AccessionJobInput(BaseModel):
     trayed: bool
+    media_type_id: Optional[int] = None
     status: Optional[str]
     user_id: Optional[int] = None
     run_time: Optional[timedelta]
@@ -24,7 +30,8 @@ class AccessionJobInput(BaseModel):
                 "run_time": "03:25:15",
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,
-                "container_type_id": 1
+                "container_type_id": 1,
+                "media_type_id": 1
             }
         }
 
@@ -37,6 +44,7 @@ class AccessionJobUpdateInput(BaseModel):
     last_transition: Optional[datetime] = None
     owner_id: Optional[int] = None
     container_type_id: Optional[int] = None
+    media_type_id: Optional[int] = None
 
     class Config:
         json_schema_extra = {
@@ -47,7 +55,8 @@ class AccessionJobUpdateInput(BaseModel):
                 "run_time": "03:25:15",
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,
-                "container_type_id": 1
+                "container_type_id": 1,
+                "media_type_id": 1
             }
         }
 
@@ -56,6 +65,8 @@ class AccessionJobBaseOutput(BaseModel):
     id: int
     trayed: bool
     status: Optional[str]
+    container_type_id: Optional[int] = None
+    media_type_id: Optional[int] = None
 
 
 class AccessionJobListOutput(AccessionJobBaseOutput):
@@ -64,9 +75,74 @@ class AccessionJobListOutput(AccessionJobBaseOutput):
             "example": {
                 "id": 1,
                 "trayed": True,
+                "media_type_id": 1,
+                "container_type_id": 1,
                 "status": "Created"
             }
         }
+
+
+class ItemDetailNestedForAccessionJob(BaseModel):
+    id: int
+    status: Optional[str] = None
+    accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
+    verification_job_id: Optional[int] = None
+    tray_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    title: Optional[str] = None
+    volume: Optional[str] = None
+    condition: Optional[str] = None
+    arbitrary_data: Optional[str] = None
+    subcollection_id: Optional[int] = None
+    media_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    barcode_id: Optional[uuid.UUID] = None
+    accession_dt: Optional[datetime] = None
+    withdrawal_dt: Optional[datetime] = None
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
+
+
+class TrayDetailNestedForAccessionJob(BaseModel):
+    accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
+    collection_accessioned: Optional[bool] = None
+    verification_job_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    shelf_position_id: Optional[int] = None
+    media_type_id: Optional[int] = None
+    conveyance_bin_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    barcode_id: Optional[uuid.UUID] = None
+    accession_dt: Optional[datetime] = None
+    shelved_dt: Optional[datetime] = None
+    withdrawal_dt: Optional[datetime] = None
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
+
+
+class NonTrayItemDetailNestedForAccessionJob(BaseModel):
+    id: int
+    status: Optional[str] = None
+    accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
+    verification_job_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    subcollection_id: Optional[int] = None
+    media_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    barcode_id: Optional[uuid.UUID] = None
+    accession_dt: Optional[datetime] = None
+    withdrawal_dt: Optional[datetime] = None
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
 
 
 class AccessionJobDetailOutput(AccessionJobBaseOutput):
@@ -76,11 +152,13 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
     owner_id: Optional[int] = None
     container_type_id: Optional[int] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None
+    media_type_id: Optional[int] = None
+    media_type: Optional[MediaTypeDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
     verification_job: Optional[list] = None
-    items: list
-    trays: list
-    non_tray_items: list
+    items: List[ItemDetailNestedForAccessionJob]
+    trays: List[TrayDetailNestedForAccessionJob]
+    non_tray_items: List[NonTrayItemDetailNestedForAccessionJob]
     create_dt: datetime
     update_dt: datetime
 
@@ -106,6 +184,13 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,
                 "container_type_id": 1,
+                "media_type_id": 1,
+                "media_type": {
+                    "id": 1,
+                    "name": "Book",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "owner": {
                     "id": 1,
                     "name": "Special Collection Directorate",

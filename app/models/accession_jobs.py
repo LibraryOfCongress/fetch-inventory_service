@@ -9,6 +9,7 @@ from app.models.trays import Tray
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.container_types import ContainerType
+from app.models.media_types import MediaType
 
 
 class AccessionJob(SQLModel, table=True):
@@ -24,6 +25,9 @@ class AccessionJob(SQLModel, table=True):
     __tablename__ = "accession_jobs"
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    media_type_id: Optional[int] = Field(
+        foreign_key="media_types.id", nullable=True
+    )
     trayed: bool = Field(sa_column=sa.Boolean, default=True, nullable=False)
     status: str = Field(
         sa_column=sa.Column(
@@ -59,6 +63,7 @@ class AccessionJob(SQLModel, table=True):
     )
 
     container_type: ContainerType = Relationship(back_populates="accession_jobs")
+    media_type: MediaType = Relationship(back_populates="accession_jobs")
     owner: Owner = Relationship(back_populates="accession_jobs")
     trays: List[Tray] = Relationship(back_populates="accession_job")
     items: List[Item] = Relationship(back_populates="accession_job")

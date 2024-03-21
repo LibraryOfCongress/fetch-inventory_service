@@ -37,6 +37,8 @@ class Tray(SQLModel, table=True):
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id", nullable=False, default=None
     )
+    scanned_for_accession: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    collection_accessioned: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
     size_class_id: int = Field(foreign_key="size_class.id", nullable=False)
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
@@ -47,18 +49,9 @@ class Tray(SQLModel, table=True):
         foreign_key="conveyance_bins.id",
         nullable=True
     )
-    accession_dt: datetime = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
-    shelved_dt:  datetime = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
-    withdrawal_dt: datetime = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
-    accession_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
-    shelved_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
-    withdrawal_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    accession_dt: Optional[datetime] = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    shelved_dt: Optional[datetime] = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    withdrawal_dt: Optional[datetime] = Field(sa_column=sa.DateTime, default=None, nullable=True)
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
@@ -73,6 +66,12 @@ class Tray(SQLModel, table=True):
         sa_relationship_kwargs={"uselist": False}
     )
     media_type: Optional["MediaType"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
+    owner: Optional["Owner"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
+    container_type: Optional["ContainerType"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
     size_class: Optional["SizeClass"] = Relationship(

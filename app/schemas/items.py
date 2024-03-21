@@ -16,6 +16,7 @@ from app.schemas.subcollection import SubcollectionDetailWriteOutput
 class ItemInput(BaseModel):
     status: Optional[str] = None
     accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
     verification_job_id: Optional[int] = None
     tray_id: Optional[int] = None
     container_type_id: Optional[int] = None
@@ -37,6 +38,7 @@ class ItemInput(BaseModel):
             "example": {
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -62,6 +64,7 @@ class ItemUpdateInput(ItemInput):
             "example": {
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -92,6 +95,7 @@ class ItemListOutput(ItemBaseOutput):
                 "id": 1,
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -111,6 +115,7 @@ class ItemListOutput(ItemBaseOutput):
 
 
 class ItemDetailWriteOutput(ItemBaseOutput):
+    barcode: BarcodeDetailReadOutput
     create_dt: datetime
     update_dt: datetime
 
@@ -120,6 +125,7 @@ class ItemDetailWriteOutput(ItemBaseOutput):
                 "id": 1,
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -132,6 +138,13 @@ class ItemDetailWriteOutput(ItemBaseOutput):
                 "media_type_id": 1,
                 "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426",
                 "create_dt": "2023-10-08T20:46:56.764426",
@@ -141,7 +154,6 @@ class ItemDetailWriteOutput(ItemBaseOutput):
 
 
 class ItemDetailReadOutput(ItemDetailWriteOutput):
-    barcode: BarcodeDetailReadOutput
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
     accession_job: AccessionJobBaseOutput
@@ -155,6 +167,7 @@ class ItemDetailReadOutput(ItemDetailWriteOutput):
                 "id": 1,
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,

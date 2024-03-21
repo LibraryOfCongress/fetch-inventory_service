@@ -62,6 +62,7 @@ class Item(SQLModel, table=True):
     accession_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="accession_jobs.id"
     )
+    scanned_for_accession: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
     verification_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="verification_jobs.id"
     )

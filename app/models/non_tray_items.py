@@ -64,15 +64,16 @@ class NonTrayItem(SQLModel, table=True):
         nullable=True,
         foreign_key="accession_jobs.id"
     )
+    scanned_for_accession: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
     verification_job_id: Optional[int] = Field(
         default=None,
         nullable=True,
         foreign_key="verification_jobs.id"
     )
-    accession_dt: datetime = Field(
+    accession_dt: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=None, nullable=True
     )
-    withdrawal_dt: datetime = Field(
+    withdrawal_dt: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=None, nullable=True
     )
     media_type_id: Optional[int] = Field(
@@ -87,6 +88,18 @@ class NonTrayItem(SQLModel, table=True):
     )
 
     barcode: Optional["Barcode"] = Relationship(sa_relationship_kwargs={"uselist": False})
+    media_type: Optional["MediaType"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
+    size_class: Optional["SizeClass"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
+    container_type: Optional["ContainerType"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
+    owner: Optional["Owner"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
     accession_job: Optional["AccessionJob"] = Relationship(back_populates="non_tray_items")
     verification_job: Optional["VerificationJob"] = Relationship(back_populates="non_tray_items")
     subcollection: Optional["Subcollection"] = Relationship(back_populates="non_tray_items")

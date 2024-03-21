@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
+from typing import List
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
@@ -61,6 +62,28 @@ def get_barcode_detail(id: uuid.UUID, session: Session = Depends(get_session)):
         return barcode
 
     raise NotFound(detail=f"Barcode ID {id} Not Found")
+
+
+@router.get("/value/{value}", response_model=BarcodeDetailReadOutput)
+def get_barcode_by_value(value: str, session: Session = Depends(get_session)):
+    """
+    Retrieve barcode details by its value
+
+    **Parameters:**
+    - value (str): The value of the barcode to retrieve.
+
+    **Returns:**
+    - Barcode Detail Read Output: The barcode details.
+
+    **Raises:**
+    - HTTPException: If the barcode is not found.
+    """
+    statement = select(Barcode).where(Barcode.value == value)
+    barcode = session.exec(statement).first()
+    if not barcode:
+        raise NotFound()
+    return barcode
+
 
 
 @router.post("/", response_model=BarcodeDetailWriteOutput, status_code=201)
@@ -125,7 +148,6 @@ def update_barcode(
         return existing_barcode
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
-
 
 
 @router.delete("/{id}")

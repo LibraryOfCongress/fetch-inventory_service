@@ -16,6 +16,7 @@ from app.schemas.subcollection import SubcollectionDetailWriteOutput
 class NonTrayItemInput(BaseModel):
     status: Optional[str] = None
     accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
     verification_job_id: Optional[int] = None
     container_type_id: Optional[int] = None
     owner_id: Optional[int] = None
@@ -31,6 +32,7 @@ class NonTrayItemInput(BaseModel):
             "example": {
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -51,6 +53,7 @@ class NonTrayItemUpdateInput(NonTrayItemInput):
             "example": {
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -76,6 +79,7 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
                 "id": 1,
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -90,6 +94,9 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
 
 
 class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
+    barcode: BarcodeDetailReadOutput
+    media_type: MediaTypeDetailReadOutput
+    size_class: SizeClassDetailReadOutput
     create_dt: datetime
     update_dt: datetime
 
@@ -99,6 +106,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                 "id": 1,
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -106,6 +114,25 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                 "media_type_id": 1,
                 "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "media_type": {
+                    "id": 1,
+                    "name": "Book",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "size_class": {
+                    "id": 1,
+                    "name": "C-Low",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398",
+                },
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426",
                 "create_dt": "2023-10-08T20:46:56.764426",
@@ -115,12 +142,9 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
 
 
 class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
-    barcode: BarcodeDetailReadOutput
-    media_type: MediaTypeDetailReadOutput
-    size_class: SizeClassDetailReadOutput
-    accession_job: AccessionJobBaseOutput
-    verification_job: VerificationJobBaseOutput
-    subcollection: SubcollectionDetailWriteOutput
+    accession_job: Optional[AccessionJobBaseOutput] = None
+    verification_job: Optional[VerificationJobBaseOutput] = None
+    subcollection: Optional[SubcollectionDetailWriteOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
 
     class Config:
@@ -129,6 +153,7 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                 "id": 1,
                 "status": "In",
                 "accession_job_id": 1,
+                "scanned_for_accession": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,

@@ -19,6 +19,7 @@ class MediaType(SQLModel, table=True):
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True))
     name: str = Field(max_length=25, sa_column=sa.VARCHAR, nullable=False, unique=True)
+    accession_jobs: List["AccessionJob"] = Relationship(back_populates="media_type")
     update_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
