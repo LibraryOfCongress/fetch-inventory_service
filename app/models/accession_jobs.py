@@ -51,6 +51,11 @@ class AccessionJob(SQLModel, table=True):
     last_transition: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
     )
+    size_class_id: Optional[int] = Field(
+        foreign_key="size_class.id",
+        nullable=True,
+        default=None
+    )
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     container_type_id: Optional[int] = Field(
         foreign_key="container_types.id", nullable=True
@@ -64,6 +69,9 @@ class AccessionJob(SQLModel, table=True):
 
     container_type: ContainerType = Relationship(back_populates="accession_jobs")
     media_type: MediaType = Relationship(back_populates="accession_jobs")
+    size_class: Optional["SizeClass"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
     owner: Owner = Relationship(back_populates="accession_jobs")
     trays: List[Tray] = Relationship(back_populates="accession_job")
     items: List[Item] = Relationship(back_populates="accession_job")

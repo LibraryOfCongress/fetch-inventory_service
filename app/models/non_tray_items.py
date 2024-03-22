@@ -40,13 +40,14 @@ class NonTrayItem(SQLModel, table=True):
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id",
         nullable=False,
-        default=None
+        default=None,
+        unique=True
     )
     owner_id: Optional[int] = Field(
         foreign_key="owners.id",
         nullable=True
     )
-    size_class_id: int = Field(
+    size_class_id: Optional[int] = Field(
         foreign_key="size_class.id",
         nullable=True
     )

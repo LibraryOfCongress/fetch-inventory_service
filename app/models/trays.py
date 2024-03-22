@@ -35,7 +35,7 @@ class Tray(SQLModel, table=True):
         foreign_key="container_types.id", nullable=True
     )
     barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id", nullable=False, default=None
+        foreign_key="barcodes.id", nullable=False, default=None, unique=True
     )
     scanned_for_accession: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
     collection_accessioned: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)

@@ -22,6 +22,7 @@ class ConveyanceBin(SQLModel, table=True):
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id",
         nullable=False,
+        unique=True,
         default=None
     )
     update_dt: datetime = Field(

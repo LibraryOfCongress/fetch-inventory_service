@@ -1,6 +1,6 @@
 import uuid
 
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -74,8 +74,14 @@ class TrayUpdateInput(TrayInput):
         }
 
 
+class ItemNestedForTrayOutput(BaseModel):
+    id: int
+    barcode: BarcodeDetailReadOutput
+
+
 class TrayBaseOutput(TrayInput):
     id: int
+    items: List[ItemNestedForTrayOutput]
     barcode: BarcodeDetailReadOutput
     media_type: MediaTypeDetailReadOutput
     size_class: SizeClassDetailReadOutput
@@ -125,7 +131,6 @@ class TrayListOutput(TrayBaseOutput):
 
 
 class TrayDetailWriteOutput(TrayBaseOutput):
-    items: list
     owner: Optional[OwnerDetailReadOutput]
     container_type: ContainerTypeDetailReadOutput
     create_dt: datetime

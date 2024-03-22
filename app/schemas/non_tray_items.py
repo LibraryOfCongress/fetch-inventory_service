@@ -96,7 +96,7 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
 class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
     barcode: BarcodeDetailReadOutput
     media_type: MediaTypeDetailReadOutput
-    size_class: SizeClassDetailReadOutput
+    size_class: Optional[SizeClassDetailReadOutput]
     create_dt: datetime
     update_dt: datetime
 

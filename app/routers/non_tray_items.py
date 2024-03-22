@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.non_tray_items import NonTrayItem
+from app.models.barcodes import Barcode
 from app.schemas.non_tray_items import (
     NonTrayItemInput,
     NonTrayItemUpdateInput,
@@ -47,6 +48,21 @@ def get_non_tray_item_detail(id: int, session: Session = Depends(get_session)):
         return non_tray_item
 
     raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
+
+
+@router.get("/barcode/{value}", response_model=NonTrayItemDetailReadOutput)
+def get_non_tray_by_barcode_value(value: str, session: Session = Depends(get_session)):
+    """
+    Retrieve a non-tray using a barcode value
+
+    **Parameters:**
+    - value (str): The value of the barcode to retrieve.
+    """
+    statement = select(NonTrayItem).join(Barcode).where(Barcode.value == value)
+    non_tray = session.exec(statement).first()
+    if not non_tray:
+        raise NotFound()
+    return non_tray
 
 
 @router.post("/", response_model=NonTrayItemDetailWriteOutput, status_code=201)

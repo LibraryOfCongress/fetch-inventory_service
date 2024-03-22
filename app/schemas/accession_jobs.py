@@ -19,6 +19,7 @@ class AccessionJobInput(BaseModel):
     run_time: Optional[timedelta]
     last_transition: Optional[datetime]
     owner_id: Optional[int] = None
+    size_class_id: Optional[int] = None
     container_type_id: Optional[int] = None
 
     class Config:
@@ -30,6 +31,7 @@ class AccessionJobInput(BaseModel):
                 "run_time": "03:25:15",
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,
+                "size_class_id": 1,
                 "container_type_id": 1,
                 "media_type_id": 1
             }
@@ -43,6 +45,7 @@ class AccessionJobUpdateInput(BaseModel):
     run_time: Optional[timedelta] = None
     last_transition: Optional[datetime] = None
     owner_id: Optional[int] = None
+    size_class_id: Optional[int] = None
     container_type_id: Optional[int] = None
     media_type_id: Optional[int] = None
 
@@ -55,6 +58,7 @@ class AccessionJobUpdateInput(BaseModel):
                 "run_time": "03:25:15",
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,
+                "size_class_id": 1,
                 "container_type_id": 1,
                 "media_type_id": 1
             }
@@ -67,6 +71,7 @@ class AccessionJobBaseOutput(BaseModel):
     status: Optional[str]
     container_type_id: Optional[int] = None
     media_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
 
 
 class AccessionJobListOutput(AccessionJobBaseOutput):
@@ -76,6 +81,7 @@ class AccessionJobListOutput(AccessionJobBaseOutput):
                 "id": 1,
                 "trayed": True,
                 "media_type_id": 1,
+                "size_class_id": 1,
                 "container_type_id": 1,
                 "status": "Created"
             }
@@ -107,6 +113,7 @@ class ItemDetailNestedForAccessionJob(BaseModel):
 
 
 class TrayDetailNestedForAccessionJob(BaseModel):
+    id: int
     accession_job_id: Optional[int] = None
     scanned_for_accession: Optional[bool] = None
     collection_accessioned: Optional[bool] = None
@@ -154,6 +161,7 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
     container_type: Optional[ContainerTypeDetailReadOutput] = None
     media_type_id: Optional[int] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
     verification_job: Optional[list] = None
     items: List[ItemDetailNestedForAccessionJob]
@@ -183,6 +191,13 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
                 "run_time": "03:25:15",
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,
+                "size_class_id": 1,
+                "size_class": {
+                    "id": 1,
+                    "name": "C-Low",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398",
+                },
                 "container_type_id": 1,
                 "media_type_id": 1,
                 "media_type": {
