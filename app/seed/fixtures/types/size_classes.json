@@ -1,0 +1,61 @@
+{
+  "model": "app.models.size_class.SizeClass",
+  "data": [
+    {
+      "name": "Document Storage Box (legal)",
+      "short_name": "DS-1"
+    },
+    {
+      "name": "Document Storage Box (1/2 legal)",
+      "short_name": "DS-2"
+    },
+    {
+      "name": "Record Storage Box",
+      "short_name": "RS"
+    },
+    {
+      "name": "AL Ft Meade boxes",
+      "short_name": "AL"
+    },
+    {
+      "name": "AH Ft Meade boxes",
+      "short_name": "AH"
+    },
+    {
+      "name": "BL Ft Meade boxes",
+      "short_name": "BL"
+    },
+    {
+      "name": "BH Ft Meade boxes",
+      "short_name": "BH"
+    },
+    {
+      "name": "CL Ft Meade boxes",
+      "short_name": "CL"
+    },
+    {
+      "name": "CH Ft Meade boxes",
+      "short_name": "CH"
+    },
+    {
+      "name": "DL Ft Meade boxes",
+      "short_name": "DL"
+    },
+    {
+      "name": "DH Ft Meade boxes",
+      "short_name": "DH"
+    },
+    {
+      "name": "EL Ft Meade boxes",
+      "short_name": "EL"
+    },
+    {
+      "name": "EH Ft Meade boxes",
+      "short_name": "EH"
+    },
+    {
+      "name": "Sheet Music Boxes",
+      "short_name": "SM"
+    }
+  ]
+}

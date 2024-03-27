@@ -4,7 +4,7 @@ An API serving the Findings Environment for Collected Holdings application
 
 # Setup
 
-This is a containerized application for both local and deployed environments.  Below steps will get you up and running locally. Virtual Environment management is only needed for developers who will be updating the application's dependencies and working with scripts. Otherwise, everything is handled inside Pods / Containers.
+This is a containerized application for both local and deployed environments.  Below steps will get you up and running locally. Virtual Environment management is only needed for developers who will be updating the application's dependencies and working with scripts. Otherwise, everything is handled inside Containers managed out of the `fetch-local` repository.
 
 ## Docker
 This project assumes you have locally setup [Docker Desktop](https://www.docker.com/products/docker-desktop/). It is posssible to use Homebrew for this. https://formulae.brew.sh/cask/docker
@@ -75,7 +75,10 @@ Simply calling the command again will take care of tear down and rebuild. The ap
 
 Under the hood, the image takes the necessary steps to generate the API's package requirements from the pyproject.toml and poetry lock files.
 
-Additional environments can be built by passing their names, `dev`, `test`, etc.
+Additional helpful commands:
+
+* `./helper.sh build-db` - Rebuilds the inventory-database container.
+* `./helper.sh rebuild-db` - Wipes the inventory-database volume and re-seeds initial data.
 
 
 # Project

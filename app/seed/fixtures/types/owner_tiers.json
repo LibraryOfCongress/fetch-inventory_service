@@ -1,0 +1,21 @@
+{
+  "model": "app.models.owner_tiers.OwnerTier",
+  "data": [
+    {
+      "level": 1,
+      "name": "Organization"
+    },
+    {
+      "level": 2,
+      "name": "Department"
+    },
+    {
+      "level": 3,
+      "name": "Division"
+    },
+    {
+      "level": 4,
+      "name": "Individual"
+    }
+  ]
+}

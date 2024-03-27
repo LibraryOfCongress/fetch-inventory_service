@@ -1,0 +1,11 @@
+{
+  "model": "app.models.container_types.ContainerType",
+  "data": [
+    {
+      "type": "Tray"
+    },
+    {
+      "type": "Non-Tray"
+    }
+  ]
+}

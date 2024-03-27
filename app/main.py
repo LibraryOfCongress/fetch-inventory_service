@@ -1,4 +1,4 @@
-import subprocess
+import subprocess, os
 from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -14,6 +14,7 @@ from alembic import command
 from alembic.config import Config
 from alembic import command
 
+from app.seed.seed_fake_data import seed_data
 from app.middlware import log_middleware
 from app.config.config import get_settings
 from app.config.exceptions import (
@@ -101,6 +102,18 @@ def alembic_context():
                 "5432",
             ]
             subprocess.run(create_schemaspy)
+        # Only allow fake data seeding in local, dev, or test
+        if get_settings().APP_ENVIRONMENT in ["local", "dev", "test"]:
+            # Only attempt seeding if seed flag is set
+            SEED_FAKE_DATA = os.environ.get("SEED_FAKE_DATA", False)
+            if SEED_FAKE_DATA in ["True", "true", True]:
+                # have to do this silliness for shell to py translation
+                SEED_FAKE_DATA = True
+            else:
+                # have to do this if shell script 'false' is str or lower
+                SEED_FAKE_DATA = False
+            if SEED_FAKE_DATA:
+                seed_data()
     except Exception as e:
         print(f"{e}")
         raise

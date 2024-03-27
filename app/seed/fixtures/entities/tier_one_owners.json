@@ -1,0 +1,32 @@
+{
+  "model": "app.models.owners.Owner",
+  "data": [
+    {
+      "name": "Library of Congress",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 1
+        }
+      }
+    },
+    {
+      "name": "Consortium of Hobbits",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 1
+        }
+      }
+    },
+    {
+      "name": "Brethren of the Coast",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 1
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "model": "app.models.barcode_types.BarcodeType",
+  "data": [
+    {
+      "name": "UPC"
+    },
+    {
+      "name": "Codabar"
+    },
+    {
+      "name": "EAN"
+    },
+    {
+      "name": "Q r code"
+    },
+    {
+      "name": "Code 39"
+    },
+    {
+      "name": "Code 128"
+    },
+    {
+      "name": "PDF417"
+    }
+  ]
+}

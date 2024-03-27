@@ -1,0 +1,65 @@
+{
+  "model": "app.models.owners.Owner",
+  "data": [
+    {
+      "name": "Collections & Management",
+      "!owner_tier_id": {
+          "model": "app.models.owner_tiers.OwnerTier",
+          "filter": {
+            "level": 2
+          }
+        },
+        "!parent_owner_id": {
+          "model":"app.models.owners.Owner",
+          "filter": {
+            "name": "Library of Congress"
+          }
+        }
+    },
+    {
+      "name": "Congressional Research Services",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 2
+        }
+      },
+      "!parent_owner_id": {
+        "model":"app.models.owners.Owner",
+        "filter": {
+          "name": "Library of Congress"
+        }
+      }
+    },
+    {
+      "name": "Department of Buried Treasure",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 2
+        }
+      },
+      "!parent_owner_id": {
+        "model":"app.models.owners.Owner",
+        "filter": {
+          "name": "Brethren of the Coast"
+        }
+      }
+    },
+    {
+      "name": "The Fellowship of the Ring",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 2
+        }
+      },
+      "!parent_owner_id": {
+        "model":"app.models.owners.Owner",
+        "filter": {
+          "name": "Consortium of Hobbits"
+        }
+      }
+    }
+  ]
+}

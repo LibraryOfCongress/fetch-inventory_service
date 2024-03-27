@@ -984,6 +984,23 @@ timezone = ["python-dateutil"]
 url = ["furl (>=0.4.1)"]
 
 [[package]]
+name = "sqlalchemyseed"
+version = "2.0.0"
+description = "SQLAlchemy Seeder"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "sqlalchemyseed-2.0.0-py3-none-any.whl", hash = "sha256:67cc2f43e02c1d187224e04eaf0be897160f8ab5138a901273b8d4cf93ef4068"},
+    {file = "sqlalchemyseed-2.0.0.tar.gz", hash = "sha256:3482c878480fe1bd2903ef9de07ab0ebdf2b92676b271161e4808b97880a7222"},
+]
+
+[package.dependencies]
+SQLAlchemy = ">=2.0"
+
+[package.extras]
+yaml = ["PyYAML (>=5.4)"]
+
+[[package]]
 name = "sqlmodel"
 version = "0"
 description = "SQLModel, SQL databases in Python, designed for simplicity, compatibility, and robustness."
@@ -1215,4 +1232,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.4"
-content-hash = "5f9cd422cd2426285867a579044b013369d8ec2306d848f3f5f70571b492f61d"
+content-hash = "f52405c319606a557fee7dc5e06b67d18f223b094b4be6d20671a2b7f96bc985"

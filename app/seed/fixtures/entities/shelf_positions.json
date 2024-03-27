@@ -1,0 +1,47 @@
+{
+  "model": "app.models.shelf_positions.ShelfPosition",
+  "data": [
+    {
+      "!shelf_position_number_id": {
+        "model": "app.models.shelf_position_numbers.ShelfPositionNumber",
+        "filter": {
+          "number": 1
+        }
+      },
+      "!shelf_id": {
+        "model": "app.models.shelves.Shelf",
+        "filter": {
+          "id": 1
+        }
+      }
+    },
+    {
+      "!shelf_position_number_id": {
+        "model": "app.models.shelf_position_numbers.ShelfPositionNumber",
+        "filter": {
+          "number": 2
+        }
+      },
+      "!shelf_id": {
+        "model": "app.models.shelves.Shelf",
+        "filter": {
+          "id": 1
+        }
+      }
+    },
+    {
+      "!shelf_position_number_id": {
+        "model": "app.models.shelf_position_numbers.ShelfPositionNumber",
+        "filter": {
+          "number": 3
+        }
+      },
+      "!shelf_id": {
+        "model": "app.models.shelves.Shelf",
+        "filter": {
+          "id": 1
+        }
+      }
+    }
+  ]
+}
