@@ -4,6 +4,8 @@ from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.models.user_groups import UserGroup
+
 
 class User(SQLModel, table=True):
     """
@@ -32,3 +34,4 @@ class User(SQLModel, table=True):
     accession_jobs: List["AccessionJob"] = Relationship(back_populates="user")
     shelving_jobs: List["ShelvingJob"] = Relationship(back_populates="user")
     verification_jobs: List["VerificationJob"] = Relationship(back_populates="user")
+    groups: List["Group"] = Relationship(back_populates="users", link_model=UserGroup)

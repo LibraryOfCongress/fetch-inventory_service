@@ -58,6 +58,11 @@ inspect-table() {
   docker exec -ti -u postgres inventory-database psql -a inventory_service -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '${tablename}';"
 }
 
+inspect-records() {
+    tablename=$1
+    docker exec -ti -u postgres inventory-database psql -a inventory_service -c "SELECT * FROM $1;"
+}
+
 idle() {
   poetry shell;
   python;

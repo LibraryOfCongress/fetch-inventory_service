@@ -63,6 +63,7 @@ from app.routers import (
     shelving_jobs_tray_association,
     shelving_jobs_item_association,
     users,
+    groups,
 )
 
 
@@ -206,5 +207,6 @@ app.include_router(shelving_jobs_tray_association.router)
 app.include_router(shelving_jobs_item_association.router)
 app.include_router(shelving_jobs.router)
 app.include_router(users.router)
+app.include_router(groups.router)
 
 add_pagination(app)

@@ -14,6 +14,7 @@ from app.schemas.users import (
     UserListOutput,
     UserDetailWriteOutput,
     UserDetailReadOutput,
+    UserGroupOutput,
 )
 
 import traceback
@@ -58,6 +59,16 @@ def get_user_detail(id: int, session: Session = Depends(get_session)):
     else:
         raise HTTPException(status_code=404, detail="Not Found")
 
+@router.get("/{id}/groups", response_model=UserGroupOutput)
+def get_user_groups(id: int, session: Session = Depends(get_session)):
+    """
+    Retrieve list of groups a user belongs to
+    """
+    user = session.get(User, id)
+    if user:
+        return user
+    else:
+        raise HTTPException(status_code=404, detail="Not Found")
 
 @router.post("/", response_model=UserDetailWriteOutput, status_code=201)
 def create_user(user_input: UserInput, session: Session = Depends(get_session)):

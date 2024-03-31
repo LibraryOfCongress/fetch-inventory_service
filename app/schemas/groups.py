@@ -3,47 +3,43 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
-class UserInput(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+class GroupInput(BaseModel):
+    name: Optional[str] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "first_name": "Frodo",
-                "last_name": "Baggins"
+                "name": "Technician"
             }
         }
 
 
-class UserUpdateInput(UserInput):
+class GroupUpdateInput(GroupInput):
 
     class Config:
         json_schema_extra = {
             "example": {
-                "first_name": "Frodo",
-                "last_name": "Baggins"
+                "name": "Technician"
             }
         }
 
 
-class UserBaseReadOutput(UserUpdateInput):
+class GroupBaseReadOutput(GroupUpdateInput):
     id: int
 
 
-class UserListOutput(UserBaseReadOutput):
+class GroupListOutput(GroupBaseReadOutput):
 
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "first_name": "Bilbo",
-                "last_name": "Baggins"
+                "name": "Technician"
             }
         }
 
 
-class UserDetailWriteOutput(UserListOutput):
+class GroupDetailWriteOutput(GroupListOutput):
     create_dt: datetime
     update_dt: datetime
 
@@ -51,47 +47,50 @@ class UserDetailWriteOutput(UserListOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "first_name": "Bilbo",
-                "last_name": "Baggins",
+                "name": "Technician",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
 
 
-class UserDetailReadOutput(UserDetailWriteOutput):
+class GroupDetailReadOutput(GroupDetailWriteOutput):
 
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "first_name": "Frodo",
-                "last_name": "Baggins",
+                "name": "Technician",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
 
 
-class NestedGroupForUserOutput(BaseModel):
+class NestedUserForGroupOutput(BaseModel):
     id: int
+    first_name: str
+    last_name: str
+
+
+class GroupUserOutput(BaseModel):
     name: str
-
-
-class UserGroupOutput(BaseModel):
-    groups: Optional[List[NestedGroupForUserOutput]] = []
+    users: Optional[List[NestedUserForGroupOutput]] = []
 
     class Config:
         json_schema_extra = {
             "example": {
-                "groups": [
+                "name": "Technician",
+                "users": [
                     {
                         "id": 1,
-                        "name": "Technician"
+                        "first_name": "Frodo",
+                        "last_name": "Baggins"
                     },
                     {
                         "id": 2,
-                        "name": "Administrator"
+                        "first_name": "Bilbo",
+                        "last_name": "Baggins"
                     }
                 ]
             }
