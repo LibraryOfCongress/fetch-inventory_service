@@ -11,12 +11,14 @@ from app.schemas.media_types import MediaTypeDetailReadOutput
 from app.schemas.size_class import SizeClassDetailReadOutput
 from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.subcollection import SubcollectionDetailWriteOutput
+from app.schemas.container_types import ContainerTypeDetailReadOutput
 
 
 class NonTrayItemInput(BaseModel):
     status: Optional[str] = None
     accession_job_id: Optional[int] = None
     scanned_for_accession: Optional[bool] = None
+    scanned_for_verification: Optional[bool] = None
     verification_job_id: Optional[int] = None
     container_type_id: Optional[int] = None
     owner_id: Optional[int] = None
@@ -33,6 +35,7 @@ class NonTrayItemInput(BaseModel):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -54,6 +57,7 @@ class NonTrayItemUpdateInput(NonTrayItemInput):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -80,6 +84,7 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -97,6 +102,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
     barcode: BarcodeDetailReadOutput
     media_type: MediaTypeDetailReadOutput
     size_class: Optional[SizeClassDetailReadOutput]
+    container_type: Optional[ContainerTypeDetailReadOutput]
     create_dt: datetime
     update_dt: datetime
 
@@ -107,6 +113,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -118,6 +125,12 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                     "id": "550e8400-e29b-41d4-a716-446655440001",
                     "value": "5901234123457",
                     "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "container_type": {
+                    "id": 1,
+                    "type": "Non-Tray",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
@@ -154,6 +167,7 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -165,6 +179,12 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                     "id": "550e8400-e29b-41d4-a716-446655440001",
                     "value": "5901234123457",
                     "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "container_type": {
+                    "id": 1,
+                    "type": "Non-Tray",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },

@@ -1,15 +1,22 @@
+import uuid
+
 from pydantic import BaseModel, field_validator
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 
 from app.schemas.accession_jobs import AccessionJobDetailOutput
 from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
 from app.schemas.shelving_jobs import ShelvingJobDetailOutput
+from app.schemas.media_types import MediaTypeDetailReadOutput
+from app.schemas.size_class import SizeClassDetailReadOutput
+from app.schemas.barcodes import BarcodeDetailReadOutput
 
 
 class VerificationJobInput(BaseModel):
     trayed: bool
+    media_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
     status: Optional[str] = None
     user_id: Optional[int] = None
     last_transition: Optional[datetime] = None
@@ -29,6 +36,8 @@ class VerificationJobInput(BaseModel):
                 "accession_job_id": 1,
                 "owner_id": 1,
                 "container_type_id": 1,
+                "media_type_id": 1,
+                "size_class_id": 1
             }
         }
 
@@ -42,6 +51,8 @@ class VerificationJobUpdateInput(BaseModel):
     accession_job_id: Optional[int] = None
     owner_id: Optional[int] = None
     container_type_id: Optional[int] = None
+    media_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
 
     class Config:
         json_schema_extra = {
@@ -54,6 +65,8 @@ class VerificationJobUpdateInput(BaseModel):
                 "accession_job_id": 1,
                 "owner_id": 1,
                 "container_type_id": 1,
+                "media_type_id": 1,
+                "size_class_id": 1
             }
         }
 
@@ -62,11 +75,80 @@ class VerificationJobBaseOutput(BaseModel):
     id: int
     trayed: bool
     status: Optional[str]
+    media_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
 
 
 class VerificationJobListOutput(VerificationJobBaseOutput):
     class Config:
         json_schema_extra = {"example": {"id": 1, "trayed": True, "status": "Created"}}
+
+
+class ItemDetailNestedForVerificationJob(BaseModel):
+    id: int
+    status: Optional[str] = None
+    accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
+    scanned_for_verification: Optional[bool] = None
+    verification_job_id: Optional[int] = None
+    tray_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    title: Optional[str] = None
+    volume: Optional[str] = None
+    condition: Optional[str] = None
+    arbitrary_data: Optional[str] = None
+    subcollection_id: Optional[int] = None
+    media_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    barcode_id: Optional[uuid.UUID] = None
+    accession_dt: Optional[datetime] = None
+    withdrawal_dt: Optional[datetime] = None
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
+
+
+class TrayDetailNestedForVerificationJob(BaseModel):
+    id: int
+    accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
+    scanned_for_verification: Optional[bool] = None
+    collection_accessioned: Optional[bool] = None
+    verification_job_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    shelf_position_id: Optional[int] = None
+    media_type_id: Optional[int] = None
+    conveyance_bin_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    barcode_id: Optional[uuid.UUID] = None
+    accession_dt: Optional[datetime] = None
+    shelved_dt: Optional[datetime] = None
+    withdrawal_dt: Optional[datetime] = None
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
+
+
+class NonTrayItemDetailNestedForVerificationJob(BaseModel):
+    id: int
+    status: Optional[str] = None
+    accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
+    scanned_for_verification: Optional[bool] = None
+    verification_job_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    subcollection_id: Optional[int] = None
+    media_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    barcode_id: Optional[uuid.UUID] = None
+    accession_dt: Optional[datetime] = None
+    withdrawal_dt: Optional[datetime] = None
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
 
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
@@ -80,9 +162,11 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
     container_type: Optional[ContainerTypeDetailReadOutput] = None
     shelving_job: Optional[ShelvingJobDetailOutput] = None
     accession_job: Optional[AccessionJobDetailOutput] = None
-    items: list
-    trays: list
-    non_tray_items: list
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    items: List[ItemDetailNestedForVerificationJob]
+    trays: List[TrayDetailNestedForVerificationJob]
+    non_tray_items: List[NonTrayItemDetailNestedForVerificationJob]
     shelving_job_id: Optional[int] = None
     create_dt: datetime
     update_dt: datetime
@@ -122,6 +206,18 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                         "create_dt": "2023-10-08T20:46:56.764426",
                         "update_dt": "2023-10-08T20:46:56.764398",
                     },
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398",
+                },
+                "media_type": {
+                    "id": 1,
+                    "name": "Book",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "size_class": {
+                    "id": 1,
+                    "name": "C-Low",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398",
                 },
@@ -212,6 +308,8 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                         "update_dt": "2023-10-08T20:46:56.764398",
                     }
                 ],
+                "media_type_id": 1,
+                "size_class_id": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
             }

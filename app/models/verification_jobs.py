@@ -11,6 +11,7 @@ from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.container_types import ContainerType
 from app.models.shelving_jobs import ShelvingJob
+from app.models.media_types import MediaType
 
 
 class VerificationJob(SQLModel, table=True):
@@ -62,6 +63,14 @@ class VerificationJob(SQLModel, table=True):
     shelving_job_id: Optional[int] = Field(
         foreign_key="shelving_jobs.id", nullable=True
     )
+    media_type_id: Optional[int] = Field(
+        foreign_key="media_types.id", nullable=True
+    )
+    size_class_id: Optional[int] = Field(
+        foreign_key="size_class.id",
+        nullable=True,
+        default=None
+    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
@@ -70,6 +79,10 @@ class VerificationJob(SQLModel, table=True):
     )
 
     owner: Owner = Relationship(back_populates="verification_jobs")
+    media_type: MediaType = Relationship(back_populates="verification_jobs")
+    size_class: Optional["SizeClass"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
     container_type: ContainerType = Relationship(back_populates="verification_jobs")
     trays: List[Tray] = Relationship(back_populates="verification_job")
     items: List[Item] = Relationship(back_populates="verification_job")

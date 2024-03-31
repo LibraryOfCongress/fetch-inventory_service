@@ -103,7 +103,7 @@ def alembic_context():
             ]
             subprocess.run(create_schemaspy)
         # Only allow fake data seeding in local, dev, or test
-        if get_settings().APP_ENVIRONMENT in ["local", "dev", "test"]:
+        if get_settings().APP_ENVIRONMENT in ["local", "develop", "test"]:
             # Only attempt seeding if seed flag is set
             SEED_FAKE_DATA = os.environ.get("SEED_FAKE_DATA", False)
             if SEED_FAKE_DATA in ["True", "true", True]:

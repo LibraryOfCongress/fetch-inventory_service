@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database.session import get_session
 from app.models.trays import Tray
 from app.models.barcodes import Barcode
+from app.models.container_types import ContainerType
 from app.schemas.trays import (
     TrayInput,
     TrayUpdateInput,
@@ -73,6 +74,14 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
     try:
         # Create a new tray
         new_tray = Tray(**tray_input.model_dump())
+        # default to tray container_type
+        container_type = session.query(ContainerType).filter(
+            ContainerType.type == 'Tray'
+        ).first()
+        # trays are created at accession, set accession date
+        if not new_tray.accession_dt:
+            new_tray.accession_dt = datetime.utcnow()
+        new_tray.container_type_id = container_type.id
         session.add(new_tray)
         session.commit()
         session.refresh(new_tray)

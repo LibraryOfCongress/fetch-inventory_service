@@ -17,7 +17,9 @@ from app.schemas.container_types import ContainerTypeDetailReadOutput
 class TrayInput(BaseModel):
     accession_job_id: Optional[int] = None
     scanned_for_accession: Optional[bool] = None
+    scanned_for_verification: Optional[bool] = None
     collection_accessioned: Optional[bool] = None
+    collection_verified: Optional[bool] = None
     verification_job_id: Optional[int] = None
     container_type_id: Optional[int] = None
     owner_id: Optional[int] = None
@@ -35,7 +37,9 @@ class TrayInput(BaseModel):
             "example": {
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "collection_accessioned": False,
+                "collection_verified": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -58,7 +62,9 @@ class TrayUpdateInput(TrayInput):
             "example": {
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "collection_accessioned": False,
+                "collection_verified": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -94,7 +100,9 @@ class TrayListOutput(TrayBaseOutput):
                 {
                     "accession_job_id": 1,
                     "scanned_for_accession": False,
+                    "scanned_for_verification": False,
                     "collection_accessioned": False,
+                    "collection_verified": False,
                     "verification_job_id": 1,
                     "container_type_id": 1,
                     "owner_id": 1,
@@ -132,7 +140,7 @@ class TrayListOutput(TrayBaseOutput):
 
 class TrayDetailWriteOutput(TrayBaseOutput):
     owner: Optional[OwnerDetailReadOutput]
-    container_type: ContainerTypeDetailReadOutput
+    container_type: Optional[ContainerTypeDetailReadOutput]
     create_dt: datetime
     update_dt: datetime
 
@@ -141,7 +149,9 @@ class TrayDetailWriteOutput(TrayBaseOutput):
             "example": {
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "collection_accessioned": False,
+                "collection_verified": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
@@ -226,7 +236,9 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
             "example": {
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "collection_accessioned": False,
+                "collection_verified": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,

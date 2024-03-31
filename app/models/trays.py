@@ -37,8 +37,10 @@ class Tray(SQLModel, table=True):
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id", nullable=False, default=None, unique=True
     )
-    scanned_for_accession: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
-    collection_accessioned: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    scanned_for_accession: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    scanned_for_verification: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    collection_accessioned: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    collection_verified: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
     size_class_id: int = Field(foreign_key="size_class.id", nullable=False)
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)

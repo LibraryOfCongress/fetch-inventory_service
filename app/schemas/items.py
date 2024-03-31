@@ -17,6 +17,7 @@ class ItemInput(BaseModel):
     status: Optional[str] = None
     accession_job_id: Optional[int] = None
     scanned_for_accession: Optional[bool] = None
+    scanned_for_verification: Optional[bool] = None
     verification_job_id: Optional[int] = None
     tray_id: Optional[int] = None
     container_type_id: Optional[int] = None
@@ -39,6 +40,7 @@ class ItemInput(BaseModel):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -65,6 +67,7 @@ class ItemUpdateInput(ItemInput):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -96,6 +99,7 @@ class ItemListOutput(ItemBaseOutput):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -126,6 +130,7 @@ class ItemDetailWriteOutput(ItemBaseOutput):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -168,6 +173,7 @@ class ItemDetailReadOutput(ItemDetailWriteOutput):
                 "status": "In",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
+                "scanned_for_verification": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,

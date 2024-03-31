@@ -6,7 +6,7 @@ build() {
       && export SEED_FAKE_DATA=false \
       && exec ./helper.sh build-inventory-api);
   fi
-  if [[ "$1" == "dev" ]]; then
+  if [[ "$1" == "develop" ]]; then
     # this is old, revisit later
     ./dev-build.sh;
   fi

@@ -26,7 +26,7 @@ class NonTrayItem(SQLModel, table=True):
         sa_column=sa.BigInteger,
         default=None
     )
-    status: str = Field(
+    status: Optional[str] = Field(
         sa_column=sa.Column(
             sa.Enum(
                 "In",
@@ -65,7 +65,8 @@ class NonTrayItem(SQLModel, table=True):
         nullable=True,
         foreign_key="accession_jobs.id"
     )
-    scanned_for_accession: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    scanned_for_accession: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    scanned_for_verification: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
     verification_job_id: Optional[int] = Field(
         default=None,
         nullable=True,

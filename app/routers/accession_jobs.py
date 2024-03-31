@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database.session import get_session, commit_record
 from app.models.accession_jobs import AccessionJob
 from app.models.verification_jobs import VerificationJob
+from app.models.container_types import ContainerType
 from app.tasks import generate_verification_job
 from app.config.exceptions import (
     NotFound,
@@ -109,6 +110,16 @@ def create_accession_job(
     """
     try:
         new_accession_job = AccessionJob(**accession_job_input.model_dump())
+        # Set container_type_id based on trayed status
+        if new_accession_job.trayed:
+            container_type = session.query(ContainerType).filter(
+                ContainerType.type == 'Tray'
+            ).first()
+        else:
+            container_type = session.query(ContainerType).filter(
+                ContainerType.type == 'Non-Tray'
+            ).first()
+        new_accession_job.container_type_id = container_type.id
         session.add(new_accession_job)
         session.commit()
         session.refresh(new_accession_job)
@@ -149,6 +160,16 @@ def update_accession_job(
 
     # setting the update_dt to now
     setattr(existing_accession_job, "update_dt", datetime.utcnow())
+    # Update container_type_id based on trayed status
+    if existing_accession_job.trayed:
+        container_type = session.query(ContainerType).filter(
+            ContainerType.type == 'Tray'
+        ).first()
+    else:
+        container_type = session.query(ContainerType).filter(
+            ContainerType.type == 'Non-Tray'
+        ).first()
+    setattr(existing_accession_job, "container_type_id", container_type.id)
 
     existing_accession_job = commit_record(session, existing_accession_job)
 

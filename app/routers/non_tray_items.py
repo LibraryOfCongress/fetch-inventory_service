@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database.session import get_session
 from app.models.non_tray_items import NonTrayItem
 from app.models.barcodes import Barcode
+from app.models.container_types import ContainerType
 from app.schemas.non_tray_items import (
     NonTrayItemInput,
     NonTrayItemUpdateInput,
@@ -76,6 +77,14 @@ def create_non_tray_item(
     try:
         # Create a new non_tray_item
         new_non_tray_item = NonTrayItem(**item_input.model_dump())
+        # default to non-tray container_type
+        container_type = session.query(ContainerType).filter(
+            ContainerType.type == 'Non-Tray'
+        ).first()
+        new_non_tray_item.container_type_id = container_type.id
+        # non-trays are created in accession, set accession date
+        if not new_non_tray_item.accession_dt:
+            new_non_tray_item.accession_dt = datetime.utcnow()
         session.add(new_non_tray_item)
         session.commit()
         session.refresh(new_non_tray_item)

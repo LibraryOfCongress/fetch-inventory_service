@@ -16,6 +16,11 @@ def generate_verification_job(session, accession_job: AccessionJob):
     verification_job_input = VerificationJobInput(
         accession_job_id=accession_job.id,
         trayed=accession_job.trayed,
+        owner_id=accession_job.owner_id,
+        size_class_id=accession_job.size_class_id,
+        media_type_id=accession_job.media_type_id,
+        container_type_id=accession_job.container_type_id,
+        user_id=accession_job.user_id,
         status="Created",
     )
 
@@ -24,34 +29,31 @@ def generate_verification_job(session, accession_job: AccessionJob):
     # Create a new verification job record
     new_verification_job = commit_record(session, new_verification_job)
 
-    # Update Tray Record with Verification Job id
-    tray = select(Tray).where(Tray.accession_job_id == accession_job.id)
-    existing_tray = session.exec(tray).first()
+    # Update Tray Records with Verification Job id
+    tray_query = select(Tray).where(Tray.accession_job_id == accession_job.id)
+    trays = session.exec(tray_query)
+    if trays:
+        for tray in trays:
+            tray.verification_job_id = new_verification_job.id
+            session.add(tray)
 
-    if existing_tray:
-        existing_tray.verification_job_id = new_verification_job.id
-        # Update Tray Record
-        session.add(existing_tray)
-
-    # Update Non Tray Item Record with Verification Job ID
-    non_tray_item = select(NonTrayItem).where(
+    # Update Non Tray Item Records with Verification Job ID
+    non_tray_query = select(NonTrayItem).where(
         NonTrayItem.accession_job_id == accession_job.id
     )
-    existing_non_tray_item = session.exec(non_tray_item).first()
+    non_trays_items = session.exec(non_tray_query)
+    if non_trays_items:
+        for non_tray_item in non_trays_items:
+            non_tray_item.verification_job_id = new_verification_job.id
+            session.add(non_tray_item)
 
-    if existing_non_tray_item:
-        existing_non_tray_item.verification_job_id = new_verification_job.id
-        # Update Non Tray Item Record
-        session.add(existing_non_tray_item)
-
-    # Update Item Record with Verification Job_ID
-    item = select(Item).where(Item.accession_job_id == accession_job.id)
-    existing_item = session.exec(item).first()
-
-    if existing_item:
-        existing_item.verification_job_id = new_verification_job.id
-        # Update Item Record
-        session.add(existing_item)
+    # Update Item Records with Verification Job_ID
+    item_query = select(Item).where(Item.accession_job_id == accession_job.id)
+    items = session.exec(item_query).first()
+    if items:
+        for item in items:
+            item.verification_job_id = new_verification_job.id
+            session.add(item)
 
     session.commit()
     session.refresh()

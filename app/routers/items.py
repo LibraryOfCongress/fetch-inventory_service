@@ -74,6 +74,9 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
     try:
         # Create a new item
         new_item = Item(**item_input.model_dump())
+        # accession is how items are created. Set accession_dt
+        if not new_item.accession_dt:
+            new_item.accession_dt = datetime.utcnow()
         session.add(new_item)
         session.commit()
         session.refresh(new_item)
