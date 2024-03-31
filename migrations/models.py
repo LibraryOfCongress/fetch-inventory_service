@@ -31,3 +31,4 @@ from app.models.non_tray_items import NonTrayItem
 from app.models.shelving_jobs import ShelvingJob
 from app.models.shelving_jobs import ShelvingJobTrayAssociation
 from app.models.shelving_jobs import ShelvingJobItemAssociation
+from app.models.users import User

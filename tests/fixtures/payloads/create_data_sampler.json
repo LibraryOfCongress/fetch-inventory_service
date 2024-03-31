@@ -148,5 +148,9 @@
     "accession_dt": "2024-01-01T00:00:00.000000",
     "shelved_dt": "2024-01-01T00:00:00.000000",
     "withdrawal_dt": "2024-01-01T00:00:00.000000"
+  },
+  "users": {
+    "first_name": "John",
+    "last_name": "Wick"
   }
 }

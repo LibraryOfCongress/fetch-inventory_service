@@ -11,6 +11,7 @@ from app.schemas.shelving_jobs import ShelvingJobDetailOutput
 from app.schemas.media_types import MediaTypeDetailReadOutput
 from app.schemas.size_class import SizeClassDetailReadOutput
 from app.schemas.barcodes import BarcodeDetailReadOutput
+from app.schemas.users import UserDetailReadOutput
 
 
 class VerificationJobInput(BaseModel):
@@ -153,6 +154,7 @@ class NonTrayItemDetailNestedForVerificationJob(BaseModel):
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
     user_id: Optional[int] = None
+    user: Optional[UserDetailReadOutput] = None
     last_transition: Optional[datetime]
     run_time: Optional[timedelta]
     accession_job_id: Optional[int]
@@ -189,6 +191,13 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                 "trayed": True,
                 "status": "Created",
                 "user_id": 1,
+                "user": {
+                    "id": 1,
+                    "first_name": "Frodo",
+                    "last_name": "Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "run_time": "03:25:15",
                 "accession_job_id": 1,

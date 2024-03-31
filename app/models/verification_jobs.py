@@ -12,6 +12,7 @@ from app.models.non_tray_items import NonTrayItem
 from app.models.container_types import ContainerType
 from app.models.shelving_jobs import ShelvingJob
 from app.models.media_types import MediaType
+from app.models.users import User
 
 
 class VerificationJob(SQLModel, table=True):
@@ -41,12 +42,7 @@ class VerificationJob(SQLModel, table=True):
         default="Created",
         nullable=False,
     )
-    # TODO: for user_id FK to users table later
-    user_id: Optional[int] = Field(
-        sa_column=sa.Column(
-            sa.SmallInteger,
-        )
-    )
+    user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     last_transition: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
     )
@@ -78,14 +74,15 @@ class VerificationJob(SQLModel, table=True):
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
 
-    owner: Owner = Relationship(back_populates="verification_jobs")
-    media_type: MediaType = Relationship(back_populates="verification_jobs")
+    user: Optional[User] = Relationship(back_populates="verification_jobs")
+    owner: Optional[Owner] = Relationship(back_populates="verification_jobs")
+    media_type: Optional[MediaType] = Relationship(back_populates="verification_jobs")
     size_class: Optional["SizeClass"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
-    container_type: ContainerType = Relationship(back_populates="verification_jobs")
+    container_type: Optional[ContainerType] = Relationship(back_populates="verification_jobs")
     trays: List[Tray] = Relationship(back_populates="verification_job")
     items: List[Item] = Relationship(back_populates="verification_job")
     non_tray_items: List[NonTrayItem] = Relationship(back_populates="verification_job")
-    shelving_job: ShelvingJob = Relationship(back_populates="verification_jobs")
+    shelving_job: Optional[ShelvingJob] = Relationship(back_populates="verification_jobs")
     accession_job: AccessionJob = Relationship(back_populates="verification_jobs")

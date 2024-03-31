@@ -2,6 +2,8 @@ from pydantic import BaseModel, field_validator
 from datetime import datetime, timedelta
 from typing import Optional
 
+from app.schemas.users import UserDetailReadOutput
+
 
 class ShelvingJobInput(BaseModel):
     status: Optional[str]
@@ -58,6 +60,7 @@ class ShelvingJobListOutput(ShelvingJobBaseOutput):
 
 class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
     user_id: Optional[int] = None
+    user: Optional[UserDetailReadOutput] = None
     last_transition: Optional[datetime]
     run_time: Optional[timedelta]
     verification_jobs: list
@@ -81,6 +84,13 @@ class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
                 "id": 1,
                 "status": "Created",
                 "user_id": 1,
+                "user": {
+                    "id": 1,
+                    "first_name": "Frodo",
+                    "last_name": "Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "run_time": "03:25:15",
                 "verification_jobs": [

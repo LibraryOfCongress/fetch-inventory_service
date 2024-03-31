@@ -279,5 +279,18 @@
       "page": 1,
       "size": 10,
       "pages": 1
+    },
+    "users": {
+      "items": [
+        {
+          "id": 1,
+          "first_name": "John",
+          "last_name": "Wick"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 10,
+      "pages": 1
     }
 }

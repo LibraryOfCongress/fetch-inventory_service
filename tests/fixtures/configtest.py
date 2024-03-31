@@ -276,6 +276,7 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_positions")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "accession_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "verification_jobs")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE,"shelving_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "subcollections")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "media_types")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "trays")
@@ -283,4 +284,4 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_item_associations")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_tray_associations")
-
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "users")

@@ -9,6 +9,7 @@ from app.schemas.container_types import ContainerTypeDetailReadOutput
 from app.schemas.media_types import MediaTypeDetailReadOutput
 from app.schemas.size_class import SizeClassDetailReadOutput
 from app.schemas.barcodes import BarcodeDetailReadOutput
+from app.schemas.users import UserDetailReadOutput
 
 
 class AccessionJobInput(BaseModel):
@@ -69,6 +70,7 @@ class AccessionJobBaseOutput(BaseModel):
     id: int
     trayed: bool
     status: Optional[str]
+    user_id: Optional[int] = None
     container_type_id: Optional[int] = None
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
@@ -80,6 +82,7 @@ class AccessionJobListOutput(AccessionJobBaseOutput):
             "example": {
                 "id": 1,
                 "trayed": True,
+                "user_id": 1,
                 "media_type_id": 1,
                 "size_class_id": 1,
                 "container_type_id": 1,
@@ -167,6 +170,7 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
     items: List[ItemDetailNestedForAccessionJob]
     trays: List[TrayDetailNestedForAccessionJob]
     non_tray_items: List[NonTrayItemDetailNestedForAccessionJob]
+    user: Optional[UserDetailReadOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -188,6 +192,13 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
                 "trayed": True,
                 "status": "Paused",
                 "user_id": 1,
+                "user": {
+                    "id": 1,
+                    "first_name": "Frodo",
+                    "last_name": "Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "run_time": "03:25:15",
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,

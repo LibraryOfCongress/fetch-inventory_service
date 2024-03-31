@@ -4,6 +4,8 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.models.users import User
+
 
 # Association tables
 class ShelvingJobTrayAssociation(SQLModel, table=True):
@@ -63,9 +65,7 @@ class ShelvingJob(SQLModel, table=True):
         default="Created",
         nullable=False,
     )
-    user_id: Optional[int] = Field(
-        sa_column=sa.Column(sa.SmallInteger, nullable=True, unique=False)
-    )
+    user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     run_time: Optional[timedelta] = Field(sa_column=sa.Interval, nullable=True)
     last_transition: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
@@ -85,3 +85,4 @@ class ShelvingJob(SQLModel, table=True):
     items: List["Item"] = Relationship(
         back_populates="shelving_jobs", link_model=ShelvingJobItemAssociation
     )
+    user: Optional[User] = Relationship(back_populates="shelving_jobs")
