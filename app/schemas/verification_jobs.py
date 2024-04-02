@@ -23,7 +23,7 @@ class VerificationJobInput(BaseModel):
     last_transition: Optional[datetime] = None
     run_time: Optional[timedelta] = None
     accession_job_id: Optional[int] = None
-    owner_id: Optional[int] = None
+    owner_id: int
     container_type_id: Optional[int] = None
 
     class Config:
@@ -76,13 +76,21 @@ class VerificationJobBaseOutput(BaseModel):
     id: int
     trayed: bool
     status: Optional[str]
+    owner_id: Optional[int] = None
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
 
 
 class VerificationJobListOutput(VerificationJobBaseOutput):
     class Config:
-        json_schema_extra = {"example": {"id": 1, "trayed": True, "status": "Created"}}
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "trayed": True,
+                "owner_id": 1,
+                "status": "Created"
+            }
+        }
 
 
 class ItemDetailNestedForVerificationJob(BaseModel):
@@ -116,6 +124,7 @@ class TrayDetailNestedForVerificationJob(BaseModel):
     scanned_for_accession: Optional[bool] = None
     scanned_for_verification: Optional[bool] = None
     collection_accessioned: Optional[bool] = None
+    collection_verified: Optional[bool] = None
     verification_job_id: Optional[int] = None
     container_type_id: Optional[int] = None
     owner_id: Optional[int] = None

@@ -19,7 +19,7 @@ class AccessionJobInput(BaseModel):
     user_id: Optional[int] = None
     run_time: Optional[timedelta]
     last_transition: Optional[datetime]
-    owner_id: Optional[int] = None
+    owner_id: int
     size_class_id: Optional[int] = None
     container_type_id: Optional[int] = None
 
@@ -71,6 +71,7 @@ class AccessionJobBaseOutput(BaseModel):
     trayed: bool
     status: Optional[str]
     user_id: Optional[int] = None
+    owner_id: Optional[int] = None
     container_type_id: Optional[int] = None
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
@@ -83,6 +84,7 @@ class AccessionJobListOutput(AccessionJobBaseOutput):
                 "id": 1,
                 "trayed": True,
                 "user_id": 1,
+                "owner_id": 1,
                 "media_type_id": 1,
                 "size_class_id": 1,
                 "container_type_id": 1,

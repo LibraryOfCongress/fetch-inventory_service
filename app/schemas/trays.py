@@ -82,6 +82,8 @@ class TrayUpdateInput(TrayInput):
 
 class ItemNestedForTrayOutput(BaseModel):
     id: int
+    scanned_for_accession: bool
+    scanned_for_verification: bool
     barcode: BarcodeDetailReadOutput
 
 

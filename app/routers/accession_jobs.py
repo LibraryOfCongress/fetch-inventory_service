@@ -10,7 +10,7 @@ from app.database.session import get_session, commit_record
 from app.models.accession_jobs import AccessionJob
 from app.models.verification_jobs import VerificationJob
 from app.models.container_types import ContainerType
-from app.tasks import generate_verification_job
+from app.tasks import complete_accession_job
 from app.config.exceptions import (
     NotFound,
     ValidationException,
@@ -174,9 +174,8 @@ def update_accession_job(
     existing_accession_job = commit_record(session, existing_accession_job)
 
     if mutated_data.get("status") == "Completed":
-        # Automatically create a related Verification Job.
         background_tasks.add_task(
-            generate_verification_job, session, existing_accession_job
+            complete_accession_job, session, existing_accession_job
         )
 
     return existing_accession_job

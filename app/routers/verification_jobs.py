@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.tasks import complete_verification_job
 from app.models.verification_jobs import VerificationJob
 from app.schemas.verification_jobs import (
     VerificationJobInput,
@@ -90,6 +91,7 @@ def update_verification_job(
     id: int,
     verification_job: VerificationJobUpdateInput,
     session: Session = Depends(get_session),
+    background_tasks: BackgroundTasks = None,
 ):
     """
     Update a verification job:
@@ -122,6 +124,11 @@ def update_verification_job(
         session.commit()
         session.refresh(existing_verification_job)
         session.refresh(existing_verification_job)
+
+        if mutated_data.get("status") == "Completed":
+            background_tasks.add_task(
+                complete_verification_job, session, existing_verification_job
+            )
 
         return existing_verification_job
 

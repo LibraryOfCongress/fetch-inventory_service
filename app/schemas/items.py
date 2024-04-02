@@ -161,9 +161,9 @@ class ItemDetailWriteOutput(ItemBaseOutput):
 class ItemDetailReadOutput(ItemDetailWriteOutput):
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    accession_job: AccessionJobBaseOutput
-    verification_job: VerificationJobBaseOutput
-    subcollection: SubcollectionDetailWriteOutput
+    accession_job: Optional[AccessionJobBaseOutput] = None
+    verification_job: Optional[VerificationJobBaseOutput] = None
+    subcollection: Optional[SubcollectionDetailWriteOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
 
     class Config:
