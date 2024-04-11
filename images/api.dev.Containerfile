@@ -1,8 +1,6 @@
 # Stage 1: Requirements stage
 FROM python:3.11.4-slim as requirements-stage
 
-ENV SEED_FAKE_DATA=${SEED_FAKE_DATA_ARG:-false}
-
 WORKDIR /tmp
 
 RUN pip install poetry
