@@ -21,7 +21,7 @@ resource "kubernetes_deployment_v1" "app-deployment-v1" {
     namespace = var.namespace
   }
   spec {
-    replicas = 2
+    replicas = var.replicas
     selector {
       match_labels = {
         app = var.name
