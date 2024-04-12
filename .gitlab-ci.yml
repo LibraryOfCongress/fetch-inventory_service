@@ -2,6 +2,7 @@ stages:
   - build
   - trigger
   - deploy
+  - controls
 
 build_image:
   stage: build
@@ -53,8 +54,7 @@ build_mr:
       --context $CI_PROJECT_DIR
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  when: manual
 
 build_image_test:
   stage: build
@@ -118,6 +118,7 @@ deploy_dev:
     - export TF_VAR_vault_addr=$VAULT_ADDR_DEV
     - export TF_VAR_app_name="inventory-service"
     - export TF_VAR_image='git.loc.gov:4567/fetch/inventory_service:latest'
+    - export TF_VAR_timestamp=$CI_COMMIT_TIMESTAMP
     - terraform --version
     - cd terraform
     - kubectl config use-context fetch/build:fetch -v=6
@@ -125,7 +126,6 @@ deploy_dev:
     - export TF_STATE_NAME=develop
     - envsubst < backend.hcl.tmpl > backend.hcl
     - terraform init -backend-config=backend.hcl
-    - terraform destroy -auto-approve
     - terraform apply -auto-approve
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
@@ -140,6 +140,7 @@ deploy_test:
     - export TF_VAR_vault_addr=$VAULT_ADDR_TEST
     - export TF_VAR_app_name="inventory-service"
     - export TF_VAR_image='git.loc.gov:4567/fetch/inventory_service/test:latest'
+    - export TF_VAR_timestamp=$CI_COMMIT_TIMESTAMP
     - terraform --version
     - cd terraform
     - kubectl config use-context fetch/build:fetch-test -v=6
@@ -147,7 +148,32 @@ deploy_test:
     - export TF_STATE_NAME=test
     - envsubst < backend.hcl.tmpl > backend.hcl
     - terraform init -backend-config=backend.hcl
-    - terraform destroy -auto-approve
     - terraform apply -auto-approve
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
+
+set_replica_to_0_dev:
+  stage: controls
+  image:
+    name: git.loc.gov:4567/fetch/build/terraform:alt
+    entrypoint: [""]
+  script:
+    - kubectl config use-context fetch/build:fetch -v=6
+    - cp -v $KUBECONFIG kubeconfig
+    - kubectl -n fetch scale deployment inventory-service --replicas=0
+    - kubectl -n fetch get pods
+    - kubectl -n fetch get deployments
+  when: manual
+
+set_replica_to_1_dev:
+  stage: controls
+  image:
+    name: git.loc.gov:4567/fetch/build/terraform:alt
+    entrypoint: [""]
+  script:
+    - kubectl config use-context fetch/build:fetch -v=6
+    - cp -v $KUBECONFIG kubeconfig
+    - kubectl -n fetch scale deployment inventory-service --replicas=1
+    - kubectl -n fetch get pods
+    - kubectl -n fetch get deployments
+  when: manual

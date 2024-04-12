@@ -1,4 +1,5 @@
 variable name {}
+variable timestamp {}
 variable namespace {}
 variable env_map {}
 variable replicas {}
@@ -31,6 +32,9 @@ resource "kubernetes_deployment_v1" "app-deployment-v1" {
       metadata {
         labels = {
           app = var.name
+        }
+        annotations = {
+          version = var.timestamp
         }
       }
       spec {

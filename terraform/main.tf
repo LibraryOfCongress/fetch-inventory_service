@@ -15,6 +15,7 @@ variable vault_deployer_username { default = "deployer" }
 variable vault_deployer_password {}
 variable vault_addr {}
 variable app_name {}
+variable timestamp {}
 
 provider "vault" {
   address = var.vault_addr
@@ -54,6 +55,7 @@ locals {
 module "app" {
   source = "./modules/app"
   name = var.app_name
+  timestamp = var.timestamp
   namespace = local.namespace
   image = var.image
   env_map = local.env_map
