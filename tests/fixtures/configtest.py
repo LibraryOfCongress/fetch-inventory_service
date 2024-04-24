@@ -128,9 +128,7 @@ def get_data_from_file(file_path):
 
 
 def generate_barcode_id(client, type_id, value):
-    results = client.post(
-        "/barcodes", json={"type_id": type_id, "value": value}
-    )
+    results = client.post("/barcodes", json={"type_id": type_id, "value": value})
 
     if results.status_code == 201:
         return results.json().get("id")
@@ -158,7 +156,6 @@ def populate_record(client, fixtures_path, table):
     data = get_data_from_file(fixtures_path)
 
     if table:
-
         logger.info(f"Populating table: {table}")
         logger.info(f"Request Data : {data.get(table)}")
 
@@ -194,11 +191,13 @@ def populate_record(client, fixtures_path, table):
             elif table == "size_class":
                 return client.post("/size_class", json=data.get(table))
             elif table == "shelving_job_tray_associations":
-                return client.post("/shelving-jobs/tray-association", json=data.get(
-                    table))
+                return client.post(
+                    "/shelving-jobs/tray-association", json=data.get(table)
+                )
             elif table == "shelving_job_item_associations":
-                return client.post("/shelving-jobs/item-association", json=data.get(
-                    table))
+                return client.post(
+                    "/shelving-jobs/item-association", json=data.get(table)
+                )
             elif table == "shelving_jobs":
                 return client.post("/shelving-jobs", json=data.get(table))
             else:
@@ -214,12 +213,14 @@ def populate_record(client, fixtures_path, table):
                     if barcode_id is not None:
                         data[table]["barcode_id"] = barcode_id
 
-                    conveyance_bins_results =client.post(
+                    conveyance_bins_results = client.post(
                         "/conveyance-bins", json={"barcode_id": barcode_id}
                     )
 
                     if conveyance_bins_results.status_code == 201:
-                        data[table]["conveyance_bin_id"] = conveyance_bins_results.json().get("id")
+                        data[table][
+                            "conveyance_bin_id"
+                        ] = conveyance_bins_results.json().get("id")
 
                 if table == "items":
                     barcode_id = generate_barcode_id(client, 1, "5901234123460")
@@ -276,12 +277,17 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_positions")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "accession_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "verification_jobs")
-    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE,"shelving_jobs")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "subcollections")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "media_types")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "trays")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "items")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_jobs")
-    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_item_associations")
-    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_tray_associations")
+    populate_record(
+        client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_item_associations"
+    )
+    populate_record(
+        client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_tray_associations"
+    )
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "users")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "groups")

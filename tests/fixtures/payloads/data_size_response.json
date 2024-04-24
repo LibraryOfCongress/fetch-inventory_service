@@ -235,36 +235,48 @@
       "size": 10,
       "pages": 1
     },
-    "trays": {
-      "items": [
-        {
-          "accession_job_id": 1,
-          "verification_job_id": 1,
-          "container_type_id": 1,
-          "barcode_id": 1,
-          "size_class_id": 1,
-          "owner_id": 1,
-          "media_type_id": 1,
-          "shelf_position_id": 1,
-          "conveyance_bin_id": 1
-        }
-      ],
-      "total": 1,
-      "page": 1,
-      "size": 10,
-      "pages": 1
-    },
-    "users": {
+  "trays": {
+    "items": [
+      {
+        "accession_job_id": 1,
+        "verification_job_id": 1,
+        "container_type_id": 1,
+        "barcode_id": 1,
+        "size_class_id": 1,
+        "owner_id": 1,
+        "media_type_id": 1,
+        "shelf_position_id": 1,
+        "conveyance_bin_id": 1
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 10,
+    "pages": 1
+  },
+  "users": {
+    "items": [
+      {
+        "id": 1,
+        "first_name": "John",
+        "last_name": "Wick"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 10,
+    "pages": 1
+  },
+  "groups": {
       "items": [
         {
           "id": 1,
-          "first_name": "John",
-          "last_name": "Wick"
+          "name": "Test Group"
         }
       ],
       "total": 1,
       "page": 1,
       "size": 10,
       "pages": 1
-    }
+  }
 }

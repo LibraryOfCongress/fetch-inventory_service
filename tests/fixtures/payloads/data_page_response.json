@@ -266,5 +266,17 @@
       "page": 1,
       "size": 50,
       "pages": 1
+    },
+    "groups": {
+      "items": [
+        {
+          "id": 1,
+          "name": "Test Group"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
     }
 }

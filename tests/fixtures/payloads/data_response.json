@@ -1,293 +1,331 @@
 {
-    "buildings": {
-        "items": [
-          {
-            "id": 1,
-            "name": "Building 1"
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "module_numbers": {
-        "items": [
-          {
-            "id": 1,
-            "number": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "modules": {
-      "items": [
-        {
-          "id": 1
-        }
-      ],
-      "total": 1,
-      "page": 1,
-      "size": 50,
-      "pages": 1
-    },
-    "aisle_numbers": {
-        "items": [
-          {
-            "id": 1,
-            "number": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "aisles": {
-        "items": [
-          {
-            "id": 1,
-            "aisle_number_id": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "side_orientations": {
-        "items": [
-          {
-            "id": 1,
-            "name": "Left"
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "sides": {
-        "items": [
-          {
-            "id": 1,
-            "side_orientation_id": 1,
-            "aisle_id": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "barcode_types": {
-        "items": [
-          {
-            "id": 1,
-            "name": "qrcode"
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "barcodes": {
-        "items": [
-            {
-                "id": "550e8400-e29b-41d4-a716-446655440000",
-                "barcode_type_id": 1,
-                "barcode": "5901234123457"
-            }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "ladder_numbers": {
-        "items": [
-          {
-            "id": 1,
-            "number": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "ladders": {
-        "items": [
-          {
-            "id": 1,
-            "ladder_number_id": 1,
-            "side_id": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "shelf_numbers": {
-        "items": [
-          {
-            "id": 1,
-            "number": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "shelf_position_numbers": {
-        "items": [
-          {
-            "id": 1,
-            "number": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "shelf_positions": {
-        "items": [
-          {
-            "id": 1,
-            "shelf_id": 1,
-            "shelf_position_number_id": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "shelves": {
-        "items": [
-          {
-            "id": 1,
-            "ladder_id": 1
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "shelving_jobs": {
-        "items": [
-          {
-            "id": 1,
-            "status": "Created"
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "accession_jobs": {
-        "items": [
-          {
-            "id": 1,
-            "trayed": false,
-            "status": "Created"
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "verification_jobs": {
-        "items": [
-          {
-            "id": 1,
-            "trayed": true,
-            "status": "Created"
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "items": {
-      "items": [
-          {
-            "id": 1,
-            "status": "In",
-            "accession_dt": "2023-10-08T20:46:56.764426",
-            "accession_job_id": 1,
-            "arbitrary_data": "Signed copy",
-            "condition": "Good",
-            "container_type_id": 1,
-            "media_type_id": 1,
-            "owner_id": 1,
-            "subcollection_id": 1,
-            "title": "Lord of The Rings",
-            "tray_id": 1,
-            "size_class_id": 1,
-            "verification_job_id": 1,
-            "volume": "I",
-            "withdrawal_dt": "2023-10-08T20:46:56.764426"
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "size": 50,
-        "pages": 1
-    },
-    "size_class": {
+  "buildings": {
       "items": [
         {
           "id": 1,
-          "name": "Small"
+          "name": "Building 1"
         }
       ],
       "total": 1,
       "page": 1,
       "size": 50,
       "pages": 1
-    },
-    "trays": {
+  },
+  "module_numbers": {
       "items": [
         {
+          "id": 1,
+          "number": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "modules": {
+    "items": [
+      {
+        "id": 1
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "aisle_numbers": {
+      "items": [
+        {
+          "id": 1,
+          "number": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "aisles": {
+      "items": [
+        {
+          "id": 1,
+          "aisle_number_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "side_orientations": {
+      "items": [
+        {
+          "id": 1,
+          "name": "Left"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "sides": {
+      "items": [
+        {
+          "id": 1,
+          "side_orientation_id": 1,
+          "aisle_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "barcode_types": {
+      "items": [
+        {
+          "id": 1,
+          "name": "qrcode"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "barcodes": {
+      "items": [
+          {
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "barcode_type_id": 1,
+              "barcode": "5901234123457"
+          }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "ladder_numbers": {
+      "items": [
+        {
+          "id": 1,
+          "number": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "ladders": {
+      "items": [
+        {
+          "id": 1,
+          "ladder_number_id": 1,
+          "side_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelf_numbers": {
+      "items": [
+        {
+          "id": 1,
+          "number": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelf_position_numbers": {
+      "items": [
+        {
+          "id": 1,
+          "number": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelf_positions": {
+      "items": [
+        {
+          "id": 1,
+          "shelf_id": 1,
+          "shelf_position_number_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelves": {
+      "items": [
+        {
+          "id": 1,
+          "ladder_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelving_jobs": {
+      "items": [
+        {
+          "id": 1,
+          "status": "Created"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelving_jobs_item_association": {
+      "items": [
+        {
+          "verified": true,
+          "shelving_job_id": 1,
+          "item_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelving_jobs_tray_association": {
+      "items": [
+        {
+          "verified": true,
+          "shelving_job_id": 1,
+          "tray_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "accession_jobs": {
+      "items": [
+        {
+          "id": 1,
+          "trayed": false,
+          "status": "Created"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "verification_jobs": {
+      "items": [
+        {
+          "id": 1,
+          "trayed": true,
+          "status": "Created"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "items": {
+    "items": [
+        {
+          "id": 1,
+          "status": "In",
+          "accession_dt": "2023-10-08T20:46:56.764426",
           "accession_job_id": 1,
-          "verification_job_id": 1,
+          "arbitrary_data": "Signed copy",
+          "condition": "Good",
           "container_type_id": 1,
-          "barcode_id": 1,
-          "size_class_id": 1,
-          "owner_id": 1,
           "media_type_id": 1,
-          "shelf_position_id": 1,
-          "conveyance_bin_id": 1
+          "owner_id": 1,
+          "subcollection_id": 1,
+          "title": "Lord of The Rings",
+          "tray_id": 1,
+          "size_class_id": 1,
+          "verification_job_id": 1,
+          "volume": "I",
+          "withdrawal_dt": "2023-10-08T20:46:56.764426"
         }
       ],
       "total": 1,
       "page": 1,
       "size": 50,
       "pages": 1
-    },
-    "users": {
+  },
+  "size_class": {
+    "items": [
+      {
+        "id": 1,
+        "name": "Small"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "trays": {
+    "items": [
+      {
+        "accession_job_id": 1,
+        "verification_job_id": 1,
+        "container_type_id": 1,
+        "barcode_id": 1,
+        "size_class_id": 1,
+        "owner_id": 1,
+        "media_type_id": 1,
+        "shelf_position_id": 1,
+        "conveyance_bin_id": 1
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "users": {
+    "items": [
+      {
+        "id": 1,
+        "first_name": "John",
+        "last_name": "Wick"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "groups": {
       "items": [
         {
           "id": 1,
-          "first_name": "John",
-          "last_name": "Wick"
+          "name": "Test Group"
         }
       ],
       "total": 1,
       "page": 1,
       "size": 50,
       "pages": 1
-    }
+  }
 }
