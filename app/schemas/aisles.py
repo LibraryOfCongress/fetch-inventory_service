@@ -1,6 +1,6 @@
 import uuid
 
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, constr, conint
 from datetime import datetime
 
@@ -75,6 +75,15 @@ class AisleDetailWriteOutput(BaseModel):
         }
 
 
+class SideOrientationNestedForAisle(BaseModel):
+    name: str
+
+
+class SideNestedForAisle(BaseModel):
+    id: int
+    side_orientation: SideOrientationNestedForAisle
+
+
 class AisleDetailReadOutput(BaseModel):
     id: int
     create_dt: datetime
@@ -82,6 +91,7 @@ class AisleDetailReadOutput(BaseModel):
     building: BuildingBaseOutput | None
     module: ModuleCustomDetailReadOutput | None
     aisle_number: AisleNumberBaseOutput
+    sides: List[SideNestedForAisle]
 
     class Config:
         json_schema_extra = {
@@ -104,6 +114,14 @@ class AisleDetailReadOutput(BaseModel):
                 "aisle_number": {
                     "id": 1,
                     "number": 1
-                }
+                },
+                "sides": [
+                    {
+                        "id": 1,
+                        "side_orientation": {
+                            "name": "Left"
+                        }
+                    }
+                ]
             }
         }

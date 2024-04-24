@@ -2,6 +2,7 @@ from typing import Optional
 from pydantic import BaseModel, conint
 from datetime import datetime
 
+from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.shelves import ShelfDetailWriteOutput
 from app.schemas.shelf_position_numbers import ShelfPositionNumberDetailOutput
 
@@ -47,13 +48,21 @@ class ShelfPositionBaseReadOutput(BaseModel):
         }
 
 
+class NestedShelfPositionNumberForShelvingPositionList(BaseModel):
+    number: int
+
 class ShelfPositionListOutput(ShelfPositionBaseReadOutput):
+    shelf_position_number: NestedShelfPositionNumberForShelvingPositionList
+
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
                 "shelf_id": 1,
                 "shelf_position_number_id": 1,
+                "shelf_position_number": {
+                    "number": 1
+                }
             }
         }
 
@@ -77,9 +86,21 @@ class ShelfPositionDetailWriteOutput(BaseModel):
         }
 
 
+class TrayNestedForShelfPositionOutput(BaseModel):
+    id: int
+    barcode: BarcodeDetailReadOutput
+
+
+class NonTrayNestedForShelfPositionOutput(BaseModel):
+    id: int
+    barcode: BarcodeDetailReadOutput
+
+
 class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):
     shelf: ShelfDetailWriteOutput
     shelf_position_number: ShelfPositionNumberDetailOutput
+    tray: Optional[TrayNestedForShelfPositionOutput] = None
+    non_tray_item: Optional[NonTrayNestedForShelfPositionOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -107,6 +128,26 @@ class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):
                     "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398",
+                },
+                "tray": {
+                    "id": 1,
+                    "barcode": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "value": "5901234123457",
+                        "type_id": 1,
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    }
+                },
+                "non_tray_item": {
+                    "id": 1,
+                    "barcode": {
+                        "id": "5532y8400-e29b-41d4-a716-446655440000",
+                        "value": "6901234123457",
+                        "type_id": 1,
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    }
                 },
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",

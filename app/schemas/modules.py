@@ -1,6 +1,6 @@
 import uuid
 
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, conint
 from datetime import datetime
 
@@ -65,9 +65,19 @@ class ModuleDetailWriteOutput(ModuleBaseOutput):
         }
 
 
+class AisleNumberNestedForModule(BaseModel):
+    number: int
+
+
+class AisleNestedForModule(BaseModel):
+    id: int
+    aisle_number: AisleNumberNestedForModule
+
+
 class ModuleDetailReadOutput(ModuleBaseOutput):
     building: BuildingDetailWriteOutput
     module_number: ModuleNumberDetailOutput
+    aisles: List[AisleNestedForModule]
     create_dt: datetime
     update_dt: datetime
 
@@ -87,6 +97,14 @@ class ModuleDetailReadOutput(ModuleBaseOutput):
                     "create_dt": "2023-10-09T17:04:09.812257",
                     "update_dt": "2023-10-10T01:00:28.576069"
                 },
+                "aisles": [
+                    {
+                        "id": 1,
+                        "aisle_number": {
+                            "number": 1
+                        }
+                    }
+                ],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }

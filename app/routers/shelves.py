@@ -9,6 +9,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
 from app.models.shelves import Shelf
+from app.models.barcodes import Barcode
 from app.schemas.shelves import (
     ShelfInput,
     ShelfUpdateInput,
@@ -62,6 +63,21 @@ def get_shelf_detail(id: int, session: Session = Depends(get_session)):
         return shelf
 
     raise NotFound(detail=f"Shelf ID {id} Not Found")
+
+
+@router.get("/barcode/{value}", response_model=ShelfDetailReadOutput)
+def get_shelf_by_barcode_value(value: str, session: Session = Depends(get_session)):
+    """
+    Retrieve a shelf using a barcode value
+
+    **Parameters:**
+    - value (str): The value of the barcode to retrieve.
+    """
+    statement = select(Shelf).join(Barcode).where(Barcode.value == value)
+    shelf = session.exec(statement).first()
+    if not shelf:
+        raise NotFound()
+    return shelf
 
 
 @router.post("/", response_model=ShelfDetailWriteOutput, status_code=201)

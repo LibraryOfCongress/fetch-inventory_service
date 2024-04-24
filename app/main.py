@@ -60,8 +60,6 @@ from app.routers import (
     subcollection,
     non_tray_items,
     shelving_jobs,
-    shelving_jobs_tray_association,
-    shelving_jobs_item_association,
     users,
     groups,
 )
@@ -203,8 +201,6 @@ app.include_router(conveyance_bins.router)
 app.include_router(items.router)
 app.include_router(subcollection.router)
 app.include_router(non_tray_items.router)
-app.include_router(shelving_jobs_tray_association.router)
-app.include_router(shelving_jobs_item_association.router)
 app.include_router(shelving_jobs.router)
 app.include_router(users.router)
 app.include_router(groups.router)

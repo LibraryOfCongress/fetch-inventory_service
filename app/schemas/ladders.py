@@ -1,11 +1,12 @@
 import uuid
 
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, conint
 from datetime import datetime
 
 from app.schemas.sides import SideDetailWriteOutput
 from app.schemas.ladder_numbers import LadderNumberDetailOutput
+from app.schemas.barcodes import BarcodeDetailReadOutput
 
 
 class LadderInput(BaseModel):
@@ -70,9 +71,27 @@ class LadderDetailWriteOutput(LadderBaseOutput):
         }
 
 
+class OwnerNestedForLadderOutput(BaseModel):
+    id: int
+    name: str
+
+
+class ShelfNumberNestedForLadderOutput(BaseModel):
+    number: int
+
+
+class ShelvesNestedForLadderOutput(BaseModel):
+    id: int
+    barcode: BarcodeDetailReadOutput
+    shelf_number: ShelfNumberNestedForLadderOutput
+    owner: OwnerNestedForLadderOutput
+    size_class_id: int
+
+
 class LadderDetailReadOutput(LadderBaseOutput):
     side: SideDetailWriteOutput
     ladder_number: LadderNumberDetailOutput
+    shelves: List[ShelvesNestedForLadderOutput]
     create_dt: datetime
     update_dt: datetime
 
@@ -93,6 +112,26 @@ class LadderDetailReadOutput(LadderBaseOutput):
                     "create_dt": "2023-10-09T17:04:09.812257",
                     "update_dt": "2023-10-10T01:00:28.576069"
                 },
+                "shelves": [
+                    {
+                        "id": 1,
+                        "shelf_number": {
+                            "number": 3
+                        },
+                        "owner": {
+                            "id": 1,
+                            "name": "Library Of Congress"
+                        },
+                        "barcode": {
+                            "id": "550e8400-e29b-41d4-a716-446655440000",
+                            "value": "5901234123457",
+                            "type_id": 1,
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "size_class_id": 1
+                    }
+                ],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }

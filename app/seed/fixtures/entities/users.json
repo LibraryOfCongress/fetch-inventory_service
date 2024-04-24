@@ -1,0 +1,17 @@
+{
+  "model": "app.models.users.User",
+  "data": [
+    {
+      "first_name": "Frodo",
+      "last_name": "Baggins"
+    },
+    {
+      "first_name": "Tester",
+      "last_name": "One"
+    },
+    {
+      "first_name": "Tester",
+      "last_name": "Two"
+    }
+  ]
+}

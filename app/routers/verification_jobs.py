@@ -27,14 +27,20 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[VerificationJobListOutput])
-def get_verification_job_list(session: Session = Depends(get_session)) -> list:
+def get_verification_job_list(unshelved: bool | None = False, session: Session = Depends(get_session)) -> list:
     """
     Retrieve a paginated list of verification jobs.
 
     **Returns:**
     - Verification Job List Output: The paginated list of verification jobs.
     """
-    return paginate(session, select(VerificationJob))
+    if unshelved:
+        verification_job_list = select(VerificationJob).where(
+            VerificationJob.shelving_job_id == None
+        ).where(VerificationJob.status == "Completed")
+    else:
+        verification_job_list = select(VerificationJob)
+    return paginate(session, verification_job_list)
 
 
 @router.get("/{id}", response_model=VerificationJobDetailOutput)

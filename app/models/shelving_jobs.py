@@ -7,39 +7,6 @@ from sqlmodel import SQLModel, Field, Relationship
 from app.models.users import User
 
 
-# Association tables
-class ShelvingJobTrayAssociation(SQLModel, table=True):
-    """
-    Model to represent the Shelving Jobs Tray Association table
-    """
-
-    __tablename__ = "shelving_job_tray_associations"
-
-    verified: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
-    shelf_position_proposed_id: int = Field(foreign_key="shelf_positions.id")
-    shelf_position_id: int = Field(foreign_key="shelf_positions.id")
-    shelving_job_id: int = Field(foreign_key="shelving_jobs.id", primary_key=True)
-    tray_id: int = Field(foreign_key="trays.id", primary_key=True)
-
-
-class ShelvingJobItemAssociation(SQLModel, table=True):
-    """
-    Model to represent the Shelving Jobs Item Association table
-    """
-
-    __tablename__ = "shelving_job_item_associations"
-
-    verified: bool = Field(sa_column=sa.Boolean, default=False, nullable=False)
-    shelf_position_proposed_id: int = Field(
-        foreign_key="shelf_positions.id",
-    )
-    shelf_position_id: int = Field(
-        foreign_key="shelf_positions.id",
-    )
-    shelving_job_id: int = Field(foreign_key="shelving_jobs.id", primary_key=True)
-    item_id: int = Field(foreign_key="items.id", primary_key=True)
-
-
 class ShelvingJob(SQLModel, table=True):
     """
     Model to represent the Shelving Jobs table
@@ -65,6 +32,18 @@ class ShelvingJob(SQLModel, table=True):
         default="Created",
         nullable=False,
     )
+    origin: str = Field(
+        sa_column=sa.Column(
+            sa.Enum(
+                "Verification",
+                "Direct",
+                name="shelving_origin",
+            )
+        ),
+        default="Verification",
+        nullable=False,
+    )
+    building_id: int = Field(foreign_key="buildings.id", nullable=False, unique=False)
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     run_time: Optional[timedelta] = Field(sa_column=sa.Interval, nullable=True)
     last_transition: Optional[datetime] = Field(
@@ -79,10 +58,7 @@ class ShelvingJob(SQLModel, table=True):
     verification_jobs: List["VerificationJob"] = Relationship(
         back_populates="shelving_job"
     )
-    trays: List["Tray"] = Relationship(
-        back_populates="shelving_jobs", link_model=ShelvingJobTrayAssociation
-    )
-    items: List["Item"] = Relationship(
-        back_populates="shelving_jobs", link_model=ShelvingJobItemAssociation
-    )
+    trays: List["Tray"] = Relationship(back_populates="shelving_job")
+    non_tray_items: List["NonTrayItem"] = Relationship(back_populates="shelving_job")
     user: Optional[User] = Relationship(back_populates="shelving_jobs")
+    building: "Building" = Relationship(back_populates="shelving_jobs")

@@ -28,14 +28,38 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ShelfPositionListOutput])
-def get_shelf_position_list(session: Session = Depends(get_session)) -> list:
+def get_shelf_position_list(
+    shelf_id: int | None = None,
+    empty: bool | None = False,
+    session: Session = Depends(get_session)
+) -> list:
     """
     Retrieve a list of shelf positions.
 
     **Returns:**
     - Shelf Position List Output: The paginated list of shelf positions.
     """
-    return paginate(session, select(ShelfPosition))
+    if shelf_id and empty:
+        statement = select(ShelfPosition).where(
+            ShelfPosition.shelf_id == shelf_id
+        ).where(
+            ShelfPosition.tray == None
+        ).where(
+            ShelfPosition.non_tray_item == None
+        )
+    elif shelf_id:
+        statement = select(ShelfPosition).where(
+            ShelfPosition.shelf_id == shelf_id
+        )
+    elif empty:
+        statement = select(ShelfPosition).where(
+            ShelfPosition.tray == None
+        ).where(
+            ShelfPosition.non_tray_item == None
+        )
+    else:
+        statement = select(ShelfPosition)
+    return paginate(session, statement)
 
 
 @router.get("/{id}", response_model=ShelfPositionDetailReadOutput)

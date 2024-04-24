@@ -48,5 +48,12 @@ class ShelfPosition(SQLModel, table=True):
     )
 
     shelf_position_number: ShelfPositionNumber = Relationship(back_populates="shelf_positions")
-
     shelf: Shelf = Relationship(back_populates="shelf_positions")
+    tray: Optional["Tray"] = Relationship(
+        sa_relationship_kwargs={'uselist': False},
+        back_populates="shelf_position"
+    )
+    non_tray_item: Optional["NonTrayItem"] = Relationship(
+        sa_relationship_kwargs={'uselist': False},
+        back_populates="shelf_position"
+    )

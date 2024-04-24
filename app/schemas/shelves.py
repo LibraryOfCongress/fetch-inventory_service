@@ -1,6 +1,6 @@
 import uuid
 
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, conint, condecimal
 from datetime import datetime
 
@@ -115,6 +115,15 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
         }
 
 
+class ShelfPositionNumberNestedForShelf(BaseModel):
+    number: int
+
+
+class ShelfPositionNestedForShelf(BaseModel):
+    id: int
+    shelf_position_number: ShelfPositionNumberNestedForShelf
+
+
 class ShelfDetailReadOutput(ShelfBaseOutput):
     ladder: LadderDetailWriteOutput
     shelf_number: ShelfNumberDetailOutput
@@ -129,6 +138,7 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
     barcode: BarcodeDetailReadOutput
     create_dt: datetime
     update_dt: datetime
+    shelf_positions: List[ShelfPositionNestedForShelf]
 
     class Config:
         json_schema_extra = {
@@ -187,5 +197,13 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
+                "shelf_positions": [
+                    {
+                        "id": 278,
+                        "shelf_position_number": {
+                            "number": 1
+                        }
+                    }
+                ]
             }
         }

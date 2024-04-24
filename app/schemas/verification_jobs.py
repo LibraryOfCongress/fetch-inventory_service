@@ -82,12 +82,15 @@ class VerificationJobBaseOutput(BaseModel):
 
 
 class VerificationJobListOutput(VerificationJobBaseOutput):
+    shelving_job_id: Optional[int] = None
+
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
                 "trayed": True,
                 "owner_id": 1,
+                "shelving_job_id": 1,
                 "status": "Created"
             }
         }
@@ -128,7 +131,9 @@ class TrayDetailNestedForVerificationJob(BaseModel):
     verification_job_id: Optional[int] = None
     container_type_id: Optional[int] = None
     owner_id: Optional[int] = None
+    shelving_job_id: Optional[int] = None
     shelf_position_id: Optional[int] = None
+    shelf_position_proposed_id: Optional[int] = None
     media_type_id: Optional[int] = None
     conveyance_bin_id: Optional[int] = None
     size_class_id: Optional[int] = None
@@ -149,6 +154,9 @@ class NonTrayItemDetailNestedForVerificationJob(BaseModel):
     scanned_for_verification: Optional[bool] = None
     verification_job_id: Optional[int] = None
     container_type_id: Optional[int] = None
+    shelving_job_id: Optional[int] = None
+    shelf_position_id: Optional[int] = None
+    shelf_position_proposed_id: Optional[int] = None
     owner_id: Optional[int] = None
     subcollection_id: Optional[int] = None
     media_type_id: Optional[int] = None
@@ -299,7 +307,9 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                         "verification_job_id": 1,
                         "container_type_id": 1,
                         "owner_id": 1,
+                        "shelving_job_id": 1,
                         "shelf_position_id": 1,
+                        "shelf_position_proposed_id": 1,
                         "media_type_id": 1,
                         "conveyance_bin_id": 1,
                         "size_class_id": 1,
@@ -316,6 +326,9 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                         "verification_job_id": 1,
                         "container_type_id": 1,
                         "owner_id": 1,
+                        "shelving_job_id": 1,
+                        "shelf_position_id": 1,
+                        "shelf_position_proposed_id": 1,
                         "subcollection_id": 1,
                         "media_type_id": 1,
                         "size_class_id": 1,

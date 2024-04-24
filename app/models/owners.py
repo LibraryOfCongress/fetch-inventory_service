@@ -52,3 +52,5 @@ class Owner(SQLModel, table=True):
         )
     )
     items: List[Item] = Relationship(back_populates="owner")
+    # trays (could support if needed)
+    # non-tray-items (could support if needed)

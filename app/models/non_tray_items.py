@@ -67,11 +67,19 @@ class NonTrayItem(SQLModel, table=True):
     )
     scanned_for_accession: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
     scanned_for_verification: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    scanned_for_shelving: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
     verification_job_id: Optional[int] = Field(
         default=None,
         nullable=True,
         foreign_key="verification_jobs.id"
     )
+    shelving_job_id: Optional[int] = Field(
+        default=None, nullable=True, foreign_key="shelving_jobs.id"
+    )
+    shelf_position_id: Optional[int] = Field(
+        foreign_key="shelf_positions.id", nullable=True
+    )
+    shelf_position_proposed_id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, nullable=True, unique=False))
     accession_dt: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=None, nullable=True
     )
@@ -104,4 +112,6 @@ class NonTrayItem(SQLModel, table=True):
     )
     accession_job: Optional["AccessionJob"] = Relationship(back_populates="non_tray_items")
     verification_job: Optional["VerificationJob"] = Relationship(back_populates="non_tray_items")
+    shelving_job: Optional["ShelvingJob"] = Relationship(back_populates="non_tray_items")
+    shelf_position: Optional["ShelfPosition"] = Relationship(back_populates="non_tray_item")
     subcollection: Optional["Subcollection"] = Relationship(back_populates="non_tray_items")

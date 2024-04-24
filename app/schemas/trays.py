@@ -7,6 +7,7 @@ from datetime import datetime
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.accession_jobs import AccessionJobBaseOutput
 from app.schemas.verification_jobs import VerificationJobBaseOutput
+from app.schemas.shelving_jobs import ShelvingJobBaseOutput
 from app.schemas.media_types import MediaTypeDetailReadOutput
 from app.schemas.size_class import SizeClassDetailReadOutput
 from app.schemas.conveyance_bins import ConveyanceBinBaseReadOutput
@@ -18,12 +19,15 @@ class TrayInput(BaseModel):
     accession_job_id: Optional[int] = None
     scanned_for_accession: Optional[bool] = None
     scanned_for_verification: Optional[bool] = None
+    scanned_for_shelving: Optional[bool] = None
     collection_accessioned: Optional[bool] = None
     collection_verified: Optional[bool] = None
     verification_job_id: Optional[int] = None
+    shelving_job_id: Optional[int] = None
     container_type_id: Optional[int] = None
     owner_id: Optional[int] = None
     shelf_position_id: Optional[int] = None
+    shelf_position_proposed_id: Optional[int] = None
     media_type_id: Optional[int] = None
     conveyance_bin_id: Optional[int] = None
     size_class_id: Optional[int] = None
@@ -38,12 +42,15 @@ class TrayInput(BaseModel):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_shelving": False,
                 "collection_accessioned": False,
                 "collection_verified": False,
                 "verification_job_id": 1,
+                "shelving_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
                 "shelf_position_id": 1,
+                "shelf_position_proposed_id": 1,
                 "media_type_id": 1,
                 "conveyance_bin_id": 1,
                 "size_class_id": 1,
@@ -63,12 +70,15 @@ class TrayUpdateInput(TrayInput):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_shelving": False,
                 "collection_accessioned": False,
                 "collection_verified": False,
                 "verification_job_id": 1,
+                "shelving_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
                 "shelf_position_id": 1,
+                "shelf_position_proposed_id": 1,
                 "media_type_id": 1,
                 "conveyance_bin_id": 1,
                 "size_class_id": 1,
@@ -87,12 +97,23 @@ class ItemNestedForTrayOutput(BaseModel):
     barcode: BarcodeDetailReadOutput
 
 
+class NestedShelfPositionNumber(BaseModel):
+    number: int
+
+
+class ShelfPositionNestedForTrayOutput(BaseModel):
+    id: int
+    shelf_id: int
+    shelf_position_number: NestedShelfPositionNumber
+
+
 class TrayBaseOutput(TrayInput):
     id: int
     items: List[ItemNestedForTrayOutput]
     barcode: BarcodeDetailReadOutput
     media_type: MediaTypeDetailReadOutput
     size_class: SizeClassDetailReadOutput
+    shelf_position: Optional[ShelfPositionNestedForTrayOutput] = None
 
 class TrayListOutput(TrayBaseOutput):
 
@@ -103,12 +124,15 @@ class TrayListOutput(TrayBaseOutput):
                     "accession_job_id": 1,
                     "scanned_for_accession": False,
                     "scanned_for_verification": False,
+                    "scanned_for_shelving": False,
                     "collection_accessioned": False,
                     "collection_verified": False,
                     "verification_job_id": 1,
+                    "shelving_job_id": 1,
                     "container_type_id": 1,
                     "owner_id": 1,
                     "shelf_position_id": 1,
+                    "shelf_position_proposed_id": 1,
                     "media_type_id": 1,
                     "conveyance_bin_id": 1,
                     "size_class_id": 1,
@@ -132,6 +156,13 @@ class TrayListOutput(TrayBaseOutput):
                         "create_dt": "2023-10-08T20:46:56.764426",
                         "update_dt": "2023-10-08T20:46:56.764398"
                     },
+                    "shelf_position": {
+                        "id": 1,
+                        "shelf_id": 1,
+                        "shelf_position_number": {
+                            "number": 1
+                        }
+                    },
                     "accession_dt": "2023-10-08T20:46:56.764426",
                     "shelved_dt": "2023-10-08T20:46:56.764426",
                     "withdrawal_dt": "2023-10-08T20:46:56.764426"
@@ -143,6 +174,7 @@ class TrayListOutput(TrayBaseOutput):
 class TrayDetailWriteOutput(TrayBaseOutput):
     owner: Optional[OwnerDetailReadOutput]
     container_type: Optional[ContainerTypeDetailReadOutput]
+    shelving_job: Optional[ShelvingJobBaseOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -152,12 +184,22 @@ class TrayDetailWriteOutput(TrayBaseOutput):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_shelving": False,
                 "collection_accessioned": False,
                 "collection_verified": False,
                 "verification_job_id": 1,
+                "shelving_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
                 "shelf_position_id": 1,
+                "shelf_position_proposed_id": 1,
+                "shelf_position": {
+                    "id": 1,
+                    "shelf_id": 1,
+                    "shelf_position_number": {
+                        "number": 1
+                    }
+                },
                 "media_type_id": 1,
                 "conveyance_bin_id": 1,
                 "size_class_id": 1,
@@ -175,6 +217,10 @@ class TrayDetailWriteOutput(TrayBaseOutput):
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "shelved_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                "shelving_job": {
+                    "id": 1,
+                    "status": "Created"
+                },
                 "container_type": {
                     "id": 1,
                     "type": "Tray",
@@ -239,12 +285,22 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_shelving": False,
                 "collection_accessioned": False,
                 "collection_verified": False,
                 "verification_job_id": 1,
+                "shelving_job_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
                 "shelf_position_id": 1,
+                "shelf_position": {
+                    "id": 1,
+                    "shelf_id": 1,
+                    "shelf_position_number": {
+                        "number": 1
+                    }
+                },
+                "shelf_position_proposed_id": 1,
                 "media_type_id": 1,
                 "conveyance_bin_id": 1,
                 "size_class_id": 1,
@@ -273,6 +329,10 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
                 "verification_job": {
                     "id": 1,
                     "trayed": True,
+                    "status": "Created"
+                },
+                "shelving_job": {
+                    "id": 1,
                     "status": "Created"
                 },
                 "media_type": {

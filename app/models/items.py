@@ -7,8 +7,6 @@ from sqlmodel import SQLModel, Field, Relationship
 
 # from sqlalchemy.schema import UniqueConstraint
 
-from app.models.shelving_jobs import ShelvingJobItemAssociation
-
 
 class Item(SQLModel, table=True):
     """
@@ -84,9 +82,6 @@ class Item(SQLModel, table=True):
     verification_job: Optional["VerificationJob"] = Relationship(back_populates="items")
     subcollection: Optional["Subcollection"] = Relationship(back_populates="items")
     tray: Optional["Tray"] = Relationship(back_populates="items")
-    shelving_jobs: List["ShelvingJob"] = Relationship(
-        back_populates="items", link_model=ShelvingJobItemAssociation
-    )
     media_type: Optional["MediaType"] = Relationship(back_populates="items")
     size_class: Optional["SizeClass"] = Relationship(back_populates="items")
     owner: Optional["Owner"] = Relationship(back_populates="items")

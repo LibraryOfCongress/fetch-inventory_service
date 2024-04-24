@@ -27,3 +27,5 @@ class SizeClass(SQLModel, table=True):
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
     items: List["Item"] = Relationship(back_populates="size_class")
+    # trays (could support if needed)
+    # non-tray-items (could support if needed)

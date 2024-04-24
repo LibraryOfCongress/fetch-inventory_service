@@ -1,6 +1,6 @@
 import uuid
 
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, constr
 from datetime import datetime
 
@@ -57,10 +57,29 @@ class BuildingDetailWriteOutput(BuildingBaseOutput):
         }
 
 
+class AisleNumberNestedForBuilding(BaseModel):
+    number: int
+
+
+class AisleNestedForBuilding(BaseModel):
+    id: int
+    aisle_number: AisleNumberNestedForBuilding
+
+
+class ModuleNumberNestedForBuilding(BaseModel):
+    number: int
+
+
+class ModuleNestedForBuilding(BaseModel):
+    id: int
+    module_number: ModuleNumberNestedForBuilding
+
+
 class BuildingDetailReadOutput(BuildingBaseOutput):
     create_dt: datetime
     update_dt: datetime
-    modules: list
+    modules: List[ModuleNestedForBuilding]
+    aisles: List[AisleNestedForBuilding]
 
     class Config:
         json_schema_extra = {
@@ -72,11 +91,18 @@ class BuildingDetailReadOutput(BuildingBaseOutput):
                 "modules": [
                     {
                         "id": 1,
-                        "building_id": 1,
-                        "module_number_id": 1,
-                        "update_dt": "2023-10-09T17:19:23.780752",
-                        "create_dt": "2023-10-09T17:19:23.780771"
+                        "module_number": {
+                            "number": 1
+                        }
                     }
                 ],
+                "aisles": [
+                    {
+                        "id": 1,
+                        "aisle_number": {
+                            "number": 1
+                        }
+                    }
+                ]
             }
         }

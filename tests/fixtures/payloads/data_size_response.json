@@ -194,32 +194,6 @@
       "size": 10,
       "pages": 1
   },
-  "shelving_jobs_item_association": {
-      "items": [
-        {
-          "verified": true,
-          "shelving_job_id": 1,
-          "item_id": 1
-        }
-      ],
-      "total": 1,
-      "page": 1,
-      "size": 10,
-      "pages": 1
-  },
-  "shelving_jobs_tray_association": {
-      "items": [
-        {
-          "verified": true,
-          "shelving_job_id": 1,
-          "tray_id": 1
-        }
-      ],
-      "total": 1,
-      "page": 1,
-      "size": 10,
-      "pages": 1
-  },
   "accession_jobs": {
       "items": [
         {

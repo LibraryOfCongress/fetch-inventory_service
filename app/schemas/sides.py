@@ -1,6 +1,6 @@
 import uuid
 
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -61,12 +61,21 @@ class SideDetailWriteOutput(SideBaseOutput):
         }
 
 
+class LadderNumberNestedForSide(BaseModel):
+    number: int
+
+
+class LadderNestedForSide(BaseModel):
+    id: int
+    ladder_number: LadderNumberNestedForSide
+
+
 class SideDetailReadOutput(SideBaseOutput):
     side_orientation: SideOrientationBaseReadOutput
     create_dt: datetime
     update_dt: datetime
     aisle: AisleBaseReadOutput
-    ladders: list
+    ladders: List[LadderNestedForSide]
 
     class Config:
         json_schema_extra = {
@@ -85,18 +94,10 @@ class SideDetailReadOutput(SideBaseOutput):
                 "ladders": [
                     {
                         "id": 1,
-                        "ladder_number_id": 1,
-                        "create_dt": "2023-11-05T21:04:07.718796",
-                        "update_dt": "2023-11-05T21:04:07.718821",
-                        "side_id": 3,
-                    },
-                    {
-                        "id": 4,
-                        "ladder_number_id": 2,
-                        "create_dt": "2023-11-05T21:30:37.842984",
-                        "update_dt": "2023-11-05T21:30:37.843005",
-                        "side_id": 3,
-                    },
-                ],
+                        "ladder_number": {
+                            "number": 1
+                        }
+                    }
+                ]
             }
         }

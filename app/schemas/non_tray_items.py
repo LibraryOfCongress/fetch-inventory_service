@@ -12,6 +12,7 @@ from app.schemas.size_class import SizeClassDetailReadOutput
 from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.subcollection import SubcollectionDetailWriteOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
+from app.schemas.shelving_jobs import ShelvingJobBaseOutput
 
 
 class NonTrayItemInput(BaseModel):
@@ -19,7 +20,11 @@ class NonTrayItemInput(BaseModel):
     accession_job_id: Optional[int] = None
     scanned_for_accession: Optional[bool] = None
     scanned_for_verification: Optional[bool] = None
+    scanned_for_shelving: Optional[bool] = None
     verification_job_id: Optional[int] = None
+    shelving_job_id: Optional[int] = None
+    shelf_position_id: Optional[int] = None
+    shelf_position_proposed_id: Optional[int] = None
     container_type_id: Optional[int] = None
     owner_id: Optional[int] = None
     subcollection_id: Optional[int] = None
@@ -36,7 +41,11 @@ class NonTrayItemInput(BaseModel):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_shelving": False,
                 "verification_job_id": 1,
+                "shelving_job_id": 1,
+                "shelf_position_id": 1,
+                "shelf_position_proposed_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
                 "subcollection_id": 1,
@@ -58,7 +67,11 @@ class NonTrayItemUpdateInput(NonTrayItemInput):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_shelving": False,
                 "verification_job_id": 1,
+                "shelving_job_id": 1,
+                "shelf_position_id": 1,
+                "shelf_position_proposed_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
                 "subcollection_id": 1,
@@ -71,8 +84,19 @@ class NonTrayItemUpdateInput(NonTrayItemInput):
         }
 
 
+class NestedShelfPositionNumberNonTray(BaseModel):
+    number: int
+
+
+class ShelfPositionNestedForNonTrayOutput(BaseModel):
+    id: int
+    shelf_id: int
+    shelf_position_number: NestedShelfPositionNumberNonTray
+
+
 class NonTrayItemBaseOutput(NonTrayItemInput):
     id: int
+    shelf_position: Optional[ShelfPositionNestedForNonTrayOutput] = None
 
 
 class NonTrayItemListOutput(NonTrayItemBaseOutput):
@@ -85,7 +109,18 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_shelving": False,
                 "verification_job_id": 1,
+                "shelving_job_id": 1,
+                "shelf_position_id": 1,
+                "shelf_position": {
+                    "id": 1,
+                    "shelf_id": 1,
+                    "shelf_position_number": {
+                        "number": 1
+                    }
+                },
+                "shelf_position_proposed_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
                 "subcollection_id": 1,
@@ -103,6 +138,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
     media_type: MediaTypeDetailReadOutput
     size_class: Optional[SizeClassDetailReadOutput]
     container_type: Optional[ContainerTypeDetailReadOutput]
+    shelving_job: Optional[ShelvingJobBaseOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -114,7 +150,22 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_shelving": False,
                 "verification_job_id": 1,
+                "shelving_job_id": 1,
+                "shelving_job": {
+                    "id": 1,
+                    "status": "Created"
+                },
+                "shelf_position_id": 1,
+                "shelf_position": {
+                    "id": 1,
+                    "shelf_id": 1,
+                    "shelf_position_number": {
+                        "number": 1
+                    }
+                },
+                "shelf_position_proposed_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
                 "subcollection_id": 1,
@@ -168,8 +219,23 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_shelving": False,
                 "verification_job_id": 1,
-                "container_type_id": 1,
+                "shelving_job_id": 1,
+                "shelving_job": {
+                    "id": 1,
+                    "status": "Created"
+                },
+                "shelf_position_id": 1,
+                "shelf_position": {
+                    "id": 1,
+                    "shelf_id": 1,
+                    "shelf_position_number": {
+                        "number": 1
+                    }
+                },
+                "shelf_position_proposed_id": 1,
+                "container_type_id": 2,
                 "owner_id": 1,
                 "subcollection_id": 1,
                 "media_type_id": 1,
@@ -183,7 +249,7 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
                 "container_type": {
-                    "id": 1,
+                    "id": 2,
                     "type": "Non-Tray",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"

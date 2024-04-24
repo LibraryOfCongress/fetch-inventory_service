@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     ENABLE_ORM_SQL_LOGGING: bool = False
     # Allowed origins for CORS
     ALLOWED_ORIGINS_REGEX: str = "https://*\.loctest\.gov, http://*\.loctest\.gov"
-    ALLOWED_ORIGINS: str = "http://127.0.0.1:8080,https://127.0.0.1:8080,http://localhost:8080,https://localhost:8080,http://localhost:3000,https://localhost:3000"
+    ALLOWED_ORIGINS: str = "http://127.0.0.1:8080,https://127.0.0.1:8080,http://localhost:8000,https://localhost:8000,http://localhost:3000,https://localhost:3000,http://localhost:4000"
 
     class Config:
         env_file = ".env"

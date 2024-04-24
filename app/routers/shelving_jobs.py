@@ -6,12 +6,22 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.utilities import process_containers_for_shelving
+from app.models.verification_jobs import VerificationJob
+from app.models.trays import Tray
+from app.models.non_tray_items import NonTrayItem
 from app.models.shelving_jobs import ShelvingJob
+from app.models.shelves import Shelf
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelf_position_numbers import ShelfPositionNumber
+from app.models.barcodes import Barcode
 from app.schemas.shelving_jobs import (
     ShelvingJobInput,
     ShelvingJobUpdateInput,
     ShelvingJobListOutput,
     ShelvingJobDetailOutput,
+    ReAssignmentInput,
+    ReAssignmentOutput,
 )
 from app.config.exceptions import (
     NotFound,
@@ -60,7 +70,13 @@ def get_shelving_job_detail(id: int, session: Session = Depends(get_session)):
 
 @router.post("/", response_model=ShelvingJobDetailOutput, status_code=201)
 def create_shelving_job(
-    shelving_job_input: ShelvingJobInput, session: Session = Depends(get_session)
+    shelving_job_input: ShelvingJobInput,
+    shelve_on_building: bool | None = False,
+    module_id: int | None = None,
+    aisle_id: int | None = None,
+    side_id: int | None = None,
+    ladder_id: int | None = None,
+    session: Session = Depends(get_session)
 ) -> ShelvingJob:
     """
     Create a new shelving job:
@@ -78,15 +94,89 @@ def create_shelving_job(
     """
 
     try:
-        new_shelving_job = ShelvingJob(**shelving_job_input.model_dump())
+        new_shelving_job = ShelvingJob(**shelving_job_input.model_dump(
+            exclude={"verification_jobs"})
+        )
         session.add(new_shelving_job)
         session.commit()
+        session.refresh(new_shelving_job)
+
+        if new_shelving_job.origin == "Verification":
+            if not shelving_job_input.verification_jobs:
+                raise ValidationException(detail=f"verification_jobs are required when origin is 'Verification'.")
+            # Assign verification jobs to shelving_job
+            for verification_job_id in shelving_job_input.verification_jobs:
+                verification_job = session.query(VerificationJob).filter(
+                    VerificationJob.id == verification_job_id
+                ).first()
+                # check for null and that ver job is complete
+                if not verification_job:
+                    raise ValidationException(
+                        detail=f"verification_job_id {verification_job_id} not found."
+                    )
+                else:
+                    if verification_job.status != "Completed":
+                        raise ValidationException(
+                            detail=f"verification_job_id {verification_job_id} 's job status must be 'Completed'."
+                        )
+                    if verification_job.shelving_job_id:
+                        raise ValidationException(
+                            detail=f"verification_job_id {verification_job_id} has already been shelved during shelving job {verification_job.shelving_job_id}"
+                        )
+
+                # Assign trays to shelving job and shelf positions
+                if verification_job.trays:
+                    process_containers_for_shelving(
+                        session,
+                        "Tray",
+                        verification_job.trays,
+                        new_shelving_job.id,
+                        new_shelving_job.building_id,
+                        shelve_on_building,
+                        module_id,
+                        aisle_id,
+                        side_id,
+                        ladder_id
+                    )
+
+                # Assign NonTrayItems to shelving job and shelf positions
+                if verification_job.non_tray_items:
+                    process_containers_for_shelving(
+                        session,
+                        "Non-Tray",
+                        verification_job.non_tray_items,
+                        new_shelving_job.id,
+                        new_shelving_job.building_id,
+                        shelve_on_building,
+                        module_id,
+                        aisle_id,
+                        side_id,
+                        ladder_id
+                    )
+
+            # set verification shelving job last, in case container errors
+            verification_job.shelving_job_id = new_shelving_job.id
+            session.add(verification_job)
+            session.commit()
+
+        # else, shelving_job.origin == "Direct", return shelving_job
+
         session.refresh(new_shelving_job)
 
         return new_shelving_job
 
     except IntegrityError as e:
         raise ValidationException(detail=f"{e}")
+    except ValidationException as e:
+        session.delete(new_shelving_job)
+        session.commit()
+        # Pass through the original error
+        raise ValidationException(detail=f"{e.detail}")
+    except NotFound as e:
+        session.delete(new_shelving_job)
+        session.commit()
+        # Pass through the original error
+        raise NotFound(detail=f"{e.detail}")
 
 
 @router.patch("/{id}", response_model=ShelvingJobDetailOutput)
@@ -151,3 +241,99 @@ def delete_shelving_job(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Shelving Job ID {id} Not Found")
 
 
+@router.post("/{id}/reassign-container-location", response_model=ReAssignmentOutput,status_code=200)
+def reassign_container_location(
+    id: int,
+    reassignment_input: ReAssignmentInput,
+    session: Session = Depends(get_session)
+):
+    """
+    Re-Assign container shelf position, given a container id,
+    shelf position number, and a shelf barcode or shelf id.
+
+    This is used for both one-off re-assignments, and the direct
+    to shelf workflow.
+
+    Params:
+      - id: Shelving Job Id
+      - reassignment_input:
+        - trayed: bool for Tray (false is NonTrayedItem)
+        - container_id: Id of the container
+        - container_barcode_value: barcode value of the container
+        - shelf_id: Id of a shelf
+        - shelf_barcode_value: raw barcode of new shelf
+        - shelf_position_number: position number in relation to new shelf
+        - scanned_for_shelving: bool. update scan status on container
+
+    Updates container shelving job and shelf position.
+
+    Returns a Tray or NonTrayItem
+    """
+    # get container
+    if reassignment_input.container_id:
+        if reassignment_input.trayed is not None:
+            if reassignment_input.trayed:
+                container = session.exec(select(Tray).where(
+                    Tray.id == reassignment_input.container_id
+                )).first()
+            else:
+                container = session.exec(select(NonTrayItem).where(
+                    NonTrayItem.id == reassignment_input.container_id
+                )).first()
+        else:
+            raise ValidationException(detail=f"If container_id is provided, 'trayed' value is also expected.")
+    else:
+        if not reassignment_input.container_barcode_value:
+            raise ValidationException(detail=f"If container_id is not provided, 'container_barcode_value' is expected.")
+        # We do not know if trayed or not. Check both
+        tray_container = session.exec(select(Tray).join(Barcode).where(
+                            Barcode.value == reassignment_input.container_barcode_value
+                        )).first()
+        if not tray_container:
+            non_tray_container = session.exec(select(NonTrayItem).join(Barcode).where(
+                            Barcode.value == reassignment_input.container_barcode_value
+                        )).first()
+            if not non_tray_container:
+                raise NotFound(
+                    detail=f"No containers were found with barcode {reassignment_input.container_barcode_value}"
+                )
+            container = non_tray_container
+        else:
+            container = tray_container
+
+    # get shelf
+    if reassignment_input.shelf_id:
+        shelf_id = reassignment_input.shelf_id
+    elif reassignment_input.shelf_barcode_value:
+        shelf_barcode_join = select(Shelf, Barcode).join(Barcode).where(
+            Barcode.value == reassignment_input.shelf_barcode_value
+        )
+        shelf_barcode_join = list(session.exec(shelf_barcode_join))[0]
+        shelf_id = shelf_barcode_join.Shelf.id
+    else:
+        raise ValidationException(detail=f"Either shelf_id or shelf_barcode_value must be provided.")
+
+    # get shelf position
+    shelf_position_position_number_join = select(
+        ShelfPosition,
+        ShelfPositionNumber
+    ).join(
+        ShelfPositionNumber
+    ).where(
+        ShelfPosition.shelf_id == shelf_id
+    ).where(ShelfPositionNumber.number == reassignment_input.shelf_position_number)
+    shelf_position_position_number_join = list(session.exec(shelf_position_position_number_join))[0]
+
+    # only reassign actual, not proposed
+    container.shelving_job_id = id
+    container.shelf_position_id = shelf_position_position_number_join.ShelfPosition.id
+
+    # bool value, explicitly check if user sent value
+    if reassignment_input.scanned_for_shelving is not None:
+        container.scanned_for_shelving = reassignment_input.scanned_for_shelving
+
+    session.add(container)
+    session.commit()
+    session.refresh(container)
+
+    return container

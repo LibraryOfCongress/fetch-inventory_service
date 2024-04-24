@@ -29,8 +29,6 @@ from app.models.subcollection import Subcollection
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.shelving_jobs import ShelvingJob
-from app.models.shelving_jobs import ShelvingJobTrayAssociation
-from app.models.shelving_jobs import ShelvingJobItemAssociation
 from app.models.user_groups import UserGroup
 from app.models.users import User
 from app.models.groups import Group
