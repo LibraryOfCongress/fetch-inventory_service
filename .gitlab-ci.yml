@@ -84,11 +84,12 @@ build_image_test:
 
 build_image_staging:
   stage: build
-  image:
-    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
-    entrypoint: [""]
+  tags: 
+    - stage-shell
+  before_script:
+    - docker info
   variables:
-    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/stage:latest
+    IMAGE_FULL_TAG: $REGISTRY_STAGE/inventory-service/stage:latest
   script:
     - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
     - cp -v images/api.stage.Containerfile Dockerfile
@@ -101,12 +102,11 @@ build_image_staging:
     - echo $STAGING_ALLOWED_ORIGINS_REGEX >> .env
     - echo $STAGING_ALLOWED_ORIGINS >> .env
     - cat .env
-    - /kaniko/executor
-      --context $CI_PROJECT_DIR
-      --dockerfile $CI_PROJECT_DIR/Dockerfile
-      --destination $IMAGE_FULL_TAG
-  rules:
-    - if: $CI_COMMIT_BRANCH == 'staging'
+    - docker build -t $IMAGE_FULL_TAG .
+    - docker push $IMAGE_FULL_TAG
+  when: manual
+  # rules:
+  #   - if: $CI_COMMIT_BRANCH == 'staging'
 
 deploy_dev:
   stage: deploy
