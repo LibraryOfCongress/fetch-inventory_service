@@ -1,10 +1,18 @@
 import sqlalchemy as sa
-
+from enum import Enum
 from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.users import User
+
+
+class ShelvingJobStatus(str, Enum):
+    Created = "Created"
+    Paused = "Paused"
+    Running = "Running"
+    Cancelled = "Cancelled"
+    Completed = "Completed"
 
 
 class ShelvingJob(SQLModel, table=True):
@@ -21,16 +29,12 @@ class ShelvingJob(SQLModel, table=True):
     status: str = Field(
         sa_column=sa.Column(
             sa.Enum(
-                "Created",
-                "Paused",
-                "Running",
-                "Cancelled",
-                "Completed",
+                ShelvingJobStatus,
                 name="shelving_status",
+                nullable=False,
             )
         ),
-        default="Created",
-        nullable=False,
+        default=ShelvingJobStatus.Created,
     )
     origin: str = Field(
         sa_column=sa.Column(

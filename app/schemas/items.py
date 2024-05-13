@@ -1,9 +1,10 @@
 import uuid
 
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 
+from app.models.items import ItemStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.accession_jobs import AccessionJobBaseOutput
 from app.schemas.verification_jobs import VerificationJobBaseOutput
@@ -33,6 +34,15 @@ class ItemInput(BaseModel):
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
 
+    @field_validator('status', mode='before', check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in ItemStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of "
+                f"{list(ItemStatus._member_names_)}"
+            )
+        return value
 
     class Config:
         json_schema_extra = {
@@ -60,7 +70,6 @@ class ItemInput(BaseModel):
 
 
 class ItemUpdateInput(ItemInput):
-
     class Config:
         json_schema_extra = {
             "example": {
@@ -91,7 +100,6 @@ class ItemBaseOutput(ItemInput):
 
 
 class ItemListOutput(ItemBaseOutput):
-
     class Config:
         json_schema_extra = {
             "example": {

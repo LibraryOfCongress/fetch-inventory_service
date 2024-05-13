@@ -1,6 +1,7 @@
 import sqlalchemy as sa
 
 from typing import Optional, List
+from enum import Enum
 from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -13,6 +14,13 @@ from app.models.container_types import ContainerType
 from app.models.shelving_jobs import ShelvingJob
 from app.models.media_types import MediaType
 from app.models.users import User
+
+
+class VerificationJobStatus(str, Enum):
+    Created = "Created"
+    Paused = "Paused"
+    Running = "Running"
+    Completed = "Completed"
 
 
 class VerificationJob(SQLModel, table=True):
@@ -32,15 +40,12 @@ class VerificationJob(SQLModel, table=True):
     status: str = Field(
         sa_column=sa.Column(
             sa.Enum(
-                "Created",
-                "Paused",
-                "Running",
-                "Completed",
+                VerificationJobStatus,
+                nullable=False,
                 name="verification_status",
             )
         ),
-        default="Created",
-        nullable=False,
+        default=VerificationJobStatus.Created,
     )
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     last_transition: Optional[datetime] = Field(
@@ -59,13 +64,9 @@ class VerificationJob(SQLModel, table=True):
     shelving_job_id: Optional[int] = Field(
         foreign_key="shelving_jobs.id", nullable=True
     )
-    media_type_id: Optional[int] = Field(
-        foreign_key="media_types.id", nullable=True
-    )
+    media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     size_class_id: Optional[int] = Field(
-        foreign_key="size_class.id",
-        nullable=True,
-        default=None
+        foreign_key="size_class.id", nullable=True, default=None
     )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
@@ -80,9 +81,13 @@ class VerificationJob(SQLModel, table=True):
     size_class: Optional["SizeClass"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
-    container_type: Optional[ContainerType] = Relationship(back_populates="verification_jobs")
+    container_type: Optional[ContainerType] = Relationship(
+        back_populates="verification_jobs"
+    )
     trays: List[Tray] = Relationship(back_populates="verification_job")
     items: List[Item] = Relationship(back_populates="verification_job")
     non_tray_items: List[NonTrayItem] = Relationship(back_populates="verification_job")
-    shelving_job: Optional[ShelvingJob] = Relationship(back_populates="verification_jobs")
+    shelving_job: Optional[ShelvingJob] = Relationship(
+        back_populates="verification_jobs"
+    )
     accession_job: AccessionJob = Relationship(back_populates="verification_jobs")

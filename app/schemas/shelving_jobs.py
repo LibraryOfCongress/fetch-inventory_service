@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 
 from app.schemas.users import UserDetailReadOutput
+from app.models.shelving_jobs import ShelvingJobStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
 
@@ -14,6 +15,15 @@ class ShelvingJobInput(BaseModel):
     user_id: Optional[int] = None
     building_id: Optional[int] = None
     verification_jobs: Optional[List[int]] = []
+
+    @field_validator("status", mode="before", check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in ShelvingJobStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of {list(ShelvingJobStatus._member_names_)}"
+            )
+        return value
 
     class Config:
         json_schema_extra = {
@@ -35,6 +45,15 @@ class ShelvingJobUpdateInput(BaseModel):
     status: Optional[str] = None
     user_id: Optional[int] = None
     building_id: Optional[int] = None
+
+    @field_validator("status", mode="before", check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in ShelvingJobStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of {list(ShelvingJobStatus._member_names_)}"
+            )
+        return value
 
     class Config:
         json_schema_extra = {

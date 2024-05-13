@@ -1,11 +1,16 @@
 import uuid
 import sqlalchemy as sa
-
+from enum import Enum
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
 # from sqlalchemy.schema import UniqueConstraint
+
+
+class ItemStatus(str, Enum):
+    In = "In"
+    Out = "Out"
 
 
 class Item(SQLModel, table=True):
@@ -25,13 +30,12 @@ class Item(SQLModel, table=True):
     status: Optional[str] = Field(
         sa_column=sa.Column(
             sa.Enum(
-                "In",
-                "Out",
+                ItemStatus,
                 name="item_status",
+                nullable=False,
             )
         ),
-        default="In",
-        nullable=False,
+        default=ItemStatus.In,
     )
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id", nullable=False, default=None, unique=True
@@ -60,8 +64,12 @@ class Item(SQLModel, table=True):
     accession_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="accession_jobs.id"
     )
-    scanned_for_accession: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
-    scanned_for_verification: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    scanned_for_accession: Optional[bool] = Field(
+        sa_column=sa.Boolean, default=False, nullable=False
+    )
+    scanned_for_verification: Optional[bool] = Field(
+        sa_column=sa.Boolean, default=False, nullable=False
+    )
     verification_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="verification_jobs.id"
     )

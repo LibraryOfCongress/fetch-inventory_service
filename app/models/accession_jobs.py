@@ -1,6 +1,7 @@
 import sqlalchemy as sa
 
 from typing import Optional, List
+from enum import Enum
 from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -11,6 +12,15 @@ from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.container_types import ContainerType
 from app.models.media_types import MediaType
+
+
+class AccessionJobStatus(str, Enum):
+    Created = "Created"
+    Paused = "Paused"
+    Running = "Running"
+    Cancelled = "Cancelled"
+    Completed = "Completed"
+    Verified = "Verified"
 
 
 class AccessionJob(SQLModel, table=True):
@@ -26,24 +36,17 @@ class AccessionJob(SQLModel, table=True):
     __tablename__ = "accession_jobs"
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
-    media_type_id: Optional[int] = Field(
-        foreign_key="media_types.id", nullable=True
-    )
+    media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     trayed: bool = Field(sa_column=sa.Boolean, default=True, nullable=False)
     status: str = Field(
         sa_column=sa.Column(
             sa.Enum(
-                "Created",
-                "Paused",
-                "Running",
-                "Cancelled",
-                "Completed",
-                "Verified",
+                AccessionJobStatus,
+                nullable=False,
                 name="accession_status",
             )
         ),
-        default="Created",
-        nullable=False,
+        default=AccessionJobStatus.Created,
     )
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     run_time: Optional[timedelta] = Field(sa_column=sa.Interval, nullable=True)
@@ -51,9 +54,7 @@ class AccessionJob(SQLModel, table=True):
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
     )
     size_class_id: Optional[int] = Field(
-        foreign_key="size_class.id",
-        nullable=True,
-        default=None
+        foreign_key="size_class.id", nullable=True, default=None
     )
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     container_type_id: Optional[int] = Field(
@@ -66,7 +67,9 @@ class AccessionJob(SQLModel, table=True):
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
 
-    container_type: Optional[ContainerType] = Relationship(back_populates="accession_jobs")
+    container_type: Optional[ContainerType] = Relationship(
+        back_populates="accession_jobs"
+    )
     media_type: Optional[MediaType] = Relationship(back_populates="accession_jobs")
     size_class: Optional["SizeClass"] = Relationship(
         sa_relationship_kwargs={"uselist": False}

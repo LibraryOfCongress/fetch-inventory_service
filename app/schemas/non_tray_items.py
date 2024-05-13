@@ -1,9 +1,10 @@
 import uuid
 
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 
+from app.models.non_tray_items import NonTrayItemStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.accession_jobs import AccessionJobBaseOutput
 from app.schemas.verification_jobs import VerificationJobBaseOutput
@@ -33,6 +34,15 @@ class NonTrayItemInput(BaseModel):
     barcode_id: Optional[uuid.UUID] = None
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
+
+    @field_validator("status", mode="before", check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in NonTrayItemStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of {list(NonTrayItemStatus._member_names_)}"
+            )
+        return value
 
     class Config:
         json_schema_extra = {

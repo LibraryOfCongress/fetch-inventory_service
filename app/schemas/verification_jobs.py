@@ -4,6 +4,7 @@ from pydantic import BaseModel, field_validator
 from datetime import datetime, timedelta
 from typing import Optional, List
 
+from app.models.verification_jobs import VerificationJobStatus
 from app.schemas.accession_jobs import AccessionJobDetailOutput
 from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
@@ -25,6 +26,15 @@ class VerificationJobInput(BaseModel):
     accession_job_id: Optional[int] = None
     owner_id: int
     container_type_id: Optional[int] = None
+
+    @field_validator("status", mode="before", check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in VerificationJobStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of {list(VerificationJobStatus._member_names_)}"
+                )
+        return value
 
     class Config:
         json_schema_extra = {
@@ -54,6 +64,15 @@ class VerificationJobUpdateInput(BaseModel):
     container_type_id: Optional[int] = None
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
+
+    @field_validator("status", mode="before", check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in VerificationJobStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of {list(VerificationJobStatus._member_names_)}"
+            )
+        return value
 
     class Config:
         json_schema_extra = {
