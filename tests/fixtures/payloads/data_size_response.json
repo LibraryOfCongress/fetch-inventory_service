@@ -121,17 +121,17 @@
       "pages": 1
   },
   "ladders": {
-      "items": [
-        {
-          "id": 1,
-          "ladder_number_id": 1,
-          "side_id": 1
-        }
-      ],
-      "total": 1,
-      "page": 1,
-      "size": 10,
-      "pages": 1
+    "items": [
+      {
+        "id": 1,
+        "ladder_number_id": 1,
+        "side_id": 1
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 10,
+    "pages": 1
   },
   "shelf_numbers": {
       "items": [
@@ -260,6 +260,18 @@
         "id": 1,
         "first_name": "John",
         "last_name": "Wick"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 10,
+    "pages": 1
+  },
+  "permissions": {
+    "items": [
+      {
+        "id": 1,
+        "name": "admin"
       }
     ],
     "total": 1,

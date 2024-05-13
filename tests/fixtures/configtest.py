@@ -290,4 +290,5 @@ def test_database(client, init_db):
         client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_tray_associations"
     )
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "users")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "permissions")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "groups")

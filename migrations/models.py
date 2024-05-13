@@ -32,3 +32,4 @@ from app.models.shelving_jobs import ShelvingJob
 from app.models.user_groups import UserGroup
 from app.models.users import User
 from app.models.groups import Group
+from app.models.permissions import Permission

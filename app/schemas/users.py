@@ -2,6 +2,8 @@ from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
 
+from app.schemas.groups import GroupPermissionsOutput
+
 
 class UserInput(BaseModel):
     first_name: Optional[str] = None
@@ -93,6 +95,25 @@ class UserGroupOutput(BaseModel):
                         "id": 2,
                         "name": "Administrator"
                     }
+                ]
+            }
+        }
+
+
+class UserPermissionsOutput(BaseModel):
+    id: int
+    permissions: list
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "permissions": [
+                    "...",
+                    "Create User",
+                    "View User",
+                    "Update User",
+                    "..."
                 ]
             }
         }

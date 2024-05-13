@@ -3,11 +3,18 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
 from datetime import datetime
 
 from app.database.session import get_session
+from app.models.groups import Group
 from app.models.users import User
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 from app.schemas.users import (
     UserInput,
     UserUpdateInput,
@@ -15,6 +22,7 @@ from app.schemas.users import (
     UserDetailWriteOutput,
     UserDetailReadOutput,
     UserGroupOutput,
+    UserPermissionsOutput,
 )
 
 import traceback
@@ -56,8 +64,9 @@ def get_user_detail(id: int, session: Session = Depends(get_session)):
 
     if user:
         return user
-    else:
-        raise HTTPException(status_code=404, detail="Not Found")
+
+    raise NotFound(detail=f"User ID {id} Not Found")
+
 
 @router.get("/{id}/groups", response_model=UserGroupOutput)
 def get_user_groups(id: int, session: Session = Depends(get_session)):
@@ -67,8 +76,9 @@ def get_user_groups(id: int, session: Session = Depends(get_session)):
     user = session.get(User, id)
     if user:
         return user
-    else:
-        raise HTTPException(status_code=404, detail="Not Found")
+
+    raise NotFound(detail=f"User ID {id} Not Found")
+
 
 @router.post("/", response_model=UserDetailWriteOutput, status_code=201)
 def create_user(user_input: UserInput, session: Session = Depends(get_session)):
@@ -108,7 +118,7 @@ def update_user(
     existing_user = session.get(User, id)
 
     if not existing_user:
-        raise HTTPException(status_code=404)
+        raise NotFound(detail=f"User ID {id} Not Found")
 
     mutated_data = user.model_dump(exclude_unset=True)
 
@@ -144,5 +154,42 @@ def delete_user(id: int, session: Session = Depends(get_session)):
         session.delete(user)
         session.commit()
         return HTTPException(status_code=204)
-    else:
-        raise HTTPException(status_code=404)
+
+    raise NotFound(detail=f"User ID {id} Not Found")
+
+
+@router.get("/{id}/permissions", response_model=UserPermissionsOutput)
+def get_user_permissions(user_id: int, session: Session = Depends(get_session)):
+    """
+    Retrieves the details of a user from the database using the provided ID.
+
+    **Args**:
+    - id: The ID of the user.
+
+    **Returns**:
+    - User Detail Read Output: The details of the user.
+
+    **Raises**:
+    - HTTPException: If the user is not found in the database.
+    """
+    user = session.get(User, user_id)
+
+    if not user:
+        raise NotFound(status_code=404, detail="User not found")
+
+    # Retrieve the user from the database using the provided ID
+    user_groups = session.exec(
+        select(Group)
+        .where(Group.users.any(id=user_id))
+        .options(joinedload(Group.permissions))
+    ).all()
+
+    # Aggregate all unique permissions from the user's groups
+    permissions_set = {
+        permission.name for group in user_groups for permission in group.permissions
+    }
+
+    if user_groups:
+        return UserPermissionsOutput(id=user_id, permissions=list(permissions_set))
+
+    raise NotFound(detail=f"User ID {id} Not Found")

@@ -62,6 +62,7 @@ from app.routers import (
     shelving_jobs,
     users,
     groups,
+    permissions,
 )
 
 
@@ -204,5 +205,5 @@ app.include_router(non_tray_items.router)
 app.include_router(shelving_jobs.router)
 app.include_router(users.router)
 app.include_router(groups.router)
-
+app.include_router(permissions.router)
 add_pagination(app)

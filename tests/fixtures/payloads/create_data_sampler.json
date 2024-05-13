@@ -153,6 +153,9 @@
     "first_name": "John",
     "last_name": "Wick"
   },
+  "permissions": {
+    "name": "admin"
+  },
   "groups": {
     "name": "Test Group"
   }
