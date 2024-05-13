@@ -33,3 +33,4 @@ from app.models.user_groups import UserGroup
 from app.models.users import User
 from app.models.groups import Group
 from app.models.permissions import Permission
+from app.models.group_permissions import GroupPermission
