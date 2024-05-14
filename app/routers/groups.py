@@ -64,62 +64,6 @@ def get_group_detail(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Group ID {id} Not Found")
 
 
-@router.get("/{id}/users", response_model=GroupUserOutput)
-def get_group_users(id: int, session: Session = Depends(get_session)):
-    """
-    Retrieve list of users belonging to a group
-
-    **Args**:
-    - id: The ID of the group.
-
-    **Returns**:
-    - Group User Output: The list of users belonging to the group.
-
-    **Raises**:
-    - Not Found Exception: If the group is not found.
-    """
-    group = session.get(Group, id)
-    if group:
-        return group
-
-    raise NotFound(detail=f"Group ID {id} Not Found")
-
-
-@router.post("/{group_id}/add_user/{user_id}", response_model=GroupUserOutput)
-def add_user_to_group(
-    group_id: int, user_id: int, session: Session = Depends(get_session)
-):
-    """
-    Add a user to a group by group and user id
-
-    **Args**:
-    - group_id: The ID of the group.
-    - user_id: The ID of the user.
-
-    **Returns**:
-    - Group User Output: The list of users belonging to the group.
-
-    **Raises**:
-    - Not Found Exception: If the group or user is not found.
-    """
-    group = session.get(Group, group_id)
-
-    if not group:
-        raise NotFound(detail=f"Group ID {group_id} Not Found")
-
-    user = session.get(User, user_id)
-
-    if not user:
-        raise NotFound(detail=f"User ID {user_id} Not Found")
-
-    new_group_user = UserGroup(group_id=group_id, user_id=user_id)
-    session.add(new_group_user)
-    session.commit()
-    session.refresh(group)
-
-    return group
-
-
 @router.post("/", response_model=GroupDetailWriteOutput, status_code=201)
 def create_group(group_input: GroupInput, session: Session = Depends(get_session)):
     """
@@ -192,13 +136,70 @@ def delete_group(id: int, session: Session = Depends(get_session)):
         session.delete(group)
         session.commit()
         return HTTPException(
-            status_code=status.HTTP_204_NO_CONTENT, detail=f"Group id {id} Deleted Successfully"
+            status_code=status.HTTP_204_NO_CONTENT,
+            detail=f"Group id {id} Deleted Successfully",
         )
 
     raise NotFound(detail=f"Group ID {id} Not Found")
 
 
-@router.delete("/{group_id}/remove_user/{user_id}",)
+@router.get("/{id}/users", response_model=GroupUserOutput)
+def get_group_users(id: int, session: Session = Depends(get_session)):
+    """
+    Retrieve list of users belonging to a group
+
+    **Args**:
+    - id: The ID of the group.
+
+    **Returns**:
+    - Group User Output: The list of users belonging to the group.
+
+    **Raises**:
+    - Not Found Exception: If the group is not found.
+    """
+    group = session.get(Group, id)
+    if group:
+        return group
+
+    raise NotFound(detail=f"Group ID {id} Not Found")
+
+
+@router.post("/{group_id}/add_user/{user_id}", response_model=GroupUserOutput)
+def add_user_to_group(
+    group_id: int, user_id: int, session: Session = Depends(get_session)
+):
+    """
+    Add a user to a group by group and user id
+
+    **Args**:
+    - group_id: The ID of the group.
+    - user_id: The ID of the user.
+
+    **Returns**:
+    - Group User Output: The list of users belonging to the group.
+
+    **Raises**:
+    - Not Found Exception: If the group or user is not found.
+    """
+    group = session.get(Group, group_id)
+
+    if not group:
+        raise NotFound(detail=f"Group ID {group_id} Not Found")
+
+    user = session.get(User, user_id)
+
+    if not user:
+        raise NotFound(detail=f"User ID {user_id} Not Found")
+
+    new_group_user = UserGroup(group_id=group_id, user_id=user_id)
+
+    commit_record(session, new_group_user)
+    session.refresh(group)
+
+    return group
+
+
+@router.delete("/{group_id}/remove_user/{user_id}", response_model=GroupUserOutput)
 def remove_user_from_group(
     group_id: int, user_id: int, session: Session = Depends(get_session)
 ):
@@ -229,7 +230,10 @@ def remove_user_from_group(
     if not group_user:
         raise NotFound(detail="User did not belong to group")
 
-    return remove_record(session, group_user)
+    remove_record(session, group_user)
+    session.refresh(group)
+
+    return group
 
 
 @router.get("/{group_id}/permissions", response_model=GroupPermissionsOutput)
@@ -292,7 +296,10 @@ def add_permission_to_group(
         group_id=group_id, permission_id=permission_id
     )
 
-    return commit_record(session, new_group_permission)
+    commit_record(session, new_group_permission)
+    session.refresh(group)
+
+    return group
 
 
 @router.delete(
@@ -338,4 +345,7 @@ def remove_permission_from_group(
     if not group_permission:
         raise NotFound(detail="Permission did not belong to group")
 
-    return remove_record(session, group_permission)
+    remove_record(session, group_permission)
+    session.refresh(group)
+
+    return group

@@ -25,5 +25,3 @@ def commit_record(session, record):
 def remove_record(session, record):
     session.delete(record)
     session.commit()
-    session.refresh(record)
-    return record
