@@ -64,15 +64,6 @@ class ShelvingJobUpdateInput(BaseModel):
             )
         return value
 
-    @field_validator("origin", mode="before", check_fields=True)
-    @classmethod
-    def validate_origin_status(cls, value):
-        if value is not None and value not in OriginStatus._member_names_:
-            raise ValueError(
-                f"Invalid status: {value}. Must be one of {list(OriginStatus._member_names_)}"
-            )
-        return value
-
     class Config:
         json_schema_extra = {
             "example": {
