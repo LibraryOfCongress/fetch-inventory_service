@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 
 from app.schemas.users import UserDetailReadOutput
-from app.models.shelving_jobs import ShelvingJobStatus
+from app.models.shelving_jobs import ShelvingJobStatus, OriginStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
 
@@ -22,6 +22,15 @@ class ShelvingJobInput(BaseModel):
         if value is not None and value not in ShelvingJobStatus._member_names_:
             raise ValueError(
                 f"Invalid status: {value}. Must be one of {list(ShelvingJobStatus._member_names_)}"
+            )
+        return value
+
+    @field_validator("origin", mode="before", check_fields=True)
+    @classmethod
+    def validate_origin_status(cls, value):
+        if value is not None and value not in OriginStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of {list(OriginStatus._member_names_)}"
             )
         return value
 
@@ -52,6 +61,15 @@ class ShelvingJobUpdateInput(BaseModel):
         if value is not None and value not in ShelvingJobStatus._member_names_:
             raise ValueError(
                 f"Invalid status: {value}. Must be one of {list(ShelvingJobStatus._member_names_)}"
+            )
+        return value
+
+    @field_validator("origin", mode="before", check_fields=True)
+    @classmethod
+    def validate_origin_status(cls, value):
+        if value is not None and value not in OriginStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of {list(OriginStatus._member_names_)}"
             )
         return value
 

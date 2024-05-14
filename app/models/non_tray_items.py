@@ -31,7 +31,7 @@ class NonTrayItem(SQLModel, table=True):
     status: Optional[str] = Field(
         sa_column=sa.Column(
             sa.Enum(
-                Enum,
+                NonTrayItemStatus,
                 name="non_tray_item_status",
                 nullable=False,
             )
@@ -58,7 +58,9 @@ class NonTrayItem(SQLModel, table=True):
     scanned_for_verification: Optional[bool] = Field(
         sa_column=sa.Boolean, default=False, nullable=False
     )
-    scanned_for_shelving: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    scanned_for_shelving: Optional[bool] = Field(
+        sa_column=sa.Boolean, default=False, nullable=False
+    )
     verification_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="verification_jobs.id"
     )
@@ -68,7 +70,9 @@ class NonTrayItem(SQLModel, table=True):
     shelf_position_id: Optional[int] = Field(
         foreign_key="shelf_positions.id", nullable=True
     )
-    shelf_position_proposed_id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, nullable=True, unique=False))
+    shelf_position_proposed_id: Optional[int] = Field(
+        sa_column=sa.Column(sa.Integer, nullable=True, unique=False)
+    )
     accession_dt: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=None, nullable=True
     )

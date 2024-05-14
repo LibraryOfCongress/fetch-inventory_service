@@ -15,6 +15,11 @@ class ShelvingJobStatus(str, Enum):
     Completed = "Completed"
 
 
+class OriginStatus(str, Enum):
+    Verification = "Verification"
+    Direct = "Direct"
+
+
 class ShelvingJob(SQLModel, table=True):
     """
     Model to represent the Shelving Jobs table
@@ -39,13 +44,12 @@ class ShelvingJob(SQLModel, table=True):
     origin: str = Field(
         sa_column=sa.Column(
             sa.Enum(
-                "Verification",
-                "Direct",
+                OriginStatus,
                 name="shelving_origin",
+                nullable=False,
             )
         ),
-        default="Verification",
-        nullable=False,
+        default=OriginStatus.Verification,
     )
     building_id: int = Field(foreign_key="buildings.id", nullable=False, unique=False)
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
