@@ -115,3 +115,4 @@ class NonTrayItem(SQLModel, table=True):
     subcollection: Optional["Subcollection"] = Relationship(
         back_populates="non_tray_items"
     )
+    requests: List["Request"] = Relationship(back_populates="non_tray_item")

@@ -1,0 +1,14 @@
+{
+  "model": "app.models.priorities.Priority",
+  "data": [
+    {
+      "value": "Low"
+    },
+    {
+      "value": "Medium"
+    },
+    {
+      "value": "High"
+    }
+  ]
+}

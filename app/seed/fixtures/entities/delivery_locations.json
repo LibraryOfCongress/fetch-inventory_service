@@ -1,0 +1,13 @@
+{
+  "model": "app.models.delivery_locations.DeliveryLocation",
+  "data": [
+    {
+      "name": "Senator Ron McRonderson",
+      "address": "1 Imaginary St, Washington D.C. 20001"
+    },
+    {
+      "name": "Pie Town",
+      "address": "2312 Fake Ave, Pie Town N.M., 87827"
+    }
+  ]
+}

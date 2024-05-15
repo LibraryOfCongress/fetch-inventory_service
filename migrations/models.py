@@ -34,3 +34,7 @@ from app.models.users import User
 from app.models.groups import Group
 from app.models.permissions import Permission
 from app.models.group_permissions import GroupPermission
+from app.models.request_types import RequestType
+from app.models.delivery_locations import DeliveryLocation
+from app.models.priorities import Priority
+from app.models.requests import Request

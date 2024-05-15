@@ -142,7 +142,10 @@ fake_data = [
     ('types', 'ladder_numbers.json'),
     ('types', 'shelf_position_numbers.json'),
     ('types', 'shelf_numbers.json'),
-    ('entities', 'users.json')
+    ('entities', 'users.json'),
+    ('types', 'request_types.json'),
+    ('types', 'priorities.json'),
+    ('entities', 'delivery_locations.json')
 ]
 
 def seed_data():

@@ -93,3 +93,4 @@ class Item(SQLModel, table=True):
     media_type: Optional["MediaType"] = Relationship(back_populates="items")
     size_class: Optional["SizeClass"] = Relationship(back_populates="items")
     owner: Optional["Owner"] = Relationship(back_populates="items")
+    requests: List["Request"] = Relationship(back_populates="item")

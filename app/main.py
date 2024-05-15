@@ -63,6 +63,10 @@ from app.routers import (
     users,
     groups,
     permissions,
+    request_types,
+    priorities,
+    delivery_locations,
+    requests,
 )
 
 
@@ -206,4 +210,8 @@ app.include_router(shelving_jobs.router)
 app.include_router(users.router)
 app.include_router(groups.router)
 app.include_router(permissions.router)
+app.include_router(request_types.router)
+app.include_router(priorities.router)
+app.include_router(delivery_locations.router)
+app.include_router(requests.router)
 add_pagination(app)

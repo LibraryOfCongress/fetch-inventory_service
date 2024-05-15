@@ -1,0 +1,116 @@
+from fastapi import APIRouter, HTTPException, Depends
+from sqlmodel import Session, select
+from datetime import datetime
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy.exc import IntegrityError
+
+from app.database.session import get_session
+from app.models.priorities import Priority
+from app.schemas.priorities import (
+    PriorityInput,
+    PriorityUpdateInput,
+    PriorityListOutput,
+    PriorityDetailWriteOutput,
+    PriorityDetailReadOutput,
+)
+from app.config.exceptions import (
+    BadRequest,
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
+
+
+router = APIRouter(
+    prefix="/requests",
+    tags=["requests"],
+)
+
+
+@router.get("/priorities", response_model=Page[PriorityListOutput])
+def get_priority_list(session: Session = Depends(get_session)) -> list:
+    """
+    Get a list of priorities
+    """
+    return paginate(session, select(Priority))
+
+
+@router.get("/priorities/{id}", response_model=PriorityDetailReadOutput)
+def get_priority_detail(id: int, session: Session = Depends(get_session)):
+    """
+    Retrieve priority details by ID
+    """
+    priority = session.get(Priority, id)
+    if priority:
+        return priority
+
+    raise NotFound(detail=f"Priority ID {id} Not Found")
+
+
+@router.post("/priorities", response_model=PriorityDetailWriteOutput, status_code=201)
+def create_priority(
+    priority_input: PriorityInput, session: Session = Depends(get_session)
+) -> Priority:
+    """
+    Create a Priority
+    """
+    try:
+        new_priority = Priority(**priority_input.model_dump())
+
+        # Add the new priority to the database
+        session.add(new_priority)
+        session.commit()
+        session.refresh(new_priority)
+        return new_priority
+
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
+
+
+@router.patch("/priorities/{id}", response_model=PriorityDetailWriteOutput)
+def update_priority(
+    id: int, priority: PriorityUpdateInput, session: Session = Depends(get_session)
+):
+    """
+    Update an existing Priority
+    """
+    try:
+        existing_priority = session.get(Priority, id)
+
+        if existing_priority is None:
+            raise NotFound(detail=f"Priority ID {id} Not Found")
+
+        mutated_data = priority.model_dump(exclude_unset=True)
+
+        for key, value in mutated_data.items():
+            setattr(existing_priority, key, value)
+
+        setattr(existing_priority, "update_dt", datetime.utcnow())
+        session.add(existing_priority)
+        session.commit()
+        session.refresh(existing_priority)
+
+        return existing_priority
+
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
+
+
+@router.delete("/priorities/{id}")
+def delete_priority(id: int, session: Session = Depends(get_session)):
+    """
+    Delete an Priority by ID
+    """
+    priority = session.get(Priority, id)
+
+    if priority:
+        session.delete(priority)
+        session.commit()
+
+        return HTTPException(
+            status_code=204, detail=f"Priority ID {id} Deleted "
+                                    f"Successfully"
+        )
+
+    raise NotFound(detail=f"Priority ID {id} Not Found")
