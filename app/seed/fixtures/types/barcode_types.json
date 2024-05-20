@@ -2,25 +2,16 @@
   "model": "app.models.barcode_types.BarcodeType",
   "data": [
     {
-      "name": "UPC"
+      "name": "Item",
+      "allowed_pattern": "^\\d{10}[0-9A]$"
     },
     {
-      "name": "Codabar"
+      "name": "Tray",
+      "allowed_pattern": "^[A-Z]{2}\\d{6}$"
     },
     {
-      "name": "EAN"
-    },
-    {
-      "name": "Q r code"
-    },
-    {
-      "name": "Code 39"
-    },
-    {
-      "name": "Code 128"
-    },
-    {
-      "name": "PDF417"
+      "name": "Shelf",
+      "allowed_pattern": "^\\d{6}$"
     }
   ]
 }

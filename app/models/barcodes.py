@@ -37,3 +37,5 @@ class Barcode(SQLModel, table=True):
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
+
+    type: Optional["BarcodeType"] = Relationship(back_populates="barcodes")

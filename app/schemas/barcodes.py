@@ -7,26 +7,32 @@ from datetime import datetime
 
 class BarcodeInput(BaseModel):
     value: str
-    type_id: int
+    type: str
 
     class Config:
         json_schema_extra = {
             "example": {
                 "value": "5901234123457",
-                "type_id": 1
+                "type": "Tray"
             }
         }
 
 
+class BarcodeMutationInput(BaseModel):
+    """This is not user facing"""
+    value: str
+    type_id: int
+
+
 class BarcodeUpdateInput(BaseModel):
     value: Optional[str] = None
-    type_id: Optional[int] = None
+    type: Optional[str] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "value": "5901234123457",
-                "type_id": 1
+                "type": "Item"
             }
         }
 
@@ -45,11 +51,16 @@ class BarcodeListOutput(BaseModel):
             }
         }
 
+class NestedBarcodeTypeOutputForBarcode(BaseModel):
+    id: int
+    name: str
+
 
 class BarcodeDetailWriteOutput(BaseModel):
     id: uuid.UUID | None
     value: str
     type_id: int
+    type: NestedBarcodeTypeOutputForBarcode
     create_dt: datetime
     update_dt: datetime
 
@@ -58,19 +69,18 @@ class BarcodeDetailWriteOutput(BaseModel):
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "value": "5901234123457",
-                "type_id": 1,
+                "type_id": 2,
+                "type": {
+                    "id": 2,
+                    "name": "Tray"
+                },
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
 
 
-class BarcodeDetailReadOutput(BaseModel):
-    id: uuid.UUID | None
-    value: str
-    type_id: int
-    create_dt: datetime
-    update_dt: datetime
+class BarcodeDetailReadOutput(BarcodeDetailWriteOutput):
 
     class Config:
         json_schema_extra = {
@@ -78,6 +88,10 @@ class BarcodeDetailReadOutput(BaseModel):
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "value": "5901234123457",
                 "type_id": 1,
+                "type": {
+                    "id": 1,
+                    "name": "Item"
+                },
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }

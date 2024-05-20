@@ -42,6 +42,76 @@
           "id": 1
         }
       }
+    },
+    {
+      "!shelf_position_number_id": {
+        "model": "app.models.shelf_position_numbers.ShelfPositionNumber",
+        "filter": {
+          "number": 4
+        }
+      },
+      "!shelf_id": {
+        "model": "app.models.shelves.Shelf",
+        "filter": {
+          "id": 1
+        }
+      }
+    },
+    {
+      "!shelf_position_number_id": {
+        "model": "app.models.shelf_position_numbers.ShelfPositionNumber",
+        "filter": {
+          "number": 5
+        }
+      },
+      "!shelf_id": {
+        "model": "app.models.shelves.Shelf",
+        "filter": {
+          "id": 1
+        }
+      }
+    },
+    {
+      "!shelf_position_number_id": {
+        "model": "app.models.shelf_position_numbers.ShelfPositionNumber",
+        "filter": {
+          "number": 6
+        }
+      },
+      "!shelf_id": {
+        "model": "app.models.shelves.Shelf",
+        "filter": {
+          "id": 1
+        }
+      }
+    },
+    {
+      "!shelf_position_number_id": {
+        "model": "app.models.shelf_position_numbers.ShelfPositionNumber",
+        "filter": {
+          "number": 7
+        }
+      },
+      "!shelf_id": {
+        "model": "app.models.shelves.Shelf",
+        "filter": {
+          "id": 1
+        }
+      }
+    },
+    {
+      "!shelf_position_number_id": {
+        "model": "app.models.shelf_position_numbers.ShelfPositionNumber",
+        "filter": {
+          "number": 8
+        }
+      },
+      "!shelf_id": {
+        "model": "app.models.shelves.Shelf",
+        "filter": {
+          "id": 1
+        }
+      }
     }
   ]
 }

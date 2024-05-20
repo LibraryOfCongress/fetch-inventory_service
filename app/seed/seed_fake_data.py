@@ -1,4 +1,4 @@
-import os, json
+import os, json, random
 
 from sqlalchemyseed import load_entities_from_json, HybridSeeder
 from app.seed.seeder_session import get_session
@@ -18,8 +18,8 @@ def load_seed(fixture_type, json_file):
 def generate_ladders_for_system():
     ladder_session = get_seeder_session()
     ladder_seeder = HybridSeeder(ladder_session)
-    # number_of_ladders = 6840 # 38 ladders x 180 sides (90 aisles)
-    number_of_sides = 180
+    # number_of_ladders = 304 # 38 ladders x 8 sides (4 aisles)
+    number_of_sides = 8
     ladder_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'ladders.json')
     with open(ladder_fixture_path, 'r') as file:
         template_dict = json.load(file)
@@ -40,16 +40,17 @@ def generate_shelf_barcodes_for_system():
     barcode_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'shelf_barcodes.json')
     with open(barcode_fixture_path, 'r') as file:
         template_dict = json.load(file)
-        # we need 13680 barcodes, template has 100
-        num_files = 137 # generate 13,700 barcodes
-        for i in range(0, num_files):
+        # we need 2432 barcodes, template has 1
+        num_barcodes = 2432 # generate 2,432 barcodes
+        for i in range(0, num_barcodes):
             barcode_dict = template_dict.copy()
             for barcode in barcode_dict['data']:
                 old_value = int(barcode['value'])
+                # barcode['value'] = str(old_value + 1)
                 if i < 1:
                     barcode['value'] = str(old_value)
                 else:
-                    barcode['value'] = str(old_value + 100)
+                    barcode['value'] = str(old_value + 1)
             generated_file_path = os.path.join(current_dir, 'fixtures', 'entities', 'gen_shelf_barcodes.json')
             with open(generated_file_path, 'w') as file:
                 json.dump(barcode_dict, file)
@@ -63,24 +64,51 @@ def generate_shelves_for_system():
     shelf_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'shelves.json')
     with open(shelf_fixture_path, 'r') as file:
         template_dict = json.load(file)
-        # we need 13680 shelves, template has 1
-        num_files = 13680
-        for i in range(0, num_files):
+        # we need 2432 shelves, template has 1
+        num_files = 2432
+        for i in range(0, num_files): # had num_files + 1
             shelf_dict = template_dict.copy()
             for shelf in shelf_dict['data']:
-                shelf['!barcode_id']['filter']['value'] = str(i + 1)
+                # here
+                old_barcode_val = shelf['!barcode_id']['filter']['value']
+                # shelf['!barcode_id']['filter']['value'] = str((i + 1) + 100100) # was + 1
+                if i < 1:
+                    # shelf['!barcode_id']['filter']['value'] = str(int(old_barcode_val) + i + 1)
+                    shelf['!barcode_id']['filter']['value'] = str(old_barcode_val)
+                else:
+                    new_barcode_value = str(int(old_barcode_val) + 1)
+                    shelf['!barcode_id']['filter']['value'] = new_barcode_value
                 cont_type = 'Non-Tray'
+                size_class_list_one = ['AH', 'BH', 'CH', 'DH', 'EH', 'RS']
+                size_class = random.choice(size_class_list_one)
+                owner_list = [
+                    "Collections & Management",
+                    "Congressional Research Services"
+                ]
+                owner = random.choice(owner_list)
                 if i % 3:
                     cont_type = 'Tray'
+                    size_class_list_two = ['AL', 'BL', 'CL', 'DL', 'EL', 'SM']
+                    size_class = random.choice(size_class_list_two)
                 shelf['!container_type_id']['filter']['type'] = cont_type
+                shelf['!size_class_id']['filter']['short_name'] = size_class
+                shelf['!owner_id']['filter']['name'] = owner
                 old_shelf_num = shelf['!shelf_number_id']['filter']['number']
-                if old_shelf_num == 1:
-                    if i > 0: #skip first pass
-                        new_shelf_num = 2
-                    else:
-                        new_shelf_num = 1
-                else:
+                # if old_shelf_num == 1:
+                #     if i > 0: #skip first pass
+                #         new_shelf_num = 2
+                #     else:
+                #         new_shelf_num = 1
+                # else:
+                #     new_shelf_num = 1
+
+                if i == 0:
+                    # shelf['!shelf_number_id']['filter']['number'] = old_shelf_num
+                    new_shelf_num = old_shelf_num
+                elif old_shelf_num == 8:
                     new_shelf_num = 1
+                else:
+                    new_shelf_num = old_shelf_num + 1
                 shelf['!shelf_number_id']['filter']['number'] = new_shelf_num
                 old_ladder_id = shelf['!ladder_id']['filter']['id']
                 if new_shelf_num == 1:
@@ -105,8 +133,8 @@ def generate_shelf_positions_for_system():
     with open(shelf_pos_fixture_path, 'r') as file:
         template_dict = json.load(file)
         # we need 3 positions per shelf, template has 3
-        # 3 pos * 13680
-        num_shelves = 13680
+        # 8 pos * 2432
+        num_shelves = 2432
         for i in range(0, num_shelves):
             shelf_pos_dict = template_dict.copy()
             for shelf_position in shelf_pos_dict['data']:
@@ -129,10 +157,7 @@ fake_data = [
     ('types', 'module_numbers.json'),
     ('entities', 'modules.json'),
     ('types', 'aisle_numbers.json'),
-    ('entities', 'fort_meade_aisles.json'), # 3 modules
-    ('entities', 'cabin_branch_aisles.json'), # 1 module
-    ('entities', 'isengard_aisles.json'), # 2 modules
-    ('entities', 'silver_dollar_aisles.json'), # no modules
+    ('entities', 'fort_meade_aisles.json'), # 2 modules
     ('types', 'side_orientations.json'),
     ('entities', 'sides.json'),
     ('types', 'size_classes.json'),
@@ -156,14 +181,15 @@ def seed_data():
         seeder.seed(load_seed(elements[0], elements[1]))
         seeder.session.commit()
     """
-    Ladders would need either 180 files, or a 96,000+ line file,
+    Ladders would need either 8 files,
     so instead we'll script to generate ladders 1-38
-    across 180 sides (90 aisles)
+    across 8 sides (4 aisles)
     """
+    # 304 ladders
     generate_ladders_for_system()
-    # 13680 shelf barcodes
+    # 2432 shelf barcodes
     generate_shelf_barcodes_for_system()
-    # 13680 shelves (2 shelves per ladder)
+    # 2432 shelves (8 shelves per ladder)
     generate_shelves_for_system()
     # 41040 shelf positions (3 positions per shelf) to match capacity=3
     generate_shelf_positions_for_system()

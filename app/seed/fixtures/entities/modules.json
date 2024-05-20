@@ -28,62 +28,6 @@
           "name": "Fort Meade"
         }
       }
-    },
-    {
-      "!module_number_id": {
-        "model": "app.models.module_numbers.ModuleNumber",
-        "filter": {
-          "number": 3
-        }
-      },
-      "!building_id": {
-        "model": "app.models.buildings.Building",
-        "filter": {
-          "name": "Fort Meade"
-        }
-      }
-    },
-    {
-      "!module_number_id": {
-        "model": "app.models.module_numbers.ModuleNumber",
-        "filter": {
-          "number": 1
-        }
-      },
-      "!building_id": {
-        "model": "app.models.buildings.Building",
-        "filter": {
-          "name": "Cabin Branch"
-        }
-      }
-    },
-    {
-      "!module_number_id": {
-        "model": "app.models.module_numbers.ModuleNumber",
-        "filter": {
-          "number": 1
-        }
-      },
-      "!building_id": {
-        "model": "app.models.buildings.Building",
-        "filter": {
-          "name": "Isengard"
-        }
-      }
-    },
-    {
-      "!module_number_id": {
-        "model": "app.models.module_numbers.ModuleNumber",
-        "filter": {
-          "number": 2
-        }
-      },
-      "!building_id": {
-        "model": "app.models.buildings.Building",
-        "filter": {
-          "name": "Isengard"
-        }
-      }
     }
   ]
 }

@@ -5,7 +5,7 @@
       "!barcode_id": {
         "model": "app.models.barcodes.Barcode",
         "filter": {
-          "value": 1
+          "value": 100100
         }
       },
       "capacity": 3,
@@ -27,7 +27,7 @@
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
-          "short_name": "RS"
+          "short_name": "BH"
         }
       },
       "!owner_id": {
