@@ -77,9 +77,28 @@ class ShelfBaseOutput(BaseModel):
 
 class ShelfListOutput(ShelfBaseOutput):
     ladder_id: int
+    container_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    barcode: BarcodeDetailReadOutput
 
     class Config:
-        json_schema_extra = {"example": {"id": 1, "ladder_id": 1}}
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "ladder_id": 1,
+                "container_type_id": 1,
+                "size_class_id": 1,
+                "owner_id": 1,
+                "barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                }
+            }
+        }
 
 
 class ShelfDetailWriteOutput(ShelfBaseOutput):
