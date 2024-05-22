@@ -21,8 +21,6 @@ class VerificationJobInput(BaseModel):
     size_class_id: Optional[int] = None
     status: Optional[str] = None
     user_id: Optional[int] = None
-    last_transition: Optional[datetime] = None
-    run_time: Optional[timedelta] = None
     accession_job_id: Optional[int] = None
     owner_id: int
     container_type_id: Optional[int] = None
@@ -42,8 +40,6 @@ class VerificationJobInput(BaseModel):
                 "trayed": True,
                 "status": "Created",
                 "user_id": 1,
-                "last_transition": "2023-11-27T12:34:56.789123Z",
-                "run_time": "03:25:15",
                 "accession_job_id": 1,
                 "owner_id": 1,
                 "container_type_id": 1,
@@ -57,8 +53,6 @@ class VerificationJobUpdateInput(BaseModel):
     trayed: Optional[bool] = None
     status: Optional[str] = None
     user_id: Optional[int] = None
-    last_transition: Optional[datetime] = None
-    run_time: Optional[timedelta] = None
     accession_job_id: Optional[int] = None
     owner_id: Optional[int] = None
     container_type_id: Optional[int] = None
@@ -80,8 +74,6 @@ class VerificationJobUpdateInput(BaseModel):
                 "trayed": True,
                 "status": "Created",
                 "user_id": 1,
-                "last_transition": "2023-11-27T12:34:56.789123Z",
-                "run_time": "03:25:15",
                 "accession_job_id": 1,
                 "owner_id": 1,
                 "container_type_id": 1,

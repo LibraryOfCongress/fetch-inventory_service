@@ -10,7 +10,7 @@ from app.database.session import get_session, commit_record
 from app.models.accession_jobs import AccessionJob
 from app.models.verification_jobs import VerificationJob
 from app.models.container_types import ContainerType
-from app.tasks import complete_accession_job
+from app.tasks import complete_accession_job, manage_accession_job_transition
 from app.config.exceptions import (
     NotFound,
     ValidationException,
@@ -150,6 +150,9 @@ def update_accession_job(
     """
     existing_accession_job = session.get(AccessionJob, id)
 
+    # capture original status for process check
+    original_status = existing_accession_job.status
+
     if not existing_accession_job:
         raise NotFound(detail=f"Accession Job ID {id} Not Found")
 
@@ -173,9 +176,20 @@ def update_accession_job(
 
     existing_accession_job = commit_record(session, existing_accession_job)
 
+    # conditional to avoid transaction concurrency issues
     if mutated_data.get("status") == "Completed":
         background_tasks.add_task(
-            complete_accession_job, session, existing_accession_job
+            complete_accession_job,
+            session,
+            existing_accession_job,
+            original_status
+        )
+    else:
+        background_tasks.add_task(
+            manage_accession_job_transition,
+            session,
+            existing_accession_job,
+            original_status,
         )
 
     return existing_accession_job

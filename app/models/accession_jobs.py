@@ -49,7 +49,11 @@ class AccessionJob(SQLModel, table=True):
         default=AccessionJobStatus.Created,
     )
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
-    run_time: Optional[timedelta] = Field(sa_column=sa.Interval, nullable=True)
+    run_time: Optional[timedelta] = Field(
+        sa_column=sa.Interval,
+        nullable=False,
+        default=timedelta()
+    )
     last_transition: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
     )

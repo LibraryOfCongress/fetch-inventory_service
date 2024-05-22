@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.tasks import complete_verification_job
+from app.tasks import complete_verification_job, manage_verification_job_transition
 from app.models.verification_jobs import VerificationJob
 from app.schemas.verification_jobs import (
     VerificationJobInput,
@@ -115,6 +115,9 @@ def update_verification_job(
     try:
         existing_verification_job = session.get(VerificationJob, id)
 
+        # capture original status for process check
+        original_status = existing_verification_job.status
+
         # Check if the tray record exists
         if not existing_verification_job:
             raise NotFound(detail=f"Verification Job ID {id} Not Found")
@@ -134,6 +137,13 @@ def update_verification_job(
         if mutated_data.get("status") == "Completed":
             background_tasks.add_task(
                 complete_verification_job, session, existing_verification_job
+            )
+        else:
+            background_tasks.add_task(
+                manage_verification_job_transition,
+                session,
+                existing_verification_job,
+                original_status,
             )
 
         return existing_verification_job

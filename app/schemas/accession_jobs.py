@@ -18,8 +18,6 @@ class AccessionJobInput(BaseModel):
     media_type_id: Optional[int] = None
     status: Optional[str]
     user_id: Optional[int] = None
-    run_time: Optional[timedelta]
-    last_transition: Optional[datetime]
     owner_id: int
     size_class_id: Optional[int] = None
     container_type_id: Optional[int] = None
@@ -39,8 +37,6 @@ class AccessionJobInput(BaseModel):
                 "trayed": True,
                 "status": "Paused",
                 "user_id": 1,
-                "run_time": "03:25:15",
-                "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,
                 "size_class_id": 1,
                 "container_type_id": 1,
@@ -53,8 +49,6 @@ class AccessionJobUpdateInput(BaseModel):
     trayed: Optional[bool] = None
     status: Optional[str] = None
     user_id: Optional[int] = None
-    run_time: Optional[timedelta] = None
-    last_transition: Optional[datetime] = None
     owner_id: Optional[int] = None
     size_class_id: Optional[int] = None
     container_type_id: Optional[int] = None
@@ -75,8 +69,6 @@ class AccessionJobUpdateInput(BaseModel):
                 "trayed": True,
                 "status": "Paused",
                 "user_id": 1,
-                "run_time": "03:25:15",
-                "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,
                 "size_class_id": 1,
                 "container_type_id": 1,
@@ -179,7 +171,7 @@ class NonTrayItemDetailNestedForAccessionJob(BaseModel):
 class AccessionJobDetailOutput(AccessionJobBaseOutput):
     user_id: Optional[int] = None
     run_time: Optional[timedelta]
-    last_transition: Optional[datetime]
+    last_transition: Optional[datetime] = None
     owner_id: Optional[int] = None
     container_type_id: Optional[int] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None

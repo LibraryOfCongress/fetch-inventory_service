@@ -51,7 +51,11 @@ class VerificationJob(SQLModel, table=True):
     last_transition: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
     )
-    run_time: Optional[timedelta] = Field(sa_column=sa.Interval(6), nullable=True)
+    run_time: Optional[timedelta] = Field(
+        sa_column=sa.Interval(6),
+        nullable=False,
+        default=timedelta()
+    )
     accession_job_id: Optional[int] = Field(
         sa_column=sa.Column(
             sa.BigInteger, sa.ForeignKey("accession_jobs.id"), nullable=False
