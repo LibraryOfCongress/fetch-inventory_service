@@ -126,9 +126,13 @@ class LadderNestedForRequest(BaseModel):
     ladder_number: LadderNumberNestedForRequest
     side: SideNestedForRequest
 
+class ShelfNumberNestedForRequest(BaseModel):
+    id: int
+    number: int
 
 class ShelfNestedForRequest(BaseModel):
     id: int
+    number: ShelfNumberNestedForRequest
     ladder: LadderNestedForRequest
 
 
