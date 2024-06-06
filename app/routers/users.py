@@ -158,13 +158,13 @@ def delete_user(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"User ID {id} Not Found")
 
 
-@router.get("/{id}/permissions", response_model=UserPermissionsOutput)
+@router.get("/{user_id}/permissions", response_model=UserPermissionsOutput)
 def get_user_permissions(user_id: int, session: Session = Depends(get_session)):
     """
     Retrieves the details of a user from the database using the provided ID.
 
     **Args**:
-    - id: The ID of the user.
+    - user_id: The ID of the user.
 
     **Returns**:
     - User Detail Read Output: The details of the user.
@@ -192,4 +192,4 @@ def get_user_permissions(user_id: int, session: Session = Depends(get_session)):
     if user_groups:
         return UserPermissionsOutput(id=user_id, permissions=list(permissions_set))
 
-    raise NotFound(detail=f"User ID {id} Not Found")
+    raise NotFound(detail=f"User ID {user_id} Not Found")
