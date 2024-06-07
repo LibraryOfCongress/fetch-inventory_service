@@ -182,7 +182,7 @@ def get_user_permissions(user_id: int, session: Session = Depends(get_session)):
         select(Group)
         .where(Group.users.any(id=user_id))
         .options(joinedload(Group.permissions))
-    ).all()
+    ).unique().all()  # Use unique().all() instead of all()
 
     # Aggregate all unique permissions from the user's groups
     permissions_set = {
