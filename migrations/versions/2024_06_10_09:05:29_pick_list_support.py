@@ -47,8 +47,8 @@ def upgrade() -> None:
     op.add_column('aisles', sa.Column('sort_priority', sa.Integer(), nullable=True))
     op.add_column('ladders', sa.Column('sort_priority', sa.Integer(), nullable=True))
     op.add_column('requests', sa.Column('building_id', sa.Integer(), nullable=True))
-    op.add_column('requests', sa.Column('scanned_for_pick_list', sa.Boolean(), nullable=False))
-    op.add_column('requests', sa.Column('scanned_for_retrieval', sa.Boolean(), nullable=False))
+    op.add_column('requests', sa.Column('scanned_for_pick_list', sa.Boolean(), nullable=False, server_default="False"))
+    op.add_column('requests', sa.Column('scanned_for_retrieval', sa.Boolean(), nullable=False, server_default="False"))
     op.create_foreign_key('fk_requests_building', 'requests', 'buildings', ['building_id'], ['id'])
     op.add_column('shelves', sa.Column('sort_priority', sa.Integer(), nullable=True))
     # ### end Alembic commands ###
