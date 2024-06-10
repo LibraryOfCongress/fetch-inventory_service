@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
-from app.database.session import get_session
+from app.database.session import get_session, commit_record
 from app.tasks import complete_verification_job, manage_verification_job_transition
 from app.models.verification_jobs import VerificationJob
 from app.schemas.verification_jobs import (
@@ -130,9 +130,7 @@ def update_verification_job(
 
         setattr(existing_verification_job, "update_dt", datetime.utcnow())
 
-        session.commit()
-        session.refresh(existing_verification_job)
-        session.refresh(existing_verification_job)
+        existing_verification_job = commit_record(session, existing_verification_job)
 
         if mutated_data.get("status") == "Completed":
             background_tasks.add_task(
@@ -145,6 +143,8 @@ def update_verification_job(
                 existing_verification_job,
                 original_status,
             )
+
+            session.refresh(existing_verification_job)
 
         return existing_verification_job
 

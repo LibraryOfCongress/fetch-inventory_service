@@ -15,10 +15,12 @@ from app.schemas.users import UserDetailReadOutput
 
 class AccessionJobInput(BaseModel):
     trayed: bool
+    status: str
     media_type_id: Optional[int] = None
-    status: Optional[str]
     user_id: Optional[int] = None
-    owner_id: int
+    run_time: Optional[timedelta] = None
+    last_transition: Optional[datetime] = None
+    owner_id: Optional[int] = None
     size_class_id: Optional[int] = None
     container_type_id: Optional[int] = None
 
@@ -35,12 +37,13 @@ class AccessionJobInput(BaseModel):
         json_schema_extra = {
             "example": {
                 "trayed": True,
-                "status": "Paused",
+                "status": "Created",
                 "user_id": 1,
+                "run_time": "03:25:15",
+                "last_transition": "2023-11-27T12:34:56.789123Z",
                 "owner_id": 1,
                 "size_class_id": 1,
-                "container_type_id": 1,
-                "media_type_id": 1
+                "container_type_id": 1
             }
         }
 

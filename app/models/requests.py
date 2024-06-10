@@ -4,6 +4,9 @@ from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.models.pick_list_requests import PickListRequest
+from app.models.pick_lists import PickList
+
 
 class Request(SQLModel, table=True):
     """
@@ -15,6 +18,7 @@ class Request(SQLModel, table=True):
 
           table constraint - must have an item or a non-tray
     """
+
     __tablename__ = "requests"
     __table_args__ = (
         sa.CheckConstraint(
@@ -25,48 +29,34 @@ class Request(SQLModel, table=True):
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True))
     request_type_id: int = Field(
-        default=None,
-        nullable=False,
-        unique=False,
-        foreign_key="request_types.id"
+        default=None, nullable=False, unique=False, foreign_key="request_types.id"
     )
     item_id: Optional[int] = Field(
-        default=None,
-        nullable=True,
-        unique=False,
-        foreign_key="items.id"
+        default=None, nullable=True, unique=False, foreign_key="items.id"
     )
     non_tray_item_id: Optional[int] = Field(
-        default=None,
-        nullable=True,
-        unique=False,
-        foreign_key="non_tray_items.id"
+        default=None, nullable=True, unique=False, foreign_key="non_tray_items.id"
+    )
+    building_id: int = Field(
+        default=None, nullable=True, unique=False, foreign_key="buildings.id"
     )
     delivery_location_id: int = Field(
-        default=None,
-        nullable=False,
-        unique=False,
-        foreign_key="delivery_locations.id"
+        default=None, nullable=False, unique=False, foreign_key="delivery_locations.id"
     )
     priority_id: Optional[int] = Field(
-        default=None,
-        nullable=True,
-        unique=False,
-        foreign_key="priorities.id"
+        default=None, nullable=True, unique=False, foreign_key="priorities.id"
     )
     external_request_id: Optional[str] = Field(
-        max_length=255,
-        sa_column=sa.VARCHAR,
-        nullable=True,
-        unique=False,
-        default=None
+        max_length=255, sa_column=sa.VARCHAR, nullable=True, unique=False, default=None
+    )
+    scanned_for_pick_list: Optional[bool] = Field(
+        sa_column=sa.Boolean, default=False, nullable=False
+    )
+    scanned_for_retrieval: Optional[bool] = Field(
+        sa_column=sa.Boolean, default=False, nullable=False
     )
     requestor_name: Optional[str] = Field(
-        max_length=50,
-        sa_column=sa.VARCHAR,
-        nullable=True,
-        unique=False,
-        default=None
+        max_length=50, sa_column=sa.VARCHAR, nullable=True, unique=False, default=None
     )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
@@ -79,4 +69,9 @@ class Request(SQLModel, table=True):
     non_tray_item: Optional["NonTrayItem"] = Relationship(back_populates="requests")
     request_type: Optional["RequestType"] = Relationship(back_populates="requests")
     priority: Optional["Priority"] = Relationship(back_populates="requests")
-    delivery_location: Optional["DeliveryLocation"] = Relationship(back_populates="requests")
+    delivery_location: Optional["DeliveryLocation"] = Relationship(
+        back_populates="requests"
+    )
+    pick_list: PickList = Relationship(
+        back_populates="requests", link_model=PickListRequest
+    )

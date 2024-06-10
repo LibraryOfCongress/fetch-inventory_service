@@ -67,6 +67,7 @@ from app.routers import (
     priorities,
     delivery_locations,
     requests,
+    pick_lists,
 )
 
 
@@ -170,6 +171,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 async def exception_handler(request: Request, exc: Exception):
     return JSONResponse({"detail": str(exc)}, status_code=500)
 
+
 # Register custom exception handlers
 app.exception_handler(BadRequest)(bad_request_exception_handler)
 app.exception_handler(NotFound)(not_found_exception_handler)
@@ -214,4 +216,6 @@ app.include_router(request_types.router)
 app.include_router(priorities.router)
 app.include_router(delivery_locations.router)
 app.include_router(requests.router)
+app.include_router(pick_lists.router)
+
 add_pagination(app)

@@ -109,7 +109,7 @@ def create_barcode(
         if not barcode_type:
             raise NotFound(detail=f"Barcode type '{barcode_type_string}' not found.")
         else:
-            mutated_barcode_input = barcode_input.dict()
+            mutated_barcode_input = barcode_input.model_dump()
             mutated_barcode_input['type_id'] = barcode_type.id
             # Use muttion input to avoid missing type_id validation
             mutated_barcode_input = BarcodeMutationInput(**mutated_barcode_input)

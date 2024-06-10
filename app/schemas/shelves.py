@@ -13,6 +13,7 @@ from app.schemas.size_class import SizeClassDetailReadOutput
 
 
 class ShelfInput(BaseModel):
+    sort_priority: Optional[conint(ge=0, le=32767)] = None
     ladder_id: conint(ge=0, le=2147483647)
     container_type_id: conint(ge=0, le=2147483647)
     size_class_id: conint(ge=0, le=32767)
@@ -27,6 +28,7 @@ class ShelfInput(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "sort_priority": 1,
                 "ladder_id": 1,
                 "container_type_id": 1,
                 "size_class_id": 1,
@@ -43,6 +45,7 @@ class ShelfInput(BaseModel):
 
 
 class ShelfUpdateInput(BaseModel):
+    sort_priority: Optional[conint(ge=0, le=32767)] = None
     ladder_id: Optional[conint(ge=0, le=2147483647)] = None
     container_type_id: Optional[conint(ge=0, le=2147483647)] = None
     size_class_id: Optional[conint(ge=0, le=32767)] = None
@@ -57,6 +60,7 @@ class ShelfUpdateInput(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "sort_priority": 1,
                 "ladder_id": 1,
                 "container_type_id": 1,
                 "size_class_id": 1,
@@ -76,6 +80,7 @@ class ShelfBaseOutput(BaseModel):
 
 
 class ShelfListOutput(ShelfBaseOutput):
+    sort_priority: Optional[int] = None
     ladder_id: int
     container_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
@@ -86,6 +91,7 @@ class ShelfListOutput(ShelfBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "sort_priority": 1,
                 "ladder_id": 1,
                 "container_type_id": 1,
                 "size_class_id": 1,
@@ -102,11 +108,12 @@ class ShelfListOutput(ShelfBaseOutput):
 
 
 class ShelfDetailWriteOutput(ShelfBaseOutput):
+    sort_priority: Optional[int] = None
     ladder_id: int
-    container_type_id: int
-    size_class_id: int
+    container_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
     shelf_number_id: int
-    owner_id: int
+    owner_id: Optional[int] = None
     capacity: int
     height: float
     width: float
@@ -119,6 +126,7 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "sort_priority": 1,
                 "ladder_id": 1,
                 "capacity": 33,
                 "shelf_number_id": 1,
@@ -144,11 +152,12 @@ class ShelfPositionNestedForShelf(BaseModel):
 
 
 class ShelfDetailReadOutput(ShelfBaseOutput):
+    sort_priority: Optional[int] = None
     ladder: LadderDetailWriteOutput
     shelf_number: ShelfNumberDetailOutput
-    container_type: ContainerTypeDetailReadOutput
-    size_class: SizeClassDetailReadOutput
-    owner: OwnerDetailReadOutput
+    container_type: Optional[ContainerTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    owner: Optional[OwnerDetailReadOutput] = None
     capacity: int
     height: float
     width: float
@@ -163,6 +172,7 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "sort_priority": 1,
                 "ladder": {
                     "id": 1,
                     "side_id": 1,

@@ -13,13 +13,15 @@ class AisleInput(BaseModel):
     aisle_number_id: conint(ge=0, le=2147483647)
     building_id: Optional[conint(ge=0, le=32767)] = None
     module_id: Optional[conint(ge=0, le=32767)] = None
+    sort_priority: Optional[conint(ge=0, le=32767)] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "aisle_number_id": 1,
                 "building_id": 1,
-                "module_id": 1
+                "module_id": 1,
+                "sort_priority": 1
             }
         }
 
@@ -28,13 +30,15 @@ class AisleUpdateInput(BaseModel):
     aisle_number_id: Optional[conint(ge=0, le=2147483647)] = None
     building_id: Optional[conint(ge=0, le=32767)] = None
     module_id: Optional[conint(ge=0, le=32767)] = None
+    sort_priority: Optional[conint(ge=0, le=32767)] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "aisle_number_id": 1,
                 "building_id": 1,
-                "module_id": 1
+                "module_id": 1,
+                "sort_priority": 1
             }
         }
 
@@ -59,6 +63,7 @@ class AisleDetailWriteOutput(BaseModel):
     aisle_number_id: int
     building_id: int | None = None
     module_id: int | None = None
+    sort_priority: int | None = None
     create_dt: datetime
     update_dt: datetime
 
@@ -69,6 +74,7 @@ class AisleDetailWriteOutput(BaseModel):
                 "aisle_number_id": 1,
                 "building_id": 1,
                 "module_id": 1,
+                "sort_priority": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -86,6 +92,7 @@ class SideNestedForAisle(BaseModel):
 
 class AisleDetailReadOutput(BaseModel):
     id: int
+    sort_priority: int
     create_dt: datetime
     update_dt: datetime
     building: BuildingBaseOutput | None
@@ -98,6 +105,7 @@ class AisleDetailReadOutput(BaseModel):
             "example": {
                 "id": 1,
                 "number": 1,
+                "sort_priority": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
                 "building": {

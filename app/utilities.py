@@ -1,16 +1,114 @@
-from sqlalchemy import select, and_
-from sqlalchemy.orm import join
+import pytz
+from sqlalchemy import and_
+from sqlalchemy.orm import joinedload
+from sqlmodel import select
 
 from app.config.exceptions import NotFound
-from app.models.trays import Tray
-from app.models.non_tray_items import NonTrayItem
-from app.models.buildings import Building
+from app.logger import inventory_logger
 from app.models.modules import Module
 from app.models.aisles import Aisle
 from app.models.sides import Side
 from app.models.ladders import Ladder
 from app.models.shelves import Shelf
 from app.models.shelf_positions import ShelfPosition
+
+
+def get_module_shelf_position(session, shelf_position):
+    """
+    Retrieves the module associated with a given shelf position.
+    **Args:**
+    -  Shelf Position: The shelf position object containing the shelf ID.
+
+    **Returns:**
+    - Module: The module associated with the shelf position.
+
+    **Raises:**
+    - NotFound: If any of the related objects (shelf, ladder, side, aisle, module)
+    are not found.
+    """
+    shelf = (
+        session.query(Shelf)
+        .options(joinedload(Shelf.ladder))
+        .filter(Shelf.id == shelf_position.shelf_id)
+        .first()
+    )
+
+    if not shelf:
+        raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
+
+    ladder = shelf.ladder
+
+    if not ladder:
+        raise NotFound(detail=f"Ladder ID {shelf.ladder_id} Not Found")
+
+    side = ladder.side
+
+    if not side:
+        raise NotFound(detail=f"Side ID {ladder.side_id} Not Found")
+
+    aisle = side.aisle
+
+    if not aisle:
+        raise NotFound(detail=f"Aisle ID {side.aisle_id} Not Found")
+
+    module = aisle.module
+
+    if not module:
+        raise NotFound(detail=f"Module ID {aisle.module_id} Not Found")
+
+    return module
+
+
+def get_location(session, shelf_position):
+    """
+    Retrieves the related location data for a given shelf position.
+
+    **Args:**
+    - shelf_position (ShelfPosition): The shelf position object containing the
+    shelf ID.
+
+    **Returns:**
+    dict: A dictionary containing the related location data. The dictionary has the
+    following keys:
+    - "aisle" (Aisle): The aisle object associated with the shelf position.
+    - "ladder" (Ladder): The ladder object associated with the shelf position.
+    - "shelf" (Shelf): The shelf object associated with the shelf position.
+
+    **Raises:**
+    - NotFound: If any of the related objects (shelf, ladder, aisle) are not found.
+    """
+    shelf_query = select(Shelf).filter(Shelf.id == shelf_position.shelf_id)
+
+    ladder_query = (
+        select(Ladder)
+        .join(Shelf)
+        .where(Ladder.id == shelf_query.subquery().c.ladder_id)
+    )
+
+    aisle_query = (
+        select(Aisle)
+        .join(Side)
+        .join(Ladder)
+        .where(Side.id == ladder_query.subquery().c.side_id)
+        .where(Aisle.id == Side.aisle_id)
+    )
+
+    shelf = session.exec(shelf_query).first()
+
+    ladder = session.exec(ladder_query).first()
+
+    aisle = session.exec(aisle_query).first()
+
+    if not shelf:
+        raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
+
+    if not ladder:
+        raise NotFound(detail=f"Ladder ID {shelf.ladder_id} Not Found")
+
+    if not aisle:
+        raise NotFound(detail=f"Aisle ID {ladder.aisle_id} Not Found")
+
+    return {"aisle": aisle, "ladder": ladder, "shelf": shelf}
 
 
 def process_containers_for_shelving(
@@ -23,7 +121,7 @@ def process_containers_for_shelving(
     module_id,
     aisle_id,
     side_id,
-    ladder_id
+    ladder_id,
 ):
     """
     Given a container and location params,
@@ -89,7 +187,9 @@ def process_containers_for_shelving(
 
     # Execute the query and fetch the results
     # keep in mind this is a joined list of [(ShelfPosition, Shelf)]
-    available_shelf_positions = session.exec(shelf_position_query.where(and_(*conditions)))
+    available_shelf_positions = session.exec(
+        shelf_position_query.where(and_(*conditions))
+    )
 
     # convert ChunkedIterator for list comprehension
     available_shelf_positions = list(available_shelf_positions)
@@ -107,7 +207,11 @@ def process_containers_for_shelving(
             continue
 
         # get matching size_class options
-        available_positions_for_size = [position for position in available_shelf_positions if position.Shelf.size_class_id == container_object.size_class_id]
+        available_positions_for_size = [
+            position
+            for position in available_shelf_positions
+            if position.Shelf.size_class_id == container_object.size_class_id
+        ]
 
         if not available_positions_for_size:
             raise NotFound(
@@ -115,7 +219,11 @@ def process_containers_for_shelving(
             )
 
         # get matching owner options
-        available_positions_for_owner = [position for position in available_positions_for_size if position.Shelf.owner_id == container_object.owner_id]
+        available_positions_for_owner = [
+            position
+            for position in available_positions_for_size
+            if position.Shelf.owner_id == container_object.owner_id
+        ]
 
         if not available_positions_for_owner:
             raise NotFound(
@@ -123,11 +231,19 @@ def process_containers_for_shelving(
             )
 
         # both actual and proposed get set
-        container_object.shelf_position_id = available_positions_for_owner[0].ShelfPosition.id
-        container_object.shelf_position_proposed_id = available_positions_for_owner[0].ShelfPosition.id
+        container_object.shelf_position_id = available_positions_for_owner[
+            0
+        ].ShelfPosition.id
+        container_object.shelf_position_proposed_id = available_positions_for_owner[
+            0
+        ].ShelfPosition.id
 
         # Remove reserved position from available before next iteration
-        available_shelf_positions = [position for position in available_shelf_positions if position.ShelfPosition.id != container_object.shelf_position_id]
+        available_shelf_positions = [
+            position
+            for position in available_shelf_positions
+            if position.ShelfPosition.id != container_object.shelf_position_id
+        ]
 
         session.add(container_object)
 
@@ -135,3 +251,31 @@ def process_containers_for_shelving(
     session.commit()
 
     return
+
+
+def make_aware(dt):
+    """
+    Make a datetime object timezone-aware.
+    """
+    if dt.tzinfo is None:
+        return pytz.utc.localize(dt)
+    return dt
+
+
+def manage_transition(original_record, update_record):
+    """
+    Task manages transition logic for running state.
+    - updates run_time
+    - tracks last_transition
+    """
+    run_timestamp = make_aware(update_record.run_timestamp)
+    if original_record.last_transition:
+        last_transition = make_aware(original_record.last_transition)
+        original_record.run_time += run_timestamp - last_transition
+    else:
+        create_dt = make_aware(original_record.create_dt)
+        original_record.run_time += run_timestamp - create_dt
+
+    original_record.last_transition = run_timestamp
+
+    return original_record

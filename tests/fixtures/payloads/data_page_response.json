@@ -290,5 +290,17 @@
     "page": 1,
     "size": 50,
     "pages": 1
+  },
+  "pick_lists": {
+    "items": [
+      {
+        "id": 1,
+        "status": "Created"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
   }
 }

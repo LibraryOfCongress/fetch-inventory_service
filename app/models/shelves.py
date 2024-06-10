@@ -46,6 +46,7 @@ class Shelf(SQLModel, table=True):
     depth: condecimal(decimal_places=2) = Field(
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
     )
+    sort_priority: int = Field(sa_column=sa.SmallInteger, nullable=True, default=None)
     container_type_id: int = Field(foreign_key="container_types.id", nullable=False)
     shelf_number_id: int = Field(foreign_key="shelf_numbers.id", nullable=False)
     size_class_id: int = Field(foreign_key="size_class.id", nullable=False)

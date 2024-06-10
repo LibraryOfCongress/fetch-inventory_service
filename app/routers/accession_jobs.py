@@ -192,6 +192,8 @@ def update_accession_job(
             original_status,
         )
 
+        session.refresh(existing_accession_job)
+
     return existing_accession_job
 
 

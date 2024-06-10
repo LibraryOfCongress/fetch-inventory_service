@@ -75,7 +75,7 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
             session.add(item)
 
     session.commit()
-    session.refresh()
+
 
 def complete_verification_job(session, verification_job: VerificationJob):
     """
@@ -113,7 +113,10 @@ def complete_verification_job(session, verification_job: VerificationJob):
     session.commit()
     session.refresh()
 
-def manage_accession_job_transition(session, accession_job: AccessionJob, original_status):
+
+def manage_accession_job_transition(
+    session, accession_job: AccessionJob, original_status
+):
     """
     Task manages transition logic for an accession job's running state.
         - updates run_time
@@ -168,7 +171,10 @@ def manage_accession_job_transition(session, accession_job: AccessionJob, origin
     session.commit()
     session.refresh()
 
-def manage_verification_job_transition(session, verification_job: VerificationJob, original_status):
+
+def manage_verification_job_transition(
+    session, verification_job: VerificationJob, original_status
+):
     """
     Task manages transition logic for an verification job's running state.
         - updates run_time

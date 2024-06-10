@@ -14,7 +14,8 @@
   },
   "aisles": {
     "aisle_number_id": 1,
-    "building_id": 1
+    "building_id": 1,
+    "sort_priority": 1
   },
   "side_orientations": {
     "name": "Left"
@@ -32,7 +33,8 @@
       "owner_id": 1,
       "shelf_number_id": 1,
       "width": 30.33,
-      "size_class_id": 1
+      "size_class_id": 1,
+      "sort_priority": 3
   },
   "shelf_numbers": {
     "number": 1
@@ -59,7 +61,8 @@
   },
   "ladders": {
     "ladder_number_id": 1,
-    "side_id": 1
+    "side_id": 1,
+    "sort_priority": 2
   },
   "owner_tiers": {
     "level": 1,
@@ -70,34 +73,21 @@
     "owner_tier_id": 1
   },
   "shelving_jobs": {
-      "status": "Created",
-      "user_id": 1,
-      "last_transition": "2023-11-27T12:34:56.789123Z",
-      "run_time": "03:25:15",
-      "verification_job_id": 1
-  },
-  "shelving_job_item_associations": {
-      "verified": true,
-      "shelf_position_proposed_id": 1,
-      "shelf_position_id": 1,
-      "shelving_job_id": 1,
-      "item_id": 1
-  },
-  "shelving_job_tray_associations": {
-      "verified": true,
-      "shelf_position_proposed_id": 1,
-      "shelf_position_id": 1,
-      "shelving_job_id": 1,
-      "tray_id": 1
+       "building_id": 1,
+        "origin": "Verification",
+        "status": "Created",
+        "user_id": 1,
+        "verification_jobs": [
+          1
+        ]
   },
   "accession_jobs": {
       "container_type_id": 1,
-      "last_transition": "2023-11-27T12:34:56.789123Z",
-      "owner_id": 1,
       "run_time": "03:25:15",
       "status": "Created",
-      "trayed": false,
-      "user_id": 1
+      "last_transition": "2023-11-27T12:34:56.789123Z",
+      "trayed": true,
+      "owner_id": 1
   },
   "verification_jobs": {
       "accession_job_id": 1,
@@ -158,5 +148,20 @@
   },
   "groups": {
     "name": "Test Group"
+  },
+  "request_types": {
+    "type": "General Delivery"
+  },
+  "requests": {
+    "barcode_value": "RS4321",
+    "request_type_id": 1,
+    "delivery_location_id": 1,
+    "requestor_name": "Bilbo Baggins",
+    "scanned_for_pick_list": false,
+    "pick_list_id": 1
+  },
+  "pick_lists": {
+    "user_id": 1,
+    "status": "Created"
   }
 }

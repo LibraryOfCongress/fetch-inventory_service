@@ -190,16 +190,19 @@ def populate_record(client, fixtures_path, table):
                 return client.post("/conveyance-bins", json=data.get(table))
             elif table == "size_class":
                 return client.post("/size_class", json=data.get(table))
-            elif table == "shelving_job_tray_associations":
-                return client.post(
-                    "/shelving-jobs/tray-association", json=data.get(table)
-                )
-            elif table == "shelving_job_item_associations":
-                return client.post(
-                    "/shelving-jobs/item-association", json=data.get(table)
-                )
+            elif table == "request_types":
+                return client.post("/requests/types", json=data.get(table))
             elif table == "shelving_jobs":
-                return client.post("/shelving-jobs", json=data.get(table))
+                response = client.patch("/verification-jobs/1", json={"status":
+                                                                         "Completed"})
+                if response.status_code == 200:
+
+                    response = client.post("/shelving-jobs", json=data.get(
+                        table))
+
+                return response
+            elif table == "pick_lists":
+                return client.post("/pick-lists", json=data.get(table))
             else:
                 if table == "shelves":
                     barcode_id = generate_barcode_id(client, 1, "5901234123458")
@@ -275,20 +278,16 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "size_class")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelves")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelf_positions")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "subcollections")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "media_types")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "users")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "accession_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "verification_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_jobs")
-    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "subcollections")
-    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "media_types")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "trays")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "items")
-    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_jobs")
-    populate_record(
-        client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_item_associations"
-    )
-    populate_record(
-        client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_job_tray_associations"
-    )
-    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "users")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "permissions")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "groups")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "pick_lists")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "request_types")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "requests")

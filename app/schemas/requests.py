@@ -6,7 +6,9 @@ from datetime import datetime
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
 
+
 class RequestInput(BaseModel):
+    building_id: Optional[int] = None
     request_type_id: int
     item_id: Optional[int] = None
     non_tray_item_id: Optional[int] = None
@@ -14,11 +16,12 @@ class RequestInput(BaseModel):
     priority_id: Optional[int] = None
     external_request_id: Optional[str] = None
     requestor_name: Optional[str] = None
-    barcode_value: str # pop this off in path operations
+    barcode_value: str  # pop this off in path operations
 
     class Config:
         json_schema_extra = {
             "example": {
+                "building_id": 1,
                 "barcode_value": "RS4321",
                 "request_type_id": 1,
                 "item_id": 1,
@@ -26,24 +29,27 @@ class RequestInput(BaseModel):
                 "delivery_location_id": 1,
                 "priority_id": 1,
                 "requestor_name": "Bilbo Baggins",
-                "external_request_id": "12345"
+                "external_request_id": "12345",
             }
         }
 
 
 class RequestUpdateInput(BaseModel):
-    request_type_id: int
+    building_id: Optional[int] = None
+    request_type_id: Optional[int] = None
     item_id: Optional[int] = None
     non_tray_item_id: Optional[int] = None
-    delivery_location_id: int
+    delivery_location_id: Optional[int] = None
     priority_id: Optional[int] = None
     external_request_id: Optional[str] = None
     requestor_name: Optional[str] = None
-    barcode_value: Optional[str] = None # pop this off in path operations
+    barcode_value: Optional[str] = None  # pop this off in path operations
+    scanned_for_retrieval: Optional[bool] = None
 
     class Config:
         json_schema_extra = {
             "example": {
+                "building_id": 1,
                 "barcode_value": "RS4321",
                 "request_type_id": 1,
                 "item_id": 1,
@@ -51,13 +57,15 @@ class RequestUpdateInput(BaseModel):
                 "delivery_location_id": 1,
                 "priority_id": 1,
                 "requestor_name": "Bilbo Baggins",
-                "external_request_id": "12345"
+                "external_request_id": "12345",
+                "scanned_for_retrieval": False
             }
         }
 
 
 class RequestBaseOutput(BaseModel):
     id: int
+    building_id: Optional[int] = None
     request_type_id: int
     item_id: Optional[int] = None
     non_tray_item_id: Optional[int] = None
@@ -65,6 +73,8 @@ class RequestBaseOutput(BaseModel):
     priority_id: Optional[int] = None
     external_request_id: Optional[str] = None
     requestor_name: Optional[str] = None
+    scanned_for_pick_list: Optional[bool] = None
+    scanned_for_retrieval: Optional[bool] = None
 
 
 class MediaTypeNestedForRequest(BaseModel):
@@ -94,7 +104,7 @@ class ModuleNumberNestedForRequest(BaseModel):
 
 
 class NestedBuildingRequestModule(BaseModel):
-    id:int
+    id: int
     name: Optional[str] = None
 
 
@@ -121,18 +131,21 @@ class SideNestedForRequest(BaseModel):
     aisle: AisleNestedForRequest
     side_orientation: SideOrientationNestedForRequest
 
+
 class LadderNestedForRequest(BaseModel):
     id: int
     ladder_number: LadderNumberNestedForRequest
     side: SideNestedForRequest
 
+
 class ShelfNumberNestedForRequest(BaseModel):
     id: int
     number: int
 
+
 class ShelfNestedForRequest(BaseModel):
     id: int
-    number: ShelfNumberNestedForRequest
+    shelf_number: ShelfNumberNestedForRequest
     ladder: LadderNestedForRequest
 
 
@@ -209,6 +222,7 @@ class RequestDetailWriteOutput(RequestBaseOutput):
     priority: Optional[PriorityNestedForRequest] = None
     delivery_location: Optional[DeliveryLocationNestedForRequest] = None
     request_type: Optional[RequestTypeNestedForRequest] = None
+    pick_list: Optional[list] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -216,6 +230,7 @@ class RequestDetailWriteOutput(RequestBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,
                 "non_tray_item_id": None,
@@ -278,6 +293,11 @@ class RequestDetailWriteOutput(RequestBaseOutput):
                             }
                         }
                     }
+                },
+                "pick_list": {
+                    "id": 1,
+                    "user_id": 1,
+                    "status": "Created"
                 },
                 "non_tray_item": None,
                 "requestor_name": "Bilbo Baggins",
@@ -325,13 +345,15 @@ class RequestListOutput(RequestBaseOutput):
     priority: Optional[PriorityNestedForRequest] = None
     delivery_location: Optional[DeliveryLocationNestedForRequest] = None
     request_type: Optional[RequestTypeNestedForRequest] = None
-    create_dt: datetime
-    update_dt: datetime
+    pick_list: Optional[list] = None
+    create_dt: Optional[datetime] = None
+    update_dt: Optional[datetime] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,
                 "non_tray_item_id": None,
@@ -395,6 +417,11 @@ class RequestListOutput(RequestBaseOutput):
                         }
                     }
                 },
+                "pick_list": {
+                    "id": 1,
+                    "user_id": 1,
+                    "status": "Created"
+                },
                 "non_tray_item": None,
                 "requestor_name": "Bilbo Baggins",
                 "external_request_id": "12345",
@@ -405,11 +432,102 @@ class RequestListOutput(RequestBaseOutput):
 
 
 class RequestDetailReadOutput(RequestDetailWriteOutput):
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "building_id": 1,
+                "request_type_id": 1,
+                "item_id": 1,
+                "non_tray_item_id": None,
+                "delivery_location_id": 1,
+                "priority_id": 1,
+                "priority": {
+                    "id": 1,
+                    "value": "Medium"
+                },
+                "request_type": {
+                    "id": 1,
+                    "type": "General Delivery"
+                },
+                "delivery_location": {
+                    "name": "Senator McSenator",
+                    "address": "1234 Example St, Washington D.C 12345"
+                },
+                "item": {
+                    "id": 1,
+                    "title": "Grapes of Wrath",
+                    "volume": "1",
+                    "condition": "Do not serve (it's boring)",
+                    "size_class": {
+                        "id": 1,
+                        "name": "Record Storage",
+                        "short_name": "RS"
+                    },
+                    "owner": {
+                        "id": 1,
+                        "name": "CMD"
+                    },
+                    "accession_dt": "2023-10-08T20:46:56.764426",
+                    "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                    "status": "In",
+                    "media_type": {
+                        "id": 1,
+                        "name": "Book"
+                    },
+                    "barcode": {
+                        "id": "550e8400-e29b-41d4-a716-446655440001",
+                        "value": "5901234123457",
+                        "type_id": 1,
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    },
+                    "tray": {
+                        "id": 1,
+                        "barcode": {
+                            "id": "255fer-e29b-41d4-a716-446655440001",
+                            "value": "3301234123457",
+                            "type_id": 1,
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "shelf_position": {
+                            "id": 1,
+                            "shelf_id": 1,
+                            "shelf_position_number": {
+                                "number": 2
+                            }
+                        }
+                    }
+                },
+                "pick_list": {
+                    "id": 1,
+                    "user_id": 1,
+                    "status": "Created"
+                },
+                "non_tray_item": None,
+                "requestor_name": "Bilbo Baggins",
+                "external_request_id": "12345",
+                "create_dt": "2023-10-08T20:46:56.764426",
+                "update_dt": "2023-10-08T20:46:56.764398"
+            }
+        }
+
+
+class RequestDetailReadOutputNoPickList(RequestBaseOutput):
+    item: Optional[NestedItemRequestList] = None
+    non_tray_item: Optional[NonTrayItemNestedForRequest] = None
+    priority: Optional[PriorityNestedForRequest] = None
+    delivery_location: Optional[DeliveryLocationNestedForRequest] = None
+    request_type: Optional[RequestTypeNestedForRequest] = None
+    create_dt: datetime
+    update_dt: datetime
 
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,
                 "non_tray_item_id": None,

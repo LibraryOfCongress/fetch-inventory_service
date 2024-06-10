@@ -38,3 +38,5 @@ from app.models.request_types import RequestType
 from app.models.delivery_locations import DeliveryLocation
 from app.models.priorities import Priority
 from app.models.requests import Request
+from app.models.pick_lists import PickList
+from app.models.pick_list_requests import PickListRequest

@@ -12,12 +12,14 @@ from app.schemas.barcodes import BarcodeDetailReadOutput
 class LadderInput(BaseModel):
     side_id: conint(ge=0, le=2147483647)
     ladder_number_id: conint(ge=0, le=32767)
+    sort_priority: Optional[conint(ge=0, le=32767)] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "side_id": 1,
-                "ladder_number_id": 1
+                "ladder_number_id": 1,
+                "sort_priority": 1
             }
         }
 
@@ -25,12 +27,14 @@ class LadderInput(BaseModel):
 class LadderUpdateInput(BaseModel):
     side_id: Optional[conint(ge=0, le=2147483647)] = None
     ladder_number_id: Optional[conint(ge=0, le=32767)] = None
+    sort_priority: Optional[conint(ge=0, le=32767)] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "side_id": 1,
-                "ladder_number_id": 1
+                "ladder_number_id": 1,
+                "sort_priority": 1
             }
         }
 
@@ -42,13 +46,15 @@ class LadderBaseOutput(BaseModel):
 class LadderListOutput(LadderBaseOutput):
     side_id: int
     ladder_number_id: int
+    sort_priority: int
 
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
                 "side_id": 1,
-                "ladder_number_id": 1
+                "ladder_number_id": 1,
+                "sort_priority": 1
             }
         }
 
@@ -56,6 +62,7 @@ class LadderListOutput(LadderBaseOutput):
 class LadderDetailWriteOutput(LadderBaseOutput):
     side_id: int
     ladder_number_id: int
+    sort_priority: int
     create_dt: datetime
     update_dt: datetime
 
@@ -65,6 +72,7 @@ class LadderDetailWriteOutput(LadderBaseOutput):
                 "id": 1,
                 "side_id": 1,
                 "ladder_number_id": 1,
+                "sort_priority": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -89,6 +97,7 @@ class ShelvesNestedForLadderOutput(BaseModel):
 
 
 class LadderDetailReadOutput(LadderBaseOutput):
+    sort_priority: int
     side: SideDetailWriteOutput
     ladder_number: LadderNumberDetailOutput
     shelves: List[ShelvesNestedForLadderOutput]
@@ -99,6 +108,7 @@ class LadderDetailReadOutput(LadderBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "sort_priority": 1,
                 "side": {
                     "id": 1,
                     "aisle_id": 1,
