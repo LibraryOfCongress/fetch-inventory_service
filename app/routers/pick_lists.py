@@ -205,7 +205,8 @@ def update_pick_list(
     if not existing_pick_list:
         raise NotFound(detail=f"Pick List ID {id} Not Found")
 
-    existing_pick_list = manage_transition(existing_pick_list, pick_list)
+    if pick_list.run_timestamp:
+        existing_pick_list = manage_transition(existing_pick_list, pick_list)
 
     mutated_data = pick_list.model_dump(exclude_unset=True, exclude={"run_timestamp"})
 
@@ -302,9 +303,8 @@ def update_request_for_pick_list(
     """
     existing_pick_list = (
         session.query(PickList)
-        .join(PickListRequest, PickListRequest.pick_list_id == PickList.id)
-        .join(Request, PickListRequest.request_id == Request.id)
-        .filter(PickList.id == pick_list_id, Request.id == request_id)
+        .filter(PickList.id == pick_list_id)
+        .filter(PickList.requests.any(Request.id == request_id))
         .first()
     )
 
@@ -313,11 +313,18 @@ def update_request_for_pick_list(
             detail=f"Pick List ID {pick_list_id} or Request ID {request_id} Not Found"
         )
 
-    existing_pick_list = manage_transition(existing_pick_list, pick_list_request_input)
+    if pick_list_request_input.run_timestamp:
+        existing_pick_list = manage_transition(
+            existing_pick_list, pick_list_request_input
+        )
 
-    session.query(Request).filter(Request.id == request_id).update(
-        {"scanned_for_retrieval": pick_list_request_input.scanned_for_retrieval}
+    session.commit()
+
+    mutated_data = pick_list_request_input.model_dump(
+        exclude_unset=True, exclude={"run_timestamp"}
     )
+    mutated_data["update_dt"] = datetime.utcnow()
+    session.query(Request).filter(Request.id == request_id).update(mutated_data)
 
     session.commit()
     session.refresh(existing_pick_list)
