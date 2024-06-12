@@ -27,7 +27,6 @@ class PickListUpdateInput(BaseModel):
     last_transition: Optional[datetime] = None
     run_time: Optional[timedelta] = None
     run_timestamp: Optional[datetime] = None
-    update_dt: Optional[datetime] = None
 
     @field_validator("status", mode="before", check_fields=True)
     @classmethod
@@ -46,36 +45,19 @@ class PickListUpdateInput(BaseModel):
                 "building_id": 1,
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "run_time": "03:25:15",
-                "run_timestamp": "2023-11-27T12:34:56.789123Z",
-                "update_dt": "2023-11-27T12:34:56.789123Z"
+                "run_timestamp": "2023-11-27T12:34:56.789123Z"
             }
         }
 
 
 class PickListUpdateRequestInput(RequestUpdateInput):
-    status: Optional[str] = None
-    last_transition: Optional[datetime] = None
-    run_time: Optional[timedelta] = None
     run_timestamp: Optional[datetime] = None
-    update_dt: Optional[datetime] = None
-
-    @field_validator("status", mode="before", check_fields=True)
-    @classmethod
-    def validate_status(cls, value):
-        if value is not None and value not in PickListStatus._member_names_:
-            raise ValueError(
-                f"Invalid status: {value}. Must be one of {list(PickListStatus._member_names_)}"
-            )
-        return value
 
     class Config:
         json_schema_extra = {
             "example": {
                 "user_id": 1,
-                "status": "Created",
                 "building_id": 1,
-                "last_transition": "2023-11-27T12:34:56.789123Z",
-                "run_time": "03:25:15",
                 "run_timestamp": "2023-11-27T12:34:56.789123Z",
                 "barcode_value": "RS4321",
                 "request_type_id": 1,
@@ -85,8 +67,8 @@ class PickListUpdateRequestInput(RequestUpdateInput):
                 "priority_id": 1,
                 "requestor_name": "Bilbo Baggins",
                 "external_request_id": "12345",
+                "scanned_for_pick_list": False,
                 "scanned_for_retrieval": False,
-                "update_dt": "2023-11-27T12:34:56.789123Z"
             }
         }
 

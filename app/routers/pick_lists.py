@@ -241,6 +241,7 @@ def add_request_to_pick_list(
         raise BadRequest(detail="Pick List ID Not Found")
 
     pick_list = session.get(PickList, pick_list_id)
+    update_dt = datetime.utcnow()
 
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
@@ -270,8 +271,11 @@ def add_request_to_pick_list(
     session.commit()
 
     session.query(Request).filter(Request.id.in_(pick_list_input.request_ids)).update(
-        {"scanned_for_pick_list": True}
+        {"scanned_for_pick_list": True, "update_dt": update_dt}
     )
+
+    # Updating the pick list update_dt time
+    pick_list.update_dt = update_dt
     session.commit()
     session.refresh(pick_list)
 
@@ -307,6 +311,7 @@ def update_request_for_pick_list(
         .filter(PickList.requests.any(Request.id == request_id))
         .first()
     )
+    update_dt = datetime.utcnow()
 
     if not existing_pick_list:
         raise NotFound(
@@ -323,8 +328,11 @@ def update_request_for_pick_list(
     mutated_data = pick_list_request_input.model_dump(
         exclude_unset=True, exclude={"run_timestamp"}
     )
-    mutated_data["update_dt"] = datetime.utcnow()
+    mutated_data["update_dt"] = update_dt
     session.query(Request).filter(Request.id == request_id).update(mutated_data)
+
+    # Updating the pick list update_dt time
+    existing_pick_list.update_dt = update_dt
 
     session.commit()
     session.refresh(existing_pick_list)
@@ -353,6 +361,7 @@ def remove_request_from_pick_list(
     - HTTPException: If the request is not found in the pick list.
     """
     pick_list = session.query(PickList).get(pick_list_id)
+    update_dt = datetime.utcnow()
 
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
@@ -367,10 +376,6 @@ def remove_request_from_pick_list(
     if not request.scanned_for_pick_list:
         raise BadRequest(detail=f"Request ID {request_id} Not In Pick List")
 
-    request.scanned_for_pick_list = False
-    request.scanned_for_retrieval = False
-    commit_record(session, request)
-
     # Getting pick list request, checking if not found, and Remove the request from
     # the pick list, and refresh the pick list
     pick_list_request = (
@@ -384,10 +389,18 @@ def remove_request_from_pick_list(
             detail=f"Request ID {request_id} Not Found in Pick List ID {pick_list_id}"
         )
 
-    remove_record(session, pick_list_request)
-    session.refresh(pick_list)
+    # Marking the pick list request as not scanned for pick list
+    request.scanned_for_pick_list = False
+    request.scanned_for_retrieval = False
+    request.update_dt = update_dt
+    commit_record(session, request)
 
-    return pick_list
+    remove_record(session, pick_list_request)
+
+    # Updating update_dt pick list
+    setattr(pick_list, "update_dt", update_dt)
+
+    return commit_record(session, pick_list)
 
 
 @router.delete("/{id}")
@@ -406,29 +419,36 @@ def delete_pick_list(id: int, session: Session = Depends(get_session)):
     """
     pick_list = session.get(PickList, id)
 
-    if pick_list:
-        # Delete pick list requests
-        pick_list_requests = session.query(
-            select(PickListRequest).filter_by(pick_list_id=pick_list.id)
-        )
-
-        if pick_list_requests:
-            for pick_list_request in pick_list_requests:
-                remove_record(session, pick_list_request)
-
-        # setting all requests as not scanned for pick list
-        if pick_list.requests:
-            for request in pick_list.requests:
-                request.scanned_for_pick_list = False
-                request.scanned_for_retrieval = False
-                commit_record(session, request)
-
-        session.delete(pick_list)
-        session.commit()
-
-        return HTTPException(
-            status_code=204, detail=f"Pick list ID {id} Deleted Successfully"
-        )
-
-    else:
+    if not pick_list:
         raise NotFound(detail=f"Pick List ID {id} Not Found")
+
+    # Delete pick list requests
+    if pick_list.requests:
+        pick_list_requests = (
+            session.query(PickListRequest)
+            .filter(PickListRequest.pick_list_id == pick_list.id)
+            .all()
+        )
+
+        for pick_list_request in pick_list_requests:
+            remove_record(session, pick_list_request)
+
+        # Update requests
+        requests_to_update = (
+            session.query(Request)
+            .filter(Request.id.in_([r.request_id for r in pick_list_requests]))
+            .all()
+        )
+
+        for request in requests_to_update:
+            request.scanned_for_pick_list = False
+            request.scanned_for_retrieval = False
+
+        session.bulk_update_mappings(Request, requests_to_update)
+
+    session.delete(pick_list)
+    session.commit()
+
+    return HTTPException(
+        status_code=204, detail=f"Pick list ID {id} Deleted Successfully"
+    )
