@@ -38,7 +38,9 @@ class Aisle(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
-    sort_priority: int = Field(sa_column=sa.SmallInteger, nullable=True, default=None)
+    sort_priority: Optional[int] = Field(
+        sa_column=sa.SmallInteger, nullable=True, default=None
+    )
     aisle_number_id: int = Field(
         foreign_key="aisle_numbers.id", nullable=False, default=None
     )

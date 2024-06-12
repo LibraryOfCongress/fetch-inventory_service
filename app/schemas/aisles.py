@@ -63,7 +63,7 @@ class AisleDetailWriteOutput(BaseModel):
     aisle_number_id: int
     building_id: int | None = None
     module_id: int | None = None
-    sort_priority: int | None = None
+    sort_priority: Optional[int] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -92,7 +92,7 @@ class SideNestedForAisle(BaseModel):
 
 class AisleDetailReadOutput(BaseModel):
     id: int
-    sort_priority: int
+    sort_priority: Optional[int] = None
     create_dt: datetime
     update_dt: datetime
     building: BuildingBaseOutput | None

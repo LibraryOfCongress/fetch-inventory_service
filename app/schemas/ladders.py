@@ -46,7 +46,7 @@ class LadderBaseOutput(BaseModel):
 class LadderListOutput(LadderBaseOutput):
     side_id: int
     ladder_number_id: int
-    sort_priority: int
+    sort_priority: Optional[int] = None
 
     class Config:
         json_schema_extra = {
@@ -62,7 +62,7 @@ class LadderListOutput(LadderBaseOutput):
 class LadderDetailWriteOutput(LadderBaseOutput):
     side_id: int
     ladder_number_id: int
-    sort_priority: int
+    sort_priority: Optional[int] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -97,7 +97,7 @@ class ShelvesNestedForLadderOutput(BaseModel):
 
 
 class LadderDetailReadOutput(LadderBaseOutput):
-    sort_priority: int
+    sort_priority: Optional[int] = None
     side: SideDetailWriteOutput
     ladder_number: LadderNumberDetailOutput
     shelves: List[ShelvesNestedForLadderOutput]

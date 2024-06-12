@@ -31,7 +31,9 @@ class Ladder(SQLModel, table=True):
         nullable=False,
     )
     side_id: int = Field(foreign_key="sides.id", nullable=False)
-    sort_priority: int = Field(sa_column=sa.SmallInteger, nullable=True, default=None)
+    sort_priority: Optional[int] = Field(
+        sa_column=sa.SmallInteger, nullable=True, default=None
+    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
