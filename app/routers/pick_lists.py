@@ -258,24 +258,27 @@ def add_request_to_pick_list(
     if len(existing_requests) != len(pick_list_input.request_ids):
         raise NotFound(detail=f"Some Requests Not Found")
 
+    # Adding the pick list request
     pick_list_requests = [
         PickListRequest(pick_list_id=pick_list_id, request_id=request.id)
         for request in existing_requests
     ]
-
-    if not pick_list.building_id:
-        pick_list.building_id = existing_requests[0].building_id
-        commit_record(session, pick_list)
-
     session.bulk_save_objects(pick_list_requests)
-    session.commit()
 
     session.query(Request).filter(Request.id.in_(pick_list_input.request_ids)).update(
-        {"scanned_for_pick_list": True, "update_dt": update_dt}
+        {"scanned_for_pick_list": True, "update_dt": datetime.utcnow()},
+        synchronize_session="fetch",
     )
 
-    # Updating the pick list update_dt time
+    # Updating the pick list, building_id, run_timestamp, and update_dt
+    if not pick_list.building_id:
+        pick_list.building_id = existing_requests[0].building_id
+
+    if pick_list.run_timestamp:
+        pick_list = manage_transition(pick_list, pick_list_input)
+
     pick_list.update_dt = update_dt
+
     session.commit()
     session.refresh(pick_list)
 
@@ -318,20 +321,18 @@ def update_request_for_pick_list(
             detail=f"Pick List ID {pick_list_id} or Request ID {request_id} Not Found"
         )
 
-    if pick_list_request_input.run_timestamp:
-        existing_pick_list = manage_transition(
-            existing_pick_list, pick_list_request_input
-        )
-
-    session.commit()
-
     mutated_data = pick_list_request_input.model_dump(
         exclude_unset=True, exclude={"run_timestamp"}
     )
     mutated_data["update_dt"] = update_dt
     session.query(Request).filter(Request.id == request_id).update(mutated_data)
 
-    # Updating the pick list update_dt time
+    # Updating the pick list, run_time, update_dt
+    if pick_list_request_input.run_timestamp:
+        existing_pick_list = manage_transition(
+            existing_pick_list, pick_list_request_input
+        )
+
     existing_pick_list.update_dt = update_dt
 
     session.commit()
