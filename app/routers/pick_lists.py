@@ -274,9 +274,6 @@ def add_request_to_pick_list(
     if not pick_list.building_id:
         pick_list.building_id = existing_requests[0].building_id
 
-    if pick_list.run_timestamp:
-        pick_list = manage_transition(pick_list, pick_list_input)
-
     pick_list.update_dt = update_dt
 
     session.commit()
@@ -326,12 +323,6 @@ def update_request_for_pick_list(
     )
     mutated_data["update_dt"] = update_dt
     session.query(Request).filter(Request.id == request_id).update(mutated_data)
-
-    # Updating the pick list, run_time, update_dt
-    if pick_list_request_input.run_timestamp:
-        existing_pick_list = manage_transition(
-            existing_pick_list, pick_list_request_input
-        )
 
     existing_pick_list.update_dt = update_dt
 
