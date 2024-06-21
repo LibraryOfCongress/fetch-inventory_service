@@ -58,8 +58,10 @@ cover/
 *.mo
 *.pot
 
-# Django stuff:
+# Ignore log files
 *.log
+
+# Django stuff:
 local_settings.py
 db.sqlite3
 db.sqlite3-journal

@@ -36,6 +36,15 @@ COPY app /code/app
 COPY migrations /code/migrations
 COPY alembic.ini /code/alembic.ini
 
+# Add log rotation to container
+COPY app/logs/log_rotate.conf /etc/logrotate.d/fetch
+COPY app/logs/logrotate-cron.sh /etc/cron.daily/logrotate-cron
+COPY app/logs/cron.sh /code/app/cron.sh
+RUN chmod +x /etc/cron.daily/logrotate-cron
+COPY app/logs/cronjob.txt /etc/cron.d/cronjob
+RUN apt-get update && apt-get install -y logrotate cron
+RUN crontab /etc/cron.d/cronjob
+
 # Add SchemaSpy
 ADD schemaspy/schemaspy-6.2.4.jar /code/schemaspy.jar
 ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
@@ -46,5 +55,8 @@ RUN chmod +x /code/db-ready-check.sh
 
 # Expose the application port
 EXPOSE 8001
+
+# Start logrotate cron schedule
+ENTRYPOINT ["/code/app/cron.sh"]
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

@@ -153,6 +153,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configure logging directory for data activity log rotation
+# This is git ignored
+data_activity_log_dir = "app/logs"
+log_file = os.path.join(data_activity_log_dir, "data_activity.log")
+# Create the log directory if it doesn't exist
+os.makedirs(data_activity_log_dir, exist_ok=True)
+
 
 @app.get("/")
 async def root():
