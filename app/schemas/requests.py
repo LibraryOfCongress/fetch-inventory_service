@@ -25,7 +25,7 @@ class RequestInput(BaseModel):
                 "barcode_value": "RS4321",
                 "request_type_id": 1,
                 "item_id": 1,
-                "non_tray_item_id": None,
+                "non_tray_item_id": 1,
                 "delivery_location_id": 1,
                 "priority_id": 1,
                 "requestor_name": "Bilbo Baggins",
@@ -44,7 +44,6 @@ class RequestUpdateInput(BaseModel):
     external_request_id: Optional[str] = None
     requestor_name: Optional[str] = None
     barcode_value: Optional[str] = None  # pop this off in path operations
-    scanned_for_pick_list: Optional[bool] = None
     scanned_for_retrieval: Optional[bool] = None
 
     class Config:

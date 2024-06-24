@@ -36,3 +36,4 @@ class User(SQLModel, table=True):
     verification_jobs: List["VerificationJob"] = Relationship(back_populates="user")
     pick_lists: List["PickList"] = Relationship(back_populates="user")
     groups: List["Group"] = Relationship(back_populates="users", link_model=UserGroup)
+    refile_jobs: List["RefileJob"] = Relationship(back_populates="assigned_user")

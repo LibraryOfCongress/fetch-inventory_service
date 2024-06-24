@@ -319,12 +319,30 @@ def update_request_for_pick_list(
         )
 
     mutated_data = pick_list_request_input.model_dump(
-        exclude_unset=True, exclude={"run_timestamp"}
+        exclude_unset=True, exclude={"run_timestamp", "status"}
     )
     mutated_data["update_dt"] = update_dt
+    existing_pick_list.update_dt = update_dt
+
+    # Updating the pick list request
     session.query(Request).filter(Request.id == request_id).update(mutated_data)
 
-    existing_pick_list.update_dt = update_dt
+    # Updating the pick list request Item or Non Tray Item status
+    if pick_list_request_input.status:
+        request = session.get(Request, request_id)
+        if request.item:
+            session.query(Item).filter(Item.id == request.item.id).update(
+                {"status": pick_list_request_input.status},
+                synchronize_session="fetch",
+            )
+
+        else:
+            session.query(NonTrayItem).filter(
+                NonTrayItem.id == request.non_tray_item.id
+            ).update(
+                {"status": pick_list_request_input.status},
+                synchronize_session="fetch",
+            )
 
     session.commit()
     session.refresh(existing_pick_list)

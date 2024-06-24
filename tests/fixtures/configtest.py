@@ -192,6 +192,8 @@ def populate_record(client, fixtures_path, table):
                 return client.post("/size_class", json=data.get(table))
             elif table == "request_types":
                 return client.post("/requests/types", json=data.get(table))
+            elif table == "refile_jobs":
+                return client.post("/refile-jobs", json=data.get(table))
             elif table == "shelving_jobs":
                 response = client.patch("/verification-jobs/1", json={"status":
                                                                          "Completed"})
@@ -291,3 +293,4 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "pick_lists")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "request_types")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "requests")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "refile_jobs")

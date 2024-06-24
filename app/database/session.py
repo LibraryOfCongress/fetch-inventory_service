@@ -22,6 +22,13 @@ def commit_record(session, record):
     return record
 
 
+def bulk_commit_records(session, records):
+    session.bulk_save_objects(records)
+    session.commit()
+    session.refresh(records)
+    return records
+
+
 def remove_record(session, record):
     session.delete(record)
     session.commit()

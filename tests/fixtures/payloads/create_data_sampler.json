@@ -163,5 +163,10 @@
   "pick_lists": {
     "user_id": 1,
     "status": "Created"
+  },
+  "refile_jobs": {
+    "assigned_user_id": 1,
+    "run_time": "00:00:00",
+    "status": "Created"
   }
 }

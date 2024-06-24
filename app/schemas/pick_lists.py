@@ -52,12 +52,14 @@ class PickListUpdateInput(BaseModel):
 
 class PickListUpdateRequestInput(RequestUpdateInput):
     run_timestamp: Optional[datetime] = None
+    status: Optional[str] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "user_id": 1,
                 "building_id": 1,
+                "status": "Out",
                 "run_timestamp": "2023-11-27T12:34:56.789123Z",
                 "barcode_value": "RS4321",
                 "request_type_id": 1,

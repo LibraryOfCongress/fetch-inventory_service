@@ -7,6 +7,9 @@ from sqlmodel import SQLModel, Field, Relationship
 
 # from sqlalchemy.schema import UniqueConstraint
 
+from app.models.refile_non_tray_item import RefileNonTrayItem
+from app.models.refile_jobs import RefileJob
+
 
 class NonTrayItemStatus(str, Enum):
     In = "In"
@@ -61,6 +64,9 @@ class NonTrayItem(SQLModel, table=True):
     scanned_for_shelving: Optional[bool] = Field(
         sa_column=sa.Boolean, default=False, nullable=False
     )
+    scanned_for_refile_queue: Optional[bool] = Field(
+        sa_column=sa.Boolean, default=False, nullable=False
+    )
     verification_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="verification_jobs.id"
     )
@@ -79,14 +85,19 @@ class NonTrayItem(SQLModel, table=True):
     withdrawal_dt: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=None, nullable=True
     )
+    condition: str = Field(
+        max_length=30, sa_column=sa.VARCHAR, nullable=True, unique=False
+    )
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
+    scanned_for_refile_queue_dt: datetime = Field(
+        sa_column=sa.DateTime, default=None, nullable=True
+    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
     update_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
-
     barcode: Optional["Barcode"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
@@ -114,5 +125,8 @@ class NonTrayItem(SQLModel, table=True):
     )
     subcollection: Optional["Subcollection"] = Relationship(
         back_populates="non_tray_items"
+    )
+    refile_jobs: Optional[RefileJob] = Relationship(
+        back_populates="non_tray_items", link_model=RefileNonTrayItem
     )
     requests: List["Request"] = Relationship(back_populates="non_tray_item")

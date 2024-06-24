@@ -1,22 +1,15 @@
-from app.logger import inventory_logger
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.models.aisles import Aisle
-from app.models.ladders import Ladder
-from app.models.modules import Module
 from app.models.requests import Request
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.barcodes import Barcode
 from app.models.shelf_positions import ShelfPosition
-from app.models.shelves import Shelf
-from app.models.sides import Side
 from app.models.trays import Tray
 from app.models.pick_list_requests import PickListRequest
 from app.schemas.requests import (
@@ -29,7 +22,6 @@ from app.schemas.requests import (
 from app.config.exceptions import (
     BadRequest,
     NotFound,
-    ValidationException,
     InternalServerError,
 )
 from app.utilities import get_module_shelf_position
@@ -118,6 +110,7 @@ def create_request(
         if (
             not shelf_position.tray.scanned_for_shelving
             or not shelf_position.tray.shelf_position_id
+            or not item.status == "In"
         ):
             raise BadRequest(detail="Item is not shelved")
 
@@ -134,6 +127,7 @@ def create_request(
         if (
             not non_tray_item.scanned_for_shelving
             or not non_tray_item.shelf_position_id
+            or not non_tray_item.status == "In"
         ):
             raise BadRequest(detail="Non tray item is not shelved")
 

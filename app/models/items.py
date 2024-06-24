@@ -7,6 +7,9 @@ from sqlmodel import SQLModel, Field, Relationship
 
 # from sqlalchemy.schema import UniqueConstraint
 
+from app.models.refile_items import RefileItem
+from app.models.refile_jobs import RefileJob
+
 
 class ItemStatus(str, Enum):
     In = "In"
@@ -70,12 +73,22 @@ class Item(SQLModel, table=True):
     scanned_for_verification: Optional[bool] = Field(
         sa_column=sa.Boolean, default=False, nullable=False
     )
+    scanned_for_refile_queue: Optional[bool] = Field(
+        sa_column=sa.Boolean, default=False, nullable=False
+    )
     verification_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="verification_jobs.id"
     )
-    accession_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
-    withdrawal_dt: datetime = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    accession_dt: Optional[datetime] = Field(
+        sa_column=sa.DateTime, default=None, nullable=True
+    )
+    withdrawal_dt: Optional[datetime] = Field(
+        sa_column=sa.DateTime, default=None, nullable=True
+    )
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
+    scanned_for_refile_queue_dt: Optional[datetime] = Field(
+        sa_column=sa.DateTime, default=None, nullable=True
+    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
@@ -86,11 +99,18 @@ class Item(SQLModel, table=True):
     barcode: Optional["Barcode"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
+
     accession_job: Optional["AccessionJob"] = Relationship(back_populates="items")
     verification_job: Optional["VerificationJob"] = Relationship(back_populates="items")
     subcollection: Optional["Subcollection"] = Relationship(back_populates="items")
     tray: Optional["Tray"] = Relationship(back_populates="items")
     media_type: Optional["MediaType"] = Relationship(back_populates="items")
     size_class: Optional["SizeClass"] = Relationship(back_populates="items")
+    container_type: Optional["ContainerType"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
     owner: Optional["Owner"] = Relationship(back_populates="items")
+    refile_jobs: List[RefileJob] = Relationship(
+        back_populates="items", link_model=RefileItem
+    )
     requests: List["Request"] = Relationship(back_populates="item")

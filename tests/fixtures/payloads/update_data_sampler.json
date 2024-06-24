@@ -107,5 +107,8 @@
   },
   "groups": {
     "name": "Updated Group 3"
+  },
+    "refile_jobs": {
+    "status": "Paused"
   }
 }

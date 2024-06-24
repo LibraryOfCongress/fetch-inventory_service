@@ -351,5 +351,19 @@
     "page": 1,
     "size": 50,
     "pages": 1
+  },
+  "refile_jobs": {
+    "items": [
+      {
+        "id": 1,
+        "assigned_user_id": 1,
+        "run_time": "00:00:00",
+        "status": "Created"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
   }
 }

@@ -1,16 +1,34 @@
+from datetime import timedelta
+from enum import Enum
+
 import pytz
 from sqlalchemy import and_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, aliased
 from sqlmodel import select
 
 from app.config.exceptions import NotFound
 from app.logger import inventory_logger
+from app.models.aisle_numbers import AisleNumber
+from app.models.barcodes import Barcode
+from app.models.buildings import Building
+from app.models.container_types import ContainerType
+from app.models.items import Item
+from app.models.ladder_numbers import LadderNumber
+from app.models.media_types import MediaType
+from app.models.module_numbers import ModuleNumber
 from app.models.modules import Module
 from app.models.aisles import Aisle
+from app.models.non_tray_items import NonTrayItem
+from app.models.owners import Owner
+from app.models.shelf_numbers import ShelfNumber
+from app.models.shelf_position_numbers import ShelfPositionNumber
+from app.models.side_orientations import SideOrientation
 from app.models.sides import Side
 from app.models.ladders import Ladder
 from app.models.shelves import Shelf
 from app.models.shelf_positions import ShelfPosition
+from app.models.size_class import SizeClass
+from app.models.trays import Tray
 
 
 def get_module_shelf_position(session, shelf_position):
@@ -269,6 +287,10 @@ def manage_transition(original_record, update_record):
     - tracks last_transition
     """
     run_timestamp = make_aware(update_record.run_timestamp)
+
+    if original_record.run_time is None:
+        original_record.run_time = timedelta(0)
+
     if original_record.last_transition:
         last_transition = make_aware(original_record.last_transition)
         original_record.run_time += run_timestamp - last_transition
@@ -279,3 +301,124 @@ def manage_transition(original_record, update_record):
     original_record.last_transition = run_timestamp
 
     return original_record
+
+
+def get_refile_queue(building_id: int = None) -> list:
+    """
+    Get refile queue
+    """
+    # Base query for items
+    item_query_conditions = []
+    non_tray_item_query_conditions = []
+
+    if building_id:
+        item_query_conditions.append(Building.id == building_id)
+        non_tray_item_query_conditions.append(Building.id == building_id)
+
+    # Get items scanned for refile queue
+    item_query_conditions.append(Item.scanned_for_refile_queue == True)
+    non_tray_item_query_conditions.append(NonTrayItem.scanned_for_refile_queue == True)
+
+    item_query = (
+        select(
+            Item.id.label("id"),
+            ShelfPosition.id.label("shelf_position_id"),
+            ShelfPositionNumber.number.label("shelf_position_number"),
+            ShelfPosition.shelf_id.label("shelf_id"),
+            ShelfNumber.number.label("shelf_number"),
+            Ladder.id.label("ladder_id"),
+            LadderNumber.number.label("ladder_number"),
+            Side.id.label("side_id"),
+            SideOrientation.name.label("side_orientation"),
+            Aisle.id.label("aisle_id"),
+            AisleNumber.number.label("aisle_number"),
+            Module.id.label("module_id"),
+            ModuleNumber.number.label("module_number"),
+            Item.scanned_for_refile_queue.label("scanned_for_refile_queue"),
+            ContainerType.type.label("container_type"),
+            MediaType.name.label("media_type"),
+            Barcode.value.label("barcode_value"),
+            Owner.name.label("owner"),
+            SizeClass.name.label("size_class"),
+            Item.scanned_for_refile_queue_dt.label("scanned_for_refile_queue_dt"),
+        )
+        .select_from(Item)
+        .join(Tray, Item.tray_id == Tray.id)
+        .join(ContainerType, Tray.container_type_id == ContainerType.id)
+        .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id)
+        .join(
+            ShelfPositionNumber,
+            ShelfPosition.shelf_position_number_id == ShelfPositionNumber.id,
+        )
+        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+        .join(ShelfNumber, Shelf.shelf_number_id == ShelfNumber.id)
+        .join(Ladder, Shelf.ladder_id == Ladder.id)
+        .join(LadderNumber, Ladder.ladder_number_id == LadderNumber.id)
+        .join(Side, Ladder.side_id == Side.id)
+        .join(SideOrientation, Side.side_orientation_id == SideOrientation.id)
+        .join(Aisle, Side.aisle_id == Aisle.id)
+        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
+        .join(Module, Aisle.module_id == Module.id)
+        .join(ModuleNumber, Module.module_number_id == ModuleNumber.id)
+        .join(Building, Module.building_id == Building.id)
+        .join(MediaType, Item.media_type_id == MediaType.id)
+        .join(Barcode, Item.barcode_id == Barcode.id)
+        .join(Owner, Item.owner_id == Owner.id)
+        .join(SizeClass, Item.size_class_id == SizeClass.id)
+        .filter(and_(*item_query_conditions))
+    )
+
+    inventory_logger.info(f"Item query: {item_query}")
+
+    # Base query for non-tray items
+    non_tray_item_query = (
+        select(
+            NonTrayItem.id.label("id"),
+            ShelfPosition.id.label("shelf_position_id"),
+            ShelfPositionNumber.number.label("shelf_position_number"),
+            ShelfPosition.shelf_id.label("shelf_id"),
+            ShelfNumber.number.label("shelf_number"),
+            Ladder.id.label("ladder_id"),
+            LadderNumber.number.label("ladder_number"),
+            Side.id.label("side_id"),
+            SideOrientation.name.label("side_orientation"),
+            Aisle.id.label("aisle_id"),
+            AisleNumber.number.label("aisle_number"),
+            Module.id.label("module_id"),
+            ModuleNumber.number.label("module_number"),
+            NonTrayItem.scanned_for_refile_queue.label("scanned_for_refile_queue"),
+            ContainerType.type.label("container_type"),
+            MediaType.name.label("media_type"),
+            Barcode.value.label("barcode_value"),
+            Owner.name.label("owner"),
+            SizeClass.name.label("size_class"),
+            NonTrayItem.scanned_for_refile_queue_dt.label(
+                "scanned_for_refile_queue_dt"
+            ),
+        )
+        .select_from(NonTrayItem)
+        .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id)
+        .join(
+            ShelfPositionNumber,
+            ShelfPosition.shelf_position_number_id == ShelfPositionNumber.id,
+        )
+        .join(ContainerType, NonTrayItem.container_type_id == ContainerType.id)
+        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+        .join(ShelfNumber, Shelf.shelf_number_id == ShelfNumber.id)
+        .join(Ladder, Shelf.ladder_id == Ladder.id)
+        .join(LadderNumber, Ladder.ladder_number_id == LadderNumber.id)
+        .join(Side, Ladder.side_id == Side.id)
+        .join(SideOrientation, Side.side_orientation_id == SideOrientation.id)
+        .join(Aisle, Side.aisle_id == Aisle.id)
+        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
+        .join(Module, Aisle.module_id == Module.id)
+        .join(ModuleNumber, Module.module_number_id == ModuleNumber.id)
+        .join(Building, Module.building_id == Building.id)
+        .join(MediaType, NonTrayItem.media_type_id == MediaType.id)
+        .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
+        .join(Owner, NonTrayItem.owner_id == Owner.id)
+        .join(SizeClass, NonTrayItem.size_class_id == SizeClass.id)
+        .filter(and_(*non_tray_item_query_conditions))
+    )
+
+    return item_query.union_all(non_tray_item_query).subquery()

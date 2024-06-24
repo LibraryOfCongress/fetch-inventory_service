@@ -7,6 +7,8 @@ from datetime import datetime
 from app.models.items import ItemStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.accession_jobs import AccessionJobBaseOutput
+from app.schemas.container_types import ContainerTypeDetailReadOutput
+from app.schemas.trays import TrayDetailReadOutput
 from app.schemas.verification_jobs import VerificationJobBaseOutput
 from app.schemas.media_types import MediaTypeDetailReadOutput
 from app.schemas.size_class import SizeClassDetailReadOutput
@@ -19,6 +21,7 @@ class ItemInput(BaseModel):
     accession_job_id: Optional[int] = None
     scanned_for_accession: Optional[bool] = None
     scanned_for_verification: Optional[bool] = None
+    scanned_for_refile_queue: Optional[bool] = None
     verification_job_id: Optional[int] = None
     tray_id: Optional[int] = None
     container_type_id: Optional[int] = None
@@ -51,6 +54,7 @@ class ItemInput(BaseModel):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_refile_queue": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -77,6 +81,7 @@ class ItemUpdateInput(ItemInput):
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
+                "scanned_for_refile_queue": False,
                 "verification_job_id": 1,
                 "container_type_id": 1,
                 "tray_id": 1,
@@ -169,10 +174,12 @@ class ItemDetailWriteOutput(ItemBaseOutput):
 class ItemDetailReadOutput(ItemDetailWriteOutput):
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
+    container_type: Optional[ContainerTypeDetailReadOutput] = None
     accession_job: Optional[AccessionJobBaseOutput] = None
     verification_job: Optional[VerificationJobBaseOutput] = None
     subcollection: Optional[SubcollectionDetailWriteOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
+    tray: Optional[TrayDetailReadOutput] = None
 
     class Config:
         json_schema_extra = {
