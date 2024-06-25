@@ -18,7 +18,6 @@ from app.schemas.refile_jobs import (
     RefileJobUpdateInput,
     RefileJobListOutput,
     RefileJobDetailOutput,
-    RefileJobWriteDetailOutput,
 )
 from app.schemas.items import ItemUpdateInput
 from app.schemas.non_tray_items import NonTrayItemUpdateInput
@@ -32,7 +31,9 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[RefileJobListOutput])
-def get_refile_job_list(all: bool = Query(default=False), session: Session = Depends(get_session)) -> list:
+def get_refile_job_list(
+    all: bool = Query(default=False), session: Session = Depends(get_session)
+) -> list:
     """
     Get a list of refile jobs
 
@@ -42,7 +43,9 @@ def get_refile_job_list(all: bool = Query(default=False), session: Session = Dep
     if all:
         return paginate(session, select(RefileJob))
     else:
-        return paginate(session, select(RefileJob).where(RefileJob.status != 'Completed'))
+        return paginate(
+            session, select(RefileJob).where(RefileJob.status != "Completed")
+        )
 
 
 @router.get("/{id}", response_model=RefileJobDetailOutput)
@@ -68,7 +71,7 @@ def get_refile_job_detail(id: int, session: Session = Depends(get_session)):
         raise NotFound(detail=f"Refile Job ID {id} Not Found")
 
 
-@router.post("/", response_model=RefileJobWriteDetailOutput, status_code=201)
+@router.post("/", response_model=RefileJobDetailOutput, status_code=201)
 def create_refile_job(
     refile_job_input: RefileJobInput, session: Session = Depends(get_session)
 ):

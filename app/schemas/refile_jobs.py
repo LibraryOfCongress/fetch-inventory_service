@@ -478,36 +478,3 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                 "non_tray_item_shelved_refiled_count": 1
             }
         }
-
-
-class RefileJobWriteDetailOutput(RefileJobBaseOutput):
-    assigned_user: Optional[UserDetailReadOutput] = None
-    items: Optional[list] = None
-    non_tray_items: Optional[list] = None
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "assigned_user_id": 1,
-                "status": "Created",
-                "run_time": "03:25:15",
-                "last_transition": "2023-10-08T20:46:56.764426Z",
-                "items": [
-                    {
-
-                    }
-                ],
-                "non_tray_items": [
-                    {
-
-                    }
-                ],
-                "item_count": 1,
-                "item_shelved_refiled_count": 1,
-                "non_tray_item_count": 1,
-                "non_tray_item_shelved_refiled_count": 1,
-                "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764426"
-            }
-        }
