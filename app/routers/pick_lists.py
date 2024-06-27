@@ -4,18 +4,22 @@ from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy.exc import IntegrityError
 
-from app.database.session import get_session, commit_record
+from app.database.session import get_session, commit_record, remove_record
+from app.models.aisles import Aisle
 from app.models.buildings import Building
-from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
-from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
+from app.models.ladders import Ladder
 from app.models.non_tray_items import NonTrayItem
+from app.models.pick_list_requests import PickListRequest
 from app.models.pick_lists import PickList
 from app.models.requests import Request
-from app.models.tray_withdrawal import TrayWithdrawal
+from app.models.shelves import Shelf
 from app.models.trays import Tray
-from app.models.withdraw_jobs import WithdrawJob
+
+from app.schemas.requests import RequestDetailReadOutput
+
 from app.schemas.pick_lists import (
     PickListInput,
     PickListUpdateInput,
@@ -23,7 +27,12 @@ from app.schemas.pick_lists import (
     PickListDetailOutput,
     PickListUpdateRequestInput,
 )
-from app.config.exceptions import BadRequest, NotFound
+from app.config.exceptions import (
+    BadRequest,
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 from app.utilities import get_location, manage_transition
 
 router = APIRouter(
@@ -146,7 +155,6 @@ def create_pick_list(
     **Raises:**
     - HTTPException: If the pick list already exists.
     """
-    errored_request_ids = []
     requests = (
         session.query(Request).filter(Request.id.in_(pick_list_input.request_ids)).all()
     )
@@ -154,22 +162,23 @@ def create_pick_list(
     if not requests:
         raise BadRequest(detail="Request Not Found")
 
-    if len(requests) != len(pick_list_input.request_ids):
-        errored_request_ids.append(set(requests) - set(pick_list_input.request_ids))
-
     building_id = requests[0].building_id
     new_pick_list = PickList(building=session.get(Building, building_id))
     session.add(new_pick_list)
     session.flush()
 
-    session.query(Request).filter(Request.id.in_(pick_list_input.request_ids)).update(
-        {"pick_list_id": new_pick_list.id}
-    )
+    pick_list_requests = [
+        PickListRequest(request_id=request.id, pick_list_id=new_pick_list.id)
+        for request in requests
+    ]
 
+    session.bulk_save_objects(pick_list_requests)
     session.commit()
 
-    new_pick_list_dict = new_pick_list.__dict__
-    new_pick_list_dict["errored_request_ids"] = errored_request_ids
+    for request in requests:
+        request.scanned_for_pick_list = True
+
+    session.commit()
 
     return new_pick_list
 
@@ -192,92 +201,9 @@ def update_pick_list(
     - HTTPException: If the pick list is not found.
     """
     existing_pick_list = session.get(PickList, id)
+
     if not existing_pick_list:
         raise NotFound(detail=f"Pick List ID {id} Not Found")
-
-    if pick_list.status == "Completed":
-        request_ids = [
-            request.id
-            for request in session.query(Request.id)
-            .filter(Request.pick_list_id == id, Request.fulfilled == False)
-            .all()
-        ]
-
-        if request_ids:
-            session.query(Request).filter(Request.id.in_(request_ids)).update(
-                {"fulfilled": True}, synchronize_session=False
-            )
-
-            # Get item ids and update their status
-            item_ids = [
-                item.id
-                for item in session.query(Item.id)
-                .join(Request, Item.id == Request.item_id)
-                .filter(Request.id.in_(request_ids))
-                .all()
-            ]
-            session.query(Item).filter(Item.id.in_(item_ids)).update(
-                {"status": "Out"}, synchronize_session=False
-            )
-
-            # Get non-tray item ids and update their status
-            non_tray_item_ids = [
-                nt_item.id
-                for nt_item in session.query(NonTrayItem.id)
-                .join(Request, NonTrayItem.id == Request.non_tray_item_id)
-                .filter(Request.id.in_(request_ids))
-                .all()
-            ]
-            session.query(NonTrayItem).filter(
-                NonTrayItem.id.in_(non_tray_item_ids)
-            ).update({"status": "Out"}, synchronize_session=False)
-
-            # Handle WithdrawJob and related entities
-            existing_withdraw_job = (
-                session.query(WithdrawJob)
-                .filter(WithdrawJob.pick_list_id == id)
-                .first()
-            )
-
-            if existing_withdraw_job:
-                # Get related item ids through the ItemWithdrawal relationship
-                withdraw_item_ids = [
-                    w.item_id
-                    for w in session.query(ItemWithdrawal.item_id)
-                    .filter(ItemWithdrawal.withdraw_job_id == existing_withdraw_job.id)
-                    .all()
-                ]  # Extract IDs from tuples
-                session.query(Item).filter(Item.id.in_(withdraw_item_ids)).update(
-                    {"status": "Out"}, synchronize_session=False
-                )
-
-                # Get related non-tray item ids through the NonTrayItemWithdrawal relationship
-                withdraw_non_tray_item_ids = [
-                    w.non_tray_item_id
-                    for w in session.query(NonTrayItemWithdrawal.non_tray_item_id)
-                    .filter(
-                        NonTrayItemWithdrawal.withdraw_job_id
-                        == existing_withdraw_job.id
-                    )
-                    .all()
-                ]  # Extract IDs from tuples
-                session.query(NonTrayItem).filter(
-                    NonTrayItem.id.in_(withdraw_non_tray_item_ids)
-                ).update({"status": "Out"}, synchronize_session=False)
-
-                # Get related tray ids and update the status of items in those trays
-                withdraw_trays = (
-                    session.query(Tray.id)
-                    .join(TrayWithdrawal, Tray.id == TrayWithdrawal.tray_id)
-                    .filter(TrayWithdrawal.withdraw_job_id == existing_withdraw_job.id)
-                    .all()
-                )
-                for tray in withdraw_trays:
-                    if tray.items:
-                        for item in tray.items:
-                            session.query(Item).filter(Item.id == item.id).update(
-                                {"status": "Out"}, synchronize_session=False
-                            )
 
     if pick_list.run_timestamp:
         existing_pick_list = manage_transition(existing_pick_list, pick_list)
@@ -289,11 +215,7 @@ def update_pick_list(
 
     setattr(existing_pick_list, "update_dt", datetime.utcnow())
 
-    session.add(existing_pick_list)
-    session.commit()
-    session.refresh(existing_pick_list)
-
-    return existing_pick_list
+    return commit_record(session, existing_pick_list)
 
 
 @router.patch("/{pick_list_id}/add_request", response_model=PickListDetailOutput)
@@ -320,7 +242,6 @@ def add_request_to_pick_list(
 
     pick_list = session.get(PickList, pick_list_id)
     update_dt = datetime.utcnow()
-    errored_request_ids = []
 
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
@@ -335,12 +256,17 @@ def add_request_to_pick_list(
     ).all()
 
     if len(existing_requests) != len(pick_list_input.request_ids):
-        errored_request_ids.append(
-            set(existing_requests) - set(pick_list_input.request_ids)
-        )
+        raise NotFound(detail=f"Some Requests Not Found")
+
+    # Adding the pick list request
+    pick_list_requests = [
+        PickListRequest(pick_list_id=pick_list_id, request_id=request.id)
+        for request in existing_requests
+    ]
+    session.bulk_save_objects(pick_list_requests)
 
     session.query(Request).filter(Request.id.in_(pick_list_input.request_ids)).update(
-        {"pick_list_id": pick_list_id, "update_dt": datetime.utcnow()},
+        {"scanned_for_pick_list": True, "update_dt": datetime.utcnow()},
         synchronize_session="fetch",
     )
 
@@ -353,10 +279,7 @@ def add_request_to_pick_list(
     session.commit()
     session.refresh(pick_list)
 
-    pick_list_dict = pick_list.__dict__
-    pick_list_dict["errored_request_ids"] = errored_request_ids
-
-    return pick_list_dict
+    return pick_list
 
 
 @router.patch(
@@ -463,16 +386,31 @@ def remove_request_from_pick_list(
     if not request.scanned_for_pick_list:
         raise BadRequest(detail=f"Request ID {request_id} Not In Pick List")
 
-    session.query(Request).filter(Request.id == request_id).update(
-        {"update_dt": datetime.utcnow(), "pick_list_id": None},
-        synchronize_session="fetch",
+    # Getting pick list request, checking if not found, and Remove the request from
+    # the pick list, and refresh the pick list
+    pick_list_request = (
+        session.query(PickListRequest)
+        .filter_by(pick_list_id=pick_list_id, request_id=request_id)
+        .first()
     )
+
+    if not pick_list_request:
+        raise NotFound(
+            detail=f"Request ID {request_id} Not Found in Pick List ID {pick_list_id}"
+        )
+
+    # Marking the pick list request as not scanned for pick list
+    request.scanned_for_pick_list = False
+    request.scanned_for_retrieval = False
+    request.update_dt = update_dt
+    commit_record(session, request)
+
+    remove_record(session, pick_list_request)
+
+    # Updating update_dt pick list
     setattr(pick_list, "update_dt", update_dt)
 
-    session.commit()
-    session.refresh(pick_list)
-
-    return pick_list
+    return commit_record(session, pick_list)
 
 
 @router.delete("/{id}")
@@ -496,14 +434,27 @@ def delete_pick_list(id: int, session: Session = Depends(get_session)):
 
     # Delete pick list requests
     if pick_list.requests:
-        # Update requests
-
-        session.query(Request).filter(
-            Request.id.in_([r.request_id for r in pick_list.requests])
-        ).update(
-            {"pick_list_id": None, "update_dt": datetime.utcnow()},
-            synchronize_session="fetch",
+        pick_list_requests = (
+            session.query(PickListRequest)
+            .filter(PickListRequest.pick_list_id == pick_list.id)
+            .all()
         )
+
+        for pick_list_request in pick_list_requests:
+            remove_record(session, pick_list_request)
+
+        # Update requests
+        requests_to_update = (
+            session.query(Request)
+            .filter(Request.id.in_([r.request_id for r in pick_list_requests]))
+            .all()
+        )
+
+        for request in requests_to_update:
+            request.scanned_for_pick_list = False
+            request.scanned_for_retrieval = False
+
+        session.bulk_update_mappings(Request, requests_to_update)
 
     session.delete(pick_list)
     session.commit()

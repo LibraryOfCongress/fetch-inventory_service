@@ -167,7 +167,6 @@ class PickListDetailOutput(PickListBaseOutput):
     requests: Optional[list[RequestDetailReadOutputNoPickList]] = None
     building_id: Optional[int] = None
     building: Optional[BuildingBaseOutput] = None
-    errored_request_ids: Optional[list[int]] = None
 
     class Config:
         json_schema_extra = {

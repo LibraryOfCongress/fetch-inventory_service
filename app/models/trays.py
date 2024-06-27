@@ -5,11 +5,7 @@ from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
-from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.items import Item
-
-# from app.models.withdraw_jobs import WithdrawJob
-
 
 # from sqlalchemy.schema import UniqueConstraint
 
@@ -43,42 +39,26 @@ class Tray(SQLModel, table=True):
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id", nullable=False, default=None, unique=True
     )
-    scanned_for_accession: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
-    )
-    scanned_for_verification: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
-    )
-    scanned_for_shelving: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
-    )
-    collection_accessioned: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
-    )
-    collection_verified: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
-    )
+    scanned_for_accession: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    scanned_for_verification: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    scanned_for_shelving: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    collection_accessioned: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
+    collection_verified: Optional[bool] = Field(sa_column=sa.Boolean, default=False, nullable=False)
     size_class_id: int = Field(foreign_key="size_class.id", nullable=False)
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     shelf_position_id: Optional[int] = Field(
-        foreign_key="shelf_positions.id", nullable=True
+        foreign_key="shelf_positions.id",
+        nullable=True
     )
-    shelf_position_proposed_id: Optional[int] = Field(
-        sa_column=sa.Column(sa.Integer, nullable=True, unique=False)
-    )
+    shelf_position_proposed_id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, nullable=True, unique=False))
     conveyance_bin_id: Optional[int] = Field(
-        foreign_key="conveyance_bins.id", nullable=True
+        foreign_key="conveyance_bins.id",
+        nullable=True
     )
-    accession_dt: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
-    shelved_dt: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
-    withdrawal_dt: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
-    )
+    accession_dt: Optional[datetime] = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    shelved_dt: Optional[datetime] = Field(sa_column=sa.DateTime, default=None, nullable=True)
+    withdrawal_dt: Optional[datetime] = Field(sa_column=sa.DateTime, default=None, nullable=True)
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
@@ -95,7 +75,9 @@ class Tray(SQLModel, table=True):
     media_type: Optional["MediaType"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
-    owner: Optional["Owner"] = Relationship(sa_relationship_kwargs={"uselist": False})
+    owner: Optional["Owner"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
     container_type: Optional["ContainerType"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
@@ -108,6 +90,3 @@ class Tray(SQLModel, table=True):
     verification_job: Optional["VerificationJob"] = Relationship(back_populates="trays")
     shelving_job: Optional["ShelvingJob"] = Relationship(back_populates="trays")
     items: List[Item] = Relationship(back_populates="tray")
-    withdrawal_jobs: Optional[List["WithdrawJob"]] = Relationship(
-        back_populates="trays", link_model=TrayWithdrawal
-    )

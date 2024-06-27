@@ -11,6 +11,7 @@ from app.models.non_tray_items import NonTrayItem
 from app.models.barcodes import Barcode
 from app.models.shelf_positions import ShelfPosition
 from app.models.trays import Tray
+from app.models.pick_list_requests import PickListRequest
 from app.schemas.requests import (
     RequestInput,
     RequestUpdateInput,
@@ -34,7 +35,7 @@ router = APIRouter(
 @router.get("/", response_model=Page[RequestListOutput])
 def get_request_list(
     building_id: int = None,
-    unfulfilled: bool = None,
+    unassociated_pick_list: bool = None,
     session: Session = Depends(get_session),
 ) -> list:
     """
@@ -52,8 +53,10 @@ def get_request_list(
     if building_id is not None:
         requests = requests.where(Request.building_id == building_id)
 
-    if unfulfilled is not None:
-        requests = requests.where(Request.fulfilled == unfulfilled)
+    if unassociated_pick_list is not None:
+        requests = requests.where(
+            Request.scanned_for_pick_list == unassociated_pick_list
+        )
 
     return paginate(session, requests)
 
@@ -218,6 +221,15 @@ def delete_request(id: int, session: Session = Depends(get_session)):
     request = session.get(Request, id)
 
     if request:
+        # Delete request from pick_list_requests
+        pick_list_requests = session.exec(
+            select(PickListRequest).where(PickListRequest.request_id == id)
+        )
+
+        if pick_list_requests:
+            for pick_list_request in pick_list_requests:
+                session.delete(pick_list_request)
+
         # Deleting request
         session.delete(request)
         session.commit()
