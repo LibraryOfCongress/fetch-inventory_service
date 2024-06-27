@@ -7,7 +7,7 @@
     },
     {
       "name": "Tray",
-      "allowed_pattern": "^[A-Z]{2}\\d{6}$"
+      "allowed_pattern": "^[A-Z]{2}\\d{5,6}$"
     },
     {
       "name": "Shelf",
