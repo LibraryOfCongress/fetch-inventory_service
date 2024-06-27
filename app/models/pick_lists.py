@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.buildings import Building
-from app.models.pick_list_requests import PickListRequest
 
 
 class PickListStatus(str, Enum):
@@ -56,7 +55,5 @@ class PickList(SQLModel, table=True):
     )
 
     user: Optional["User"] = Relationship(back_populates="pick_lists")
-    requests: List["Request"] = Relationship(
-        back_populates="pick_list", link_model=PickListRequest
-    )
+    requests: List["Request"] = Relationship(back_populates="pick_list")
     building: Optional[Building] = Relationship(back_populates="pick_lists")

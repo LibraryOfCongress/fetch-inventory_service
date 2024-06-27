@@ -68,6 +68,7 @@ from app.routers import (
     delivery_locations,
     requests,
     pick_lists,
+    withdraw_jobs,
     refile_queue,
     refile_jobs,
 )
@@ -226,6 +227,7 @@ app.include_router(priorities.router)
 app.include_router(delivery_locations.router)
 app.include_router(requests.router)
 app.include_router(pick_lists.router)
+app.include_router(withdraw_jobs.router)
 app.include_router(refile_queue.router)
 app.include_router(refile_jobs.router)
 

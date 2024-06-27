@@ -5,7 +5,7 @@ from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
-# from sqlalchemy.schema import UniqueConstraint
+from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 
 from app.models.refile_non_tray_item import RefileNonTrayItem
 from app.models.refile_jobs import RefileJob
@@ -13,6 +13,8 @@ from app.models.refile_jobs import RefileJob
 
 class NonTrayItemStatus(str, Enum):
     In = "In"
+    Requested = "Requested"
+    Withdrawn = "Withdrawn"
     Out = "Out"
 
 
@@ -130,3 +132,6 @@ class NonTrayItem(SQLModel, table=True):
         back_populates="non_tray_items", link_model=RefileNonTrayItem
     )
     requests: List["Request"] = Relationship(back_populates="non_tray_item")
+    withdrawal_jobs: Optional[List["WithdrawJob"]] = Relationship(
+        back_populates="non_tray_items", link_model=NonTrayItemWithdrawal
+    )
