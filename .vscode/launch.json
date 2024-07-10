@@ -13,7 +13,11 @@
                 "app.main:app",
                 "--reload",
                 "--port",
-                "8001"
+                "8001",
+                "--ssl-keyfile",
+                "~/workspace/fetch/inventory_service/app/saml/local/key.pem",
+                "--ssl-certfile",
+                "~/workspace/fetch/inventory_service/app/saml/local/cert.pem"
             ],
             "pythonArgs": ["-Xfrozen_modules=off"],
             "jinja": true,
@@ -22,7 +26,8 @@
               "PYDEVD_DISABLE_FILE_VALIDATION": "1",
               "APP_ENVIRONMENT": "debug",
               "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/inventory_service"
-            }
+            },
+            "preLaunchTask": "Generate Local Certificates"
         }
     ]
 }

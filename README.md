@@ -264,3 +264,16 @@ pip install pylint
 Create or open a Python file and write some code. Try saving the file to see if it gets formatted automatically.
 
 
+# Authentication System
+
+This application supports two types of authentication. A legacy login endpoint is available for accepting a username and password in a POST request.  This is only available in debug, local, dev, and test environments. The other method uses Single-Sign on in SAML communication with an Identity Provider. This method is available over all environments.
+
+## Local and Debug
+
+The Identity Provider is configured to relay to the acs endpoint on a localhost environment, but may only do so over https.  To support this, the local container build uses a self-signed certificate which is generated at build time.  Your browser may still give warnings about an untrusted certificate. You can either just bypass it in the browser, or (if on Mac) you can add these local certs to your keychain to stop getting the browser warning.  A VSCode launch profile is included in this repository, and that too, makes use of generated self-signed certs for localhost over https.
+
+## SSO Design
+
+The API exposes a login route, and a Assertion Consumer Service route for forwarding users to the identity provider, and receiving communication back from the idenity provider.  SAML configuration for the environments is slightly different.  At the time of this writing, these are separated via config files. At a future date, configuration should move entirely to the environment and be loaded in-memory only.
+
+When the ACS endpoint receives an encrypted re-direction with user Auth data, it then checks and / or creates a user in the FETCH database before issuing its own encrypted token for use with the front-end application.  Such a token is necessary for successful ongoing use of the FETCH webapp in an authenticated state.

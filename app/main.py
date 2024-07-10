@@ -2,6 +2,7 @@ import subprocess, os
 from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
+from app.middlware import JWTMiddleware
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -15,7 +16,6 @@ from alembic.config import Config
 from alembic import command
 
 from app.seed.seed_fake_data import seed_data
-from app.middlware import log_middleware
 from app.config.config import get_settings
 from app.config.exceptions import (
     BadRequest,
@@ -70,6 +70,7 @@ from app.routers import (
     pick_lists,
     refile_queue,
     refile_jobs,
+    auth,
 )
 
 
@@ -142,8 +143,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# add log middleware
-app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
+# add log and auth check middleware
+app.add_middleware(JWTMiddleware)
 
 # add CORS middleware
 app.add_middleware(
@@ -228,5 +229,6 @@ app.include_router(requests.router)
 app.include_router(pick_lists.router)
 app.include_router(refile_queue.router)
 app.include_router(refile_jobs.router)
+app.include_router(auth.router)
 
 add_pagination(app)

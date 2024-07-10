@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "FETCH"
     APP_ENVIRONMENT: str = "local"
     TIMEZONE: str = "America/New_York"
+    IDP_ENTITY_ID: str = "https://sts.windows.net/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/"
+    IDP_LOGIN_URL: str = "https://login.microsoftonline.com/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/saml2"
+    VUE_HOST: str = "https://localhost:8000"
     DATABASE_URL: str = (
         "postgresql://postgres:postgres@host.docker.internal:5432/inventory_service"
     )

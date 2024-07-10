@@ -1,0 +1,29 @@
+{
+  "strict": true,
+  "debug": true,
+  "sp": {
+    "entityId": "https://inventory.fetch.loc.gov/",
+    "assertionConsumerService": {
+        "url": "https://inventory.fetch.loc.gov/auth/sso/acs",
+        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+    },
+    "singleLogoutService": {
+        "url": "https://inventory.fetch.loc.gov/auth/sso/logout",
+        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+    },
+    "x509cert": "",
+    "privateKey": ""
+  },
+  "idp": {
+      "entityId": "https://sts.windows.net/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/",
+      "singleSignOnService": {
+          "url": "https://login.microsoftonline.com/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/saml2",
+          "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      },
+      "singleLogoutService": {
+          "url": "https://logout.microsoftonline.com/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/saml2",
+          "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      },
+      "x509cert": "MIIC8DCCAdigAwIBAgIQc/zdKP9TYKVJ6OLuoLR08DANBgkqhkiG9w0BAQsFADA0MTIwMAYDVQQDEylNaWNyb3NvZnQgQXp1cmUgRmVkZXJhdGVkIFNTTyBDZXJ0aWZpY2F0ZTAeFw0yNDA2MjQxOTI3NDJaFw0yNzA2MjQxOTI3NDJaMDQxMjAwBgNVBAMTKU1pY3Jvc29mdCBBenVyZSBGZWRlcmF0ZWQgU1NPIENlcnRpZmljYXRlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAth0W7V7l1e04i3m8FSGAZBc35o9ylyF1zcY5CC5xg0NgxDJIRmJvhZzGMdqG+UZwvh2lJIyv6V+epP4j+PKyE+Ylqphx9nKuBSW3Jplepa/AbJth2XJnqrGlKTri9SKUFycxOZX1sdJI9fq7phNrICHDpCOXL5Epr0cz3W/3oTw07Bn5dXMFRHW5HpeeZCdvDE7hHH0Il3W3M7ZfvHWOcW6E04Z6Fb5prUdjzlALERwQrV9CCQ87aA7YswRGUZr6vcaxWT15WqdycF3VjQxzbyeE6Ef2skc7+bjy8v2VGdBlazAURRkxlhkvG0zFe82gGN//v3TPZ9P5YUvT6kOG/QIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCcPqJ8VgcNX//XTSK8+gVeDzpi8kBHKuv8fsl847O8GCbIE0v3kFLz/dV52ob4lMVr1F+JtwbpuL0jiVfXdbbFHTvEXXZWgfKMKPJoCsJVPba/jw2Nir3sD3wqDTeAlh+0slelqKaF4bZDhkkHnrRiJjXpRAphRUBcWd2mDynfrySWuxVqduZs4FKdqIvfQW44SH5rxYWQgcHGxlZiaiDjVB7GGBJd923a+9m4kUeVG3U0c8v+HIdjPR61p+ojPGp3vM36tf6U2L9JTSRsoTjrtS2NNNbTRg18GiymBjgg43D1zzfphohf5NgFOfuB9tx0jIEFOOm2rYaLwREZgiHV"
+  }
+}

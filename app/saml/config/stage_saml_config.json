@@ -1,0 +1,29 @@
+{
+  "strict": true,
+  "debug": true,
+  "sp": {
+    "entityId": "https://inventory.stage.fetch.loc.gov/",
+    "assertionConsumerService": {
+        "url": "https://inventory.stage.fetch.loc.gov/auth/sso/acs",
+        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+    },
+    "singleLogoutService": {
+        "url": "https://inventory.stage.fetch.loc.gov/auth/sso/logout",
+        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+    },
+    "x509cert": "",
+    "privateKey": ""
+  },
+  "idp": {
+      "entityId": "https://sts.windows.net/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/",
+      "singleSignOnService": {
+          "url": "https://login.microsoftonline.com/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/saml2",
+          "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      },
+      "singleLogoutService": {
+          "url": "https://logout.microsoftonline.com/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/saml2",
+          "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      },
+      "x509cert": "MIIC8DCCAdigAwIBAgIQInwugmOQ1pFOLaW0L4opczANBgkqhkiG9w0BAQsFADA0MTIwMAYDVQQDEylNaWNyb3NvZnQgQXp1cmUgRmVkZXJhdGVkIFNTTyBDZXJ0aWZpY2F0ZTAeFw0yNDA2MjQxOTI0MTdaFw0yNzA2MjQxOTI0MTdaMDQxMjAwBgNVBAMTKU1pY3Jvc29mdCBBenVyZSBGZWRlcmF0ZWQgU1NPIENlcnRpZmljYXRlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy0WJ5qjwttt8v0kFBcmfN9OkrSMkParz/Gz7anKlgjW7/9QA5jVo+zAHLcdnKpKS/ETlYjY+zJKl1lD9SXZbuwj2MFptBh8NBKRePptoI7YRdfpKlj1j9IgTPW8Ad1AxWYYDRGQ6UAmWY0yNB0QRhJ1lS2mNrnePm+URnJC7O7rWrPsnFrMed8W9W7xySIzearnGCwW2hbbs4uuTr+zmHD0d4drk97mqmQCO/NWSMbPedqVkHiMt8f0Zn9i02J3VrOL3Py1Az2a+/8xox3fXFlJ5GTMjQfIbyPJY/yqFmaA48l0FMmkgfSSUD3s/tDlzLJbPNr9ef0u6NxLupqtZkQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBttmfUg1w+W6s+xCWEEx5HR02LIiNYai+KtqBbMmNmjknO5Cahr3eDf+cDxDMhhMAz7QiJsmqR7hjsntXFC2EOUZVdddquW3nAd+202vXjZffBmWbAppG2ziC8+vO255hSe6nJr+aXx2+ZVUtg9jnlSXZ1DS6nuPdGGUGXhCvPzUxINzOLhP7K7dtpYg5WkNW7PSyQXkI0MOm+z99SsdLF6Qby6BeR6H44LHps7oejTKZvZGvuhXp4bCjOkSjDoR4cT8M0iLDKJ/57k6Rrfm6/xqy5LACdou66PIySC9KzIKnXmPFcCWQGc+pJ3CdDohnc4GCWFuIkso7bqraislz6"
+  }
+}

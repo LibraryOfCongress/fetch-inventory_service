@@ -49,7 +49,9 @@ RUN apt-get update && apt-get install -y logrotate cron
 RUN crontab /etc/cron.d/cronjob
 
 # Add SchemaSpy
-ADD schemaspy/schemaspy-6.2.4.jar /code/schemaspy.jar
+# ADD schemaspy/schemaspy-6.2.4.jar /code/schemaspy.jar
+# snapshot release fixes graphiz warnings. Update when official release.
+ADD schemaspy/schemaspy-7.0.0-SNAPSHOT.jar /code/schemaspy.jar
 ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
 
 # Ready check could be used in the future. Not needed in deployed atm

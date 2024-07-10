@@ -46,12 +46,17 @@ RUN apt-get update && apt-get install -y logrotate cron
 RUN crontab /etc/cron.d/cronjob
 
 # Add SchemaSpy
-ADD schemaspy/schemaspy-6.2.4.jar /code/schemaspy.jar
+# ADD schemaspy/schemaspy-6.2.4.jar /code/schemaspy.jar
+# snapshot release fixes graphiz warnings. Update when official release.
+ADD schemaspy/schemaspy-7.0.0-SNAPSHOT.jar /code/schemaspy.jar
 ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
 
 # Wait for db container before starting api
 COPY schemaspy/db-ready-check.sh /code/db-ready-check.sh
 RUN chmod +x /code/db-ready-check.sh
+
+# Generate self-signed certs for SSO over localhost
+RUN app/saml/local/gen_self_signed_certs.sh
 
 # Expose the application port
 EXPOSE 8001
@@ -59,4 +64,6 @@ EXPOSE 8001
 # Start logrotate cron schedule
 ENTRYPOINT ["/code/app/cron.sh"]
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--ssl-keyfile", "app/saml/local/key.pem", "--ssl-certfile", "app/saml/local/cert.pem"]

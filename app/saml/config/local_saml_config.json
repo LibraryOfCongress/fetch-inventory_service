@@ -1,0 +1,29 @@
+{
+  "strict": true,
+  "debug": true,
+  "sp": {
+    "entityId": "https://localhost:8001/",
+    "assertionConsumerService": {
+        "url": "https://localhost:8001/auth/sso/acs",
+        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+    },
+    "singleLogoutService": {
+        "url": "https://localhost:8001/auth/sso/logout",
+        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+    },
+    "x509cert": "",
+    "privateKey": ""
+  },
+  "idp": {
+      "entityId": "https://sts.windows.net/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/",
+      "singleSignOnService": {
+          "url": "https://login.microsoftonline.com/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/saml2",
+          "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      },
+      "singleLogoutService": {
+          "url": "https://logout.microsoftonline.com/32d4cbf0-7cc7-49ca-bd92-ff86a69580af/saml2",
+          "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      },
+      "x509cert": "MIIC8DCCAdigAwIBAgIQfZxiAn604qdKUYyHQSsTtDANBgkqhkiG9w0BAQsFADA0MTIwMAYDVQQDEylNaWNyb3NvZnQgQXp1cmUgRmVkZXJhdGVkIFNTTyBDZXJ0aWZpY2F0ZTAeFw0yNDA2MjUxMjIzNTRaFw0yNzA2MjUxMjIzNTNaMDQxMjAwBgNVBAMTKU1pY3Jvc29mdCBBenVyZSBGZWRlcmF0ZWQgU1NPIENlcnRpZmljYXRlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxfFb7a1voEpcOFcXYnwnTvhvvuXTy2hMKE6lTBrKjJa/ZuU7HVO/GBVdz4qQ1vtX0eGaEE+3FhCCZizT5b7edubJBzU/eSKmPyaV0AGxz48tAPNcQvPxvZ1kunVgEzQr79a5l0vXOHflqJlY/OVjrV7hB3riwwjZ6PSmZu6Ai2TB46c4WE40zr1lQaXgTFovhDTz0DtMnxWIQJ5fPz/0OQVpu4xPvQAZEOFzfCRfIJvRhBOLZgl1Ap4yJiZwD2jqE64qk3ixS5OZDvt6SzzJtMaUMe90ZvYBaxe04+Xjr7/GqGD0rhNmLsIrxWWx5Ef+6g4IMQi4zrWnc5aqbjMPJQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQC4tQKny4O5edEEwJrCqYwNyiKhUKos0uoyTt/YBieVVDL40AFltg6NHYGRqy9qXb9bJP/++us1gfI92/Atu1pFOAA0b6X4kZVBegg9Ix6dNXepT+zx/T9/CXUbc0moZplLQuWsbgHATvNmNZZLNXcPgV0YlpspIdNqNOokFXLpUIVWoykUcvH7O0pcO7c+3IM1IY4rloSjr25yj2WIQqVHZcNd5hS/KI2q7IGOsErjljPQ10kLwvqMjwP/Ac7m80AJTuDBCuLrOlZ65Uc6uxKjdeWXv9nMWwJJ0eZOoclLTrd/D4z0G7Y+3Iuj9At4Tcmq+knpnkYIjDLbpr/AdJ8p"
+  }
+}

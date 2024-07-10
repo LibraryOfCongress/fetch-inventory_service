@@ -12,19 +12,22 @@ data_activity_logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
     fmt=f"%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-data_activity_log_file_formatter = logging.Formatter(
+data_activity_log_stream_formatter = logging.Formatter(
     fmt=f"%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # handlers
 stream_handler = logging.StreamHandler()
+data_activity_stream_handler = logging.StreamHandler()
 stream_handler.setLevel(logging.DEBUG)
-file_handler = logging.FileHandler('app/logs/data_activity.log')
+data_activity_stream_handler.setLevel(logging.DEBUG)
+# file_handler = logging.FileHandler('app/logs/data_activity.log')
 # sqlalchemy_handler = logging.FileHandler('sqlalchemy.log')
 
 # register formatters
 stream_handler.setFormatter(formatter)
-file_handler.setFormatter(data_activity_log_file_formatter) #(save for log rotate in future)
+data_activity_stream_handler.setFormatter(data_activity_log_stream_formatter)
+# file_handler.setFormatter(data_activity_log_file_formatter) #(save for log rotate in future)
 # sqlalchemy_handler.setFormatter(formatter)
 
 # register handlers
@@ -33,7 +36,8 @@ inventory_logger.handlers = [
     # file_handler
 ]
 data_activity_logger.handlers = [
-    file_handler
+    # file_handler
+    data_activity_stream_handler
 ]
 # inventory_logger.addHandler(stream_handler)
 

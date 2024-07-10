@@ -24,6 +24,13 @@ class User(SQLModel, table=True):
     last_name: str = Field(
         max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=False
     )
+    email: str = Field(
+        max_length=100, sa_column=sa.VARCHAR, nullable=True, unique=True
+    )
+    # never serialize this
+    fetch_auth_token: str = Field(
+        max_length=300, sa_column=sa.VARCHAR, nullable=True, unique=False
+    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
