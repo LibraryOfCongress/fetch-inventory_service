@@ -116,14 +116,19 @@ async def prepare_fastapi_request(request: Request):
     # Converts FastAPI request to a dict
 
     #debug testing
-    forwarded_proto = request.headers.get('X-Forwarded-Proto', request.url.scheme)
-    forwarded_host = request.headers.get('X-Forwarded-Host', request.url.hostname)
-    forwarded_port = request.headers.get('X-Forwarded-Port', request.url.port)
-    forwarded_for = request.headers.get('X-Forwarded-For', request.client.host)
+    # forwarded_proto = request.headers.get('X-Forwarded-Proto', request.url.scheme)
+    forwarded_host = request.headers.get('X-Forwarded-Host')
+    if not forwarded_host:
+        forwarded_host = request.url.hostname
+    forwarded_port = request.headers.get('X-Forwarded-Port')
+    if not forwarded_port:
+        forwarded_port = request.url.port
+    # forwarded_for = request.headers.get('X-Forwarded-For', request.client.host)
 
     url_data = urlparse(str(request.url))
     # if local, cast 127.0.0.1 to localhost
     acs_host = 'localhost'
+    acs_port = url_data.port
     if get_settings().APP_ENVIRONMENT not in ["debug", "local"]:
         # acs_host = request.client.host # this could be an issue
         # acs_port = url_data.port
