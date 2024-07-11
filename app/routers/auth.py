@@ -118,7 +118,7 @@ async def prepare_fastapi_request(request: Request):
     # if local, cast 127.0.0.1 to localhost
     acs_host = 'localhost'
     if get_settings().APP_ENVIRONMENT not in ["debug", "local"]:
-        acs_host = request.client.host
+        acs_host = request.client.host # this could be an issue
     return {
         'http_host': acs_host,
         'script_name': request.scope.get('root_path'),
@@ -154,8 +154,11 @@ async def saml_acs(request: Request, session: Session = Depends(get_session)):
     auth = init_saml_auth(req)
     auth.process_response()
     errors = auth.get_errors()
+    last_error_reason = auth.get_last_error_reason()
     if len(errors) > 0 or not auth.is_authenticated():
-        return HTTPException(status_code=400, detail=', '.join(errors))
+        # return HTTPException(status_code=400, detail=', '.join(errors))
+        # temp debug
+        return HTTPException(status_code=400, detail=f"{errors}, last error reason: {last_error_reason}")
 
     user_info = auth.get_attributes()
 
