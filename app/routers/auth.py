@@ -43,22 +43,46 @@ def load_saml_settings():
                 private_key = key_file.read()
             settings['sp']['x509cert'] = certificate
             settings['sp']['privateKey'] = private_key
-        case "dev":
+        case "develop":
             saml_config_file = "app/saml/config/dev_saml_config.json"
             with open(saml_config_file) as f:
                 settings = json.load(f)
+            with open("app/saml/develop/cert.pem", "r") as cert_file:
+                certificate = cert_file.read()
+            with open("app/saml/develop/key.pem", "r") as key_file:
+                private_key = key_file.read()
+            settings['sp']['x509cert'] = certificate
+            settings['sp']['privateKey'] = private_key
         case "test":
             saml_config_file = "app/saml/config/test_saml_config.json"
             with open(saml_config_file) as f:
                 settings = json.load(f)
+            with open("app/saml/test/cert.pem", "r") as cert_file:
+                certificate = cert_file.read()
+            with open("app/saml/test/key.pem", "r") as key_file:
+                private_key = key_file.read()
+            settings['sp']['x509cert'] = certificate
+            settings['sp']['privateKey'] = private_key
         case "stage":
             saml_config_file = "app/saml/config/stage_saml_config.json"
             with open(saml_config_file) as f:
                 settings = json.load(f)
+            with open("app/saml/stage/cert.pem", "r") as cert_file:
+                certificate = cert_file.read()
+            with open("app/saml/stage/key.pem", "r") as key_file:
+                private_key = key_file.read()
+            settings['sp']['x509cert'] = certificate
+            settings['sp']['privateKey'] = private_key
         case "production":
             saml_config_file = "app/saml/config/prod_saml_config.json"
             with open(saml_config_file) as f:
                 settings = json.load(f)
+            with open("app/saml/production/cert.pem", "r") as cert_file:
+                certificate = cert_file.read()
+            with open("app/saml/production/key.pem", "r") as key_file:
+                private_key = key_file.read()
+            settings['sp']['x509cert'] = certificate
+            settings['sp']['privateKey'] = private_key
         case _:
             raise Exception(f"No matching saml config for {get_settings().APP_ENVIRONMENT} environment.")
 

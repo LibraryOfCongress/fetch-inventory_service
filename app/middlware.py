@@ -41,6 +41,8 @@ class JWTMiddleware(BaseHTTPMiddleware):
         # Exclude /auth endpoints from token validation
         if request.url.path.startswith("/auth"):
             response = await call_next(request)
+        elif request.url.path.startswith("/status"):
+            response = await call_next(request)
         elif not token:
             response = JSONResponse(status_code=401, content={"detail": "Not Authorized"})
         else:

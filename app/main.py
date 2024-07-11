@@ -71,6 +71,7 @@ from app.routers import (
     refile_queue,
     refile_jobs,
     auth,
+    status,
 )
 
 
@@ -230,5 +231,6 @@ app.include_router(pick_lists.router)
 app.include_router(refile_queue.router)
 app.include_router(refile_jobs.router)
 app.include_router(auth.router)
+app.include_router(status.router)
 
 add_pagination(app)
