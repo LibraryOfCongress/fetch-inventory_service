@@ -26,6 +26,14 @@ class JWTMiddleware(BaseHTTPMiddleware):
         else:
             client_ip = request.client.host
 
+        #debug testing
+        x_forwarded_proto = request.headers.get('X-Forwarded-Proto', 'http')
+        x_forwarded_host = request.headers.get('X-Forwarded-Host', request.url.hostname)
+        if x_forwarded_proto:
+            request.url.scheme = x_forwarded_proto
+        if x_forwarded_host:
+            request.url.hostname = x_forwarded_host
+
         process_time = time.time() - start
 
         # Get token from Authorization header

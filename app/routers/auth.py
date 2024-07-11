@@ -114,15 +114,28 @@ def generate_token(user_object, session):
 
 async def prepare_fastapi_request(request: Request):
     # Converts FastAPI request to a dict
+
+    #debug testing
+    forwarded_proto = request.headers.get('X-Forwarded-Proto', request.url.scheme)
+    forwarded_host = request.headers.get('X-Forwarded-Host', request.url.hostname)
+    forwarded_port = request.headers.get('X-Forwarded-Port', request.url.port)
+    forwarded_for = request.headers.get('X-Forwarded-For', request.client.host)
+
     url_data = urlparse(str(request.url))
     # if local, cast 127.0.0.1 to localhost
     acs_host = 'localhost'
     if get_settings().APP_ENVIRONMENT not in ["debug", "local"]:
-        acs_host = request.client.host # this could be an issue
+        # acs_host = request.client.host # this could be an issue
+        # acs_port = url_data.port
+
+        #debug testing
+        acs_host = forwarded_host
+        acs_port = forwarded_port
+
     return {
         'http_host': acs_host,
         'script_name': request.scope.get('root_path'),
-        'server_port': url_data.port,
+        'server_port': acs_port,
         'https': 'on' if url_data.scheme == 'https' else 'off',
         'get_data': request.query_params,
         'post_data': await request.form()
