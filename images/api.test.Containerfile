@@ -59,7 +59,7 @@ ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
 # RUN chmod +x /code/db-ready-check.sh
 
 # Generate self-signed certs for SSO over develop
-RUN app/saml/test/gen_self_signed_certs.sh
+# RUN app/saml/test/gen_self_signed_certs.sh
 
 # Expose the application port
 EXPOSE 8001
@@ -67,6 +67,6 @@ EXPOSE 8001
 # Start logrotate cron schedule
 ENTRYPOINT ["/code/app/cron.sh"]
 
-# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--ssl-keyfile", "app/saml/test/key.pem", "--ssl-certfile", "app/saml/test/cert.pem"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--ssl-keyfile", "app/saml/test/key.pem", "--ssl-certfile", "app/saml/test/cert.pem"]
