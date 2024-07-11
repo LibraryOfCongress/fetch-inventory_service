@@ -16,6 +16,9 @@ build_image:
     - cp -v images/api.dev.Containerfile Dockerfile
     - echo $DEVELOP_APP_NAME > .env
     - echo $DEVELOP_APP_ENVIRONMENT >> .env
+    - echo $DEVELOP_IDP_ENTITY_ID >> .env
+    - echo $DEVELOP_IDP_LOGIN_URL >> .env
+    - echo $DEVELOP_VUE_HOST >> .env
     - echo $DEVELOP_TIMEZONE >> .env
     - echo $DEVELOP_DATABASE_URL >> .env
     - echo $DEVELOP_MIGRATION_URL >> .env
@@ -44,6 +47,9 @@ build_mr:
     - echo $DEVELOP_APP_NAME > .env
     - echo $DEVELOP_APP_ENVIRONMENT >> .env
     - echo $DEVELOP_TIMEZONE >> .env
+    - echo $DEVELOP_IDP_ENTITY_ID >> .env
+    - echo $DEVELOP_IDP_LOGIN_URL >> .env
+    - echo $DEVELOP_VUE_HOST >> .env
     - echo $DEVELOP_DATABASE_URL >> .env
     - echo $DEVELOP_MIGRATION_URL >> .env
     - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
@@ -69,6 +75,9 @@ build_image_test:
     - echo $TEST_APP_NAME > .env
     - echo $TEST_APP_ENVIRONMENT >> .env
     - echo $TEST_TIMEZONE >> .env
+    - echo $TEST_IDP_ENTITY_ID >> .env
+    - echo $TEST_IDP_LOGIN_URL >> .env
+    - echo $TEST_VUE_HOST >> .env
     - echo $TEST_DATABASE_URL >> .env
     - echo $TEST_MIGRATION_URL >> .env
     - echo $TEST_ENABLE_ORM_SQL_LOGGING >> .env
@@ -84,7 +93,7 @@ build_image_test:
 
 build_image_staging:
   stage: build
-  tags: 
+  tags:
     - stage-shell
   before_script:
     - docker info
@@ -96,6 +105,9 @@ build_image_staging:
     - echo $STAGING_APP_NAME > .env
     - echo $STAGING_APP_ENVIRONMENT >> .env
     - echo $STAGING_TIMEZONE >> .env
+    - echo $STAGING_IDP_ENTITY_ID >> .env
+    - echo $STAGING_IDP_LOGIN_URL >> .env
+    - echo $STAGING_VUE_HOST >> .env
     - echo $STAGING_DATABASE_URL >> .env
     - echo $STAGING_MIGRATION_URL >> .env
     - echo $STAGING_ENABLE_ORM_SQL_LOGGING >> .env
