@@ -134,14 +134,15 @@ async def prepare_fastapi_request(request: Request):
         # acs_port = url_data.port
 
         #debug testing
-        acs_host = forwarded_host
+        # acs_host = forwarded_host
+        acs_host = f"{forwarded_host}/auth/sso/acs"
         acs_port = forwarded_port
 
     return {
         'http_host': acs_host,
         'script_name': request.scope.get('root_path'),
         'server_port': acs_port,
-        'https': 'on' if url_data.scheme == 'https' else 'off',
+        'https': 'on',#'on' if url_data.scheme == 'https' else 'off'
         'get_data': request.query_params,
         'post_data': await request.form()
     }
