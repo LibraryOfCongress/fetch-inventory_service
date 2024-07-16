@@ -1,5 +1,5 @@
 from app.logger import inventory_logger
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
@@ -42,14 +42,20 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[PickListListOutput])
-def get_pick_list_list(session: Session = Depends(get_session)) -> list:
+def get_pick_list_list(all: bool = Query(default=False), session: Session = Depends(get_session)) -> list:
     """
     Get a list of pick lists.
 
     **Returns:**
     - Pick List List Output: The paginated list of pick lists.
     """
-    return paginate(session, select(PickList))
+    try:
+        query = select(PickList).where(
+            PickList.status != "Completed"
+        ).distinct()
+        return paginate(session, query)
+    except IntegrityError as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.get("/{id}", response_model=PickListDetailOutput)

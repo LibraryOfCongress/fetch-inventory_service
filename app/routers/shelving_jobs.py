@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -36,14 +36,23 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ShelvingJobListOutput])
-def get_shelving_job_list(session: Session = Depends(get_session)) -> list:
+def get_shelving_job_list(all: bool = Query(default=False), session: Session = Depends(get_session)) -> list:
     """
     Retrieve a paginated list of shelving jobs.
+    Default view filters out Completed jobs.
 
     **Returns:**
     - list: A paginated list of shelving jobs.
     """
-    return paginate(session, select(ShelvingJob))
+    try:
+        query = select(ShelvingJob).where(
+            ShelvingJob.status != "Completed"
+        ).where(
+            ShelvingJob.status != "Cancelled"
+        ).distinct()
+        return paginate(session, query)
+    except IntegrityError as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.get("/{id}", response_model=ShelvingJobDetailOutput)

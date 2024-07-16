@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from app.logger import inventory_logger, data_activity_logger
+from app.config.config import get_settings
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -44,13 +45,19 @@ class JWTMiddleware(BaseHTTPMiddleware):
         elif request.url.path.startswith("/status"):
             response = await call_next(request)
         elif not token:
-            response = JSONResponse(status_code=401, content={"detail": "Not Authorized"})
+            if get_settings().APP_ENVIRONMENT not in ["local", "develop", "test"]:
+                response = JSONResponse(status_code=401, content={"detail": "Not Authorized"})
+            else:
+                response = await call_next(request)
         else:
             # Check if token is expired
             token_exp = decoded_token.get('exp')
             token_exp_datetime = datetime.utcfromtimestamp(token_exp)
             if token_exp_datetime < datetime.utcnow():
-                response = JSONResponse(status_code=401, content={"detail": "Token Expired"})
+                if get_settings().APP_ENVIRONMENT not in ["local", "develop", "test"]:
+                    response = JSONResponse(status_code=401, content={"detail": "Token Expired"})
+                else:
+                    response = await call_next(request)
             else:
                 # Everything's good
                 response = await call_next(request)
