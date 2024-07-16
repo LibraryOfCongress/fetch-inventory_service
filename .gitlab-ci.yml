@@ -116,9 +116,9 @@ build_image_staging:
     - cat .env
     - docker build -t $IMAGE_FULL_TAG .
     - docker push $IMAGE_FULL_TAG
-  when: manual
-  # rules:
-  #   - if: $CI_COMMIT_BRANCH == 'staging'
+  # when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'staging'
 
 deploy_dev:
   stage: deploy
@@ -184,7 +184,8 @@ deploy_stage:
     - envsubst < backend.hcl.tmpl > backend.hcl
     - terraform init -backend-config=backend.hcl
     - terraform apply -auto-approve
-  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'staging'
 
 set_replica_to_0_dev:
   stage: controls
