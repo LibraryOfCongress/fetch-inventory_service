@@ -45,12 +45,14 @@ def get_shelving_job_list(all: bool = Query(default=False), session: Session = D
     - list: A paginated list of shelving jobs.
     """
     try:
-        query = select(ShelvingJob).where(
-            ShelvingJob.status != "Completed"
-        ).where(
-            ShelvingJob.status != "Cancelled"
-        ).distinct()
-        return paginate(session, query)
+        if not all:
+            query = select(ShelvingJob).where(
+                ShelvingJob.status != "Completed"
+            ).where(
+                ShelvingJob.status != "Cancelled"
+            ).distinct()
+            return paginate(session, query)
+        return paginate(session, select(ShelvingJob))
     except IntegrityError as e:
         raise InternalServerError(detail=f"{e}")
 

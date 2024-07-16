@@ -50,10 +50,12 @@ def get_pick_list_list(all: bool = Query(default=False), session: Session = Depe
     - Pick List List Output: The paginated list of pick lists.
     """
     try:
-        query = select(PickList).where(
-            PickList.status != "Completed"
-        ).distinct()
-        return paginate(session, query)
+        if not all:
+            query = select(PickList).where(
+                PickList.status != "Completed"
+            ).distinct()
+            return paginate(session, query)
+        return paginate(session, select(PickList))
     except IntegrityError as e:
         raise InternalServerError(detail=f"{e}")
 
