@@ -12,6 +12,9 @@ from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
+from app.models.refile_items import RefileItem
+from app.models.refile_jobs import RefileJob
+from app.models.refile_non_tray_item import RefileNonTrayItem
 
 from app.schemas.refile_queue import (
     RefileQueueInput,
@@ -99,6 +102,27 @@ def add_to_refile_queue(
         )
 
         if item:
+            existing_refile_items = (
+                session.query(RefileItem).filter(RefileItem.item_id == item.id).all()
+            )
+
+            if existing_refile_items:
+                refile_items_id = [
+                    refile.refile_job_id for refile in existing_refile_items
+                ]
+                existing_refile_job = (
+                    session.query(RefileJob)
+                    .filter(
+                        RefileJob.id.in_(refile_items_id),
+                        RefileJob.status != "Completed",
+                    )
+                    .all()
+                )
+
+                if existing_refile_job:
+                    errored_barcodes.append(barcode_value)
+                    continue
+
             if item.scanned_for_refile_queue or item.status == "In":
                 errored_barcodes.append(barcode_value)
                 continue
@@ -109,6 +133,29 @@ def add_to_refile_queue(
             successful_items.append(item)
 
         elif non_tray_item:
+            existing_refile_non_tray_items = (
+                session.query(RefileNonTrayItem)
+                .filter(RefileNonTrayItem.non_tray_item_id == non_tray_item.id)
+                .all()
+            )
+
+            if existing_refile_non_tray_items:
+                refile_items_id = [
+                    refile.refile_job_id for refile in existing_refile_non_tray_items
+                ]
+                existing_refile_job = (
+                    session.query(RefileJob)
+                    .filter(
+                        RefileJob.id.in_(refile_items_id),
+                        RefileJob.status != "Completed",
+                    )
+                    .all()
+                )
+
+                if existing_refile_job:
+                    errored_barcodes.append(barcode_value)
+                    continue
+
             if non_tray_item.scanned_for_refile_queue or non_tray_item.status == "In":
                 errored_barcodes.append(barcode_value)
                 continue

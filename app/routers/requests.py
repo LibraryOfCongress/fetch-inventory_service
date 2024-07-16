@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy import or_
 
 from app.database.session import get_session
 from app.models.requests import Request
@@ -100,6 +101,21 @@ def create_request(
     ).first()
 
     if item:
+        existing_request = (
+            session.query(Request)
+            .filter(
+                Request.item_id == item.id,
+                or_(
+                    Request.scanned_for_retrieval == True,
+                    Request.scanned_for_pick_list == True,
+                ),
+            )
+            .first()
+        )
+
+        if existing_request:
+            raise BadRequest(detail=f"Item ID {item.id} is already in a request")
+
         request_input.item_id = item.id
         tray_id = item.tray_id
 
@@ -123,6 +139,23 @@ def create_request(
 
         if not non_tray_item:
             raise NotFound(detail=f"No items or non_trays found with barcode.")
+
+        existing_request = (
+            session.query(Request)
+            .filter(
+                Request.non_tray_item_id == non_tray_item.id,
+                or_(
+                    Request.scanned_for_retrieval == True,
+                    Request.scanned_for_pick_list == True,
+                ),
+            )
+            .first()
+        )
+
+        if existing_request:
+            raise BadRequest(
+                detail=f"Non tray item ID {non_tray_item.id} is already in a request"
+            )
 
         if (
             not non_tray_item.scanned_for_shelving
