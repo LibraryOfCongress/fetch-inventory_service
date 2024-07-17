@@ -105,6 +105,11 @@ class ItemBaseOutput(ItemInput):
 
 
 class ItemListOutput(ItemBaseOutput):
+    # media_type, size_class, owner nested serialization is temporary fix
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    owner: Optional[OwnerDetailReadOutput] = None
+
     class Config:
         json_schema_extra = {
             "example": {

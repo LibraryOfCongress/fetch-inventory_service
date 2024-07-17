@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -30,12 +30,36 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[TrayListOutput])
-def get_tray_list(session: Session = Depends(get_session)) -> list:
+def get_tray_list(
+        session: Session = Depends(get_session),
+        owner_id: int = Query(default=None),
+        size_class_id: int = Query(default=None),
+        media_type_id: int = Query(default=None),
+        barcode_value: str = Query(default=None),
+        from_dt: datetime = Query(default=None),
+        to_dt: datetime = Query(default=None)
+    ) -> list:
     """
     Get a paginated list of trays from the database
     """
     # Create a query to select all trays from the database
-    return paginate(session, select(Tray))
+    query = select(Tray).distinct()
+
+    if barcode_value:
+        query = query.join(Barcode, Tray.barcode_id == Barcode.id)
+        query = query.where(Barcode.value == barcode_value)
+    if owner_id:
+        query = query.where(Tray.owner_id == owner_id)
+    if size_class_id:
+        query = query.where(Tray.size_class_id == size_class_id)
+    if media_type_id:
+        query = query.where(Tray.media_type_id == media_type_id)
+    if from_dt:
+        query = query.where(Tray.accession_dt >= from_dt)
+    if to_dt:
+        query = query.where(Tray.accession_dt <= to_dt)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=TrayDetailReadOutput)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -30,12 +30,32 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[NonTrayItemListOutput])
-def get_non_tray_item_list(session: Session = Depends(get_session)) -> list:
+def get_non_tray_item_list(
+        session: Session = Depends(get_session),
+        owner_id: int = Query(default=None),
+        size_class_id: int = Query(default=None),
+        media_type_id: int = Query(default=None),
+        from_dt: datetime = Query(default=None),
+        to_dt: datetime = Query(default=None)
+    ) -> list:
     """
     Get a paginated list of non tray items from the database
     """
     # Create a query to select all non tray items from the database
-    return paginate(session, select(NonTrayItem))
+    query = select(NonTrayItem).distinct()
+
+    if owner_id:
+        query = query.where(NonTrayItem.owner_id == owner_id)
+    if size_class_id:
+        query = query.where(NonTrayItem.size_class_id == size_class_id)
+    if media_type_id:
+        query = query.where(NonTrayItem.media_type_id == media_type_id)
+    if from_dt:
+        query = query.where(NonTrayItem.accession_dt >= from_dt)
+    if to_dt:
+        query = query.where(NonTrayItem.accession_dt <= to_dt)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=NonTrayItemDetailReadOutput)
