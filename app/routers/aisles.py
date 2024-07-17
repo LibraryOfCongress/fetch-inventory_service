@@ -78,9 +78,6 @@ def create_aisle(aisle_input: AisleInput, session: Session = Depends(get_session
 
     **Raises**:
     - HTTPException: If building_id and module_id are both set.
-
-    **Notes**:
-    - building id and module id may not both be set. Only one allowed.
     """
     try:
         # Create a new Aisle object
@@ -152,7 +149,8 @@ def delete_aisle(id: int, session: Session = Depends(get_session)):
     if aisle:
         session.delete(aisle)
         session.commit()
-        return HTTPException(status_code=204, detail=f"Aisle ID {id} Deleted "
-                                                     f"Successfully")
+        return HTTPException(
+            status_code=204, detail=f"Aisle ID {id} Deleted " f"Successfully"
+        )
 
     raise NotFound(detail=f"Aisle ID {id} Not Found")

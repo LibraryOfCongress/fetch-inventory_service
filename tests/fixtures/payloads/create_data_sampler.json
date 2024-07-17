@@ -14,7 +14,7 @@
   },
   "aisles": {
     "aisle_number_id": 1,
-    "building_id": 1,
+    "module_id": 1,
     "sort_priority": 1
   },
   "side_orientations": {

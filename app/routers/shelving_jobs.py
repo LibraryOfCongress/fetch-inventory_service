@@ -82,12 +82,11 @@ def get_shelving_job_detail(id: int, session: Session = Depends(get_session)):
 @router.post("/", response_model=ShelvingJobDetailOutput, status_code=201)
 def create_shelving_job(
     shelving_job_input: ShelvingJobInput,
-    shelve_on_building: bool | None = False,
     module_id: int | None = None,
     aisle_id: int | None = None,
     side_id: int | None = None,
     ladder_id: int | None = None,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ) -> ShelvingJob:
     """
     Create a new shelving job:
@@ -105,8 +104,8 @@ def create_shelving_job(
     """
 
     try:
-        new_shelving_job = ShelvingJob(**shelving_job_input.model_dump(
-            exclude={"verification_jobs"})
+        new_shelving_job = ShelvingJob(
+            **shelving_job_input.model_dump(exclude={"verification_jobs"})
         )
         session.add(new_shelving_job)
         session.commit()
@@ -114,12 +113,16 @@ def create_shelving_job(
 
         if new_shelving_job.origin == "Verification":
             if not shelving_job_input.verification_jobs:
-                raise ValidationException(detail=f"verification_jobs are required when origin is 'Verification'.")
+                raise ValidationException(
+                    detail=f"verification_jobs are required when origin is 'Verification'."
+                )
             # Assign verification jobs to shelving_job
             for verification_job_id in shelving_job_input.verification_jobs:
-                verification_job = session.query(VerificationJob).filter(
-                    VerificationJob.id == verification_job_id
-                ).first()
+                verification_job = (
+                    session.query(VerificationJob)
+                    .filter(VerificationJob.id == verification_job_id)
+                    .first()
+                )
                 # check for null and that ver job is complete
                 if not verification_job:
                     raise ValidationException(
@@ -143,11 +146,10 @@ def create_shelving_job(
                         verification_job.trays,
                         new_shelving_job.id,
                         new_shelving_job.building_id,
-                        shelve_on_building,
                         module_id,
                         aisle_id,
                         side_id,
-                        ladder_id
+                        ladder_id,
                     )
 
                 # Assign NonTrayItems to shelving job and shelf positions
@@ -158,11 +160,10 @@ def create_shelving_job(
                         verification_job.non_tray_items,
                         new_shelving_job.id,
                         new_shelving_job.building_id,
-                        shelve_on_building,
                         module_id,
                         aisle_id,
                         side_id,
-                        ladder_id
+                        ladder_id,
                     )
 
             # set verification shelving job last, in case container errors
@@ -252,11 +253,15 @@ def delete_shelving_job(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Shelving Job ID {id} Not Found")
 
 
-@router.post("/{id}/reassign-container-location", response_model=ReAssignmentOutput,status_code=200)
+@router.post(
+    "/{id}/reassign-container-location",
+    response_model=ReAssignmentOutput,
+    status_code=200,
+)
 def reassign_container_location(
     id: int,
     reassignment_input: ReAssignmentInput,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
     """
     Re-Assign container shelf position, given a container id,
@@ -284,26 +289,36 @@ def reassign_container_location(
     if reassignment_input.container_id:
         if reassignment_input.trayed is not None:
             if reassignment_input.trayed:
-                container = session.exec(select(Tray).where(
-                    Tray.id == reassignment_input.container_id
-                )).first()
+                container = session.exec(
+                    select(Tray).where(Tray.id == reassignment_input.container_id)
+                ).first()
             else:
-                container = session.exec(select(NonTrayItem).where(
-                    NonTrayItem.id == reassignment_input.container_id
-                )).first()
+                container = session.exec(
+                    select(NonTrayItem).where(
+                        NonTrayItem.id == reassignment_input.container_id
+                    )
+                ).first()
         else:
-            raise ValidationException(detail=f"If container_id is provided, 'trayed' value is also expected.")
+            raise ValidationException(
+                detail=f"If container_id is provided, 'trayed' value is also expected."
+            )
     else:
         if not reassignment_input.container_barcode_value:
-            raise ValidationException(detail=f"If container_id is not provided, 'container_barcode_value' is expected.")
+            raise ValidationException(
+                detail=f"If container_id is not provided, 'container_barcode_value' is expected."
+            )
         # We do not know if trayed or not. Check both
-        tray_container = session.exec(select(Tray).join(Barcode).where(
-                            Barcode.value == reassignment_input.container_barcode_value
-                        )).first()
+        tray_container = session.exec(
+            select(Tray)
+            .join(Barcode)
+            .where(Barcode.value == reassignment_input.container_barcode_value)
+        ).first()
         if not tray_container:
-            non_tray_container = session.exec(select(NonTrayItem).join(Barcode).where(
-                            Barcode.value == reassignment_input.container_barcode_value
-                        )).first()
+            non_tray_container = session.exec(
+                select(NonTrayItem)
+                .join(Barcode)
+                .where(Barcode.value == reassignment_input.container_barcode_value)
+            ).first()
             if not non_tray_container:
                 raise NotFound(
                     detail=f"No containers were found with barcode {reassignment_input.container_barcode_value}"
@@ -316,24 +331,28 @@ def reassign_container_location(
     if reassignment_input.shelf_id:
         shelf_id = reassignment_input.shelf_id
     elif reassignment_input.shelf_barcode_value:
-        shelf_barcode_join = select(Shelf, Barcode).join(Barcode).where(
-            Barcode.value == reassignment_input.shelf_barcode_value
+        shelf_barcode_join = (
+            select(Shelf, Barcode)
+            .join(Barcode)
+            .where(Barcode.value == reassignment_input.shelf_barcode_value)
         )
         shelf_barcode_join = list(session.exec(shelf_barcode_join))[0]
         shelf_id = shelf_barcode_join.Shelf.id
     else:
-        raise ValidationException(detail=f"Either shelf_id or shelf_barcode_value must be provided.")
+        raise ValidationException(
+            detail=f"Either shelf_id or shelf_barcode_value must be provided."
+        )
 
     # get shelf position
-    shelf_position_position_number_join = select(
-        ShelfPosition,
-        ShelfPositionNumber
-    ).join(
-        ShelfPositionNumber
-    ).where(
-        ShelfPosition.shelf_id == shelf_id
-    ).where(ShelfPositionNumber.number == reassignment_input.shelf_position_number)
-    shelf_position_position_number_join = list(session.exec(shelf_position_position_number_join))[0]
+    shelf_position_position_number_join = (
+        select(ShelfPosition, ShelfPositionNumber)
+        .join(ShelfPositionNumber)
+        .where(ShelfPosition.shelf_id == shelf_id)
+        .where(ShelfPositionNumber.number == reassignment_input.shelf_position_number)
+    )
+    shelf_position_position_number_join = list(
+        session.exec(shelf_position_position_number_join)
+    )[0]
 
     # only reassign actual, not proposed
     container.shelving_job_id = id

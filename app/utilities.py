@@ -135,7 +135,6 @@ def process_containers_for_shelving(
     containers,
     shelving_job_id,
     building_id,
-    shelve_on_building,
     module_id,
     aisle_id,
     side_id,
@@ -195,13 +194,9 @@ def process_containers_for_shelving(
         conditions.append(Ladder.side_id == Side.id)
         conditions.append(Side.aisle_id == Aisle.id)
 
-        if shelve_on_building:
-            # search in aisles belonging to a building
-            conditions.append(Aisle.building_id == building_id)
-        else:
-            # searching in aisles belonging to a building's modules
-            conditions.append(Aisle.module_id == Module.id)
-            conditions.append(Module.building_id == building_id)
+        # searching in aisles belonging to a building's modules
+        conditions.append(Aisle.module_id == Module.id)
+        conditions.append(Module.building_id == building_id)
 
     # Execute the query and fetch the results
     # keep in mind this is a joined list of [(ShelfPosition, Shelf)]

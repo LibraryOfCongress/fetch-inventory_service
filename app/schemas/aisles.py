@@ -1,17 +1,15 @@
 import uuid
 
 from typing import Optional, List
-from pydantic import BaseModel, constr, conint
+from pydantic import BaseModel, conint
 from datetime import datetime
 
 from app.schemas.modules import ModuleCustomDetailReadOutput
-from app.schemas.buildings import BuildingBaseOutput
 from app.schemas.aisle_numbers import AisleNumberBaseOutput
 
 
 class AisleInput(BaseModel):
     aisle_number_id: conint(ge=0, le=2147483647)
-    building_id: Optional[conint(ge=0, le=32767)] = None
     module_id: Optional[conint(ge=0, le=32767)] = None
     sort_priority: Optional[conint(ge=0, le=32767)] = None
 
@@ -19,7 +17,6 @@ class AisleInput(BaseModel):
         json_schema_extra = {
             "example": {
                 "aisle_number_id": 1,
-                "building_id": 1,
                 "module_id": 1,
                 "sort_priority": 1
             }
@@ -28,7 +25,6 @@ class AisleInput(BaseModel):
 
 class AisleUpdateInput(BaseModel):
     aisle_number_id: Optional[conint(ge=0, le=2147483647)] = None
-    building_id: Optional[conint(ge=0, le=32767)] = None
     module_id: Optional[conint(ge=0, le=32767)] = None
     sort_priority: Optional[conint(ge=0, le=32767)] = None
 
@@ -36,7 +32,6 @@ class AisleUpdateInput(BaseModel):
         json_schema_extra = {
             "example": {
                 "aisle_number_id": 1,
-                "building_id": 1,
                 "module_id": 1,
                 "sort_priority": 1
             }
@@ -61,7 +56,6 @@ class AisleListOutput(AisleBaseReadOutput):
 class AisleDetailWriteOutput(BaseModel):
     id: int
     aisle_number_id: int
-    building_id: int | None = None
     module_id: int | None = None
     sort_priority: Optional[int] = None
     create_dt: datetime
@@ -72,7 +66,6 @@ class AisleDetailWriteOutput(BaseModel):
             "example": {
                 "id": 1,
                 "aisle_number_id": 1,
-                "building_id": 1,
                 "module_id": 1,
                 "sort_priority": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
@@ -95,7 +88,6 @@ class AisleDetailReadOutput(BaseModel):
     sort_priority: Optional[int] = None
     create_dt: datetime
     update_dt: datetime
-    building: BuildingBaseOutput | None
     module: ModuleCustomDetailReadOutput | None
     aisle_number: AisleNumberBaseOutput
     sides: List[SideNestedForAisle]
@@ -108,10 +100,6 @@ class AisleDetailReadOutput(BaseModel):
                 "sort_priority": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
-                "building": {
-                    "id": 1,
-                    "name": "Southpoint Circle"
-                },
                 "module": {
                     "id": 1,
                     "module_number": {
