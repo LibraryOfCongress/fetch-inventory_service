@@ -7,12 +7,14 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 
 from app.database.session import get_session, commit_record
+from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.refile_jobs import RefileJob
 from app.models.refile_items import RefileItem
 from app.models.refile_non_tray_item import RefileNonTrayItem
+from app.models.trays import Tray
 from app.schemas.refile_jobs import (
     RefileJobInput,
     RefileJobUpdateInput,
@@ -22,7 +24,7 @@ from app.schemas.refile_jobs import (
 from app.schemas.items import ItemUpdateInput
 from app.schemas.non_tray_items import NonTrayItemUpdateInput
 from app.config.exceptions import BadRequest, NotFound
-from app.utilities import manage_transition
+from app.utilities import manage_transition, get_location
 
 router = APIRouter(
     prefix="/refile-jobs",
@@ -63,8 +65,93 @@ def get_refile_job_detail(id: int, session: Session = Depends(get_session)):
     - Not Found HTTPException: If the refile job is not found.
     """
     refile_job = session.get(RefileJob, id)
+    request_data = []
 
     if refile_job:
+        items = refile_job.items
+        non_tray_items = refile_job.non_tray_items
+
+        if items:
+            for item in items:
+                tray = session.get(Tray, item.tray_id)
+
+                location = get_location(session, tray.shelf_position)
+
+                aisle_priority = (
+                    location["aisle"].sort_priority or location["aisle"].aisle_number_id
+                )
+
+                ladder_priority = (
+                    location["ladder"].sort_priority
+                    or location["ladder"].ladder_number_id
+                )
+
+                shelf_priority = (
+                    location["shelf"].sort_priority or location["shelf"].shelf_number_id
+                )
+
+                request_data.append(
+                    {
+                        "item": item,
+                        "aisle_priority": aisle_priority,
+                        "ladder_priority": ladder_priority,
+                        "shelf_priority": shelf_priority,
+                    }
+                )
+
+            sorted_requests = sorted(
+                request_data,
+                key=lambda x: (
+                    x["aisle_priority"],
+                    x["ladder_priority"],
+                    x["shelf_priority"],
+                ),
+            )
+
+            # Extract the sorted request objects
+            refile_job.items = [data["item"] for data in sorted_requests]
+
+        if non_tray_items:
+            for non_tray_item in non_tray_items:
+                if not non_tray_item.shelf_position:
+                    raise NotFound(detail=f"Shelf Position Not Found")
+
+                location = get_location(session, non_tray_item.shelf_position)
+
+                aisle_priority = (
+                    location["aisle"].sort_priority or location["aisle"].aisle_number_id
+                )
+                ladder_priority = (
+                    location["ladder"].sort_priority
+                    or location["ladder"].ladder_number_id
+                )
+                shelf_priority = (
+                    location["shelf"].sort_priority or location["shelf"].shelf_number_id
+                )
+
+                request_data.append(
+                    {
+                        "non_tray_item": non_tray_item,
+                        "aisle_priority": aisle_priority,
+                        "ladder_priority": ladder_priority,
+                        "shelf_priority": shelf_priority,
+                    }
+                )
+
+            sorted_requests = sorted(
+                request_data,
+                key=lambda x: (
+                    x["aisle_priority"],
+                    x["ladder_priority"],
+                    x["shelf_priority"],
+                ),
+            )
+
+            # Extract the sorted request objects
+            refile_job.non_tray_items = [
+                data["non_tray_item"] for data in sorted_requests
+            ]
+
         return refile_job
 
     else:
