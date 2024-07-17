@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -28,7 +28,14 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ItemListOutput])
-def get_item_list(session: Session = Depends(get_session)) -> list:
+def get_item_list(
+        session: Session = Depends(get_session),
+        owner_id: int = Query(default=None),
+        size_class_id: int = Query(default=None),
+        media_type_id: int = Query(default=None),
+        from_dt: datetime = Query(default=None),
+        to_dt: datetime = Query(default=None)
+    ) -> list:
     """
     Retrieve a paginated list of items from the database.
 
@@ -36,7 +43,20 @@ def get_item_list(session: Session = Depends(get_session)) -> list:
     - Item List Output: The paginated list of items.
     """
     # Create a query to select all items from the database
-    return paginate(session, select(Item))
+    query = select(Item).distinct()
+
+    if owner_id:
+        query = query.where(Item.owner_id == owner_id)
+    if size_class_id:
+        query = query.where(Item.size_class_id == size_class_id)
+    if media_type_id:
+        query = query.where(Item.media_type_id == media_type_id)
+    if from_dt:
+        query = query.where(Item.accession_dt >= from_dt)
+    if to_dt:
+        query = query.where(Item.accession_dt <= to_dt)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=ItemDetailReadOutput)

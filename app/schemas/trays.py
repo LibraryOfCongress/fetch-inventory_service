@@ -116,6 +116,7 @@ class TrayBaseOutput(TrayInput):
     shelf_position: Optional[ShelfPositionNestedForTrayOutput] = None
 
 class TrayListOutput(TrayBaseOutput):
+    owner: Optional[OwnerDetailReadOutput]
 
     class Config:
         json_schema_extra = {
@@ -165,7 +166,38 @@ class TrayListOutput(TrayBaseOutput):
                     },
                     "accession_dt": "2023-10-08T20:46:56.764426",
                     "shelved_dt": "2023-10-08T20:46:56.764426",
-                    "withdrawal_dt": "2023-10-08T20:46:56.764426"
+                    "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                    "owner": {
+                        "id": 1,
+                        "name": "Special Collection Directorate",
+                        "owner_tier_id": 2,
+                        "parent_owner_id": 2,
+                        "owner_tier": {
+                            "id": 1,
+                            "level": 2,
+                            "name": "division",
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "parent_owner": {
+                            "id": 2,
+                            "name": "Library of Congress",
+                            "owner_tier_id": 1,
+                            "parent_owner_id": None,
+                            "owner_tier": {
+                                "id": 2,
+                                "level": 1,
+                                "name": "organization",
+                                "create_dt": "2023-10-08T20:46:56.764426",
+                                "update_dt": "2023-10-08T20:46:56.764398"
+                            },
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "children": [],
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    }
                 }
             ]
         }
