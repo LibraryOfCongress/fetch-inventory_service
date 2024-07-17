@@ -4,7 +4,6 @@ from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
-from app.models.pick_list_requests import PickListRequest
 from app.models.pick_lists import PickList
 
 
@@ -28,8 +27,8 @@ class Request(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True))
-    request_type_id: int = Field(
-        default=None, nullable=False, unique=False, foreign_key="request_types.id"
+    request_type_id: Optional[int] = Field(
+        default=None, nullable=True, unique=False, foreign_key="request_types.id"
     )
     item_id: Optional[int] = Field(
         default=None, nullable=True, unique=False, foreign_key="items.id"
@@ -40,8 +39,8 @@ class Request(SQLModel, table=True):
     building_id: int = Field(
         default=None, nullable=True, unique=False, foreign_key="buildings.id"
     )
-    delivery_location_id: int = Field(
-        default=None, nullable=False, unique=False, foreign_key="delivery_locations.id"
+    delivery_location_id: Optional[int] = Field(
+        default=None, nullable=True, unique=False, foreign_key="delivery_locations.id"
     )
     priority_id: Optional[int] = Field(
         default=None, nullable=True, unique=False, foreign_key="priorities.id"
@@ -49,10 +48,10 @@ class Request(SQLModel, table=True):
     external_request_id: Optional[str] = Field(
         max_length=255, sa_column=sa.VARCHAR, nullable=True, unique=False, default=None
     )
-    scanned_for_pick_list: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+    pick_list_id: Optional[int] = Field(
+        default=None, nullable=True, unique=False, foreign_key="pick_lists.id"
     )
-    scanned_for_retrieval: Optional[bool] = Field(
+    fulfilled: Optional[bool] = Field(
         sa_column=sa.Boolean, default=False, nullable=False
     )
     requestor_name: Optional[str] = Field(
@@ -72,6 +71,5 @@ class Request(SQLModel, table=True):
     delivery_location: Optional["DeliveryLocation"] = Relationship(
         back_populates="requests"
     )
-    pick_list: PickList = Relationship(
-        back_populates="requests", link_model=PickListRequest
-    )
+
+    pick_list: PickList = Relationship(back_populates="requests")

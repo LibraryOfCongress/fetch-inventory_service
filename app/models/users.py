@@ -44,3 +44,4 @@ class User(SQLModel, table=True):
     pick_lists: List["PickList"] = Relationship(back_populates="user")
     groups: List["Group"] = Relationship(back_populates="users", link_model=UserGroup)
     refile_jobs: List["RefileJob"] = Relationship(back_populates="assigned_user")
+    withdraw_jobs: List["WithdrawJob"] = Relationship(back_populates="assigned_user")

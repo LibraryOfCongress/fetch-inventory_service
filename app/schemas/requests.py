@@ -9,10 +9,10 @@ from app.schemas.barcodes import BarcodeDetailReadOutput
 
 class RequestInput(BaseModel):
     building_id: Optional[int] = None
-    request_type_id: int
+    request_type_id: Optional[int] = None
     item_id: Optional[int] = None
     non_tray_item_id: Optional[int] = None
-    delivery_location_id: int
+    delivery_location_id: Optional[int] = None
     priority_id: Optional[int] = None
     external_request_id: Optional[str] = None
     requestor_name: Optional[str] = None
@@ -67,10 +67,10 @@ class RequestUpdateInput(BaseModel):
 class RequestBaseOutput(BaseModel):
     id: int
     building_id: Optional[int] = None
-    request_type_id: int
+    request_type_id: Optional[int] = None
     item_id: Optional[int] = None
     non_tray_item_id: Optional[int] = None
-    delivery_location_id: int
+    delivery_location_id: Optional[int] = None
     priority_id: Optional[int] = None
     external_request_id: Optional[str] = None
     requestor_name: Optional[str] = None

@@ -9,10 +9,14 @@ from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.refile_non_tray_item import RefileNonTrayItem
 from app.models.refile_jobs import RefileJob
+from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
+from app.models.withdraw_jobs import WithdrawJob
 
 
 class NonTrayItemStatus(str, Enum):
     In = "In"
+    Requested = "Requested"
+    Withdrawn = "Withdrawn"
     Out = "Out"
 
 
@@ -130,3 +134,6 @@ class NonTrayItem(SQLModel, table=True):
         back_populates="non_tray_items", link_model=RefileNonTrayItem
     )
     requests: List["Request"] = Relationship(back_populates="non_tray_item")
+    withdraw_jobs: List[WithdrawJob] = Relationship(
+        back_populates="non_tray_items", link_model=NonTrayItemWithdrawal
+    )

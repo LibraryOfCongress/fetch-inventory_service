@@ -5,8 +5,6 @@ from pydantic import BaseModel
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
-from app.schemas.items import ItemListOutput
-from app.schemas.non_tray_items import NonTrayItemListOutput
 
 
 class RefileQueueInput(BaseModel):
@@ -168,7 +166,7 @@ class TrayNestedForRefileQueue(BaseModel):
     scanned_for_shelving: Optional[bool] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class NonTrayNestedForRefileQueue(BaseModel):
@@ -184,7 +182,7 @@ class NonTrayNestedForRefileQueue(BaseModel):
     scanned_for_shelving: Optional[bool] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class RefileQueueWriteOutput(BaseModel):

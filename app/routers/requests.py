@@ -11,7 +11,6 @@ from app.models.non_tray_items import NonTrayItem
 from app.models.barcodes import Barcode
 from app.models.shelf_positions import ShelfPosition
 from app.models.trays import Tray
-from app.models.pick_list_requests import PickListRequest
 from app.schemas.requests import (
     RequestInput,
     RequestUpdateInput,
@@ -35,7 +34,8 @@ router = APIRouter(
 @router.get("/", response_model=Page[RequestListOutput])
 def get_request_list(
     building_id: int = None,
-    unassociated_pick_list: bool = None,
+    fulfilled: bool = False,
+    unassociated_pick_list: bool = False,
     session: Session = Depends(get_session),
 ) -> list:
     """
@@ -49,14 +49,13 @@ def get_request_list(
     - Request List Output: The paginated list of requests.
     """
     requests = select(Request)
+    requests = requests.where(Request.fulfilled == fulfilled)
 
     if building_id is not None:
         requests = requests.where(Request.building_id == building_id)
 
-    if unassociated_pick_list is not None:
-        requests = requests.where(
-            Request.scanned_for_pick_list == unassociated_pick_list
-        )
+    if unassociated_pick_list:
+        requests = requests.where(Request.pick_list_id == None)
 
     return paginate(session, requests)
 
@@ -100,6 +99,15 @@ def create_request(
     ).first()
 
     if item:
+        existing_request = session.exec(
+            select(Request)
+            .where(Request.item_id == item.id)
+            .where(Request.fulfilled == False)
+        ).first()
+
+        if existing_request:
+            raise BadRequest(detail="Item is already requested")
+
         request_input.item_id = item.id
         tray_id = item.tray_id
 
@@ -114,6 +122,10 @@ def create_request(
         ):
             raise BadRequest(detail="Item is not shelved")
 
+        session.query(Item).filter(Item.id == item.id).update(
+            {"status": "Requested"}, synchronize_session="fetch"
+        )
+
     else:
         non_tray_item = session.exec(
             select(NonTrayItem)
@@ -124,12 +136,23 @@ def create_request(
         if not non_tray_item:
             raise NotFound(detail=f"No items or non_trays found with barcode.")
 
+        existing_non_tray_item = session.query(
+            Request).filter(Request.non_tray_item_id == non_tray_item.id,
+                            Request.fulfilled == False).first()
+
+        if existing_non_tray_item:
+            raise BadRequest(detail="Non tray item is already requested")
+
         if (
             not non_tray_item.scanned_for_shelving
             or not non_tray_item.shelf_position_id
             or not non_tray_item.status == "In"
         ):
             raise BadRequest(detail="Non tray item is not shelved")
+
+        session.query(NonTrayItem).filter(NonTrayItem.id == non_tray_item.id).update(
+            {"status": "Requested"}, synchronize_session="fetch"
+        )
 
         request_input.non_tray_item_id = non_tray_item.id
         shelf_position = session.get(ShelfPosition, non_tray_item.shelf_position_id)
@@ -222,19 +245,21 @@ def delete_request(id: int, session: Session = Depends(get_session)):
 
     if request:
         # Delete request from pick_list_requests
-        pick_list_requests = session.exec(
-            select(PickListRequest).where(PickListRequest.request_id == id)
-        )
+        if request.item:
+            session.query(Item).filter(Item.id == request.item.id).update(
+                {"status": "In"}, synchronize_session="fetch"
+            )
 
-        if pick_list_requests:
-            for pick_list_request in pick_list_requests:
-                session.delete(pick_list_request)
+        else:
+            session.query(NonTrayItem).filter(
+                NonTrayItem.id == request.non_tray_item.id
+            ).update({"status": "In"}, synchronize_session="fetch")
 
         # Deleting request
         session.delete(request)
         session.commit()
 
-        return HTTPException(
+        raise HTTPException(
             status_code=204, detail=f"Request ID {id} Deleted " f"Successfully"
         )
 

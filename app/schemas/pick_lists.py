@@ -7,15 +7,18 @@ from app.schemas.buildings import BuildingBaseOutput
 from app.schemas.requests import (RequestDetailReadOutputNoPickList,
                                   RequestBaseOutput, RequestUpdateInput)
 from app.schemas.users import UserDetailReadOutput, UserListOutput
+from app.schemas.withdraw_jobs import WithdrawJobBaseOutput, WithdrawJobDetailOutput
 
 
 class PickListInput(BaseModel):
     request_ids: list[int]
+    errored_request_ids: Optional[list[int]] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "request_ids": [1, 2, 3]
+                "request_ids": [1, 2, 3],
+                "errored_request_ids": [4, 5, 6]
             }
         }
 
@@ -84,6 +87,7 @@ class PickListBaseOutput(BaseModel):
     last_transition: Optional[datetime] = None
     run_time: Optional[timedelta] = None
     requests: Optional[list[RequestBaseOutput]] = None
+    withdraw_jobs: Optional[list[WithdrawJobBaseOutput]] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -165,8 +169,10 @@ class PickListListOutput(PickListBaseOutput):
 class PickListDetailOutput(PickListBaseOutput):
     user: Optional[UserDetailReadOutput] = None
     requests: Optional[list[RequestDetailReadOutputNoPickList]] = None
+    withdraw_jobs: Optional[list[WithdrawJobDetailOutput]] = None
     building_id: Optional[int] = None
     building: Optional[BuildingBaseOutput] = None
+    errored_request_ids: Optional[list[int]] = None
 
     class Config:
         json_schema_extra = {
@@ -204,6 +210,7 @@ class PickListDetailOutput(PickListBaseOutput):
                 "last_transition": "2023-11-27T12:34:56.789123Z",
                 "run_time": "03:25:15",
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764426"
+                "update_dt": "2023-10-08T20:46:56.764426",
+                "errored_request_ids": [4, 5, 6]
             }
         }
