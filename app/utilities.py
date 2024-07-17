@@ -211,6 +211,8 @@ def process_containers_for_shelving(
 
     # convert ChunkedIterator for list comprehension
     available_shelf_positions = list(available_shelf_positions)
+    # reverse the list to get the most constrained first
+    available_shelf_positions = available_shelf_positions[::-1]
 
     if not available_shelf_positions:
         raise NotFound(detail=f"No available shelf positions within constraints.")
