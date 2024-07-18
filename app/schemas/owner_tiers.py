@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, conint
 from datetime import datetime
 
@@ -5,6 +7,19 @@ from datetime import datetime
 class OwnerTierInput(BaseModel):
     level: int
     name: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "level": 1,
+                "name": "organization"
+            }
+        }
+
+
+class OwnerTierUpdateInput(BaseModel):
+    level: Optional[int] = None
+    name: Optional[str] = None
 
     class Config:
         json_schema_extra = {

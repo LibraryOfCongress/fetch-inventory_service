@@ -9,6 +9,7 @@ from app.database.session import get_session
 from app.models.owner_tiers import OwnerTier
 from app.schemas.owner_tiers import (
     OwnerTierInput,
+    OwnerTierUpdateInput,
     OwnerTierListOutput,
     OwnerTierDetailOutput,
 )
@@ -91,7 +92,7 @@ def create_owner_tier(
 
 @router.patch("/tiers/{id}", response_model=OwnerTierDetailOutput)
 def update_owner_tier(
-    id: int, owner_tier: OwnerTierInput, session: Session = Depends(get_session)
+    id: int, owner_tier: OwnerTierUpdateInput, session: Session = Depends(get_session)
 ):
     """
     Update an owner tier by its ID.
@@ -146,8 +147,7 @@ def delete_owner_tier(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Owner Tier ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Owner Tier ID {id} Deleted " f"Successfully"
         )
 
     raise NotFound(detail=f"Owner Tier ID {id} Not Found")
