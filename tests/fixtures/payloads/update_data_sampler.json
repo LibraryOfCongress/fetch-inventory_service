@@ -2,12 +2,9 @@
   "buildings": {
     "name": "Updated Building 1"
   },
-  "module_numbers": {
-    "number": 6
-  },
   "modules": {
     "building_id": 1,
-    "module_number_id": 8
+    "module_number": "8"
   },
   "aisle_numbers": {
     "number": 4

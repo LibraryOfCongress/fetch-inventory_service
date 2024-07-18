@@ -154,7 +154,6 @@ fake_data = [
     ('entities', 'tier_one_owners.json'),
     ('entities', 'tier_two_owners.json'),
     ('entities', 'buildings.json'),
-    ('types', 'module_numbers.json'),
     ('entities', 'modules.json'),
     ('types', 'aisle_numbers.json'),
     ('entities', 'fort_meade_aisles.json'), # 2 modules

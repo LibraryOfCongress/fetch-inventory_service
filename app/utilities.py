@@ -15,7 +15,6 @@ from app.models.container_types import ContainerType
 from app.models.items import Item
 from app.models.ladder_numbers import LadderNumber
 from app.models.media_types import MediaType
-from app.models.module_numbers import ModuleNumber
 from app.models.modules import Module
 from app.models.aisles import Aisle
 from app.models.non_tray_items import NonTrayItem
@@ -330,7 +329,7 @@ def get_refile_queue(building_id: int = None) -> list:
             Aisle.id.label("aisle_id"),
             AisleNumber.number.label("aisle_number"),
             Module.id.label("module_id"),
-            ModuleNumber.number.label("module_number"),
+            Module.module_number.label("module_number"),
             Item.scanned_for_refile_queue.label("scanned_for_refile_queue"),
             ContainerType.type.label("container_type"),
             MediaType.name.label("media_type"),
@@ -356,7 +355,6 @@ def get_refile_queue(building_id: int = None) -> list:
         .join(Aisle, Side.aisle_id == Aisle.id)
         .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
         .join(Module, Aisle.module_id == Module.id)
-        .join(ModuleNumber, Module.module_number_id == ModuleNumber.id)
         .join(Building, Module.building_id == Building.id)
         .join(MediaType, Item.media_type_id == MediaType.id)
         .join(Barcode, Item.barcode_id == Barcode.id)
@@ -382,7 +380,7 @@ def get_refile_queue(building_id: int = None) -> list:
             Aisle.id.label("aisle_id"),
             AisleNumber.number.label("aisle_number"),
             Module.id.label("module_id"),
-            ModuleNumber.number.label("module_number"),
+            Module.module_number.label("module_number"),
             NonTrayItem.scanned_for_refile_queue.label("scanned_for_refile_queue"),
             ContainerType.type.label("container_type"),
             MediaType.name.label("media_type"),
@@ -409,7 +407,6 @@ def get_refile_queue(building_id: int = None) -> list:
         .join(Aisle, Side.aisle_id == Aisle.id)
         .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
         .join(Module, Aisle.module_id == Module.id)
-        .join(ModuleNumber, Module.module_number_id == ModuleNumber.id)
         .join(Building, Module.building_id == Building.id)
         .join(MediaType, NonTrayItem.media_type_id == MediaType.id)
         .join(Barcode, NonTrayItem.barcode_id == Barcode.id)

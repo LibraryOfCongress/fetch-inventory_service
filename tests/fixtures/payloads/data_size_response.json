@@ -11,18 +11,6 @@
       "size": 10,
       "pages": 1
   },
-  "module_numbers": {
-      "items": [
-        {
-          "id": 1,
-          "number": 1
-        }
-      ],
-      "total": 1,
-      "page": 1,
-      "size": 10,
-      "pages": 1
-  },
   "modules": {
     "items": [
       {

@@ -145,13 +145,9 @@ class NestedAisleNumberForShelvingJob(BaseModel):
     number: int
 
 
-class NestedModuleNumberForShelvingJob(BaseModel):
-    number: int
-
-
 class NestedModuleForShelvingJob(BaseModel):
     id: int
-    module_number: NestedModuleNumberForShelvingJob
+    module_number: str
 
 
 class NestedBuildingForShelvingJob(BaseModel):
@@ -342,9 +338,7 @@ class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
                                             },
                                             "module": {
                                                 "id": 1,
-                                                "module_number": {
-                                                    "number": 1
-                                                }
+                                                "module_number": "1"
                                             },
                                             "building": {
                                                 "id": 1,
@@ -419,9 +413,7 @@ class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
                                             },
                                             "module": {
                                                 "id": 1,
-                                                "module_number": {
-                                                    "number": 1
-                                                }
+                                                "module_number": "1"
                                             },
                                             "building": {
                                                 "id": 1,
@@ -544,9 +536,7 @@ class ReAssignmentOutput(BaseModel):
                                 },
                                 "module": {
                                     "id": 1,
-                                    "module_number": {
-                                        "number": 1
-                                    }
+                                    "module_number": "1"
                                 },
                                 "building": {
                                     "id": 1,

@@ -7,7 +7,6 @@ from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
 
 from app.models.buildings import Building
-from app.models.module_numbers import ModuleNumber
 
 
 class Module(SQLModel, table=True):
@@ -20,16 +19,11 @@ class Module(SQLModel, table=True):
     """
 
     __tablename__ = "modules"
-    __table_args__ = (
-        UniqueConstraint(
-            "building_id", "module_number_id", name="uq_building_id_module_number_id"
-        ),
-    )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     building_id: int = Field(foreign_key="buildings.id", nullable=False)
-    module_number_id: int = Field(
-        foreign_key="module_numbers.id", nullable=False, default=None
+    module_number: str = Field(
+        max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=True
     )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
@@ -40,7 +34,5 @@ class Module(SQLModel, table=True):
 
     # building in a module
     building: Building = Relationship(back_populates="modules")
-    # module number
-    module_number: ModuleNumber = Relationship(back_populates="modules")
     # aisles in a module
     aisles: List["Aisle"] = Relationship(back_populates="module")

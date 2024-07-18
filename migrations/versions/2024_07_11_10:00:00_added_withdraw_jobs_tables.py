@@ -120,7 +120,10 @@ def upgrade() -> None:
     )
     op.drop_table("pick_list_requests")
     op.add_column("requests", sa.Column("pick_list_id", sa.Integer(), nullable=True))
-    op.add_column("requests", sa.Column("fulfilled", sa.Boolean(), nullable=False))
+    op.add_column(
+        "requests",
+        sa.Column("fulfilled", sa.Boolean(), nullable=False, server_default="False"),
+    )
     op.create_foreign_key(None, "requests", "pick_lists", ["pick_list_id"], ["id"])
     op.drop_column("requests", "scanned_for_retrieval")
     op.drop_column("requests", "scanned_for_pick_list")

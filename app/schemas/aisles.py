@@ -69,7 +69,7 @@ class AisleDetailWriteOutput(BaseModel):
                 "module_id": 1,
                 "sort_priority": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398"
+                "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
 
@@ -102,10 +102,7 @@ class AisleDetailReadOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764398",
                 "module": {
                     "id": 1,
-                    "module_number": {
-                        "id": 1,
-                        "number": 1
-                    },
+                    "module_number": "1",
                 },
                 "aisle_number": {
                     "id": 1,
