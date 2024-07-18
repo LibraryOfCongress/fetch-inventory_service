@@ -23,7 +23,7 @@ class Module(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     building_id: int = Field(foreign_key="buildings.id", nullable=False)
     module_number: str = Field(
-        max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=True
+        max_length=50, sa_column=sa.VARCHAR, nullable=True, unique=True
     )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False

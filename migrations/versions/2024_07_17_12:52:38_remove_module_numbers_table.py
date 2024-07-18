@@ -25,7 +25,7 @@ def upgrade() -> None:
     op.add_column(
         "modules",
         sa.Column(
-            "module_number", sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False
+            "module_number", sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True
         ),
     )
     op.drop_constraint("uq_building_id_module_number_id", "modules", type_="unique")
