@@ -149,9 +149,9 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
 
 class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
     barcode: BarcodeDetailReadOutput
-    media_type: MediaTypeDetailReadOutput
-    size_class: Optional[SizeClassDetailReadOutput]
-    container_type: Optional[ContainerTypeDetailReadOutput]
+    media_type: Optional[MediaTypeDetailReadOutput] = None
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    container_type: Optional[ContainerTypeDetailReadOutput] = None
     shelving_job: Optional[ShelvingJobBaseOutput] = None
     create_dt: datetime
     update_dt: datetime
