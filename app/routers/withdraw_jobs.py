@@ -329,7 +329,7 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
 
     return HTTPException(
         status_code=204,
-        detail=f"Verification Job id {id} Deleted Successfully",
+        detail=f"Withdraw Job id {job_id} Deleted Successfully",
     )
 
 
