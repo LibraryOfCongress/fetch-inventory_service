@@ -82,7 +82,7 @@ def get_withdraw_job_detail(id: int, session: Session = Depends(get_session)):
     withdraw_job = session.get(WithdrawJob, id)
 
     if not withdraw_job:
-        raise NotFound(detail="Withdraw job id {id} not found")
+        raise NotFound(detail=f"Withdraw job id {id} not found")
 
     return withdraw_job
 
