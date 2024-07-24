@@ -28,6 +28,7 @@ from app.models.shelves import Shelf
 from app.models.shelf_positions import ShelfPosition
 from app.models.size_class import SizeClass
 from app.models.trays import Tray
+from app.models.withdraw_jobs import WithdrawJob
 
 
 def get_module_shelf_position(session, shelf_position):
@@ -199,14 +200,17 @@ def process_containers_for_shelving(
 
     # Execute the query and fetch the results
     # keep in mind this is a joined list of [(ShelfPosition, Shelf)]
-    available_shelf_positions = session.exec(
-        shelf_position_query.where(and_(*conditions))
+    # Add order by clause to sort shelf positions by shelf_position_number_id in descending order
+    shelf_position_query = shelf_position_query.where(and_(*conditions)).order_by(
+        ShelfPosition.shelf_position_number_id.desc()
     )
+
+    # Execute the query and fetch the results
+    # keep in mind this is a joined list of [(ShelfPosition, Shelf)]
+    available_shelf_positions = session.exec(shelf_position_query)
 
     # convert ChunkedIterator for list comprehension
     available_shelf_positions = list(available_shelf_positions)
-    # reverse the list to get the most constrained first
-    available_shelf_positions = available_shelf_positions[::-1]
 
     if not available_shelf_positions:
         raise NotFound(detail=f"No available shelf positions within constraints.")
@@ -416,3 +420,30 @@ def get_refile_queue(building_id: int = None) -> list:
     )
 
     return item_query.union_all(non_tray_item_query).subquery()
+
+
+def process_request(barcode: str, session):
+    # Implement the logic to process the request type
+    item = session.query(Item).filter(Item.barcode == barcode).first()
+    if not item:
+        raise Exception("Unable to find this item")
+    # More processing logic...
+
+
+def process_shelving(barcode: str, session):
+    # Implement the logic to process the shelving type
+    location = session.query(Shelf).filter(Shelf.barcode_id == barcode).first()
+    if not location:
+        raise Exception("Unable to find this location")
+    # More processing logic...
+
+
+def process_withdraw(barcode: str, session):
+    # Implement the logic to process the withdraw type
+    withdraw_job = (
+        session.query(WithdrawJob).filter(WithdrawJob.barcode == barcode).first()
+    )
+
+    if not withdraw_job:
+        raise Exception("Unable to find this withdraw job")
+    # More processing logic...
