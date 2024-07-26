@@ -45,7 +45,11 @@ async def batch_upload_request(
     file_name = file.filename
     content_type = file.content_type
     contents = await file.read()
-    df = pd.read_excel(contents)
+
+    if file_name.endswith(".xlsx"):
+        df = pd.read_excel(contents)
+    if file_name.endswith(".csv"):
+        df = pd.read_csv(BytesIO(contents))
 
     # Check if the necessary column exists
     if "Item Barcode" not in df.columns:
@@ -89,7 +93,11 @@ async def batch_upload_withdraw_job(
     file_name = file.filename
     content_type = file.content_type
     contents = await file.read()
-    df = pd.read_excel(contents)
+
+    if file_name.endswith(".xlsx"):
+        df = pd.read_excel(contents)
+    if file_name.endswith(".csv"):
+        df = pd.read_csv(BytesIO(contents))
 
     # Check if the necessary column exists
     withdraw_job = session.get(WithdrawJob, job_id)
