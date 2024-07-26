@@ -7,11 +7,13 @@
     },
     {
       "first_name": "Tester",
-      "last_name": "One"
+      "last_name": "One",
+      "email": "tester1@loctest.gov"
     },
     {
       "first_name": "Tester",
-      "last_name": "Two"
+      "last_name": "Two",
+      "email": "tester2@loctest.gov"
     },
     {
       "first_name": "Cat",

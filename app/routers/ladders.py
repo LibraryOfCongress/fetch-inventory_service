@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.ladders import Ladder
+from app.models.ladder_numbers import LadderNumber
 from app.schemas.ladders import (
     LadderInput,
     LadderUpdateInput,
@@ -81,7 +82,21 @@ def create_ladder(
     - **ladder_number_id**: Required integer id for related ladder number
     """
     try:
-        new_ladder = Ladder(**ladder_input.model_dump())
+        # Check if ladder # or ladder_number_id
+        ladder_number = ladder_input.ladder_number
+        ladder_number_id = ladder_input.ladder_number_id
+        mutated_data = ladder_input.model_dump(exclude="ladder_number")
+        if not ladder_number_id and not ladder_number:
+            raise ValidationException(detail=f"ladder_number_id OR ladder_number required")
+        elif ladder_number and not ladder_number_id:
+            # get ladder_number_id from ladder number
+            ladder_num_object = session.query(LadderNumber).filter(LadderNumber.number == ladder_number).first()
+            if not ladder_num_object:
+                raise ValidationException(detail=f"No ladder_number entity exists for ladder number {ladder_number}")
+            mutated_data['ladder_number_id'] = ladder_num_object.id
+
+        # new_ladder = Ladder(**ladder_input.model_dump())
+        new_ladder = Ladder(**mutated_data)
         session.add(new_ladder)
         session.commit()
         session.refresh(new_ladder)

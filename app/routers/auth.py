@@ -1,7 +1,7 @@
 import json, jwt
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Request, HTTPException, Response, status, Depends
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from app.config.config import get_settings
 from app.models.users import User
 from sqlmodel import Session, select
@@ -100,12 +100,13 @@ def generate_token(user_object, session):
         "user_id": user_object.id,
         "first_name": user_object.first_name,
         "last_name": user_object.last_name,
-        "email": user_object.email,
-        'exp': datetime.utcnow() + timedelta(minutes=15)  # Token expires in 15 minutes
+        "email": user_object.email
+        # 'exp': datetime.utcnow() + timedelta(minutes=15)  # Token expires in 15 minutes
     }
     token = jwt.encode(payload, "your-secret-key", algorithm="HS256")
 
     setattr(user_object, "fetch_auth_token", token)
+    setattr(user_object, "fetch_auth_expiration", datetime.utcnow() + timedelta(minutes=15))
 
     session.add(user_object)
     session.commit()
@@ -220,4 +221,6 @@ if get_settings().APP_ENVIRONMENT in ['debug', 'local', 'develop', 'test']:
 
         token = generate_token(user, session)
 
-        return RedirectResponse(url=f"{get_settings().VUE_HOST}/?token={token}", status_code=status.HTTP_303_SEE_OTHER)
+        return JSONResponse({"detail": f"{token}"}, status_code=200)
+
+        # return RedirectResponse(url=f"{get_settings().VUE_HOST}/?token={token}", status_code=status.HTTP_303_SEE_OTHER)
