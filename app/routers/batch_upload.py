@@ -1,7 +1,7 @@
 import base64
 from fastapi import APIRouter, HTTPException, Depends, UploadFile
 from sqlmodel import Session
-from io import BytesIO
+from io import BytesIO, StringIO
 import pandas as pd
 from starlette import status
 from starlette.responses import JSONResponse
@@ -49,11 +49,28 @@ async def batch_upload_request(
     if file_name.endswith(".xlsx"):
         df = pd.read_excel(contents)
     if file_name.endswith(".csv"):
-        df = pd.read_csv(BytesIO(contents))
+        df = pd.read_csv(
+            StringIO(contents.decode("utf-8")), dtype={"Item Barcode": str}
+        )
+
+    df = df.dropna(subset=["Item Barcode"])
+
+    df.fillna(
+        {
+            "External Request ID": "Unknown",
+            "Priority": "Unknown",
+            "Requestor Name": "Unknown",
+            "Request Type": "Unknown",
+            "Delivery Location": "Unknown",
+        },
+        inplace=True,
+    )
 
     # Check if the necessary column exists
     if "Item Barcode" not in df.columns:
         raise BadRequest(detail="Excel file must contain a 'Item Barcode' column.")
+
+    df["Item Barcode"] = df["Item Barcode"].astype(str)
 
     validated_df, errored_df, errors = validate_request_data(session, df)
     # Process the request data
@@ -97,7 +114,13 @@ async def batch_upload_withdraw_job(
     if file_name.endswith(".xlsx"):
         df = pd.read_excel(contents)
     if file_name.endswith(".csv"):
-        df = pd.read_csv(BytesIO(contents))
+        df = pd.read_csv(
+            StringIO(contents.decode("utf-8")),
+            dtype={"Item Barcode": str, "Tray Barcode": str},
+        )
+
+    # Remove rows with NaN values in 'Item Barcode' or 'Tray Barcode'
+    df = df.dropna(subset=["Item Barcode", "Tray Barcode"], how="all")
 
     # Check if the necessary column exists
     withdraw_job = session.get(WithdrawJob, job_id)
