@@ -60,7 +60,6 @@ async def batch_upload_request(
 
     session.bulk_save_objects(request_instances)
     session.commit()
-    session.refresh(request_df)
 
     if errors:
         return JSONResponse(status_code=status.HTTP_200_OK, content=errors)
