@@ -10,6 +10,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from app.database.session import get_session
 from app.models.shelves import Shelf
 from app.models.barcodes import Barcode
+from app.models.shelf_numbers import ShelfNumber
 from app.schemas.shelves import (
     ShelfInput,
     ShelfUpdateInput,
@@ -104,7 +105,21 @@ def create_shelf(
     - **depth**: Required numeric (scale 4, precision 2) depth in inches
     """
     try:
-        new_shelf = Shelf(**shelf_input.model_dump())
+        # Check if shelf # or shelf_number_id
+        shelf_number = shelf_input.shelf_number
+        shelf_number_id = shelf_input.shelf_number_id
+        mutated_data = shelf_input.model_dump(exclude="shelf_number")
+        if not shelf_number_id and not shelf_number:
+            raise ValidationException(detail=f"shelf_number_id OR shelf_number required")
+        elif shelf_number and not shelf_number_id:
+            # get shelf_number_id from shelf number
+            shelf_num_object = session.query(ShelfNumber).filter(ShelfNumber.number == shelf_number).first()
+            if not shelf_num_object:
+                raise ValidationException(detail=f"No shelf_number entity exists for shelf number {shelf_number}")
+            mutated_data['shelf_number_id'] = shelf_num_object.id
+
+        # new_shelf = Shelf(**shelf_input.model_dump())
+        new_shelf = Shelf(**mutated_data)
         session.add(new_shelf)
         session.commit()
         session.refresh(new_shelf)

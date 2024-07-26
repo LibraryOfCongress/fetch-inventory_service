@@ -31,6 +31,9 @@ class User(SQLModel, table=True):
     fetch_auth_token: str = Field(
         max_length=300, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
+    fetch_auth_expiration: datetime = Field(
+        sa_column=sa.DateTime, nullable=True, default=None, unique=False
+    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )

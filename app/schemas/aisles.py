@@ -9,7 +9,8 @@ from app.schemas.aisle_numbers import AisleNumberBaseOutput
 
 
 class AisleInput(BaseModel):
-    aisle_number_id: conint(ge=0, le=2147483647)
+    aisle_number_id: Optional[conint(ge=0, le=2147483647)] = None
+    aisle_number: Optional[int] = None
     module_id: Optional[conint(ge=0, le=32767)] = None
     sort_priority: Optional[conint(ge=0, le=32767)] = None
 
@@ -17,6 +18,7 @@ class AisleInput(BaseModel):
         json_schema_extra = {
             "example": {
                 "aisle_number_id": 1,
+                "aisle_number": None,
                 "module_id": 1,
                 "sort_priority": 1
             }

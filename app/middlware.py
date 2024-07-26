@@ -6,6 +6,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from app.logger import inventory_logger, data_activity_logger
 from app.config.config import get_settings
+from app.database.session import get_session
+from app.models.users import User
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -51,16 +53,25 @@ class JWTMiddleware(BaseHTTPMiddleware):
                 response = await call_next(request)
         else:
             # Check if token is expired
-            token_exp = decoded_token.get('exp')
-            token_exp_datetime = datetime.utcfromtimestamp(token_exp)
-            if token_exp_datetime < datetime.utcnow():
-                if get_settings().APP_ENVIRONMENT not in ["local", "develop", "test"]:
-                    response = JSONResponse(status_code=401, content={"detail": "Token Expired"})
+            # token_exp = decoded_token.get('exp')
+            # token_exp_datetime = datetime.utcfromtimestamp(token_exp)
+            # from user table
+            with get_session() as session:
+                user_object = session.query(User).filter(User.email == fetch_user).first()
+                token_exp_datetime = user_object.fetch_auth_expiration
+                if token_exp_datetime < datetime.utcnow():
+                    if get_settings().APP_ENVIRONMENT not in ["local", "develop", "test"]:
+                        response = JSONResponse(status_code=401, content={"detail": "Token Expired"})
+                    else:
+                        response = await call_next(request)
                 else:
+                    # Everything's good
+                    # refresh exp and pass through
+                    user_object.fetch_auth_expiration = datetime.utcnow() + timedelta(minutes=15)
+                    session.add(user_object)
+                    session.commit(user_object)
+                    session.refresh(user_object)
                     response = await call_next(request)
-            else:
-                # Everything's good
-                response = await call_next(request)
 
         request_log_dict = {
             'url': request.url.path,
