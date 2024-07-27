@@ -454,9 +454,13 @@ def _fetch_building_id_from_item(session, item_id, item_type):
                                     if module.building_id:
                                         return module.building_id
     else:
-        item = session.query(NonTrayItem).get(item_id)
-        if item and item.shelf_position_id and item.shelf_position:
-            shelf_position = item.shelf_position
+        non_tray_item = session.query(NonTrayItem).get(item_id)
+        if (
+            non_tray_item
+            and non_tray_item.shelf_position_id
+            and non_tray_item.shelf_position
+        ):
+            shelf_position = non_tray_item.shelf_position
             if shelf_position.shelf_id and shelf_position.shelf:
                 shelf = shelf_position.shelf
                 if shelf.ladder_id and shelf.ladder:
@@ -545,11 +549,18 @@ def _validate_items(session, items, request_data, errors):
 def _validate_item(
     session, item, row_index, barcode_value, errors, errored_indices, item_type
 ):
-    existing_request = (
-        session.query(Request)
-        .filter(Request.item_id == item.id, Request.fulfilled == False)
-        .first()
-    )
+    if item_type == "Items":
+        existing_request = (
+            session.query(Request)
+            .filter(Request.item_id == item.id, Request.fulfilled == False)
+            .first()
+        )
+    elif item_type == "Non tray item":
+        existing_request = (
+            session.query(Request)
+            .filter(Request.non_tray_item_id == item.id, Request.fulfilled == False)
+            .first()
+        )
 
     if existing_request:
         errors.append(
@@ -650,17 +661,21 @@ def validate_request_data(session, request_data: pd.DataFrame):
             "Delivery Location",
         )
     )
+
     barcodes = _fetch_existing_data(
         session,
         Barcode,
         request_data["Item Barcode"].astype(str).tolist(),
         Barcode.value,
     )
-    errored_indices.update(_validate_items(session, barcodes, request_data, errors))
+
+    barcodes_errored_indices = _validate_items(session, barcodes, request_data, errors)
+    errored_indices.update(barcodes_errored_indices)
 
     errored_indices = list(errored_indices)
+    barcodes_errored_indices = list(barcodes_errored_indices)
     errored_df = request_data.loc[errored_indices]
-    good_df = request_data.drop(index=errored_indices)
+    good_df = request_data.drop(index=barcodes_errored_indices)
 
     return good_df, errored_df, {"errors": errors}
 
@@ -709,33 +724,42 @@ def process_request_data(session, request_df: pd.DataFrame):
         columns=["Priority", "Request Type", "Delivery Location", "Item Barcode"]
     )
 
-    if not building_id:
+    if building_id is None:
         for index, row in request_df.iterrows():
-            if row["item_id"]:
+            if not pd.isnull(row["item_id"]):
                 building_id = _fetch_building_id_from_item(
                     session, row["item_id"], "Item"
                 )
                 break
-            if row["non_tray_item_id"]:
+            if not pd.isnull(row["non_tray_item_id"]):
                 building_id = _fetch_building_id_from_item(
                     session, row["non_tray_item_id"], "Non Tray Item"
                 )
                 break
 
-    inventory_logger.info(f"Building ID: {building_id}")
     # Create Request instances from the DataFrame
     request_instances = [
         Request(
-            request_type_id=row["request_type_id"],
+            request_type_id=row["request_type_id"]
+            if not pd.isnull(row["request_type_id"])
+            else None,
             item_id=row["item_id"] if not pd.isnull(row["item_id"]) else None,
             non_tray_item_id=row["non_tray_item_id"]
             if not pd.isnull(row["non_tray_item_id"])
             else None,
-            delivery_location_id=row["delivery_location_id"],
-            priority_id=row["priority_id"],
-            external_request_id=row.get("external_request_id"),
-            requestor_name=row.get("requestor_name"),
-            building_id=building_id,
+            delivery_location_id=row["delivery_location_id"]
+            if not pd.isnull(row["delivery_location_id"])
+            else None,
+            priority_id=row["priority_id"]
+            if not pd.isnull(row["priority_id"])
+            else None,
+            external_request_id=row["External Request ID"]
+            if not pd.isnull(row["External Request ID"])
+            else None,
+            requestor_name=row["Requestor Name"]
+            if not pd.isnull(row["Requestor Name"])
+            else None,
+            building_id=building_id if building_id else None,
         )
         for index, row in request_df.iterrows()
     ]

@@ -50,18 +50,26 @@ async def batch_upload_request(
         df = pd.read_excel(contents)
     if file_name.endswith(".csv"):
         df = pd.read_csv(
-            StringIO(contents.decode("utf-8")), dtype={"Item Barcode": str}
+            StringIO(contents.decode("utf-8")),
+            dtype={
+                "Item Barcode": str,
+                "External Request ID": str,
+                "Requestor Name": str,
+                "Request Type": str,
+                "Priority": str,
+                "Delivery Location": str,
+            },
         )
 
     df = df.dropna(subset=["Item Barcode"])
 
     df.fillna(
         {
-            "External Request ID": "Unknown",
-            "Priority": "Unknown",
-            "Requestor Name": "Unknown",
-            "Request Type": "Unknown",
-            "Delivery Location": "Unknown",
+            "External Request ID": "",
+            "Priority": "",
+            "Requestor Name": "",
+            "Request Type": "",
+            "Delivery Location": "",
         },
         inplace=True,
     )
@@ -149,7 +157,7 @@ async def batch_upload_withdraw_job(
     )
 
     if not barcodes:
-        raise BadRequest(detail="At least one valida barcode value must be provided")
+        raise BadRequest(detail="At least one valid barcode value must be provided")
 
     (
         withdraw_items,
