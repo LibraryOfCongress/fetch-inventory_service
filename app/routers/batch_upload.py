@@ -54,16 +54,16 @@ async def get_batch_upload(
     query = select(BatchUpload)
 
     if batch_upload_type:
-        if batch_upload_type == "Request":
+        if batch_upload_type == "request":
             query = query.filter(
                 and_(
                     BatchUpload.withdraw_job_id.is_(None),
                     BatchUpload.shelving_job_id.is_(None),
                 )
             )
-        elif batch_upload_type == "Withdraw":
+        elif batch_upload_type == "withdraw":
             query = query.filter(BatchUpload.withdraw_job_id.isnot(None))
-        elif batch_upload_type == "Shelving":
+        elif batch_upload_type == "shelving":
             query = query.filter(BatchUpload.shelving_job_id.isnot(None))
 
     return paginate(session, query)
@@ -307,6 +307,9 @@ async def batch_upload_withdraw_job(
     # Check if the necessary column exists
     withdraw_job = session.get(WithdrawJob, job_id)
 
+    if not withdraw_job:
+        raise NotFound(detail=f"Withdraw job id {job_id} not found")
+
     # Create a new batch upload
     new_batch_upload = BatchUpload(
         file_name=file_name,
@@ -380,6 +383,7 @@ async def batch_upload_withdraw_job(
         errored_barcodes,
     ) = process_withdraw_job_data(session, withdraw_job.id, barcodes, df)
 
+    inventory_logger.info(f"errored_barcodes: {errored_barcodes}")
     if not withdraw_items and not withdraw_non_tray_items and not withdraw_trays:
         if not errored_barcodes.get("errors"):
             session.query(BatchUpload).filter(
@@ -413,6 +417,8 @@ async def batch_upload_withdraw_job(
 
     session.commit()
     session.refresh(withdraw_job)
+
+    inventory_logger.filter(f"errored_barcodes: {errored_barcodes}")
 
     if errored_barcodes.get("errors"):
         return JSONResponse(status_code=status.HTTP_200_OK, content=errored_barcodes)

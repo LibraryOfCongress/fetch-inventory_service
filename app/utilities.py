@@ -831,17 +831,17 @@ def _validate_withdraw_existing_item(existing_withdraws, job_id, status):
 
 def _validate_item_status(item, index, errors, error_message):
     if item.status in INVALID_STATUSES:
-        errors.append({"line": index, "error": error_message})
+        errors.append({"line": int(index), "error": error_message})
 
 
 def _validate_item_shelved(shelf_position, index, errors, error_message):
     if not shelf_position or not shelf_position.tray.scanned_for_shelving:
-        errors.append({"line": index, "error": error_message})
+        errors.append({"line": int(index), "error": error_message})
 
 
 def _validate_non_tray_item_shelved(item, index, errors, error_message):
     if not item or not item.shelf_position_id or not item.scanned_for_shelving:
-        errors.append({"line": index, "error": error_message})
+        errors.append({"line": int(index), "error": error_message})
 
 
 def _validate_withdraw_item(session, item, withdraw_job_id, barcode, index, errors):
@@ -860,7 +860,7 @@ def _validate_withdraw_item(session, item, withdraw_job_id, barcode, index, erro
         existing_withdrawals, withdraw_job_id, "Completed"
     ):
         item_errors.append(
-            {"line": index, "error": "Item is in existing withdrawals job"}
+            {"line": int(index), "error": "Item is in existing withdrawals job"}
         )
 
     if not item_errors:
