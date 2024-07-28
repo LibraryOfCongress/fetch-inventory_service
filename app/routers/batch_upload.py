@@ -186,7 +186,14 @@ async def batch_upload_request(
         or file_content_type
         == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ):
-        df = pd.read_excel(contents)
+        df = pd.read_excel(contents,  dtype={
+                "Item Barcode": str,
+                "External Request ID": str,
+                "Requestor Name": str,
+                "Request Type": str,
+                "Priority": str,
+                "Delivery Location": str,
+            },)
     if file_name.endswith(".csv") or file_content_type == "text/csv":
         df = pd.read_csv(
             StringIO(contents.decode("utf-8")),
@@ -297,7 +304,7 @@ async def batch_upload_withdraw_job(
         or file_content_type
         == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ):
-        df = pd.read_excel(contents)
+        df = pd.read_excel(contents, dtype={"Item Barcode": str, "Tray Barcode": str},)
     if file_name.endswith(".csv"):
         df = pd.read_csv(
             StringIO(contents.decode("utf-8")),
