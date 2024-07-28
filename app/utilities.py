@@ -492,7 +492,7 @@ def _validate_field(
             errors.append({"line:": index + 1, "error": error_message})
         return indices
 
-    return []
+    return set()
 
 
 def _validate_items(session, items, request_data, errors):
@@ -542,6 +542,14 @@ def _validate_items(session, items, request_data, errors):
                 errored_indices,
                 "Non tray item",
             )
+        else:
+            errors.append(
+                {
+                    "line": int(row_index + 1),
+                    "error": f"No items or non_trays found with barcode.",
+                }
+            )
+            errored_indices.add(row_index)
 
     return errored_indices
 
@@ -576,10 +584,10 @@ def _validate_item(
         tray_id = item.tray_id
         shelf_position = _fetch_tray_shelf_position(session, tray_id)
 
-        if shelf_position and (
-            not shelf_position.tray.scanned_for_shelving
+        if (
+            not shelf_position
+            or not shelf_position.tray.scanned_for_shelving
             or not shelf_position.tray.shelf_position_id
-            or item.status != "In"
         ):
             errors.append(
                 {
@@ -589,11 +597,7 @@ def _validate_item(
             )
             errored_indices.add(row_index)
     else:
-        if (
-            not item.scanned_for_shelving
-            or not item.shelf_position_id
-            or not item.status == "In"
-        ):
+        if not item.scanned_for_shelving or not item.shelf_position_id:
             errors.append(
                 {
                     "line": int(row_index + 1),
@@ -617,50 +621,74 @@ def _fetch_non_tray_shelf_position(session, shelf_position_id):
 
 def validate_request_data(session, request_data: pd.DataFrame):
     errors = []
+    barcodes_errored_indices = set()
     errored_indices = set()
 
-    priority_values = set(request_data["Priority"].tolist())
-    request_type_values = set(request_data["Request Type"].tolist())
-    delivery_location_values = set(request_data["Delivery Location"].tolist())
+    # Replace empty strings with NaN for External Request ID and check for missing values
+    if (
+        "External Request ID" not in request_data.columns
+        or request_data["External Request ID"].replace("", pd.NA).isnull().any()
+    ):
+        missing_indices = request_data[
+            request_data["External Request ID"].replace("", pd.NA).isnull()
+        ].index
+        for index in missing_indices:
+            errors.append(
+                {"line": int(index + 1), "error": "External Request ID is required"}
+            )
+            barcodes_errored_indices.update(missing_indices)
+            errored_indices.update(missing_indices)
 
-    errored_indices.update(
-        _validate_field(
-            session,
-            Priority,
-            priority_values,
-            Priority.value,
-            "Priority not found",
-            errors,
-            request_data,
-            "Priority",
-        )
+    # Replace empty strings with NaN and drop NaN values
+    priority_values = set(request_data["Priority"].replace("", pd.NA).dropna().tolist())
+    request_type_values = set(
+        request_data["Request Type"].replace("", pd.NA).dropna().tolist()
+    )
+    delivery_location_values = set(
+        request_data["Delivery Location"].replace("", pd.NA).dropna().tolist()
     )
 
-    errored_indices.update(
-        _validate_field(
-            session,
-            RequestType,
-            request_type_values,
-            RequestType.type,
-            "Request Types not found",
-            errors,
-            request_data,
-            "Request Type",
+    if priority_values:
+        errored_indices.update(
+            _validate_field(
+                session,
+                Priority,
+                priority_values,
+                Priority.value,
+                "Priority not found",
+                errors,
+                request_data,
+                "Priority",
+            )
         )
-    )
 
-    errored_indices.update(
-        _validate_field(
-            session,
-            DeliveryLocation,
-            delivery_location_values,
-            DeliveryLocation.name,
-            f"Delivery Locations not found",
-            errors,
-            request_data,
-            "Delivery Location",
+    if request_type_values:
+        errored_indices.update(
+            _validate_field(
+                session,
+                RequestType,
+                request_type_values,
+                RequestType.type,
+                "Request Type not found",
+                errors,
+                request_data,
+                "Request Type",
+            )
         )
-    )
+
+    if delivery_location_values:
+        errored_indices.update(
+            _validate_field(
+                session,
+                DeliveryLocation,
+                delivery_location_values,
+                DeliveryLocation.name,
+                "Delivery Location not found",
+                errors,
+                request_data,
+                "Delivery Location",
+            )
+        )
 
     barcodes = _fetch_existing_data(
         session,
@@ -669,7 +697,9 @@ def validate_request_data(session, request_data: pd.DataFrame):
         Barcode.value,
     )
 
-    barcodes_errored_indices = _validate_items(session, barcodes, request_data, errors)
+    barcodes_errored_indices.update(
+        _validate_items(session, barcodes, request_data, errors)
+    )
     errored_indices.update(barcodes_errored_indices)
 
     errored_indices = list(errored_indices)
@@ -680,7 +710,7 @@ def validate_request_data(session, request_data: pd.DataFrame):
     return good_df, errored_df, {"errors": errors}
 
 
-def process_request_data(session, request_df: pd.DataFrame):
+def process_request_data(session, request_df: pd.DataFrame, batch_upload_id):
     building_id = None
     barcodes = _fetch_existing_data(
         session, Barcode, request_df["Item Barcode"].astype(str).tolist(), Barcode.value
@@ -738,31 +768,34 @@ def process_request_data(session, request_df: pd.DataFrame):
                 break
 
     # Create Request instances from the DataFrame
-    request_instances = [
-        Request(
-            request_type_id=row["request_type_id"]
+    request_instances = []
+    for index, row in request_df.iterrows():
+        request_data = {
+            "request_type_id": row["request_type_id"]
             if not pd.isnull(row["request_type_id"])
             else None,
-            item_id=row["item_id"] if not pd.isnull(row["item_id"]) else None,
-            non_tray_item_id=row["non_tray_item_id"]
+            "item_id": row["item_id"] if not pd.isnull(row["item_id"]) else None,
+            "non_tray_item_id": row["non_tray_item_id"]
             if not pd.isnull(row["non_tray_item_id"])
             else None,
-            delivery_location_id=row["delivery_location_id"]
+            "delivery_location_id": row["delivery_location_id"]
             if not pd.isnull(row["delivery_location_id"])
             else None,
-            priority_id=row["priority_id"]
+            "priority_id": row["priority_id"]
             if not pd.isnull(row["priority_id"])
             else None,
-            external_request_id=row["External Request ID"]
+            "external_request_id": row["External Request ID"]
             if not pd.isnull(row["External Request ID"])
             else None,
-            requestor_name=row["Requestor Name"]
+            "requestor_name": row["Requestor Name"]
             if not pd.isnull(row["Requestor Name"])
             else None,
-            building_id=building_id if building_id else None,
-        )
-        for index, row in request_df.iterrows()
-    ]
+            "batch_upload_id": batch_upload_id,
+        }
+        if building_id is not None:
+            request_data["building_id"] = building_id
+
+        request_instances.append(Request(**request_data))
 
     return request_df, request_instances
 
