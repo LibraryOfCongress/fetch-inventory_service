@@ -186,14 +186,17 @@ async def batch_upload_request(
         or file_content_type
         == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ):
-        df = pd.read_excel(contents,  dtype={
+        df = pd.read_excel(
+            contents,
+            dtype={
                 "Item Barcode": str,
                 "External Request ID": str,
                 "Requestor Name": str,
                 "Request Type": str,
                 "Priority": str,
                 "Delivery Location": str,
-            },)
+            },
+        )
     if file_name.endswith(".csv") or file_content_type == "text/csv":
         df = pd.read_csv(
             StringIO(contents.decode("utf-8")),
@@ -304,7 +307,10 @@ async def batch_upload_withdraw_job(
         or file_content_type
         == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ):
-        df = pd.read_excel(contents, dtype={"Item Barcode": str, "Tray Barcode": str},)
+        df = pd.read_excel(
+            contents,
+            dtype={"Item Barcode": str, "Tray Barcode": str},
+        )
     if file_name.endswith(".csv"):
         df = pd.read_csv(
             StringIO(contents.decode("utf-8")),
@@ -347,7 +353,7 @@ async def batch_upload_withdraw_job(
         )
         session.commit()
         raise BadRequest(
-            detail="Excel file must contain a 'Item Barcode' or 'Tray "
+            detail="Batch file must contain a 'Item Barcode' or 'Tray "
             "Barcode' columns."
         )
 
@@ -363,7 +369,9 @@ async def batch_upload_withdraw_job(
             {"status": "Failed", "update_dt": datetime.utcnow()},
             synchronize_session=False,
         )
-        raise NotFound(detail="At least one barcode value must be provided")
+        raise NotFound(
+            detail="All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
+        )
 
     session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
         {"status": "Processing", "update_dt": datetime.utcnow()},
@@ -375,20 +383,40 @@ async def batch_upload_withdraw_job(
         session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
     )
 
+    found_barcodes = set(barcode.value for barcode in barcodes)
+    missing_barcodes = set(lookup_barcode_values) - found_barcodes
+
+    errored_barcodes = {"errors": []}
+
+    for barcode in missing_barcodes:
+        index = df.index[df["Item Barcode"] == barcode].tolist()
+        if not index:
+            index = df.index[df["Tray Barcode"] == barcode].tolist()
+        if index:
+            errored_barcodes["errors"].append(
+                {"line": index[0] + 1, "error": f"Barcode value {barcode} not found"}
+            )
+
     if not barcodes:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
             {"status": "Failed", "update_dt": datetime.utcnow()},
             synchronize_session=False,
         )
         session.commit()
-        raise BadRequest(detail="At least one valid barcode value must be provided")
+        raise BadRequest(
+            detail="All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
+        )
 
     (
         withdraw_items,
         withdraw_non_tray_items,
         withdraw_trays,
-        errored_barcodes,
+        errored_barcodes_from_processing,
     ) = process_withdraw_job_data(session, withdraw_job.id, barcodes, df)
+
+    errored_barcodes["errors"].extend(
+        errored_barcodes_from_processing.get("errors", [])
+    )
 
     inventory_logger.info(f"errored_barcodes: {errored_barcodes}")
     if not withdraw_items and not withdraw_non_tray_items and not withdraw_trays:
@@ -400,7 +428,9 @@ async def batch_upload_withdraw_job(
                 synchronize_session=False,
             )
             session.commit()
-            raise NotFound(detail=f"At least one valida barcode value must be provided")
+            raise NotFound(
+                detail=f"All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
+            )
         else:
             session.query(BatchUpload).filter(
                 BatchUpload.id == new_batch_upload.id
