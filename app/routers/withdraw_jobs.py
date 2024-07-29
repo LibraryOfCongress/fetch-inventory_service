@@ -242,12 +242,19 @@ def update_withdraw_job(
 
     if withdraw_job_input.status == "Completed":
         item_ids = [item.id for item in existing_withdraw_job.items]
+        item_barcodes = [item.barcode_id for item in existing_withdraw_job.items]
         non_tray_item_ids = [
             non_tray_item.id for non_tray_item in existing_withdraw_job.non_tray_items
         ]
+        non_tray_item_barcodes = [non_tray_item.barcode_id for non_tray_item in
+                                  existing_withdraw_job.non_tray_items]
         if item_ids:
             session.query(Item).filter(Item.id.in_(item_ids)).update(
                 {"withdrawal_dt": datetime.utcnow(), "status": "Withdrawn"},
+                synchronize_session=False,
+            )
+            session.query(Barcode).filter(Barcode.barcode.in_(item_barcodes)).update(
+                {"withdrawn": True},
                 synchronize_session=False,
             )
         if non_tray_item_ids:
@@ -257,6 +264,9 @@ def update_withdraw_job(
                 {"withdrawal_dt": datetime.utcnow(), "status": "Withdrawn"},
                 synchronize_session=False,
             )
+            Session(NonTrayItem).query(Barcode).filter(
+                Barcode.barcode.in_(non_tray_item_barcodes)
+            ).update({"withdrawn": True}, synchronize_session=False)
 
     mutated_data = withdraw_job_input.model_dump(
         exclude_unset=True,
