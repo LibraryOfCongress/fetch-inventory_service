@@ -3,8 +3,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel, field_validator
 
-from app.schemas.requests import RequestBaseOutput
-from app.schemas.shelving_jobs import ShelvingJobBaseOutput
+from app.schemas.requests import RequestListOutput
 from app.schemas.users import UserDetailWriteOutput
 from app.schemas.withdraw_jobs import WithdrawJobBaseOutput
 from app.models.batch_upload import BatchUploadStatus
@@ -45,8 +44,7 @@ class BatchUploadUpdateInput(BaseModel):
                 "file_name": "test.csv",
                 "file_size": 1000,
                 "file_type": "text/csv",
-                "withdraw_job_id": 1,
-                "shelving_job_id": 1
+                "withdraw_job_id": 1
             }
         }
 
@@ -62,8 +60,7 @@ class BatchUploadListOutput(BatchUploadBaseOutput):
     file_size: Optional[int] = None
     file_type: Optional[str] = None
     withdraw_job_id: Optional[int] = None
-    shelving_job_id: Optional[int] = None
-    requests: Optional[List[RequestBaseOutput]] = None
+    requests: Optional[List[RequestListOutput]] = None
     user: Optional[UserDetailWriteOutput] = None
     create_dt: datetime
     update_dt: datetime
@@ -78,7 +75,6 @@ class BatchUploadListOutput(BatchUploadBaseOutput):
                 "file_size": 1000,
                 "file_type": "text/csv",
                 "withdraw_job_id": 1,
-                "shelving_job_id": 1,
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -91,10 +87,8 @@ class BatchUploadDetailOutput(BatchUploadBaseOutput):
     file_size: Optional[int] = None
     file_type: Optional[str] = None
     withdraw_job_id: Optional[int] = None
-    shelving_job_id: Optional[int] = None
-    requests: Optional[List[RequestBaseOutput]] = None
+    requests: Optional[List[RequestListOutput]] = None
     withdraw_job: Optional[WithdrawJobBaseOutput] = None
-    shelving_job: Optional[ShelvingJobBaseOutput] = None
     user: Optional[object] = None
     create_dt: datetime
     update_dt: datetime
@@ -110,7 +104,6 @@ class BatchUploadDetailOutput(BatchUploadBaseOutput):
                 "file_type": "text/csv",
                 "request_id": 1,
                 "withdraw_job_id": 1,
-                "shelving_job_id": 1,
                 "request": [{
                     "id": 1,
                     "building_id": 1,
@@ -143,23 +136,6 @@ class BatchUploadDetailOutput(BatchUploadBaseOutput):
                     "item_count": 1,
                     "tray_count": 1,
                     "non_tray_item_count": 1,
-                },
-                "shelving_job": {
-                    "id": 1,
-                    "status": "Created",
-                    "origin": 1,
-                    "building_id": 1,
-                    "run_time": "00:00:00",
-                    "last_transition": "2022-01-01 00:00:00",
-                    "user": {
-                        "id": 1,
-                        "first_name": "Frodo",
-                        "last_name": "Baggins",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
                 },
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
