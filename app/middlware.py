@@ -6,7 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from app.logger import inventory_logger, data_activity_logger
 from app.config.config import get_settings
-from app.database.session import get_session
+from app.database.session import get_session, session_manager
 from app.models.users import User
 
 
@@ -56,7 +56,8 @@ class JWTMiddleware(BaseHTTPMiddleware):
             # token_exp = decoded_token.get('exp')
             # token_exp_datetime = datetime.utcfromtimestamp(token_exp)
             # from user table
-            with get_session() as session:
+            # with get_session() as session:
+            with session_manager() as session:
                 user_object = session.query(User).filter(User.email == fetch_user).first()
                 token_exp_datetime = user_object.fetch_auth_expiration
                 if token_exp_datetime < datetime.utcnow():
@@ -69,7 +70,8 @@ class JWTMiddleware(BaseHTTPMiddleware):
                     # refresh exp and pass through
                     user_object.fetch_auth_expiration = datetime.utcnow() + timedelta(minutes=15)
                     session.add(user_object)
-                    session.commit(user_object)
+                    # session.commit(user_object)
+                    session.commit()
                     session.refresh(user_object)
                     response = await call_next(request)
 
