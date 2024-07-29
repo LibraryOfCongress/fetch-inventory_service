@@ -28,16 +28,11 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=True),
         sa.Column("withdraw_job_id", sa.Integer(), nullable=True),
-        sa.Column("shelving_job_id", sa.Integer(), nullable=True),
         sa.Column("file_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("file_size", sa.Integer(), nullable=True),
         sa.Column("file_type", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("create_dt", sa.DateTime(), nullable=False),
         sa.Column("update_dt", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["shelving_job_id"],
-            ["shelving_jobs.id"],
-        ),
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["users.id"],

@@ -2,7 +2,7 @@ import base64
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, Form
 from fastapi_pagination.ext.sqlmodel import paginate
 from fastapi_pagination import Page
 from sqlalchemy import and_
@@ -164,7 +164,7 @@ async def update_batch_upload(
 
 @router.post("/request")
 async def batch_upload_request(
-    file: UploadFile, session: Session = Depends(get_session)
+    file: UploadFile, user_id: int = Form(None), session: Session = Depends(get_session)
 ):
     """
     Batch upload endpoint to process barcodes for different operations.
@@ -224,7 +224,10 @@ async def batch_upload_request(
     )
 
     new_batch_upload = BatchUpload(
-        file_name=file_name, file_size=file_size, file_type=file_content_type
+        file_name=file_name,
+        file_size=file_size,
+        file_type=file_content_type,
+        user_id=user_id,
     )
 
     session.add(new_batch_upload)
@@ -262,7 +265,7 @@ async def batch_upload_request(
 
     session.bulk_save_objects(request_instances)
 
-    if errors:
+    if errors.get("errors"):
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
             {"status": "Completed", "update_dt": datetime.utcnow()},
             synchronize_session=False,
@@ -335,7 +338,7 @@ async def batch_upload_withdraw_job(
     session.commit()
     session.refresh(new_batch_upload)
 
-    # Remove rows with NaN values in 'Item Barcode' or 'Tray Barcode'
+    # Remove rows with NaN values in 'Item Barcode' and 'Tray Barcode'
     df = df.dropna(subset=["Item Barcode", "Tray Barcode"], how="all")
 
     if not withdraw_job:
@@ -357,12 +360,22 @@ async def batch_upload_withdraw_job(
             "Barcode' columns."
         )
 
-    lookup_barcode_values = []
-    if not df["Item Barcode"].empty:
-        lookup_barcode_values.extend(df["Item Barcode"].astype(str).tolist())
+    # Drop NaN and empty string values
+    item_df = df["Item Barcode"].replace("", pd.NA).dropna()
+    tray_df = df["Tray Barcode"].replace("", pd.NA).dropna()
 
-    if not df["Tray Barcode"].empty:
-        lookup_barcode_values.extend(df["Tray Barcode"].astype(str).tolist())
+    # Concatenate the cleaned columns into a single Series
+    merged_series = pd.concat([item_df, tray_df])
+
+    # Create a new DataFrame from the concatenated Series
+    merged_df = pd.DataFrame(merged_series, columns=["Barcode"])
+
+    # Reset the index if necessary
+    merged_df.reset_index(drop=True, inplace=True)
+
+    lookup_barcode_values = []
+    if not merged_df["Barcode"].empty:
+        lookup_barcode_values.extend(merged_df["Barcode"].astype(str).tolist())
 
     if not lookup_barcode_values:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
@@ -389,9 +402,7 @@ async def batch_upload_withdraw_job(
     errored_barcodes = {"errors": []}
 
     for barcode in missing_barcodes:
-        index = df.index[df["Item Barcode"] == barcode].tolist()
-        if not index:
-            index = df.index[df["Tray Barcode"] == barcode].tolist()
+        index = merged_df.index[merged_df["Barcode"] == barcode].tolist()
         if index:
             errored_barcodes["errors"].append(
                 {"line": index[0] + 1, "error": f"Barcode value {barcode} not found"}
@@ -418,7 +429,6 @@ async def batch_upload_withdraw_job(
         errored_barcodes_from_processing.get("errors", [])
     )
 
-    inventory_logger.info(f"errored_barcodes: {errored_barcodes}")
     if not withdraw_items and not withdraw_non_tray_items and not withdraw_trays:
         if not errored_barcodes.get("errors"):
             session.query(BatchUpload).filter(
@@ -454,8 +464,6 @@ async def batch_upload_withdraw_job(
 
     session.commit()
     session.refresh(withdraw_job)
-
-    inventory_logger.filter(f"errored_barcodes: {errored_barcodes}")
 
     if errored_barcodes.get("errors"):
         return JSONResponse(status_code=status.HTTP_200_OK, content=errored_barcodes)

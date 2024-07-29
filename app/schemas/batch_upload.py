@@ -5,6 +5,7 @@ from pydantic import BaseModel, field_validator
 
 from app.schemas.requests import RequestBaseOutput
 from app.schemas.shelving_jobs import ShelvingJobBaseOutput
+from app.schemas.users import UserDetailWriteOutput
 from app.schemas.withdraw_jobs import WithdrawJobBaseOutput
 from app.models.batch_upload import BatchUploadStatus
 
@@ -27,7 +28,6 @@ class BatchUploadUpdateInput(BaseModel):
     file_size: Optional[int] = None
     file_type: Optional[str] = None
     withdraw_job_id: Optional[int] = None
-    shelving_job_id: Optional[int] = None
 
     @field_validator("status", mode="before", check_fields=True)
     @classmethod
@@ -63,6 +63,8 @@ class BatchUploadListOutput(BatchUploadBaseOutput):
     file_type: Optional[str] = None
     withdraw_job_id: Optional[int] = None
     shelving_job_id: Optional[int] = None
+    requests: Optional[List[RequestBaseOutput]] = None
+    user: Optional[UserDetailWriteOutput] = None
     create_dt: datetime
     update_dt: datetime
 

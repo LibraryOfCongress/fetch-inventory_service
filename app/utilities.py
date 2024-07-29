@@ -374,8 +374,6 @@ def get_refile_queue(building_id: int = None) -> list:
         .filter(and_(*item_query_conditions))
     )
 
-    inventory_logger.info(f"Item query: {item_query}")
-
     # Base query for non-tray items
     non_tray_item_query = (
         select(
@@ -904,8 +902,12 @@ def process_withdraw_job_data(
         non_tray_item = non_tray_item_dict.get(barcode.id)
         tray = tray_dict.get(barcode.id)
 
-        if item:
+        if not df[df["Item Barcode"].astype(str) == barcode.value].empty:
             index = df[df["Item Barcode"].astype(str) == barcode.value].index[0]
+        else:
+            index = df[df["Tray Barcode"].astype(str) == barcode.value].index[0]
+
+        if item:
             item_withdrawal, item_errors = _validate_withdraw_item(
                 session, item, withdraw_job_id, barcode, index + 1, errors
             )
@@ -914,7 +916,6 @@ def process_withdraw_job_data(
                 item.update_dt = update_dt
                 session.add(item)
         elif non_tray_item:
-            index = df[df["Item Barcode"].astype(str) == barcode.value].index[0]
             _validate_item_status(
                 non_tray_item, index + 1, errors, "Non Tray Item is invalid status"
             )
@@ -946,7 +947,6 @@ def process_withdraw_job_data(
                 non_tray_item.update_dt = update_dt
                 session.add(non_tray_item)
         elif tray:
-            index = df[df["Tray Barcode"].astype(str) == barcode.value].index[0]
             existing_tray_withdrawal = (
                 session.query(TrayWithdrawal)
                 .filter(

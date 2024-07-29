@@ -70,4 +70,3 @@ class ShelvingJob(SQLModel, table=True):
     non_tray_items: List["NonTrayItem"] = Relationship(back_populates="shelving_job")
     user: Optional[User] = Relationship(back_populates="shelving_jobs")
     building: "Building" = Relationship(back_populates="shelving_jobs")
-    batch_upload: Optional["BatchUpload"] = Relationship(back_populates="shelving_job")
