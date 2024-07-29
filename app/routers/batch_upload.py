@@ -17,7 +17,6 @@ from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.batch_upload import BatchUpload
 from app.models.requests import Request
-from app.models.shelving_jobs import ShelvingJob
 from app.models.withdraw_jobs import WithdrawJob
 from app.schemas.batch_upload import (
     BatchUploadListOutput,
@@ -104,10 +103,6 @@ async def delete_batch_upload(id: int, session: Session = Depends(get_session)):
     if batch_upload.withdraw_job_id:
         session.query(WithdrawJob).filter(
             WithdrawJob.id == batch_upload.withdraw_job_id
-        ).delete()
-    elif batch_upload.shelving_job_id:
-        session.query(ShelvingJob).filter(
-            ShelvingJob.id == batch_upload.shelving_job_id
         ).delete()
     else:
         session.query(Request).filter(Request.batch_upload_id == id).delete()
