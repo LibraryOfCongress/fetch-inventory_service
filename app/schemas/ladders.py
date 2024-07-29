@@ -90,12 +90,34 @@ class ShelfNumberNestedForLadderOutput(BaseModel):
     number: int
 
 
+class SizeClassNestedForLadderOutput(BaseModel):
+    id: int
+    name: str
+
+
+class ContainerTypeNestedForLadderOutput(BaseModel):
+    id: int
+    type: str
+
+
 class ShelvesNestedForLadderOutput(BaseModel):
     id: int
+    sort_priority: Optional[int] = None
     barcode: BarcodeDetailReadOutput
     shelf_number: ShelfNumberNestedForLadderOutput
     owner: OwnerNestedForLadderOutput
-    size_class_id: int
+    width: Optional[float] = None
+    height: Optional[float] = None
+    depth: Optional[float] = None
+    capacity: Optional[int] = None
+    size_class: SizeClassNestedForLadderOutput
+    container_type: Optional[ContainerTypeNestedForLadderOutput] = None
+    create_dt: Optional[datetime] = None
+    update_dt: Optional[datetime] = None
+
+
+class SideNestedForLadderOutput(SideDetailWriteOutput):
+    sort_priority: Optional[int] = None
 
 
 class LadderDetailReadOutput(LadderBaseOutput):
@@ -113,6 +135,7 @@ class LadderDetailReadOutput(LadderBaseOutput):
                 "sort_priority": 1,
                 "side": {
                     "id": 1,
+                    "sort_priority": 1,
                     "aisle_id": 1,
                     "side_orientation_id": 1,
                     "create_dt": "2023-10-08T20:46:56.764426",

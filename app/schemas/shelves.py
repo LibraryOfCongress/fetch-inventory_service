@@ -111,6 +111,7 @@ class ShelfListOutput(ShelfBaseOutput):
 
 class ShelfDetailWriteOutput(ShelfBaseOutput):
     sort_priority: Optional[int] = None
+    barcode_id: uuid.UUID
     ladder_id: int
     container_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
@@ -120,7 +121,11 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
     height: float
     width: float
     depth: float
-    barcode_id: uuid.UUID
+    size_class: Optional[SizeClassDetailReadOutput] = None
+    container_type: Optional[ContainerTypeDetailReadOutput] = None
+    ladder: LadderDetailWriteOutput
+    owner: Optional[OwnerDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
     create_dt: datetime
     update_dt: datetime
 
@@ -137,7 +142,66 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
+                "size_class": {
+                    "id": 1,
+                    "name": "C-Low",
+                    "short_name": "CL",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "container_type": {
+                    "id": 1,
+                    "type": "Tray",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "ladder": {
+                    "id": 1,
+                    "side_id": 1,
+                    "ladder_number_id": 1,
+                    "sort_priority": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "owner": {
+                    "id": 1,
+                    "name": "Special Collection Directorate",
+                    "owner_tier_id": 2,
+                    "parent_owner_id": 2,
+                    "owner_tier": {
+                        "id": 1,
+                        "level": 2,
+                        "name": "division",
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    },
+                    "parent_owner": {
+                        "id": 2,
+                        "name": "Library of Congress",
+                        "owner_tier_id": 1,
+                        "parent_owner_id": None,
+                        "owner_tier": {
+                            "id": 2,
+                            "level": 1,
+                            "name": "organization",
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    },
+                    "children": [],
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
