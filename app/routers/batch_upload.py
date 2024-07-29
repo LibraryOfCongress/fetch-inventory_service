@@ -55,16 +55,9 @@ async def get_batch_upload(
 
     if batch_upload_type:
         if batch_upload_type == "request":
-            query = query.filter(
-                and_(
-                    BatchUpload.withdraw_job_id.is_(None),
-                    BatchUpload.shelving_job_id.is_(None),
-                )
-            )
+            query = query.filter(BatchUpload.withdraw_job_id.is_(None))
         elif batch_upload_type == "withdraw":
             query = query.filter(BatchUpload.withdraw_job_id.isnot(None))
-        elif batch_upload_type == "shelving":
-            query = query.filter(BatchUpload.shelving_job_id.isnot(None))
 
     return paginate(session, query)
 
