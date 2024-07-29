@@ -11,7 +11,8 @@ from app.schemas.barcodes import BarcodeDetailReadOutput
 
 class LadderInput(BaseModel):
     side_id: conint(ge=0, le=2147483647)
-    ladder_number_id: conint(ge=0, le=32767)
+    ladder_number_id: Optional[conint(ge=0, le=32767)] = None
+    ladder_number: Optional[int] = None
     sort_priority: Optional[conint(ge=0, le=32767)] = None
 
     class Config:
@@ -19,6 +20,7 @@ class LadderInput(BaseModel):
             "example": {
                 "side_id": 1,
                 "ladder_number_id": 1,
+                "ladder_number": None,
                 "sort_priority": 1
             }
         }

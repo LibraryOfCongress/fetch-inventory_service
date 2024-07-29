@@ -109,7 +109,9 @@ def get_refile_job_detail(id: int, session: Session = Depends(get_session)):
             )
 
             # Extract the sorted request objects
-            refile_job.items = [data["item"] for data in sorted_requests]
+            refile_job.items = [
+                data["item"] for data in sorted_requests if data.get("item")
+            ]
 
         if non_tray_items:
             for non_tray_item in non_tray_items:
@@ -149,7 +151,9 @@ def get_refile_job_detail(id: int, session: Session = Depends(get_session)):
 
             # Extract the sorted request objects
             refile_job.non_tray_items = [
-                data["non_tray_item"] for data in sorted_requests
+                data["non_tray_item"]
+                for data in sorted_requests
+                if data.get("non_tray_item")
             ]
 
         return refile_job

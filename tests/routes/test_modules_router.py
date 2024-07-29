@@ -45,40 +45,22 @@ def test_get_module_by_id(client):
 
 
 def test_create_module_record(client):
-    response = client.post("/modules/numbers/", json={"number": 7})
-
-    assert response.status_code == status.HTTP_201_CREATED
-    assert response.json().get("number") == 7
-
-    module_number_id = response.json().get("id")
-
-    response = client.post(
-        "/modules", json={"building_id": 1, "module_number_id": module_number_id}
-    )
+    response = client.post("/modules", json={"building_id": 1, "module_number": "7"})
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json().get("building_id") == 1
-    assert response.json().get("module_number_id") == module_number_id
+    assert response.json().get("module_number") == "7"
 
 
 def test_patch_module_record(client):
-    response = client.post("/modules/numbers/", json={"number": 8})
-
-    assert response.status_code == status.HTTP_201_CREATED
-    assert response.json().get("number") == 8
-
-    module_number_id = response.json().get("id")
-
-    logging.info(f"module_number_id: {module_number_id}")
-
     response = client.patch(
-        f"/modules/1", json={"building_id": 1, "module_number_id": module_number_id}
+        f"/modules/1", json={"building_id": 1, "module_number": "8"}
     )
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("building_id") == UPDATED_MODULES_SINGLE_RECORD.get(
         "building_id"
     )
-    assert response.json().get("module_number_id") == module_number_id
+    assert response.json().get("module_number") == "8"
 
 
 def test_update_module_record_not_found(client):
@@ -95,17 +77,11 @@ def test_delete_module_record_success(client):
 
     building_id = response.json().get("id")
 
-    # Create new module number
-    response = client.post("/modules/numbers/", json={"number": 9})
-    assert response.status_code == status.HTTP_201_CREATED
-    assert response.json().get("number") == 9
-
-    module_number_id = response.json().get("id")
-
     response = client.post(
         "/modules/",
-        json={"building_id": building_id, "module_number_id": module_number_id},
+        json={"building_id": building_id, "module_number": "9"},
     )
+
     assert response.status_code == status.HTTP_201_CREATED
 
     module_id = response.json().get("id")
@@ -114,7 +90,9 @@ def test_delete_module_record_success(client):
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("status_code") == 204
-    assert response.json().get("detail") == f"Module ID {module_id} Deleted Successfully"
+    assert (
+        response.json().get("detail") == f"Module ID {module_id} Deleted Successfully"
+    )
 
 
 def test_delete_module_record_not_found(client):

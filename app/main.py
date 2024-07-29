@@ -9,8 +9,6 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
-from alembic.config import Config
-from alembic import command
 
 from alembic.config import Config
 from alembic import command
@@ -34,7 +32,6 @@ from app.config.exceptions import (
 from app.routers import (
     buildings,
     modules,
-    module_numbers,
     aisles,
     aisle_numbers,
     sides,
@@ -194,7 +191,6 @@ app.exception_handler(Forbidden)(forbidden_exception_handler)
 
 # order matters for route matching [nested before base]
 app.include_router(buildings.router)
-app.include_router(module_numbers.router)
 app.include_router(modules.router)
 app.include_router(aisle_numbers.router)
 app.include_router(aisles.router)

@@ -205,12 +205,9 @@ class NestedAisleNumberForRefileJob(BaseModel):
     number: int
 
 
-class NestedModuleNumberForRefileJob(BaseModel):
-    number: int
-
 class NestedModuleForRefileJob(BaseModel):
     id: int
-    module_number: NestedModuleNumberForRefileJob
+    module_number: str
 
 
 class NestedBuildingForRefileJob(BaseModel):

@@ -17,7 +17,8 @@ class ShelfInput(BaseModel):
     ladder_id: conint(ge=0, le=2147483647)
     container_type_id: conint(ge=0, le=2147483647)
     size_class_id: conint(ge=0, le=32767)
-    shelf_number_id: conint(ge=0, le=32767)
+    shelf_number_id: Optional[conint(ge=0, le=32767)] = None
+    shelf_number: Optional[int] = None
     owner_id: conint(ge=0, le=32767)
     capacity: conint(ge=0, le=32767)
     height: condecimal(decimal_places=2)
@@ -33,6 +34,7 @@ class ShelfInput(BaseModel):
                 "container_type_id": 1,
                 "size_class_id": 1,
                 "shelf_number_id": 1,
+                "shelf_number": None,
                 "owner_id": 1,
                 "capacity": 33,
                 "height": 15.7,

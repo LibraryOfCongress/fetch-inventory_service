@@ -7,22 +7,14 @@ class BuildingInput(BaseModel):
     name: constr(max_length=25, strict=False) = None
 
     class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "Southpoint Circle"
-            }
-        }
+        json_schema_extra = {"example": {"name": "Southpoint Circle"}}
 
 
 class BuildingUpdateInput(BaseModel):
     name: Optional[constr(max_length=25, strict=False)] = None
 
     class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "Southpoint Circle"
-            }
-        }
+        json_schema_extra = {"example": {"name": "Southpoint Circle"}}
 
 
 class BuildingBaseOutput(BaseModel):
@@ -55,13 +47,18 @@ class BuildingDetailWriteOutput(BuildingBaseOutput):
         }
 
 
-class ModuleNumberNestedForBuilding(BaseModel):
+class AisleNumberNestedForBuilding(BaseModel):
     number: int
+
+
+class AisleNestedForBuilding(BaseModel):
+    id: int
+    aisle_number: AisleNumberNestedForBuilding
 
 
 class ModuleNestedForBuilding(BaseModel):
     id: int
-    module_number: ModuleNumberNestedForBuilding
+    module_number: str
 
 
 class BuildingDetailReadOutput(BuildingBaseOutput):
@@ -79,10 +76,8 @@ class BuildingDetailReadOutput(BuildingBaseOutput):
                 "modules": [
                     {
                         "id": 1,
-                        "module_number": {
-                            "number": 1
-                        }
+                        "module_number": "1"
                     }
-                ],
+                ]
             }
         }
