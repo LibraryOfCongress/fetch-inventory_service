@@ -69,6 +69,9 @@ class AisleNumberNestedForModule(BaseModel):
 class AisleNestedForModule(BaseModel):
     id: int
     aisle_number: AisleNumberNestedForModule
+    sort_priority: Optional[int] = None
+    create_dt: datetime
+    update_dt: datetime
 
 
 class ModuleDetailReadOutput(ModuleBaseOutput):
@@ -94,7 +97,10 @@ class ModuleDetailReadOutput(ModuleBaseOutput):
                         "id": 1,
                         "aisle_number": {
                             "number": 1
-                        }
+                        },
+                        "sort_priority": 1,
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
                     }
                 ],
                 "create_dt": "2023-10-08T20:46:56.764426",
