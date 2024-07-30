@@ -42,7 +42,7 @@ def get_accession_job_list(
     - list: A paginated list of accession jobs.
     """
     try:
-        query = select(AccessionJob)
+        query = select(AccessionJob).where(AccessionJob.status != "Cancelled")
 
         if queue:
             # Filter to exclude Accession Jobs with a related Verification Job not in
