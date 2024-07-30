@@ -20,21 +20,26 @@ class BuildingUpdateInput(BaseModel):
 class BuildingBaseOutput(BaseModel):
     id: int
     name: str | None
+    create_dt: datetime
+    update_dt: datetime
 
 
 class BuildingListOutput(BuildingBaseOutput):
+
     class Config:
         json_schema_extra = {
-            "example": {
-                "id": 1,
-                "name": "Southpoint Circle"
-            }
+            "example": [
+                {
+                    "id": 1,
+                    "name": "Southpoint Circle",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                }
+            ]
         }
 
 
 class BuildingDetailWriteOutput(BuildingBaseOutput):
-    create_dt: datetime
-    update_dt: datetime
 
     class Config:
         json_schema_extra = {
@@ -59,6 +64,8 @@ class AisleNestedForBuilding(BaseModel):
 class ModuleNestedForBuilding(BaseModel):
     id: int
     module_number: str
+    create_dt: datetime
+    update_dt: datetime
 
 
 class BuildingDetailReadOutput(BuildingBaseOutput):
@@ -76,7 +83,9 @@ class BuildingDetailReadOutput(BuildingBaseOutput):
                 "modules": [
                     {
                         "id": 1,
-                        "module_number": "1"
+                        "module_number": "1",
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
                     }
                 ]
             }
