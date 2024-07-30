@@ -42,6 +42,7 @@ class RequestUpdateInput(BaseModel):
     delivery_location_id: Optional[int] = None
     priority_id: Optional[int] = None
     external_request_id: Optional[str] = None
+    batch_upload_id: Optional[int] = None
     requestor_name: Optional[str] = None
     barcode_value: Optional[str] = None  # pop this off in path operations
     scanned_for_retrieval: Optional[bool] = None
@@ -56,6 +57,7 @@ class RequestUpdateInput(BaseModel):
                 "non_tray_item_id": None,
                 "delivery_location_id": 1,
                 "priority_id": 1,
+                "batch_upload_id": 1,
                 "requestor_name": "Bilbo Baggins",
                 "external_request_id": "12345",
                 "scanned_for_pick_list": False,
@@ -73,6 +75,7 @@ class RequestBaseOutput(BaseModel):
     delivery_location_id: Optional[int] = None
     priority_id: Optional[int] = None
     external_request_id: Optional[str] = None
+    batch_upload_id: Optional[int] = None
     requestor_name: Optional[str] = None
     scanned_for_pick_list: Optional[bool] = None
     scanned_for_retrieval: Optional[bool] = None
@@ -233,6 +236,7 @@ class RequestDetailWriteOutput(RequestBaseOutput):
                 "non_tray_item_id": None,
                 "delivery_location_id": 1,
                 "priority_id": 1,
+                "batch_upload_id": 1,
                 "priority": {"id": 1, "value": "Medium"},
                 "request_type": {"id": 1, "type": "General Delivery"},
                 "delivery_location": {
@@ -343,6 +347,7 @@ class RequestListOutput(RequestBaseOutput):
                 "non_tray_item_id": None,
                 "delivery_location_id": 1,
                 "priority_id": 1,
+                "batch_upload_id": 1,
                 "priority": {"id": 1, "value": "Medium"},
                 "request_type": {"id": 1, "type": "General Delivery"},
                 "delivery_location": {
@@ -412,6 +417,7 @@ class RequestDetailReadOutput(RequestDetailWriteOutput):
                 "non_tray_item_id": None,
                 "delivery_location_id": 1,
                 "priority_id": 1,
+                "batch_upload_id": 1,
                 "priority": {
                     "id": 1,
                     "value": "Medium"
@@ -503,6 +509,7 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
                 "non_tray_item_id": None,
                 "delivery_location_id": 1,
                 "priority_id": 1,
+                "batch_upload_id": 1,
                 "priority": {"id": 1, "value": "Medium"},
                 "request_type": {"id": 1, "type": "General Delivery"},
                 "delivery_location": {

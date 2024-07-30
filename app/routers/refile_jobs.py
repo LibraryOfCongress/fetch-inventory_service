@@ -190,31 +190,77 @@ def create_refile_job(
 
     refile_items = []
     refile_non_tray_items = []
+    errored_barcodes = []
 
-    for barcode_value in lookup_barcode_values:
-        barcode = session.query(Barcode).where(Barcode.value == barcode_value).first()
+    barcodes = (
+        session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
+    )
+    items_map = {
+        barcode.id: session.query(Item).filter(Item.barcode_id == barcode.id).first()
+        for barcode in barcodes
+    }
+    non_tray_items_map = {
+        barcode.id: session.query(NonTrayItem)
+        .filter(NonTrayItem.barcode_id == barcode.id)
+        .first()
+        for barcode in barcodes
+    }
 
-        item = session.query(Item).where(Item.barcode_id == barcode.id).first()
+    for barcode in barcodes:
+        item = items_map.get(barcode.id)
+        non_tray_item = non_tray_items_map.get(barcode.id)
 
         if item:
+            existing_refile_items = (
+                session.query(RefileItem).filter(RefileItem.item_id == item.id).all()
+            )
+            if existing_refile_items:
+                refile_job_ids = [
+                    refile.refile_job_id for refile in existing_refile_items
+                ]
+                requests = (
+                    session.query(RefileJob)
+                    .filter(
+                        RefileJob.id.in_(refile_job_ids),
+                        RefileJob.status != "Completed",
+                    )
+                    .all()
+                )
+                if requests:
+                    errored_barcodes.append(barcode.value)
+                    continue
+
             refile_items.append(
                 RefileItem(refile_job_id=new_refile_job.id, item_id=item.id)
             )
+            item.scanned_for_refile_queue = False
+            item.scanned_for_refile_queue_dt = None
+            item.update_dt = update_dt
+            session.add(item)
 
-            session.query(Item).where(Item.id == item.id).update(
-                {
-                    "scanned_for_refile_queue": False,
-                    "scanned_for_refile_queue_dt": None,
-                    "update_dt": update_dt,
-                }
+        elif non_tray_item:
+            existing_refile_non_tray_items = (
+                session.query(RefileNonTrayItem)
+                .filter(RefileNonTrayItem.non_tray_item_id == non_tray_item.id)
+                .all()
             )
 
-        else:
-            non_tray_item = (
-                session.query(NonTrayItem)
-                .where(barcode.id == NonTrayItem.barcode_id)
-                .first()
-            )
+            if existing_refile_non_tray_items:
+                refile_job_ids = [
+                    refile.refile_job_id for refile in existing_refile_non_tray_items
+                ]
+                requests = (
+                    session.query(RefileJob)
+                    .filter(
+                        RefileJob.id.in_(refile_job_ids),
+                        RefileJob.status != "Completed",
+                    )
+                    .all()
+                )
+
+                if requests:
+                    errored_barcodes.append(barcode.value)
+                    continue
 
             refile_non_tray_items.append(
                 RefileNonTrayItem(
@@ -222,13 +268,13 @@ def create_refile_job(
                 )
             )
 
-            session.query(NonTrayItem).where(NonTrayItem.id == non_tray_item.id).update(
-                {
-                    "scanned_for_refile_queue": False,
-                    "scanned_for_refile_queue_dt": None,
-                    "update_dt": update_dt,
-                }
-            )
+            non_tray_item.scanned_for_refile_queue = False
+            non_tray_item.scanned_for_refile_queue_dt = None
+            non_tray_item.update_dt = update_dt
+            session.add(non_tray_item)
+
+        else:
+            errored_barcodes.append(barcode.value)
 
     if refile_items:
         session.bulk_save_objects(refile_items)
@@ -384,13 +430,48 @@ def add_items_to_refile_job(
 
     refile_items = []
     refile_non_tray_items = []
+    errored_barcodes = []
 
-    for barcode_value in lookup_barcode_values:
-        barcode = session.query(Barcode).filter(Barcode.value == barcode_value).first()
+    barcodes = (
+        session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
+    )
+    items_map = {
+        barcode.id: session.query(Item).filter(Item.barcode_id == barcode.id).first()
+        for barcode in barcodes
+    }
+    non_tray_items_map = {
+        barcode.id: session.query(NonTrayItem)
+        .filter(NonTrayItem.barcode_id == barcode.id)
+        .first()
+        for barcode in barcodes
+    }
 
-        item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    for barcode in barcodes:
+        item = items_map.get(barcode.id)
+        non_tray_item = non_tray_items_map.get(barcode.id)
 
         if item:
+            existing_refile_items = (
+                session.query(RefileItem).filter(RefileItem.item_id == item.id).all()
+            )
+
+            if existing_refile_items:
+                refile_job_ids = [
+                    refile.refile_job_id for refile in existing_refile_items
+                ]
+                requests = (
+                    session.query(RefileJob)
+                    .filter(
+                        RefileJob.id.in_(refile_job_ids),
+                        RefileJob.status != "Completed",
+                    )
+                    .all()
+                )
+
+                if requests:
+                    errored_barcodes.append(barcode.value)
+                    continue
+
             refile_items.append(
                 RefileItem(refile_job_id=refile_job.id, item_id=item.id)
             )
@@ -399,12 +480,29 @@ def add_items_to_refile_job(
             item.scanned_for_refile_queue_dt = None
             item.update_dt = update_dt
 
-        else:
-            non_tray_item = (
-                session.query(NonTrayItem)
-                .filter(NonTrayItem.barcode_id == barcode.id)
-                .first()
+        elif non_tray_item:
+            existing_refile_non_tray_items = (
+                session.query(RefileNonTrayItem)
+                .filter(RefileNonTrayItem.non_tray_item_id == non_tray_item.id)
+                .all()
             )
+
+            if existing_refile_non_tray_items:
+                refile_job_ids = [
+                    refile.refile_job_id for refile in existing_refile_non_tray_items
+                ]
+                requests = (
+                    session.query(RefileJob)
+                    .filter(
+                        RefileJob.id.in_(refile_job_ids),
+                        RefileJob.status != "Completed",
+                    )
+                    .all()
+                )
+
+                if requests:
+                    errored_barcodes.append(barcode.value)
+                    continue
 
             refile_non_tray_items.append(
                 RefileNonTrayItem(
@@ -456,10 +554,23 @@ def remove_item_from_refile_job(
     if not refile_job:
         raise NotFound(detail=f"Refile Job ID {job_id} Not Found")
 
-    for barcode_value in lookup_barcode_values:
-        barcode = session.query(Barcode).filter(Barcode.value == barcode_value).first()
+    barcodes = (
+        session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
+    )
+    items_map = {
+        barcode.id: session.query(Item).filter(Item.barcode_id == barcode.id).first()
+        for barcode in barcodes
+    }
+    non_tray_items_map = {
+        barcode.id: session.query(NonTrayItem)
+        .filter(NonTrayItem.barcode_id == barcode.id)
+        .first()
+        for barcode in barcodes
+    }
 
-        item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    for barcode in barcodes:
+        item = items_map.get(barcode.id)
+        non_tray_item = non_tray_items_map.get(barcode.id)
 
         if item:
             refile_item = (
@@ -474,7 +585,7 @@ def remove_item_from_refile_job(
                 session.delete(refile_item)
                 item.scanned_for_refile_queue = True
                 item.update_dt = update_dt
-        else:
+        elif non_tray_item:
             non_tray_item = (
                 session.query(NonTrayItem)
                 .filter(NonTrayItem.barcode_id == barcode.id)

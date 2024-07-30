@@ -45,3 +45,4 @@ from app.models.item_withdrawals import ItemWithdrawal
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.withdraw_jobs import WithdrawJob
+from app.models.batch_upload import BatchUpload

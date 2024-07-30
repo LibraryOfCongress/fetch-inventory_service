@@ -70,6 +70,7 @@ from app.routers import (
     withdraw_jobs,
     auth,
     status,
+    batch_upload,
 )
 
 
@@ -230,6 +231,6 @@ app.include_router(refile_jobs.router)
 app.include_router(withdraw_jobs.router)
 app.include_router(auth.router)
 app.include_router(status.router)
-
+app.include_router(batch_upload.router)
 
 add_pagination(app)

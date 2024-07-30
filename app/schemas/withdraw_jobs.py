@@ -226,7 +226,6 @@ class WithdrawJobWriteOutput(WithdrawJobBaseOutput):
     items: Optional[list[ItemNestedForWithdrawJob]] = None
     non_tray_items: Optional[list[NonTrayNestedForWithdrawJob]] = None
     trays: Optional[list[TrayNestedForWithdrawJob]] = None
-    errored_barcodes: Optional[List] = None
 
     class Config:
         json_schema_extra = {
@@ -349,12 +348,6 @@ class WithdrawJobWriteOutput(WithdrawJobBaseOutput):
                         ],
                     }
                 ],
-                "errored_barcodes": [
-                    "1234567890",
-                    "1234567891",
-                    "1234567892",
-                    "..."
-                ],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764426",
             }
@@ -371,7 +364,6 @@ class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
     non_tray_items: Optional[list[NonTrayNestedForWithdrawJob]] = None
     trays: Optional[list[TrayNestedForWithdrawJob]] = None
     pick_list: Optional[PickBaseOutput] = None
-    errored_barcodes: Optional[List] = None
 
     @field_validator("run_time")
     @classmethod
@@ -508,12 +500,6 @@ class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
                             }
                         ],
                     }
-                ],
-                "errored_barcodes": [
-                    "5901234123457",
-                    "5901234123458",
-                    "5901234123459",
-                    "..."
                 ],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764426"
