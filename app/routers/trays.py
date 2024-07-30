@@ -9,6 +9,7 @@ from app.database.session import get_session
 from app.models.trays import Tray
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
+from app.models.items import Item
 from app.schemas.trays import (
     TrayInput,
     TrayUpdateInput,
@@ -157,7 +158,16 @@ def delete_tray(id: int, session: Session = Depends(get_session)):
     tray = session.get(Tray, id)
 
     if tray:
+        items_to_delete = session.exec(select(Item).where(Item.tray_id == id).distinct())
+        for item in items_to_delete:
+            session.delete(item)
+            session.commit()
         session.delete(tray)
+        session.commit()
+        for item in items_to_delete:
+            session.delete(session.get(Barcode, item.barcode_id))
+            session.commit()
+        session.delete(Barcode, tray.barcode_id)
         session.commit()
 
         return HTTPException(
