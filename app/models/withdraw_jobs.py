@@ -68,3 +68,4 @@ class WithdrawJob(SQLModel, table=True):
         back_populates="withdraw_jobs", link_model=TrayWithdrawal
     )
     pick_list: Optional["PickList"] = Relationship(back_populates="withdraw_jobs")
+    batch_upload: Optional["BatchUpload"] = Relationship(back_populates="withdraw_job")

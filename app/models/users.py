@@ -24,9 +24,7 @@ class User(SQLModel, table=True):
     last_name: str = Field(
         max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=False
     )
-    email: str = Field(
-        max_length=100, sa_column=sa.VARCHAR, nullable=True, unique=True
-    )
+    email: str = Field(max_length=100, sa_column=sa.VARCHAR, nullable=True, unique=True)
     # never serialize this
     fetch_auth_token: str = Field(
         max_length=300, sa_column=sa.VARCHAR, nullable=True, unique=False
@@ -48,3 +46,4 @@ class User(SQLModel, table=True):
     groups: List["Group"] = Relationship(back_populates="users", link_model=UserGroup)
     refile_jobs: List["RefileJob"] = Relationship(back_populates="assigned_user")
     withdraw_jobs: List["WithdrawJob"] = Relationship(back_populates="assigned_user")
+    batch_uploads: List["BatchUpload"] = Relationship(back_populates="user")

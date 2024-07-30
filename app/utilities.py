@@ -1,10 +1,12 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from enum import Enum
+from typing import List, Dict, Tuple
 
+import pandas as pd
 import pytz
 from sqlalchemy import and_
 from sqlalchemy.orm import joinedload, aliased
-from sqlmodel import select
+from sqlmodel import select, Session
 
 from app.config.exceptions import NotFound
 from app.logger import inventory_logger
@@ -12,13 +14,19 @@ from app.models.aisle_numbers import AisleNumber
 from app.models.barcodes import Barcode
 from app.models.buildings import Building
 from app.models.container_types import ContainerType
+from app.models.delivery_locations import DeliveryLocation
+from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
 from app.models.ladder_numbers import LadderNumber
 from app.models.media_types import MediaType
 from app.models.modules import Module
 from app.models.aisles import Aisle
+from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
+from app.models.priorities import Priority
+from app.models.request_types import RequestType
+from app.models.requests import Request
 from app.models.shelf_numbers import ShelfNumber
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.side_orientations import SideOrientation
@@ -27,6 +35,7 @@ from app.models.ladders import Ladder
 from app.models.shelves import Shelf
 from app.models.shelf_positions import ShelfPosition
 from app.models.size_class import SizeClass
+from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
 from app.models.withdraw_jobs import WithdrawJob
 
@@ -201,9 +210,7 @@ def process_containers_for_shelving(
     # Execute the query and fetch the results
     # keep in mind this is a joined list of [(ShelfPosition, Shelf)]
     # Add order by clause to sort shelf positions by shelf_position_number_id in descending order
-    shelf_position_query = shelf_position_query.where(and_(*conditions)).order_by(
-        ShelfPosition.shelf_position_number_id.desc()
-    )
+    shelf_position_query = shelf_position_query.where(and_(*conditions))
 
     # Execute the query and fetch the results
     # keep in mind this is a joined list of [(ShelfPosition, Shelf)]
@@ -367,8 +374,6 @@ def get_refile_queue(building_id: int = None) -> list:
         .filter(and_(*item_query_conditions))
     )
 
-    inventory_logger.info(f"Item query: {item_query}")
-
     # Base query for non-tray items
     non_tray_item_query = (
         select(
@@ -422,28 +427,564 @@ def get_refile_queue(building_id: int = None) -> list:
     return item_query.union_all(non_tray_item_query).subquery()
 
 
-def process_request(barcode: str, session):
-    # Implement the logic to process the request type
-    item = session.query(Item).filter(Item.barcode == barcode).first()
-    if not item:
-        raise Exception("Unable to find this item")
-    # More processing logic...
+# Request Batch Upload Helper Functions
+def _fetch_existing_data(session, model, values, column):
+    return session.query(model).filter(column.in_(values)).all()
 
 
-def process_shelving(barcode: str, session):
-    # Implement the logic to process the shelving type
-    location = session.query(Shelf).filter(Shelf.barcode_id == barcode).first()
-    if not location:
-        raise Exception("Unable to find this location")
-    # More processing logic...
+def _fetch_building_id_from_item(session, item_id, item_type):
+    if item_type == "Item":
+        item = session.query(Item).get(item_id)
+        if item and item.tray:
+            tray = item.tray
+            if tray.shelf_position_id and tray.shelf_position:
+                shelf_position = tray.shelf_position
+                if shelf_position.shelf_id and shelf_position.shelf:
+                    shelf = shelf_position.shelf
+                    if shelf.ladder_id and shelf.ladder:
+                        ladder = shelf.ladder
+                        if ladder.side_id and ladder.side:
+                            side = ladder.side
+                            if side.aisle_id and side.aisle:
+                                aisle = side.aisle
+                                if aisle.module_id and aisle.module:
+                                    module = aisle.module
+                                    if module.building_id:
+                                        return module.building_id
+    else:
+        non_tray_item = session.query(NonTrayItem).get(item_id)
+        if (
+            non_tray_item
+            and non_tray_item.shelf_position_id
+            and non_tray_item.shelf_position
+        ):
+            shelf_position = non_tray_item.shelf_position
+            if shelf_position.shelf_id and shelf_position.shelf:
+                shelf = shelf_position.shelf
+                if shelf.ladder_id and shelf.ladder:
+                    ladder = shelf.ladder
+                    if ladder.side_id and ladder.side:
+                        side = ladder.side
+                        if side.aisle_id and side.aisle:
+                            aisle = side.aisle
+                            if aisle.module_id and aisle.module:
+                                module = aisle.module
+                                if module.building_id:
+                                    return module.building_id
 
 
-def process_withdraw(barcode: str, session):
-    # Implement the logic to process the withdraw type
-    withdraw_job = (
-        session.query(WithdrawJob).filter(WithdrawJob.barcode == barcode).first()
+def _map_values_to_ids(data, key_column, value_column):
+    return {getattr(item, key_column): getattr(item, value_column) for item in data}
+
+
+def _validate_field(
+    session, model, values, column, error_message, errors, request_data, field_name
+):
+    fetched_data = _fetch_existing_data(session, model, values, column)
+    valid_values = {getattr(item, column.key) for item in fetched_data}
+    errored_values = values - valid_values
+
+    if errored_values:
+        indices = request_data[request_data[field_name].isin(errored_values)].index
+        for index in indices:
+            errors.append({"line:": index + 1, "error": error_message})
+        return indices
+
+    return set()
+
+
+def _validate_items(session, items, request_data, errors):
+    errored_indices = set()
+    barcode_dict = _map_values_to_ids(items, "value", "id")
+    barcode_values = set(request_data["Item Barcode"].astype(str))
+    missing_barcodes = barcode_values - barcode_dict.keys()
+
+    if missing_barcodes:
+        for barcode in missing_barcodes:
+            index = request_data[
+                request_data["Item Barcode"].astype(str) == barcode
+            ].index[0]
+            errors.append(
+                {"line": int(index + 1), "error": f"Barcode {barcode} not " f"found"}
+            )
+            errored_indices.add(index)
+
+    for barcode_value, barcode_id in barcode_dict.items():
+        row_index = request_data[
+            request_data["Item Barcode"].astype(str) == barcode_value
+        ].index[0]
+        item = session.query(Item).filter(Item.barcode_id == barcode_id).first()
+        non_tray_item = (
+            session.query(NonTrayItem)
+            .filter(NonTrayItem.barcode_id == barcode_id)
+            .first()
+        )
+
+        if item:
+            _validate_item(
+                session,
+                item,
+                row_index,
+                barcode_value,
+                errors,
+                errored_indices,
+                "Items",
+            )
+        elif non_tray_item:
+            _validate_item(
+                session,
+                non_tray_item,
+                row_index,
+                barcode_value,
+                errors,
+                errored_indices,
+                "Non tray item",
+            )
+        else:
+            errors.append(
+                {
+                    "line": int(row_index + 1),
+                    "error": f"No items or non_trays found with barcode.",
+                }
+            )
+            errored_indices.add(row_index)
+
+    return errored_indices
+
+
+def _validate_item(
+    session, item, row_index, barcode_value, errors, errored_indices, item_type
+):
+    if item_type == "Items":
+        existing_request = (
+            session.query(Request)
+            .filter(Request.item_id == item.id, Request.fulfilled == False)
+            .first()
+        )
+    elif item_type == "Non tray item":
+        existing_request = (
+            session.query(Request)
+            .filter(Request.non_tray_item_id == item.id, Request.fulfilled == False)
+            .first()
+        )
+
+    if existing_request:
+        errors.append(
+            {
+                "line": int(row_index + 1),
+                "error": f"{item_type}" f" {barcode_value} is " f"already requested",
+            }
+        )
+        errored_indices.add(row_index)
+        return
+
+    if item_type == "Items":
+        tray_id = item.tray_id
+        shelf_position = _fetch_tray_shelf_position(session, tray_id)
+
+        if (
+            not shelf_position
+            or not shelf_position.tray.scanned_for_shelving
+            or not shelf_position.tray.shelf_position_id
+        ):
+            errors.append(
+                {
+                    "line": int(row_index + 1),
+                    "error": f"{item_type}" f" {barcode_value} is not shelved",
+                }
+            )
+            errored_indices.add(row_index)
+    else:
+        if not item.scanned_for_shelving or not item.shelf_position_id:
+            errors.append(
+                {
+                    "line": int(row_index + 1),
+                    "error": f"{item_type}" f" {barcode_value} is not shelved",
+                }
+            )
+            errored_indices.add(row_index)
+
+
+def _fetch_tray_shelf_position(session, tray_id):
+    return session.query(ShelfPosition).join(Tray).filter(Tray.id == tray_id).first()
+
+
+def _fetch_non_tray_shelf_position(session, shelf_position_id):
+    return (
+        session.query(ShelfPosition)
+        .filter(ShelfPosition.id == shelf_position_id)
+        .first()
     )
 
-    if not withdraw_job:
-        raise Exception("Unable to find this withdraw job")
-    # More processing logic...
+
+def validate_request_data(session, request_data: pd.DataFrame):
+    errors = []
+    barcodes_errored_indices = set()
+    errored_indices = set()
+
+    # Replace empty strings with NaN for External Request ID and check for missing values
+    if (
+        "External Request ID" not in request_data.columns
+        or request_data["External Request ID"].replace("", pd.NA).isnull().any()
+    ):
+        missing_indices = request_data[
+            request_data["External Request ID"].replace("", pd.NA).isnull()
+        ].index
+        for index in missing_indices:
+            errors.append(
+                {"line": int(index + 1), "error": "External Request ID is required"}
+            )
+            barcodes_errored_indices.update(missing_indices)
+            errored_indices.update(missing_indices)
+
+    # Replace empty strings with NaN and drop NaN values
+    priority_values = set(request_data["Priority"].replace("", pd.NA).dropna().tolist())
+    request_type_values = set(
+        request_data["Request Type"].replace("", pd.NA).dropna().tolist()
+    )
+    delivery_location_values = set(
+        request_data["Delivery Location"].replace("", pd.NA).dropna().tolist()
+    )
+
+    if priority_values:
+        errored_indices.update(
+            _validate_field(
+                session,
+                Priority,
+                priority_values,
+                Priority.value,
+                "Priority not found",
+                errors,
+                request_data,
+                "Priority",
+            )
+        )
+
+    if request_type_values:
+        errored_indices.update(
+            _validate_field(
+                session,
+                RequestType,
+                request_type_values,
+                RequestType.type,
+                "Request Type not found",
+                errors,
+                request_data,
+                "Request Type",
+            )
+        )
+
+    if delivery_location_values:
+        errored_indices.update(
+            _validate_field(
+                session,
+                DeliveryLocation,
+                delivery_location_values,
+                DeliveryLocation.name,
+                "Delivery Location not found",
+                errors,
+                request_data,
+                "Delivery Location",
+            )
+        )
+
+    barcodes = _fetch_existing_data(
+        session,
+        Barcode,
+        request_data["Item Barcode"].astype(str).tolist(),
+        Barcode.value,
+    )
+
+    barcodes_errored_indices.update(
+        _validate_items(session, barcodes, request_data, errors)
+    )
+    errored_indices.update(barcodes_errored_indices)
+
+    errored_indices = list(errored_indices)
+    barcodes_errored_indices = list(barcodes_errored_indices)
+    errored_df = request_data.loc[errored_indices]
+    good_df = request_data.drop(index=barcodes_errored_indices)
+
+    return good_df, errored_df, {"errors": errors}
+
+
+def process_request_data(session, request_df: pd.DataFrame, batch_upload_id):
+    building_id = None
+    barcodes = _fetch_existing_data(
+        session, Barcode, request_df["Item Barcode"].astype(str).tolist(), Barcode.value
+    )
+    barcode_dict = _map_values_to_ids(barcodes, "value", "id")
+    items = _fetch_existing_data(session, Item, barcode_dict.values(), Item.barcode_id)
+    non_tray_items = _fetch_existing_data(
+        session, NonTrayItem, barcode_dict.values(), NonTrayItem.barcode_id
+    )
+
+    if items:
+        items_ids = [item.id for item in items]
+        session.query(Item).filter(Item.id.in_(items_ids)).update(
+            {"status": "Requested"}, synchronize_session=False
+        )
+        session.commit()
+
+    if non_tray_items:
+        non_tray_items_ids = [item.id for item in non_tray_items]
+        session.query(NonTrayItem).filter(
+            NonTrayItem.id.in_(non_tray_items_ids)
+        ).update({"status": "Requested"}, synchronize_session=False)
+        session.commit()
+
+    priorities = _fetch_existing_data(
+        session, Priority, request_df["Priority"].tolist(), Priority.value
+    )
+    request_types = _fetch_existing_data(
+        session, RequestType, request_df["Request Type"].tolist(), RequestType.type
+    )
+    delivery_locations = _fetch_existing_data(
+        session,
+        DeliveryLocation,
+        request_df["Delivery Location"].tolist(),
+        DeliveryLocation.name,
+    )
+
+    priority_dict = _map_values_to_ids(priorities, "value", "id")
+    request_type_dict = _map_values_to_ids(request_types, "type", "id")
+    delivery_location_dict = _map_values_to_ids(delivery_locations, "name", "id")
+
+    item_dict = _map_values_to_ids(items, "barcode_id", "id")
+    non_tray_item_dict = _map_values_to_ids(non_tray_items, "barcode_id", "id")
+
+    request_df["priority_id"] = request_df["Priority"].map(priority_dict)
+    request_df["request_type_id"] = request_df["Request Type"].map(request_type_dict)
+    request_df["delivery_location_id"] = request_df["Delivery Location"].map(
+        delivery_location_dict
+    )
+    request_df["barcode_id"] = request_df["Item Barcode"].astype(str).map(barcode_dict)
+    request_df["item_id"] = request_df["barcode_id"].map(item_dict)
+    request_df["non_tray_item_id"] = request_df["barcode_id"].map(non_tray_item_dict)
+
+    request_df = request_df.drop(
+        columns=["Priority", "Request Type", "Delivery Location", "Item Barcode"]
+    )
+
+    if building_id is None:
+        for index, row in request_df.iterrows():
+            if not pd.isnull(row["item_id"]):
+                building_id = _fetch_building_id_from_item(
+                    session, row["item_id"], "Item"
+                )
+                break
+            if not pd.isnull(row["non_tray_item_id"]):
+                building_id = _fetch_building_id_from_item(
+                    session, row["non_tray_item_id"], "Non Tray Item"
+                )
+                break
+
+    # Create Request instances from the DataFrame
+    request_instances = []
+    for index, row in request_df.iterrows():
+        request_data = {
+            "request_type_id": row["request_type_id"]
+            if not pd.isnull(row["request_type_id"])
+            else None,
+            "item_id": row["item_id"] if not pd.isnull(row["item_id"]) else None,
+            "non_tray_item_id": row["non_tray_item_id"]
+            if not pd.isnull(row["non_tray_item_id"])
+            else None,
+            "delivery_location_id": row["delivery_location_id"]
+            if not pd.isnull(row["delivery_location_id"])
+            else None,
+            "priority_id": row["priority_id"]
+            if not pd.isnull(row["priority_id"])
+            else None,
+            "external_request_id": row["External Request ID"]
+            if not pd.isnull(row["External Request ID"])
+            else None,
+            "requestor_name": row["Requestor Name"]
+            if not pd.isnull(row["Requestor Name"])
+            else None,
+            "batch_upload_id": batch_upload_id,
+        }
+        if building_id is not None:
+            request_data["building_id"] = building_id
+
+        request_instances.append(Request(**request_data))
+
+    return request_df, request_instances
+
+
+# Withdraw Utilities
+# Constants for statuses
+INVALID_STATUSES = {"Requested", "Withdrawn"}
+COMPLETED_STATUS = "Completed"
+
+
+def _get_shelf_position(session: Session, tray_id: int):
+    return session.query(ShelfPosition).join(Tray).filter(Tray.id == tray_id).first()
+
+
+def _get_existing_withdrawals(session: Session, item_ids, item_type):
+    model_map = {
+        "Item": ItemWithdrawal,
+        "NonTrayItem": NonTrayItemWithdrawal,
+    }
+    return (
+        session.query(model_map[item_type])
+        .filter(model_map[item_type].item_id.in_(item_ids))
+        .all()
+    )
+
+
+def _validate_withdraw_existing_item(existing_withdraws, job_id, status):
+    return any(
+        item.withdraw_job_id == job_id or item.status != status
+        for item in existing_withdraws
+    )
+
+
+def _validate_item_status(item, index, errors, error_message):
+    if item.status in INVALID_STATUSES:
+        errors.append({"line": int(index), "error": error_message})
+
+
+def _validate_item_shelved(shelf_position, index, errors, error_message):
+    if not shelf_position or not shelf_position.tray.scanned_for_shelving:
+        errors.append({"line": int(index), "error": error_message})
+
+
+def _validate_non_tray_item_shelved(item, index, errors, error_message):
+    if not item or not item.shelf_position_id or not item.scanned_for_shelving:
+        errors.append({"line": int(index), "error": error_message})
+
+
+def _validate_withdraw_item(session, item, withdraw_job_id, barcode, index, errors):
+    item_errors = []
+
+    _validate_item_status(item, index, item_errors, "Item is invalid status")
+    shelf_position = (
+        session.query(ShelfPosition).join(Tray).filter(Tray.id == item.tray_id).first()
+    )
+    _validate_item_shelved(shelf_position, index, item_errors, "Item is not shelved")
+
+    existing_withdrawals = (
+        session.query(ItemWithdrawal).filter(ItemWithdrawal.item_id == item.id).all()
+    )
+    if _validate_withdraw_existing_item(
+        existing_withdrawals, withdraw_job_id, "Completed"
+    ):
+        item_errors.append(
+            {"line": int(index), "error": "Item is in existing withdrawals job"}
+        )
+
+    if not item_errors:
+        return (
+            ItemWithdrawal(item_id=item.id, withdraw_job_id=withdraw_job_id),
+            item_errors,
+        )
+    else:
+        errors.extend(item_errors)
+        return None, item_errors
+
+
+def process_withdraw_job_data(
+    session: Session, withdraw_job_id: int, barcodes: List, df: pd.DataFrame
+) -> Tuple[List, List, List, Dict]:
+    errors = []
+    withdraw_items = []
+    withdraw_non_tray_items = []
+    withdraw_trays = []
+    update_dt = datetime.utcnow()
+
+    # Collect all barcode ids
+    barcode_ids = [barcode.id for barcode in barcodes]
+
+    # Fetch all necessary data in batch
+    items = session.query(Item).filter(Item.barcode_id.in_(barcode_ids)).all()
+    non_tray_items = (
+        session.query(NonTrayItem).filter(NonTrayItem.barcode_id.in_(barcode_ids)).all()
+    )
+    trays = session.query(Tray).filter(Tray.barcode_id.in_(barcode_ids)).all()
+
+    # Create dictionaries for quick lookup
+    item_dict = {item.barcode_id: item for item in items}
+    non_tray_item_dict = {
+        non_tray_item.barcode_id: non_tray_item for non_tray_item in non_tray_items
+    }
+    tray_dict = {tray.barcode_id: tray for tray in trays}
+
+    for barcode in barcodes:
+        item = item_dict.get(barcode.id)
+        non_tray_item = non_tray_item_dict.get(barcode.id)
+        tray = tray_dict.get(barcode.id)
+
+        if not df[df["Item Barcode"].astype(str) == barcode.value].empty:
+            index = df[df["Item Barcode"].astype(str) == barcode.value].index[0]
+        else:
+            index = df[df["Tray Barcode"].astype(str) == barcode.value].index[0]
+
+        if item:
+            item_withdrawal, item_errors = _validate_withdraw_item(
+                session, item, withdraw_job_id, barcode, index + 1, errors
+            )
+            if item_withdrawal:
+                withdraw_items.append(item_withdrawal)
+                item.update_dt = update_dt
+                session.add(item)
+        elif non_tray_item:
+            _validate_item_status(
+                non_tray_item, index + 1, errors, "Non Tray Item is invalid status"
+            )
+            _validate_non_tray_item_shelved(
+                non_tray_item, index + 1, errors, "Non Tray Item is not shelved"
+            )
+
+            existing_withdrawals = (
+                session.query(NonTrayItemWithdrawal)
+                .filter(NonTrayItemWithdrawal.non_tray_item_id == non_tray_item.id)
+                .all()
+            )
+            if _validate_withdraw_existing_item(
+                existing_withdrawals, withdraw_job_id, "Completed"
+            ):
+                errors.append(
+                    {
+                        "line": index + 1,
+                        "error": "Non Tray Item is in existing withdrawals job",
+                    }
+                )
+            else:
+                withdraw_non_tray_items.append(
+                    NonTrayItemWithdrawal(
+                        non_tray_item_id=non_tray_item.id,
+                        withdraw_job_id=withdraw_job_id,
+                    )
+                )
+                non_tray_item.update_dt = update_dt
+                session.add(non_tray_item)
+        elif tray:
+            if tray.items:
+                for tray_item in tray.items:
+                    item_withdrawal, item_errors = _validate_withdraw_item(
+                        session, tray_item, withdraw_job_id, barcode, index + 1, errors
+                    )
+
+                    if item_withdrawal:
+                        withdraw_items.append(item_withdrawal)
+                        tray_item.update_dt = update_dt
+                        session.add(tray_item)
+
+                        existing_tray_withdrawal = (
+                            session.query(TrayWithdrawal)
+                            .filter(
+                                TrayWithdrawal.tray_id == tray.id,
+                                TrayWithdrawal.withdraw_job_id == withdraw_job_id,
+                            )
+                            .first()
+                        )
+                        if not existing_tray_withdrawal:
+                            withdraw_trays.append(
+                                TrayWithdrawal(
+                                    tray_id=tray.id, withdraw_job_id=withdraw_job_id
+                                )
+                            )
+
+    return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
