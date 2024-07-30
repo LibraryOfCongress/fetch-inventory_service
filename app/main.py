@@ -9,8 +9,6 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
-from alembic.config import Config
-from alembic import command
 
 from alembic.config import Config
 from alembic import command
@@ -34,7 +32,6 @@ from app.config.exceptions import (
 from app.routers import (
     buildings,
     modules,
-    module_numbers,
     aisles,
     aisle_numbers,
     sides,
@@ -70,8 +67,10 @@ from app.routers import (
     pick_lists,
     refile_queue,
     refile_jobs,
+    withdraw_jobs,
     auth,
     status,
+    batch_upload,
 )
 
 
@@ -193,7 +192,6 @@ app.exception_handler(Forbidden)(forbidden_exception_handler)
 
 # order matters for route matching [nested before base]
 app.include_router(buildings.router)
-app.include_router(module_numbers.router)
 app.include_router(modules.router)
 app.include_router(aisle_numbers.router)
 app.include_router(aisles.router)
@@ -230,7 +228,9 @@ app.include_router(requests.router)
 app.include_router(pick_lists.router)
 app.include_router(refile_queue.router)
 app.include_router(refile_jobs.router)
+app.include_router(withdraw_jobs.router)
 app.include_router(auth.router)
 app.include_router(status.router)
+app.include_router(batch_upload.router)
 
 add_pagination(app)

@@ -46,20 +46,18 @@ class AisleNumberDetailOutput(AisleNumberBaseOutput):
                 "aisles": [
                     {
                         "aisle_number_id": 4,
-                        "building_id": 1,
                         "create_dt": "2023-10-18T11:46:24.748946",
                         "id": 24,
-                        "module_id": None,
+                        "module_id": 1,
                         "update_dt": "2023-10-18T11:46:24.748962"
                     },
                     {
                         "aisle_number_id": 4,
-                        "building_id": None,
                         "create_dt": "2023-10-18T11:46:24.748946",
                         "id": 26,
-                        "module_id": 1,
+                        "module_id": 2,
                         "update_dt": "2023-10-18T11:46:24.748962"
                     },
-                ],
+                ]
             }
         }

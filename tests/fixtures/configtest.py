@@ -160,9 +160,7 @@ def populate_record(client, fixtures_path, table):
         logger.info(f"Request Data : {data.get(table)}")
 
         try:
-            if table == "module_numbers":
-                return client.post("/modules/numbers", json=data.get(table))
-            elif table == "aisle_numbers":
+            if table == "aisle_numbers":
                 return client.post("/aisles/numbers", json=data.get(table))
             elif table == "side_orientations":
                 return client.post("/sides/orientations", json=data.get(table))
@@ -262,7 +260,6 @@ def test_database(client, init_db):
 
     # Populate the database with sample data
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "buildings")
-    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "module_numbers")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "modules")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "aisle_numbers")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "aisles")
@@ -288,6 +285,7 @@ def test_database(client, init_db):
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "trays")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "items")
+    populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "shelving_jobs")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "permissions")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "groups")
     populate_record(client, CREATE_DATA_SAMPLER_FIXTURE, "pick_lists")

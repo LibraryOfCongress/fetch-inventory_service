@@ -1,5 +1,6 @@
 from sqlmodel import create_engine, Session
 
+from contextlib import contextmanager
 from app.config.config import get_settings
 
 engine = create_engine(
@@ -13,6 +14,18 @@ def get_session():
     """
     with Session(engine) as session:
         yield session
+
+
+@contextmanager
+def session_manager():
+    """
+    For use when a generator is not valid
+    """
+    session = next(get_session())
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 def commit_record(session, record):

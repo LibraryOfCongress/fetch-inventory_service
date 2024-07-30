@@ -1,21 +1,27 @@
 import os, json, random
 
 from sqlalchemyseed import load_entities_from_json, HybridSeeder
-from app.seed.seeder_session import get_session
 from sqlalchemy.orm import Session
+
+from app.seed.seeder_session import get_session
+from app.logger import inventory_logger
 
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 def get_seeder_session() -> Session:
     """Dependency function to get the SQLAlchemy session for seeder."""
     return get_session()
 
+
 def load_seed(fixture_type, json_file):
     fixture_path = os.path.join(current_dir, 'fixtures', fixture_type, json_file)
     return load_entities_from_json(fixture_path)
 
+
 def generate_ladders_for_system():
+    inventory_logger.info('Generating ladders')
     ladder_session = get_seeder_session()
     ladder_seeder = HybridSeeder(ladder_session)
     # number_of_ladders = 304 # 38 ladders x 8 sides (4 aisles)
@@ -31,10 +37,15 @@ def generate_ladders_for_system():
             with open(generated_file_path, 'w') as file:
                 json.dump(ladder_dict, file)
             # And seed
+
+            inventory_logger.info(f'\nGenerating {i + 1} of {number_of_sides} ladders')
+
             ladder_seeder.seed(load_entities_from_json(generated_file_path))
             ladder_seeder.session.commit()
 
+
 def generate_shelf_barcodes_for_system():
+    inventory_logger.info('Generating shelf barcodes')
     barcode_session = get_seeder_session()
     barcode_seeder = HybridSeeder(barcode_session)
     barcode_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'shelf_barcodes.json')
@@ -55,10 +66,15 @@ def generate_shelf_barcodes_for_system():
             with open(generated_file_path, 'w') as file:
                 json.dump(barcode_dict, file)
             # And seed
+
+            inventory_logger.info(f'\nGenerating {i + 1} of {num_barcodes} shelf barcodes')
+
             barcode_seeder.seed(load_entities_from_json(generated_file_path))
             barcode_seeder.session.commit()
 
+
 def generate_shelves_for_system():
+    inventory_logger.info('Generating shelves')
     shelf_session = get_seeder_session()
     shelf_seeder = HybridSeeder(shelf_session)
     shelf_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'shelves.json')
@@ -123,10 +139,14 @@ def generate_shelves_for_system():
             with open(generated_file_path, 'w') as file:
                 json.dump(shelf_dict, file)
             # And seed
+
+            inventory_logger.info(f'\nGenerating {i + 1} of {num_files} shelves')
             shelf_seeder.seed(load_entities_from_json(generated_file_path))
             shelf_seeder.session.commit()
 
+
 def generate_shelf_positions_for_system():
+    inventory_logger.info('Generating shelf positions')
     shelf_pos_session = get_seeder_session()
     shelf_pos_seeder = HybridSeeder(shelf_pos_session)
     shelf_pos_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'shelf_positions.json')
@@ -145,8 +165,11 @@ def generate_shelf_positions_for_system():
             with open(generated_file_path, 'w') as file:
                 json.dump(shelf_pos_dict, file)
             # And seed
+
+            inventory_logger.info(f'\nGenerating {i + 1} of {num_shelves} shelf positions')
             shelf_pos_seeder.seed(load_entities_from_json(generated_file_path))
             shelf_pos_seeder.session.commit()
+
 
 # Tuple-List of fixtures to load
 fake_data = [
@@ -154,7 +177,6 @@ fake_data = [
     ('entities', 'tier_one_owners.json'),
     ('entities', 'tier_two_owners.json'),
     ('entities', 'buildings.json'),
-    ('types', 'module_numbers.json'),
     ('entities', 'modules.json'),
     ('types', 'aisle_numbers.json'),
     ('entities', 'fort_meade_aisles.json'), # 2 modules
@@ -173,11 +195,17 @@ fake_data = [
     ('entities', 'delivery_locations.json')
 ]
 
+
 def seed_data():
+    inventory_logger.info('Staring process to seed fake data...')
     session = get_seeder_session()
     seeder = HybridSeeder(session)
+
     for data in fake_data:
         elements = list(data)
+
+        inventory_logger.info(f'\nSeeding element: {elements[0]} from {elements[1]}\n')
+
         seeder.seed(load_seed(elements[0], elements[1]))
         seeder.session.commit()
     """

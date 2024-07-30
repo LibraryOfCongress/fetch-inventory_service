@@ -5,14 +5,16 @@ from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
-# from sqlalchemy.schema import UniqueConstraint
-
 from app.models.refile_items import RefileItem
 from app.models.refile_jobs import RefileJob
+from app.models.item_withdrawals import ItemWithdrawal
+from app.models.withdraw_jobs import WithdrawJob
 
 
 class ItemStatus(str, Enum):
     In = "In"
+    Requested = "Requested"
+    Withdrawn = "Withdrawn"
     Out = "Out"
 
 
@@ -26,9 +28,6 @@ class Item(SQLModel, table=True):
     """
 
     __tablename__ = "items"
-    # __table_args__ = (
-    # )
-
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
     status: Optional[str] = Field(
         sa_column=sa.Column(
@@ -114,3 +113,6 @@ class Item(SQLModel, table=True):
         back_populates="items", link_model=RefileItem
     )
     requests: List["Request"] = Relationship(back_populates="item")
+    withdraw_jobs: List[WithdrawJob] = Relationship(
+        back_populates="items", link_model=ItemWithdrawal
+    )

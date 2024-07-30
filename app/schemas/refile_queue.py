@@ -5,8 +5,6 @@ from pydantic import BaseModel
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
-from app.schemas.items import ItemListOutput
-from app.schemas.non_tray_items import NonTrayItemListOutput
 
 
 class RefileQueueInput(BaseModel):
@@ -38,7 +36,7 @@ class RefileQueueListOutput(BaseModel):
     aisle_id: int
     aisle_number: int
     module_id: int
-    module_number: int
+    module_number: str
     container_type: str
     media_type: str
     barcode_value: str
@@ -62,7 +60,7 @@ class RefileQueueListOutput(BaseModel):
                 "aisle_id": 1,
                 "aisle_number": 1,
                 "module_id": 1,
-                "module_number": 1,
+                "module_number": "1",
                 "container_type": "Tray",
                 "media_type": "Film",
                 "barcode_value": "123456789",
@@ -94,13 +92,9 @@ class NestedAisleNumberForRefileQueue(BaseModel):
     number: int
 
 
-class NestedModuleNumberForRefileQueue(BaseModel):
-    number: int
-
-
 class NestedModuleForRefileQueue(BaseModel):
     id: int
-    module_number: NestedModuleNumberForRefileQueue
+    module_number: str
 
 
 class NestedBuildingForRefileQueue(BaseModel):
@@ -168,7 +162,7 @@ class TrayNestedForRefileQueue(BaseModel):
     scanned_for_shelving: Optional[bool] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class NonTrayNestedForRefileQueue(BaseModel):
@@ -184,7 +178,7 @@ class NonTrayNestedForRefileQueue(BaseModel):
     scanned_for_shelving: Optional[bool] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class RefileQueueWriteOutput(BaseModel):

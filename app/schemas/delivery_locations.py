@@ -18,7 +18,7 @@ class DeliveryLocationInput(BaseModel):
 
 class DeliveryLocationUpdateInput(BaseModel):
     name: Optional[str] = None
-    address: str
+    address: Optional[str] = None
 
     class Config:
         json_schema_extra = {

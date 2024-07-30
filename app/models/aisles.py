@@ -1,5 +1,3 @@
-import uuid
-
 import sqlalchemy as sa
 
 from typing import Optional, List
@@ -7,7 +5,6 @@ from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
 
-from app.models.buildings import Building
 from app.models.modules import Module
 from app.models.aisle_numbers import AisleNumber
 
@@ -15,25 +12,18 @@ from app.models.aisle_numbers import AisleNumber
 class Aisle(SQLModel, table=True):
     """
     Model to represent the aisles table.
-        Aisles belong to buildings and modules simultaneously.
-        Modules association is optional, Building assocation is required.
-        Aisle number must be unique within a building or within a module.
+        Aisles belong to modules simultaneously.
+        Modules association is required.
+        Aisle number must be unique within a module.
 
-      id: Optional is declared only for Python's needs before a db object is
+    id: Optional is declared only for Python's needs before a db object is
           created. This field cannot be null in the database.
     """
 
     __tablename__ = "aisles"
     __table_args__ = (
         UniqueConstraint(
-            "building_id", "aisle_number_id", name="uq_building_aisle_number_id"
-        ),
-        UniqueConstraint(
             "module_id", "aisle_number_id", name="uq_module_aisle_number_id"
-        ),
-        sa.CheckConstraint(
-            "(module_id IS NULL AND building_id IS NOT NULL) OR (building_id IS NULL AND module_id IS NOT NULL)",
-            name="ck_building_xor_module",
         ),
     )
 
@@ -47,9 +37,6 @@ class Aisle(SQLModel, table=True):
     module_id: Optional[int] = Field(
         foreign_key="modules.id", nullable=True, default=None
     )
-    building_id: Optional[int] = Field(
-        foreign_key="buildings.id", nullable=True, default=None
-    )
     create_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
@@ -59,8 +46,6 @@ class Aisle(SQLModel, table=True):
 
     # aisle number belonging to an aisle
     aisle_number: AisleNumber = Relationship(back_populates="aisles")
-    # building belonging to an aisle
-    building: Building = Relationship(back_populates="aisles")
     # module belonging to an aisle
     module: Module = Relationship(back_populates="aisles")
     # sides belonging to an aisle

@@ -82,7 +82,7 @@ def create_module(
 
     **Notes:**
     - **building_id**: Required integer id for related building
-    - **module_number_id**: Required integer id for related module number
+    - **module_number**: Required unique string for each module
     """
     try:
         new_module = Module(**module_input.model_dump())
@@ -100,27 +100,36 @@ def create_module(
 def update_module(
     id: int, module: ModuleUpdateInput, session: Session = Depends(get_session)
 ):
-    try:
-        existing_module = session.get(Module, id)
+    """
+    Update a module by its ID.
 
-        if not existing_module:
-            raise NotFound(detail=f"Module ID {id} Not Found")
+    **Args:**
+    - id: The ID of the module to update.
+    - Module Update Input: The updated module data.
 
-        mutated_data = module.model_dump(exclude_unset=True)
+    **Returns:**
+    - Module Detail Write Output: The updated module.
 
-        for key, value in mutated_data.items():
-            setattr(existing_module, key, value)
+    **Raises:**
+    - HTTPException: If the module is not found.
+    """
+    existing_module = session.get(Module, id)
 
-        setattr(existing_module, "update_dt", datetime.utcnow())
+    if not existing_module:
+        raise NotFound(detail=f"Module ID {id} Not Found")
 
-        session.add(existing_module)
-        session.commit()
-        session.refresh(existing_module)
+    mutated_data = module.model_dump(exclude_unset=True)
 
-        return existing_module
+    for key, value in mutated_data.items():
+        setattr(existing_module, key, value)
 
-    except Exception as e:
-        raise InternalServerError(detail=f"{e}")
+    setattr(existing_module, "update_dt", datetime.utcnow())
+
+    session.add(existing_module)
+    session.commit()
+    session.refresh(existing_module)
+
+    return existing_module
 
 
 @router.delete("/{id}")
@@ -143,8 +152,7 @@ def delete_module(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Module ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Module ID {id} Deleted " f"Successfully"
         )
 
     raise NotFound(detail=f"Module ID {id} Not Found")

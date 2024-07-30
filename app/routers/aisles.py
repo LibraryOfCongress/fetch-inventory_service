@@ -9,6 +9,7 @@ from datetime import datetime
 
 from app.database.session import get_session
 from app.models.aisles import Aisle
+from app.models.aisle_numbers import AisleNumber
 from app.schemas.aisles import (
     AisleInput,
     AisleUpdateInput,
@@ -78,13 +79,24 @@ def create_aisle(aisle_input: AisleInput, session: Session = Depends(get_session
 
     **Raises**:
     - HTTPException: If building_id and module_id are both set.
-
-    **Notes**:
-    - building id and module id may not both be set. Only one allowed.
     """
     try:
+        # Check if aisle # or aisle_number_id
+        aisle_number = aisle_input.aisle_number
+        aisle_number_id = aisle_input.aisle_number_id
+        mutated_data = aisle_input.model_dump(exclude="aisle_number")
+        if not aisle_number_id and not aisle_number:
+            raise ValidationException(detail=f"aisle_number_id OR aisle_number required")
+        elif aisle_number and not aisle_number_id:
+            # get aisle_number_id from aisle number
+            aisle_num_object = session.query(AisleNumber).filter(AisleNumber.number == aisle_number).first()
+            if not aisle_num_object:
+                raise ValidationException(detail=f"No aisle_number entity exists for aisle number {aisle_number}")
+            mutated_data['aisle_number_id'] = aisle_num_object.id
+
         # Create a new Aisle object
-        new_aisle = Aisle(**aisle_input.model_dump())
+        # new_aisle = Aisle(**aisle_input.model_dump())
+        new_aisle = Aisle(**mutated_data)
         session.add(new_aisle)
         session.commit()
         session.refresh(new_aisle)
@@ -152,7 +164,8 @@ def delete_aisle(id: int, session: Session = Depends(get_session)):
     if aisle:
         session.delete(aisle)
         session.commit()
-        return HTTPException(status_code=204, detail=f"Aisle ID {id} Deleted "
-                                                     f"Successfully")
+        return HTTPException(
+            status_code=204, detail=f"Aisle ID {id} Deleted " f"Successfully"
+        )
 
     raise NotFound(detail=f"Aisle ID {id} Not Found")

@@ -1,5 +1,3 @@
-import uuid
-
 from typing import Optional, List
 from pydantic import BaseModel, constr
 from datetime import datetime
@@ -30,21 +28,26 @@ class BuildingUpdateInput(BaseModel):
 class BuildingBaseOutput(BaseModel):
     id: int
     name: str | None
+    create_dt: datetime
+    update_dt: datetime
 
 
 class BuildingListOutput(BuildingBaseOutput):
+
     class Config:
         json_schema_extra = {
-            "example": {
-                "id": 1,
-                "name": "Southpoint Circle"
-            }
+            "example": [
+                {
+                    "id": 1,
+                    "name": "Southpoint Circle",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                }
+            ]
         }
 
 
 class BuildingDetailWriteOutput(BuildingBaseOutput):
-    create_dt: datetime
-    update_dt: datetime
 
     class Config:
         json_schema_extra = {
@@ -66,20 +69,17 @@ class AisleNestedForBuilding(BaseModel):
     aisle_number: AisleNumberNestedForBuilding
 
 
-class ModuleNumberNestedForBuilding(BaseModel):
-    number: int
-
-
 class ModuleNestedForBuilding(BaseModel):
     id: int
-    module_number: ModuleNumberNestedForBuilding
+    module_number: str
+    create_dt: datetime
+    update_dt: datetime
 
 
 class BuildingDetailReadOutput(BuildingBaseOutput):
     create_dt: datetime
     update_dt: datetime
     modules: List[ModuleNestedForBuilding]
-    aisles: List[AisleNestedForBuilding]
 
     class Config:
         json_schema_extra = {
@@ -91,17 +91,9 @@ class BuildingDetailReadOutput(BuildingBaseOutput):
                 "modules": [
                     {
                         "id": 1,
-                        "module_number": {
-                            "number": 1
-                        }
-                    }
-                ],
-                "aisles": [
-                    {
-                        "id": 1,
-                        "aisle_number": {
-                            "number": 1
-                        }
+                        "module_number": "1",
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
                     }
                 ]
             }

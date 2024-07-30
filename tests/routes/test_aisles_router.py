@@ -53,7 +53,7 @@ def test_create_aisle_record(client):
     aisle_number_id = response.json().get("id")
 
     response = client.post(
-        "/aisles", json={"building_id": 1, "aisle_number_id": aisle_number_id}
+        "/aisles", json={"module_id": 1, "aisle_number_id": aisle_number_id}
     )
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json().get("building_id") == 1
@@ -71,12 +71,12 @@ def test_update_aisle_record(client):
     logging.info(f"aisle_number_id: {aisle_number_id}")
 
     response = client.patch(
-        f"/aisles/1", json={"building_id": 1, "aisle_number_id": aisle_number_id}
+        f"/aisles/1", json={"module_id": 1, "aisle_number_id": aisle_number_id}
     )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json().get("building_id") == UPDATED_AISLES_SINGLE_RECORD.get(
-        "building_id"
+    assert response.json().get("module_id") == UPDATED_AISLES_SINGLE_RECORD.get(
+        "module_id"
     )
     assert response.json().get("aisle_number_id") == aisle_number_id
 
@@ -88,7 +88,7 @@ def test_update_aisle_record_not_found(client):
 
 
 def test_delete_aisle_record_success(client):
-    response = client.post("/aisles/", json={"building_id": 1, "aisle_number_id": 1})
+    response = client.post("/aisles/", json={"module_id": 1, "aisle_number_id": 1})
     assert response.status_code == status.HTTP_201_CREATED
 
     aisle_id = response.json().get("id")

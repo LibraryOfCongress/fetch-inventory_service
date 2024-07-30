@@ -2,19 +2,16 @@
   "buildings": {
     "name": "Building 1"
   },
-  "module_numbers": {
-    "number": 1
-  },
   "modules": {
     "building_id": 1,
-    "module_number_id": 1
+    "module_number": "1"
   },
   "aisle_numbers": {
     "number": 1
   },
   "aisles": {
     "aisle_number_id": 1,
-    "building_id": 1,
+    "module_id": 1,
     "sort_priority": 1
   },
   "side_orientations": {
@@ -87,7 +84,8 @@
       "status": "Created",
       "last_transition": "2023-11-27T12:34:56.789123Z",
       "trayed": true,
-      "owner_id": 1
+      "owner_id": 1,
+      "user_id": 1
   },
   "verification_jobs": {
       "accession_job_id": 1,
