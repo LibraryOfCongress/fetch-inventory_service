@@ -719,6 +719,20 @@ def process_request_data(session, request_df: pd.DataFrame, batch_upload_id):
         session, NonTrayItem, barcode_dict.values(), NonTrayItem.barcode_id
     )
 
+    if items:
+        items_ids = [item.id for item in items]
+        session.query(Item).filter(Item.id.in_(items_ids)).update(
+            {"status": "Requested"}, synchronize_session=False
+        )
+        session.commit()
+
+    if non_tray_items:
+        non_tray_items_ids = [item.id for item in non_tray_items]
+        session.query(NonTrayItem).filter(
+            NonTrayItem.id.in_(non_tray_items_ids)
+        ).update({"status": "Requested"}, synchronize_session=False)
+        session.commit()
+
     priorities = _fetch_existing_data(
         session, Priority, request_df["Priority"].tolist(), Priority.value
     )
