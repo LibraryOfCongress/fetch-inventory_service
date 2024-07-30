@@ -167,7 +167,7 @@ def delete_tray(id: int, session: Session = Depends(get_session)):
         for item in items_to_delete:
             session.delete(session.get(Barcode, item.barcode_id))
             session.commit()
-        session.delete(Barcode, tray.barcode_id)
+        session.delete(session.get(Barcode, tray.barcode_id))
         session.commit()
 
         return HTTPException(
