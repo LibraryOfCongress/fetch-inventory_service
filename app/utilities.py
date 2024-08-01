@@ -1,13 +1,17 @@
 from datetime import timedelta, datetime
 from enum import Enum
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
+from typing_extensions import Annotated
+import logging
 
 import pandas as pd
 import pytz
-from sqlalchemy import and_
+from sqlalchemy import and_, text
 from sqlalchemy.orm import joinedload, aliased
 from sqlmodel import select, Session
+from fastapi import Header, Depends
 
+from app.database.session import get_session
 from app.config.exceptions import NotFound
 from app.logger import inventory_logger
 from app.models.aisle_numbers import AisleNumber
@@ -37,7 +41,10 @@ from app.models.shelf_positions import ShelfPosition
 from app.models.size_class import SizeClass
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
+from app.models.users import User
 from app.models.withdraw_jobs import WithdrawJob
+
+LOGGER = logging.getLogger(__name__)
 
 
 def get_module_shelf_position(session, shelf_position):
@@ -988,3 +995,28 @@ def process_withdraw_job_data(
                             )
 
     return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
+
+
+async def start_session_with_user_id(user_email: str, session):
+    """
+    This method is to add the user id for any database change.
+    """
+    session.execute(
+        text(f"select set_config('audit.user_id', '{user_email}', true)")
+    )
+
+
+async def set_session_to_request(
+    request: Request,
+    session: Session,
+    user_email: str,
+):
+
+    if request.method != "GET":
+        request.state.db_session = session
+
+        await start_session_with_user_id(
+            user_email, session=request.state.db_session
+        )
+
+    return request

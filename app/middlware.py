@@ -8,7 +8,7 @@ from app.logger import inventory_logger, data_activity_logger
 from app.config.config import get_settings
 from app.database.session import get_session, session_manager
 from app.models.users import User
-
+from app.utilities import set_session_to_request
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -34,7 +34,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
         # Get token from Authorization header
         token = None
         decoded_token = None
-        fetch_user = 'unkown'
+        fetch_user = 'unknown'
         auth_header = request.headers.get("authorization")
         if auth_header:
             token = auth_header.split("Bearer ")[1]
@@ -64,6 +64,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
                     if get_settings().APP_ENVIRONMENT not in ["local", "develop", "test"]:
                         response = JSONResponse(status_code=401, content={"detail": "Token Expired"})
                     else:
+                        request = await set_session_to_request(request, session, fetch_user)
                         response = await call_next(request)
                 else:
                     # Everything's good
@@ -73,8 +74,8 @@ class JWTMiddleware(BaseHTTPMiddleware):
                     # session.commit(user_object)
                     session.commit()
                     session.refresh(user_object)
+                    request = await set_session_to_request(request, session, fetch_user)
                     response = await call_next(request)
-
         request_log_dict = {
             'url': request.url.path,
             'method': request.method,

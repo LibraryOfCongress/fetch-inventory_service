@@ -1,4 +1,5 @@
 from sqlmodel import create_engine, Session
+from fastapi import Request
 
 from contextlib import contextmanager
 from app.config.config import get_settings
@@ -8,12 +9,13 @@ engine = create_engine(
 )
 
 
-def get_session():
+def get_session(request: Request = None):
     """
     Database sessions are injected as Path Operation Dependencies
     """
     with Session(engine) as session:
-        yield session
+        existing_session = None if not request else getattr(request.state, 'db_session', None)
+        yield session if not existing_session else existing_session
 
 
 @contextmanager
