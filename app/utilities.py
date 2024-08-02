@@ -962,6 +962,20 @@ def process_withdraw_job_data(
                 session.add(non_tray_item)
         elif tray:
             if tray.items:
+                existing_tray_withdrawal = (
+                    session.query(TrayWithdrawal)
+                    .filter(
+                        TrayWithdrawal.tray_id == tray.id,
+                        TrayWithdrawal.withdraw_job_id == withdraw_job_id,
+                    )
+                    .first()
+                )
+
+                if not existing_tray_withdrawal:
+                    withdraw_trays.append(
+                        TrayWithdrawal(tray_id=tray.id, withdraw_job_id=withdraw_job_id)
+                    )
+
                 for tray_item in tray.items:
                     item_withdrawal, item_errors = _validate_withdraw_item(
                         session, tray_item, withdraw_job_id, barcode, index + 1, errors
@@ -971,20 +985,12 @@ def process_withdraw_job_data(
                         withdraw_items.append(item_withdrawal)
                         tray_item.update_dt = update_dt
                         session.add(tray_item)
-
-                        existing_tray_withdrawal = (
-                            session.query(TrayWithdrawal)
-                            .filter(
-                                TrayWithdrawal.tray_id == tray.id,
-                                TrayWithdrawal.withdraw_job_id == withdraw_job_id,
-                            )
-                            .first()
-                        )
-                        if not existing_tray_withdrawal:
-                            withdraw_trays.append(
-                                TrayWithdrawal(
-                                    tray_id=tray.id, withdraw_job_id=withdraw_job_id
-                                )
-                            )
+            else:
+                errors.append(
+                    {
+                        "line": index + 1,
+                        "error": "Tray is empty",
+                    }
+                )
 
     return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
