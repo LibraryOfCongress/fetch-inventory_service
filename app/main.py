@@ -70,6 +70,7 @@ from app.routers import (
     withdraw_jobs,
     auth,
     status,
+    batch_upload,
 )
 
 
@@ -110,8 +111,8 @@ def alembic_context():
                 "5432",
             ]
             subprocess.run(create_schemaspy)
-        # Only allow fake data seeding in local, dev, or test
-        if get_settings().APP_ENVIRONMENT in ["local", "develop", "test"]:
+        # Only allow fake data seeding in local, dev, test, or stage
+        if get_settings().APP_ENVIRONMENT in ["local", "develop", "test", "stage"]:
             # Only attempt seeding if seed flag is set
             SEED_FAKE_DATA = os.environ.get("SEED_FAKE_DATA", False)
             if SEED_FAKE_DATA in ["True", "true", True]:
@@ -230,6 +231,6 @@ app.include_router(refile_jobs.router)
 app.include_router(withdraw_jobs.router)
 app.include_router(auth.router)
 app.include_router(status.router)
-
+app.include_router(batch_upload.router)
 
 add_pagination(app)

@@ -165,7 +165,8 @@ async def saml_metadata():
 async def saml_login(request: Request):
     req = await prepare_fastapi_request(request)
     auth = init_saml_auth(req)
-    sso_built_url = auth.login()
+    sso_built_url = auth.login(force_authn=True)
+    # sso_built_url = auth.login()
     return RedirectResponse(sso_built_url)
 
 @router.post("/sso/acs")

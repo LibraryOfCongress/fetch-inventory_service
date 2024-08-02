@@ -51,6 +51,9 @@ class Request(SQLModel, table=True):
     pick_list_id: Optional[int] = Field(
         default=None, nullable=True, unique=False, foreign_key="pick_lists.id"
     )
+    batch_upload_id: Optional[int] = Field(
+        default=None, nullable=True, unique=False, foreign_key="batch_uploads.id"
+    )
     fulfilled: Optional[bool] = Field(
         sa_column=sa.Boolean, default=False, nullable=False
     )
@@ -73,3 +76,4 @@ class Request(SQLModel, table=True):
     )
 
     pick_list: PickList = Relationship(back_populates="requests")
+    batch_upload: Optional["BatchUpload"] = Relationship(back_populates="requests")

@@ -3,6 +3,23 @@ stages:
   - trigger
   - deploy
   - controls
+  - sonarqube
+
+sonarqube_run:
+  stage: sonarqube
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  script:
+    - sonar-scanner
+      -Dsonar.projectKey=fetch-inventory-service
+      -Dsonar.sources=.
+      -Dsonar.host.url=http://c2vldimsci01.loctest.gov:9001
+      -Dsonar.login=$DEV_SONARQUBE_TOKEN
+  only:
+    - develop
+    - test
+    - staging
 
 build_image:
   stage: build

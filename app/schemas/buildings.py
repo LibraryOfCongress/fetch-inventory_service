@@ -7,14 +7,22 @@ class BuildingInput(BaseModel):
     name: constr(max_length=25, strict=False) = None
 
     class Config:
-        json_schema_extra = {"example": {"name": "Southpoint Circle"}}
+        json_schema_extra = {
+            "example": {
+                "name": "Southpoint Circle"
+            }
+        }
 
 
 class BuildingUpdateInput(BaseModel):
     name: Optional[constr(max_length=25, strict=False)] = None
 
     class Config:
-        json_schema_extra = {"example": {"name": "Southpoint Circle"}}
+        json_schema_extra = {
+            "example": {
+                "name": "Southpoint Circle"
+            }
+        }
 
 
 class BuildingBaseOutput(BaseModel):

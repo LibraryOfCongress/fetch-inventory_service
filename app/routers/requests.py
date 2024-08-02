@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy import or_
 
 from app.database.session import get_session
 from app.models.requests import Request
@@ -105,7 +106,7 @@ def create_request(
             .where(Request.fulfilled == False)
         ).first()
 
-        if existing_request:
+        if existing_request and existing_request.status == "Requested":
             raise BadRequest(detail="Item is already requested")
 
         request_input.item_id = item.id
@@ -140,7 +141,7 @@ def create_request(
             Request).filter(Request.non_tray_item_id == non_tray_item.id,
                             Request.fulfilled == False).first()
 
-        if existing_non_tray_item:
+        if existing_non_tray_item and existing_non_tray_item.status == "Requested":
             raise BadRequest(detail="Non tray item is already requested")
 
         if (
