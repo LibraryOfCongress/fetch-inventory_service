@@ -1,7 +1,7 @@
 """Updating barcode table
 
 Revision ID: 2024_07_29_20:03:23
-Revises: 2024_07_25_16:30:47
+Revises: 2024_07_27_15:55:29
 Create Date: 2024-07-30 00:03:23.029713
 
 """
@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "2024_07_29_20:03:23"
-down_revision: Union[str, None] = "2024_07_25_16:30:47"
+down_revision: Union[str, None] = "2024_07_27_15:55:29"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

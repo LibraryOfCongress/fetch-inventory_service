@@ -13,17 +13,12 @@ from app.schemas.users import UserDetailReadOutput
 
 
 class WithdrawJobInput(BaseModel):
-    barcode_values: Optional[List[str]] = None
+    barcode_value: Optional[str] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "barcode_values": [
-                    "1234567890",
-                    "1234567891",
-                    "1234567892",
-                    "...",
-                ]
+                "barcode_values": "1234567890"
             }
         }
 
@@ -354,6 +349,11 @@ class WithdrawJobWriteOutput(WithdrawJobBaseOutput):
         }
 
 
+class ErrorNestedForWithdrawJob(BaseModel):
+    barcode: str
+    error: str
+
+
 class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
     pick_list_id: Optional[int] = None
     run_time: Optional[timedelta] = None
@@ -364,6 +364,7 @@ class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
     non_tray_items: Optional[list[NonTrayNestedForWithdrawJob]] = None
     trays: Optional[list[TrayNestedForWithdrawJob]] = None
     pick_list: Optional[PickBaseOutput] = None
+    errors: Optional[list[ErrorNestedForWithdrawJob]] = None
 
     @field_validator("run_time")
     @classmethod
