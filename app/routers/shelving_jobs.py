@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.utilities import process_containers_for_shelving
+from app.utilities import process_containers_for_shelving, manage_transition
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
@@ -36,7 +36,9 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ShelvingJobListOutput])
-def get_shelving_job_list(all: bool = Query(default=False), session: Session = Depends(get_session)) -> list:
+def get_shelving_job_list(
+    all: bool = Query(default=False), session: Session = Depends(get_session)
+) -> list:
     """
     Retrieve a paginated list of shelving jobs.
     Default view filters out Completed jobs.
@@ -46,11 +48,12 @@ def get_shelving_job_list(all: bool = Query(default=False), session: Session = D
     """
     try:
         if not all:
-            query = select(ShelvingJob).where(
-                ShelvingJob.status != "Completed"
-            ).where(
-                ShelvingJob.status != "Cancelled"
-            ).distinct()
+            query = (
+                select(ShelvingJob)
+                .where(ShelvingJob.status != "Completed")
+                .where(ShelvingJob.status != "Cancelled")
+                .distinct()
+            )
             return paginate(session, query)
         return paginate(session, select(ShelvingJob))
     except IntegrityError as e:
@@ -220,6 +223,11 @@ def update_shelving_job(
             setattr(existing_shelving_job, key, value)
 
         setattr(existing_shelving_job, "update_dt", datetime.utcnow())
+
+        if shelving_job.run_timestamp:
+            existing_shelving_job = manage_transition(
+                existing_shelving_job, shelving_job
+            )
 
         session.add(existing_shelving_job)
         session.commit()
