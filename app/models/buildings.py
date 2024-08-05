@@ -31,3 +31,4 @@ class Building(SQLModel, table=True):
     modules: List["Module"] = Relationship(back_populates="building")
     shelving_jobs: List["ShelvingJob"] = Relationship(back_populates="building")
     pick_lists: List["PickList"] = Relationship(back_populates="building")
+    requests: List["Request"] = Relationship(back_populates="building")

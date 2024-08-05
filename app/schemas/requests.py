@@ -5,6 +5,7 @@ from pydantic import BaseModel, conint
 from datetime import datetime
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
+from app.schemas.buildings import BuildingDetailReadOutput
 
 
 class RequestInput(BaseModel):
@@ -222,6 +223,7 @@ class RequestDetailWriteOutput(RequestBaseOutput):
     priority: Optional[PriorityNestedForRequest] = None
     delivery_location: Optional[DeliveryLocationNestedForRequest] = None
     request_type: Optional[RequestTypeNestedForRequest] = None
+    building: Optional[BuildingDetailReadOutput] = None
     pick_list: Optional[list] = None
     create_dt: datetime
     update_dt: datetime
@@ -333,6 +335,7 @@ class RequestListOutput(RequestBaseOutput):
     priority: Optional[PriorityNestedForRequest] = None
     delivery_location: Optional[DeliveryLocationNestedForRequest] = None
     request_type: Optional[RequestTypeNestedForRequest] = None
+    building: Optional[BuildingDetailReadOutput] = None
     pick_list: Optional[list] = None
     create_dt: Optional[datetime] = None
     update_dt: Optional[datetime] = None
@@ -496,6 +499,7 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
     priority: Optional[PriorityNestedForRequest] = None
     delivery_location: Optional[DeliveryLocationNestedForRequest] = None
     request_type: Optional[RequestTypeNestedForRequest] = None
+    building: Optional[BuildingDetailReadOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -512,6 +516,10 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
                 "batch_upload_id": 1,
                 "priority": {"id": 1, "value": "Medium"},
                 "request_type": {"id": 1, "type": "General Delivery"},
+                "building": {
+                  "id": 1,
+                  "name": "Southpoint Circle"
+                },
                 "delivery_location": {
                     "name": "Senator McSenator",
                     "address": "1234 Example St, Washington D.C 12345",

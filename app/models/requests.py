@@ -74,6 +74,6 @@ class Request(SQLModel, table=True):
     delivery_location: Optional["DeliveryLocation"] = Relationship(
         back_populates="requests"
     )
-
+    building: Optional["Building"] = Relationship(back_populates="requests")
     pick_list: PickList = Relationship(back_populates="requests")
     batch_upload: Optional["BatchUpload"] = Relationship(back_populates="requests")
