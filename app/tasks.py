@@ -1,7 +1,10 @@
 from sqlmodel import Session, select
 from datetime import datetime
 
+from app.config.exceptions import NotFound
 from app.models.accession_jobs import AccessionJob
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
@@ -195,3 +198,32 @@ def manage_verification_job_transition(
     if original_status != verification_job.status:
         verification_job.last_transition = datetime.utcnow()
     commit_record(session, verification_job)
+
+
+def manage_shelf_position(session, item):
+    """
+    Task manages transition logic for an item's shelf position.
+        - updates available_space
+    """
+    shelf_position = (
+        session.query(ShelfPosition)
+        .filter(ShelfPosition.id == item.shelf_position_id)
+        .first()
+    )
+
+    if not shelf_position:
+        raise NotFound(detail=f"Shelf Position ID {item.shelf_position_id} Not Found")
+
+    shelf = session.query(Shelf).filter(Shelf.id == shelf_position.shelf_id).first()
+
+    if not shelf:
+        raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
+
+    if item.shelf_position_id is None:
+        shelf.available_space -= 1
+    else:
+        shelf.available_space += 1
+
+    session.add(shelf)
+    session.commit()
+    session.refresh(shelf_position)
