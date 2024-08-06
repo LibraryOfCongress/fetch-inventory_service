@@ -82,7 +82,7 @@ class AccessionJobUpdateInput(BaseModel):
 
 class AccessionJobBaseOutput(BaseModel):
     id: int
-    workflow_id: int
+    workflow_id: Optional[int] = None
     trayed: bool
     status: Optional[str]
     user_id: Optional[int] = None

@@ -85,7 +85,7 @@ class VerificationJobUpdateInput(BaseModel):
 
 class VerificationJobBaseOutput(BaseModel):
     id: int
-    workflow_id: int
+    workflow_id: Optional[int] = None
     trayed: bool
     status: Optional[str]
     owner_id: Optional[int] = None

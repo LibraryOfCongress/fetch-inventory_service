@@ -36,7 +36,7 @@ class AccessionJob(SQLModel, table=True):
     __tablename__ = "accession_jobs"
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
-    workflow_id: int = Field(foreign_key="workflow.id", nullable=True)
+    workflow_id: Optional[int] = Field(foreign_key="workflow.id", nullable=True)
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     trayed: bool = Field(sa_column=sa.Boolean, default=True, nullable=False)
     status: str = Field(
