@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 import sqlalchemy as sa
@@ -24,4 +25,10 @@ class RefileNonTrayItem(SQLModel, table=True):
     )
     refile_job_id: Optional[int] = Field(
         default=None, nullable=False, foreign_key="refile_jobs.id"
+    )
+    create_dt: datetime = Field(
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+    )
+    update_dt: datetime = Field(
+        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
     )
