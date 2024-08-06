@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -9,6 +9,8 @@ from app.database.session import get_session
 from app.models.non_tray_items import NonTrayItem
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
 from app.schemas.non_tray_items import (
     NonTrayItemInput,
     NonTrayItemUpdateInput,
@@ -21,7 +23,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.tasks import manage_shelf_position
 
 router = APIRouter(
     prefix="/non_tray_items",
@@ -31,13 +33,13 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[NonTrayItemListOutput])
 def get_non_tray_item_list(
-        session: Session = Depends(get_session),
-        owner_id: int = Query(default=None),
-        size_class_id: int = Query(default=None),
-        media_type_id: int = Query(default=None),
-        from_dt: datetime = Query(default=None),
-        to_dt: datetime = Query(default=None)
-    ) -> list:
+    session: Session = Depends(get_session),
+    owner_id: int = Query(default=None),
+    size_class_id: int = Query(default=None),
+    media_type_id: int = Query(default=None),
+    from_dt: datetime = Query(default=None),
+    to_dt: datetime = Query(default=None),
+) -> list:
     """
     Get a paginated list of non tray items from the database
     """
@@ -98,9 +100,11 @@ def create_non_tray_item(
         # Create a new non_tray_item
         new_non_tray_item = NonTrayItem(**item_input.model_dump())
         # default to non-tray container_type
-        container_type = session.query(ContainerType).filter(
-            ContainerType.type == 'Non-Tray'
-        ).first()
+        container_type = (
+            session.query(ContainerType)
+            .filter(ContainerType.type == "Non-Tray")
+            .first()
+        )
         new_non_tray_item.container_type_id = container_type.id
         # non-trays are created in accession, set accession date
         if not new_non_tray_item.accession_dt:
@@ -120,6 +124,7 @@ def update_non_tray_item(
     id: int,
     non_tray_item: NonTrayItemUpdateInput,
     session: Session = Depends(get_session),
+    background_tasks: BackgroundTasks = None,
 ):
     """
     Update a non_tray_item record in the database
@@ -132,6 +137,29 @@ def update_non_tray_item(
         # Check if the non_tray_item record exists
         if not existing_non_tray_item:
             raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
+
+        if (
+            non_tray_item.shelf_position_id
+            and non_tray_item.shelf_position_id
+            != existing_non_tray_item.shelf_position_id
+        ):
+            existing_non_tray_item_shelf_position = (
+                session.query(NonTrayItem)
+                .filter(
+                    NonTrayItem.shelf_position_id == non_tray_item.shelf_position_id
+                )
+                .first()
+            )
+
+            if existing_non_tray_item_shelf_position:
+                raise ValidationException(
+                    detail=f"Non Tray Item already exists at "
+                    f"shelf position {non_tray_item.shelf_position_id}"
+                )
+
+            background_tasks.add_task(
+                manage_shelf_position, session, existing_non_tray_item
+            )
 
         # Update the non_tray_item record with the mutated data
         mutated_data = non_tray_item.model_dump(exclude_unset=True)
@@ -150,6 +178,7 @@ def update_non_tray_item(
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
+
 @router.delete("/{id}")
 def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
     """
@@ -162,9 +191,7 @@ def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Non Tray Item ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Non Tray Item ID {id} Deleted " f"Successfully"
         )
-
 
     raise NotFound(detail=f"Non Tray Item ID {id} Not Found")

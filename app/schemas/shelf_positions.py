@@ -22,12 +22,10 @@ class ShelfPositionInput(BaseModel):
 
 class ShelfPositionUpdateInput(BaseModel):
     shelf_position_number_id: Optional[conint(ge=0, le=9223372036854775807)] = None
-    shelf_id: Optional[conint(ge=0, le=2147483647)] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "shelf_id": 1,
                 "shelf_position_number_id": 1
             }
         }

@@ -24,8 +24,6 @@ class NonTrayItemInput(BaseModel):
     scanned_for_shelving: Optional[bool] = None
     verification_job_id: Optional[int] = None
     shelving_job_id: Optional[int] = None
-    shelf_position_id: Optional[int] = None
-    shelf_position_proposed_id: Optional[int] = None
     container_type_id: Optional[int] = None
     owner_id: Optional[int] = None
     subcollection_id: Optional[int] = None
@@ -54,8 +52,6 @@ class NonTrayItemInput(BaseModel):
                 "scanned_for_shelving": False,
                 "verification_job_id": 1,
                 "shelving_job_id": 1,
-                "shelf_position_id": 1,
-                "shelf_position_proposed_id": 1,
                 "container_type_id": 1,
                 "owner_id": 1,
                 "subcollection_id": 1,
@@ -69,6 +65,8 @@ class NonTrayItemInput(BaseModel):
 
 
 class NonTrayItemUpdateInput(NonTrayItemInput):
+    shelf_position_id: Optional[int] = None
+    shelf_position_proposed_id: Optional[int] = None
 
     class Config:
         json_schema_extra = {
