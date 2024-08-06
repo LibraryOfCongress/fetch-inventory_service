@@ -39,7 +39,9 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[PickListListOutput])
-def get_pick_list_list(all: bool = Query(default=False), session: Session = Depends(get_session)) -> list:
+def get_pick_list_list(
+    all: bool = Query(default=False), session: Session = Depends(get_session)
+) -> list:
     """
     Get a list of pick lists.
 
@@ -48,9 +50,7 @@ def get_pick_list_list(all: bool = Query(default=False), session: Session = Depe
     """
     try:
         if not all:
-            query = select(PickList).where(
-                PickList.status != "Completed"
-            ).distinct()
+            query = select(PickList).where(PickList.status != "Completed").distinct()
             return paginate(session, query)
         return paginate(session, select(PickList))
     except IntegrityError as e:
@@ -212,6 +212,7 @@ def update_pick_list(
         raise NotFound(detail=f"Pick List ID {id} Not Found")
 
     if pick_list.status == "Completed":
+        session.query()
         request_ids = [
             request.id
             for request in session.query(Request.id)
