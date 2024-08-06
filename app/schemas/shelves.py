@@ -54,6 +54,7 @@ class ShelfUpdateInput(BaseModel):
     shelf_number_id: Optional[conint(ge=0, le=32767)] = None
     owner_id: Optional[conint(ge=0, le=32767)] = None
     capacity: Optional[conint(ge=0, le=32767)] = None
+    available_space: Optional[conint(ge=0, le=32767)] = None
     height: Optional[condecimal(decimal_places=2)] = None
     width: Optional[condecimal(decimal_places=2)] = None
     depth: Optional[condecimal(decimal_places=2)] = None
@@ -69,6 +70,7 @@ class ShelfUpdateInput(BaseModel):
                 "shelf_number_id": 1,
                 "owner_id": 1,
                 "capacity": 33,
+                "available_space": 33,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
@@ -118,6 +120,7 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
     shelf_number_id: int
     owner_id: Optional[int] = None
     capacity: int
+    available_space: int
     height: float
     width: float
     depth: float
@@ -136,6 +139,7 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
                 "sort_priority": 1,
                 "ladder_id": 1,
                 "capacity": 33,
+                "available_space": 33,
                 "shelf_number_id": 1,
                 "container_type_id": 1,
                 "size_class_id": 1,
@@ -225,6 +229,7 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
     size_class: Optional[SizeClassDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
     capacity: int
+    available_space: int
     height: float
     width: float
     depth: float
@@ -286,6 +291,7 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
                 "capacity": 33,
+                "available_space": 33,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,

@@ -105,18 +105,30 @@ def create_shelf(
     - **depth**: Required numeric (scale 4, precision 2) depth in inches
     """
     try:
+        # Check shelf capacity
+        if not shelf_input.capacity < 1:
+            raise ValidationException(detail="Shelf capacity may not be less than one.")
+
         # Check if shelf # or shelf_number_id
         shelf_number = shelf_input.shelf_number
         shelf_number_id = shelf_input.shelf_number_id
         mutated_data = shelf_input.model_dump(exclude="shelf_number")
         if not shelf_number_id and not shelf_number:
-            raise ValidationException(detail=f"shelf_number_id OR shelf_number required")
+            raise ValidationException(
+                detail=f"shelf_number_id OR shelf_number required"
+            )
         elif shelf_number and not shelf_number_id:
             # get shelf_number_id from shelf number
-            shelf_num_object = session.query(ShelfNumber).filter(ShelfNumber.number == shelf_number).first()
+            shelf_num_object = (
+                session.query(ShelfNumber)
+                .filter(ShelfNumber.number == shelf_number)
+                .first()
+            )
             if not shelf_num_object:
-                raise ValidationException(detail=f"No shelf_number entity exists for shelf number {shelf_number}")
-            mutated_data['shelf_number_id'] = shelf_num_object.id
+                raise ValidationException(
+                    detail=f"No shelf_number entity exists for shelf number {shelf_number}"
+                )
+            mutated_data["shelf_number_id"] = shelf_num_object.id
 
         # new_shelf = Shelf(**shelf_input.model_dump())
         new_shelf = Shelf(**mutated_data)
@@ -153,6 +165,19 @@ def update_shelf(
 
         if existing_shelf is None:
             raise NotFound(detail=f"Shelf ID {id} Not Found")
+
+        # Check shelf capacity
+        if not shelf.capacity < 1:
+            raise ValidationException(detail="Shelf capacity may not be less than one.")
+
+        if shelf.capacity < existing_shelf.capacity:
+            if (
+                existing_shelf.available_space - shelf.capacity
+            ) > existing_shelf.available_space:
+                raise ValidationException(
+                    detail="Capacity cannot be reduced below "
+                    "currently shelved containers."
+                )
 
         mutated_data = shelf.model_dump(exclude_unset=True)
 
@@ -191,8 +216,7 @@ def delete_shelf(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Shelf ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Shelf ID {id} Deleted " f"Successfully"
         )
 
     raise NotFound(detail=f"Shelf ID {id} Not Found")

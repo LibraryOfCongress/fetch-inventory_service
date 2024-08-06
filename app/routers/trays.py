@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -6,6 +6,8 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
 from app.models.trays import Tray
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
@@ -22,7 +24,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.tasks import manage_shelf_position
 
 router = APIRouter(
     prefix="/trays",
@@ -32,14 +34,14 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[TrayListOutput])
 def get_tray_list(
-        session: Session = Depends(get_session),
-        owner_id: int = Query(default=None),
-        size_class_id: int = Query(default=None),
-        media_type_id: int = Query(default=None),
-        barcode_value: str = Query(default=None),
-        from_dt: datetime = Query(default=None),
-        to_dt: datetime = Query(default=None)
-    ) -> list:
+    session: Session = Depends(get_session),
+    owner_id: int = Query(default=None),
+    size_class_id: int = Query(default=None),
+    media_type_id: int = Query(default=None),
+    barcode_value: str = Query(default=None),
+    from_dt: datetime = Query(default=None),
+    to_dt: datetime = Query(default=None),
+) -> list:
     """
     Get a paginated list of trays from the database
     """
@@ -100,9 +102,9 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
         # Create a new tray
         new_tray = Tray(**tray_input.model_dump())
         # default to tray container_type
-        container_type = session.query(ContainerType).filter(
-            ContainerType.type == 'Tray'
-        ).first()
+        container_type = (
+            session.query(ContainerType).filter(ContainerType.type == "Tray").first()
+        )
         # trays are created at accession, set accession date
         if not new_tray.accession_dt:
             new_tray.accession_dt = datetime.utcnow()
@@ -119,7 +121,10 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
 
 @router.patch("/{id}", response_model=TrayDetailWriteOutput)
 def update_tray(
-    id: int, tray: TrayUpdateInput, session: Session = Depends(get_session)
+    id: int,
+    tray: TrayUpdateInput,
+    session: Session = Depends(get_session),
+    background_tasks: BackgroundTasks = None,
 ):
     """
     Update a tray record in the database
@@ -131,6 +136,20 @@ def update_tray(
         # Check if the tray record exists
         if not existing_tray:
             raise NotFound(detail=f"Tray ID {id} Not Found")
+
+        if tray.shelf_position_id != existing_tray.shelf_position_id:
+            existing_tray_shelf_position = (
+                session.query(Tray)
+                .filter(Tray.shelf_position_id == tray.shelf_position_id)
+                .first()
+            )
+
+            if existing_tray_shelf_position:
+                raise ValidationException(
+                    detail=f"Tray already exists at shelf position {tray.shelf_position_id}"
+                )
+
+            background_tasks.add_task(manage_shelf_position, session, existing_tray)
 
         # Update the tray record with the mutated data
         mutated_data = tray.model_dump(exclude_unset=True)
@@ -158,7 +177,9 @@ def delete_tray(id: int, session: Session = Depends(get_session)):
     tray = session.get(Tray, id)
 
     if tray:
-        items_to_delete = session.exec(select(Item).where(Item.tray_id == id).distinct())
+        items_to_delete = session.exec(
+            select(Item).where(Item.tray_id == id).distinct()
+        )
         for item in items_to_delete:
             session.delete(item)
             session.commit()

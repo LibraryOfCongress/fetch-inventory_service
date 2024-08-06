@@ -6,7 +6,9 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
+from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
 from app.schemas.shelf_positions import (
     ShelfPositionInput,
     ShelfPositionUpdateInput,
@@ -31,7 +33,7 @@ router = APIRouter(
 def get_shelf_position_list(
     shelf_id: int | None = None,
     empty: bool | None = False,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ) -> list:
     """
     Retrieve a list of shelf positions.
@@ -40,22 +42,19 @@ def get_shelf_position_list(
     - Shelf Position List Output: The paginated list of shelf positions.
     """
     if shelf_id and empty:
-        statement = select(ShelfPosition).where(
-            ShelfPosition.shelf_id == shelf_id
-        ).where(
-            ShelfPosition.tray == None
-        ).where(
-            ShelfPosition.non_tray_item == None
+        statement = (
+            select(ShelfPosition)
+            .where(ShelfPosition.shelf_id == shelf_id)
+            .where(ShelfPosition.tray == None)
+            .where(ShelfPosition.non_tray_item == None)
         )
     elif shelf_id:
-        statement = select(ShelfPosition).where(
-            ShelfPosition.shelf_id == shelf_id
-        )
+        statement = select(ShelfPosition).where(ShelfPosition.shelf_id == shelf_id)
     elif empty:
-        statement = select(ShelfPosition).where(
-            ShelfPosition.tray == None
-        ).where(
-            ShelfPosition.non_tray_item == None
+        statement = (
+            select(ShelfPosition)
+            .where(ShelfPosition.tray == None)
+            .where(ShelfPosition.non_tray_item == None)
         )
     else:
         statement = select(ShelfPosition)
@@ -102,7 +101,29 @@ def create_shelf_position(
     the database.
     """
     try:
+        shelf = session.query(Shelf).get(shelf_position_input.shelf_id)
+        shelf_position_number = session.query(ShelfPositionNumber).get(
+            shelf_position_input.shelf_position_number_id
+        )
+        if not shelf:
+            raise NotFound(detail=f"Shelf ID {shelf_position_input.shelf_id} Not Found")
+
+        if not shelf_position_number:
+            raise NotFound(
+                detail=f"Shelf Position Number ID {shelf_position_input.shelf_position_number_id} Not Found"
+            )
+
+        shelf_position = shelf_position_number.number
+
+        if shelf_position >= shelf.capacity:
+            raise ValidationException(
+                detail=f"Shelf Position Number {shelf_position} can not exceed shelf capacity {shelf.capacity}"
+            )
+        else:
+            shelf.available_space += 1
+
         new_shelf_position = ShelfPosition(**shelf_position_input.model_dump())
+        session.add(shelf)
         session.add(new_shelf_position)
         session.commit()
         session.refresh(new_shelf_position)
@@ -111,6 +132,7 @@ def create_shelf_position(
 
     except IntegrityError as e:
         raise ValidationException(detail=f"{e}")
+
 
 @router.patch("/{id}", response_model=ShelfPositionDetailWriteOutput)
 def update_shelf_position(
@@ -171,12 +193,38 @@ def delete_shelf_position(id: int, session: Session = Depends(get_session)):
     shelf_position = session.get(ShelfPosition, id)
 
     if shelf_position:
+        if shelf_position.tray or shelf_position.non_tray_item:
+            raise ValidationException(
+                detail="Can not delete shelf position associated tray and non-tray items"
+            )
+
+    if shelf_position:
+        shelf = session.query(Shelf).get(shelf_position.shelf_id)
+        shelf_position_number = session.query(ShelfPositionNumber).get(
+            shelf_position.shelf_position_number_id
+        )
+        if not shelf:
+            raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
+
+        if not shelf_position_number:
+            raise NotFound(
+                detail=f"Shelf Position Number ID {shelf_position.shelf_position_number_id} Not Found"
+            )
+
+        shelf_position = shelf_position_number.number
+
+        if shelf_position <= shelf.capacity:
+            raise ValidationException(
+                detail=f"Shelf Position Number {shelf_position} can not subceed shelf capacity {shelf.capacity}"
+            )
+        else:
+            shelf.available_space -= 1
+
         session.delete(shelf_position)
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Shelf Position ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Shelf Position ID {id} Deleted " f"Successfully"
         )
 
     raise NotFound(detail=f"Shelf Position ID {id} Not Found")

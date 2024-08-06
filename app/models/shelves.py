@@ -36,7 +36,12 @@ class Shelf(SQLModel, table=True):
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id", nullable=False, default=None, unique=True
     )
-    capacity: int = Field(sa_column=sa.Column(sa.SmallInteger, nullable=False))
+    capacity: int = Field(
+        sa_column=sa.Column(sa.SmallInteger, nullable=False, default=1)
+    )
+    available_space: int = Field(
+        sa_column=sa.Column(sa.Integer, nullable=False, default=0)
+    )
     height: condecimal(decimal_places=2) = Field(
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
     )
