@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 
 from app.models.pick_lists import PickListStatus
 from app.schemas.buildings import BuildingBaseOutput
-from app.schemas.requests import (RequestDetailReadOutputNoPickList,
-                                  RequestBaseOutput, RequestUpdateInput)
+from app.schemas.requests import (
+    RequestDetailReadOutputNoPickList, RequestUpdateInput
+)
 from app.schemas.users import UserDetailReadOutput, UserListOutput
 from app.schemas.withdraw_jobs import WithdrawJobBaseOutput, WithdrawJobDetailOutput
 
@@ -86,8 +87,9 @@ class PickListBaseOutput(BaseModel):
     status: str
     last_transition: Optional[datetime] = None
     run_time: Optional[timedelta] = None
-    requests: Optional[list[RequestBaseOutput]] = None
+    requests: Optional[list[RequestDetailReadOutputNoPickList]] = None
     withdraw_jobs: Optional[list[WithdrawJobBaseOutput]] = None
+    building: Optional[BuildingBaseOutput] = None
     create_dt: datetime
     update_dt: datetime
 

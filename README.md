@@ -277,3 +277,12 @@ The Identity Provider is configured to relay to the acs endpoint on a localhost 
 The API exposes a login route, and a Assertion Consumer Service route for forwarding users to the identity provider, and receiving communication back from the idenity provider.  SAML configuration for the environments is slightly different.  At the time of this writing, these are separated via config files. At a future date, configuration should move entirely to the environment and be loaded in-memory only.
 
 When the ACS endpoint receives an encrypted re-direction with user Auth data, it then checks and / or creates a user in the FETCH database before issuing its own encrypted token for use with the front-end application.  Such a token is necessary for successful ongoing use of the FETCH webapp in an authenticated state.
+
+## Audit Log
+A table has been created to store the audit log of table updates. The log is updated based on triggers added to each of the model tables.
+There are three migrations which initially set this up. One to create the table, the second to create the function, and the last to add the trigger to each of the existing tables.
+There is minimal code changed to support this, namely setting the user based off the user token in the request on post, patch, and deletes.
+
+** It will be necessary to add a trigger to any new table which is added, but it is a simple migration which can be referenced from the third migration add_trigger_to_tables.
+
+There are no endpoints to retrieve audits yet, but they are populating in the database. System run operations, such as seeding, will have the postgres user in the audit log.

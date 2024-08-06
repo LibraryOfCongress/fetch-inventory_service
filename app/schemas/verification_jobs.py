@@ -17,6 +17,7 @@ from app.schemas.users import UserDetailReadOutput
 
 class VerificationJobInput(BaseModel):
     trayed: bool
+    workflow_id: Optional[int] = None
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
     status: Optional[str] = None
@@ -38,6 +39,7 @@ class VerificationJobInput(BaseModel):
         json_schema_extra = {
             "example": {
                 "trayed": True,
+                "workflow_id": None,
                 "status": "Created",
                 "user_id": 1,
                 "accession_job_id": 1,
@@ -85,6 +87,7 @@ class VerificationJobUpdateInput(BaseModel):
 
 class VerificationJobBaseOutput(BaseModel):
     id: int
+    workflow_id: Optional[int] = None
     trayed: bool
     status: Optional[str]
     owner_id: Optional[int] = None
@@ -99,6 +102,7 @@ class VerificationJobListOutput(VerificationJobBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "workflow_id": 1,
                 "trayed": True,
                 "owner_id": 1,
                 "shelving_job_id": 1,
@@ -216,6 +220,7 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "workflow_id": 1,
                 "trayed": True,
                 "status": "Created",
                 "user_id": 1,

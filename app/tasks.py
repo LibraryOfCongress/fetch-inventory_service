@@ -7,6 +7,7 @@ from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
 from app.models.items import Item
 from app.models.barcodes import Barcode
+from app.models.workflows import Workflow
 from app.database.session import commit_record
 from app.schemas.verification_jobs import VerificationJobInput
 
@@ -26,11 +27,13 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
     if original_status == "Running":
         time_difference = datetime.utcnow() - accession_job.last_transition
         accession_job.run_time += time_difference
-        accession_job.last_transition = datetime.utcnow()
+
+    accession_job.last_transition = datetime.utcnow()
     commit_record(session, accession_job)
 
     verification_job_input = VerificationJobInput(
         accession_job_id=accession_job.id,
+        workflow_id=accession_job.workflow_id,
         trayed=accession_job.trayed,
         owner_id=accession_job.owner_id,
         size_class_id=accession_job.size_class_id,

@@ -64,6 +64,28 @@ def get_verification_job_detail(id: int, session: Session = Depends(get_session)
 
     raise NotFound(detail=f"Verification Job ID {id} Not Found")
 
+@router.get("/workflow/{id}", response_model=VerificationJobDetailOutput)
+def get_verification_job_detail_by_workflow(id: int, session: Session = Depends(get_session)):
+    """
+    Retrieves the verification job detail for the given workflow ID.
+
+    **Args:**
+    - ID: The ID of the verification job workflow.
+
+    **Returns:**
+    - Verification Job Detail Output: The verification job detail.
+
+    **Raises:**
+    - HTTPException: If the verification job with the given ID is not found.
+    """
+    verification_job = session.exec(select(VerificationJob).where(
+        VerificationJob.workflow_id == id
+    )).first()
+
+    if verification_job:
+        return verification_job
+
+    raise NotFound(detail=f"Verification Job ID {id} Not Found")
 
 @router.post("/", response_model=VerificationJobDetailOutput, status_code=201)
 def create_verification_job(

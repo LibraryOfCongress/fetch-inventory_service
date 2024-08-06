@@ -95,9 +95,17 @@ def create_request(
 
     lookup_barcode_value = request_input.barcode_value
 
-    item = session.exec(
-        select(Item).join(Barcode).where(Barcode.value == lookup_barcode_value)
-    ).first()
+    barcode = (
+        session.query(Barcode).filter(Barcode.value == lookup_barcode_value).first()
+    )
+
+    if not barcode:
+        raise BadRequest(detail=f"Barcode value {lookup_barcode_value} not found")
+
+    item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    non_tray_item = (
+        session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
+    )
 
     if item:
         existing_request = session.exec(
@@ -106,7 +114,7 @@ def create_request(
             .where(Request.fulfilled == False)
         ).first()
 
-        if existing_request and existing_request.status == "Requested":
+        if existing_request:
             raise BadRequest(detail="Item is already requested")
 
         request_input.item_id = item.id
@@ -124,24 +132,20 @@ def create_request(
             raise BadRequest(detail="Item is not shelved")
 
         session.query(Item).filter(Item.id == item.id).update(
-            {"status": "Requested"}, synchronize_session="fetch"
+            {"status": "Requested", "update_dt": datetime.now()},
+            synchronize_session="fetch",
         )
 
-    else:
-        non_tray_item = session.exec(
-            select(NonTrayItem)
-            .join(Barcode)
-            .where(Barcode.value == lookup_barcode_value)
-        ).first()
+    elif non_tray_item:
+        existing_non_tray_item = (
+            session.query(Request)
+            .filter(
+                Request.non_tray_item_id == non_tray_item.id, Request.fulfilled == False
+            )
+            .first()
+        )
 
-        if not non_tray_item:
-            raise NotFound(detail=f"No items or non_trays found with barcode.")
-
-        existing_non_tray_item = session.query(
-            Request).filter(Request.non_tray_item_id == non_tray_item.id,
-                            Request.fulfilled == False).first()
-
-        if existing_non_tray_item and existing_non_tray_item.status == "Requested":
+        if existing_non_tray_item:
             raise BadRequest(detail="Non tray item is already requested")
 
         if (
@@ -152,11 +156,18 @@ def create_request(
             raise BadRequest(detail="Non tray item is not shelved")
 
         session.query(NonTrayItem).filter(NonTrayItem.id == non_tray_item.id).update(
-            {"status": "Requested"}, synchronize_session="fetch"
+            {"status": "Requested", "update_dt": datetime.now()},
+            synchronize_session="fetch",
         )
 
         request_input.non_tray_item_id = non_tray_item.id
         shelf_position = session.get(ShelfPosition, non_tray_item.shelf_position_id)
+
+    else:
+        raise BadRequest(
+            detail=f"Item or Non Tray with barcode value "
+            f"{lookup_barcode_value} not found"
+        )
 
     if not shelf_position:
         raise NotFound(detail=f"Shelf Position Not Found")
