@@ -82,6 +82,7 @@ class AccessionJobUpdateInput(BaseModel):
 
 class AccessionJobBaseOutput(BaseModel):
     id: int
+    workflow_id: int
     trayed: bool
     status: Optional[str]
     user_id: Optional[int] = None
@@ -96,6 +97,7 @@ class AccessionJobListOutput(AccessionJobBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "workflow_id": 1,
                 "trayed": True,
                 "user_id": 1,
                 "owner_id": 1,
@@ -205,6 +207,7 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "workflow_id": 1,
                 "trayed": True,
                 "status": "Paused",
                 "user_id": 1,

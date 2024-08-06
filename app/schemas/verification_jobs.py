@@ -85,6 +85,7 @@ class VerificationJobUpdateInput(BaseModel):
 
 class VerificationJobBaseOutput(BaseModel):
     id: int
+    workflow_id: int
     trayed: bool
     status: Optional[str]
     owner_id: Optional[int] = None
@@ -99,6 +100,7 @@ class VerificationJobListOutput(VerificationJobBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "workflow_id": 1,
                 "trayed": True,
                 "owner_id": 1,
                 "shelving_job_id": 1,
@@ -216,6 +218,7 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "workflow_id": 1,
                 "trayed": True,
                 "status": "Created",
                 "user_id": 1,
