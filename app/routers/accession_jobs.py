@@ -10,6 +10,7 @@ from app.database.session import get_session, commit_record
 from app.models.accession_jobs import AccessionJob
 from app.models.verification_jobs import VerificationJob
 from app.models.container_types import ContainerType
+from app.models.workflows import Workflow
 from app.tasks import complete_accession_job, manage_accession_job_transition
 from app.config.exceptions import (
     NotFound,
@@ -120,6 +121,9 @@ def create_accession_job(
                 ContainerType.type == 'Non-Tray'
             ).first()
         new_accession_job.container_type_id = container_type.id
+        # generate a new workflow and attach
+        workflow = Workflow()
+        new_accession_job.workflow_id = workflow.id
         session.add(new_accession_job)
         session.commit()
         session.refresh(new_accession_job)
