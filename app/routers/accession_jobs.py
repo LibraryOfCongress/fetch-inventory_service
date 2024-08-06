@@ -90,6 +90,29 @@ def get_accession_job_detail(id: int, session: Session = Depends(get_session)):
 
     raise NotFound(detail=f"Accession Job ID {id} Not Found")
 
+@router.get("/workflow/{id}", response_model=AccessionJobDetailOutput)
+def get_accession_job_detail_by_workflow(id: int, session: Session = Depends(get_session)):
+    """
+    Retrieves the accession job detail for the given workflow id.
+
+    **Args:**
+    - id: The ID of the accession job workflow.
+
+    **Returns:**
+    - Accession Job Detail Output: The accession job detail.
+
+    **Raises:**
+    - HTTPException: If the accession job with the given ID is not found.
+    """
+    accession_job = session.exec(select(AccessionJob).where(
+        AccessionJob.workflow_id == id
+    )).first()
+
+    if accession_job:
+        return accession_job
+
+    raise NotFound(detail=f"Accession Job ID {id} Not Found")
+
 
 @router.post("/", response_model=AccessionJobDetailOutput, status_code=201)
 def create_accession_job(
