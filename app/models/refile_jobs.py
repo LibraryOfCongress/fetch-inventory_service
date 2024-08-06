@@ -34,7 +34,7 @@ class RefileJob(SQLModel, table=True):
             sa.Enum(
                 RefileJobStatus,
                 nullable=False,
-                name="refile_job_status",
+                name="refile_job_status_enum",
             )
         ),
         default=RefileJobStatus.Created,

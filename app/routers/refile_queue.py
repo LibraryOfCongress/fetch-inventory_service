@@ -23,7 +23,7 @@ from app.schemas.refile_queue import (
     TrayNestedForRefileQueue,
     NonTrayNestedForRefileQueue,
 )
-from app.config.exceptions import BadRequest
+from app.config.exceptions import BadRequest, NotFound, ValidationException
 from app.utilities import get_refile_queue
 
 
@@ -67,119 +67,105 @@ def add_to_refile_queue(
     **Raises:**
     - HTTPException: If the item is not found.
     """
-    lookup_barcode_values = refile_input.barcode_values
+    lookup_barcode_value = refile_input.barcode_value
     update_dt = datetime.utcnow()
 
-    if not lookup_barcode_values:
-        raise BadRequest(detail="No barcode values found in request")
+    if not lookup_barcode_value:
+        raise BadRequest(detail="No barcode value found in request")
 
-    barcodes = (
-        session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
-    )
-    barcode_ids = {barcode.value: barcode.id for barcode in barcodes}
-
-    items = session.query(Item).filter(Item.barcode_id.in_(barcode_ids.values())).all()
-    non_tray_items = (
-        session.query(NonTrayItem)
-        .filter(NonTrayItem.barcode_id.in_(barcode_ids.values()))
-        .all()
+    barcode = (
+        session.query(Barcode).filter(Barcode.value == lookup_barcode_value).first()
     )
 
-    successful_items = []
-    successful_non_tray_items = []
-    errored_barcodes = []
+    item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    non_tray_item = (
+        session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
+    )
 
-    for barcode_value in lookup_barcode_values:
-        barcode_id = barcode_ids.get(barcode_value)
-        if not barcode_id:
-            errored_barcodes.append(barcode_value)
-            continue
+    if item:
+        if item.scanned_for_refile_queue:
+            raise ValidationException(detail="Item is already in the refile queue")
+        if item.status == "In":
+            raise ValidationException(detail="Item is already has status 'In'")
 
-        item = next((item for item in items if item.barcode_id == barcode_id), None)
-        non_tray_item = next(
-            (nt_item for nt_item in non_tray_items if nt_item.barcode_id == barcode_id),
-            None,
+        existing_refile_items = (
+            session.query(RefileItem).filter(RefileItem.item_id == item.id).all()
         )
 
-        if item:
-            existing_refile_items = (
-                session.query(RefileItem).filter(RefileItem.item_id == item.id).all()
+        if existing_refile_items:
+            refile_items_id = [refile.refile_job_id for refile in existing_refile_items]
+            existing_refile_job = (
+                session.query(RefileJob)
+                .filter(
+                    RefileJob.id.in_(refile_items_id),
+                    RefileJob.status != "Completed",
+                )
+                .first()
             )
 
-            if existing_refile_items:
-                refile_items_id = [
-                    refile.refile_job_id for refile in existing_refile_items
-                ]
-                existing_refile_job = (
-                    session.query(RefileJob)
-                    .filter(
-                        RefileJob.id.in_(refile_items_id),
-                        RefileJob.status != "Completed",
-                    )
-                    .all()
+            if existing_refile_job:
+                raise ValidationException(
+                    detail=f"Item already exists in an "
+                    "uncompleted "
+                    "refile "
+                    f"Job ID: {existing_refile_job.id}"
                 )
 
-                if existing_refile_job:
-                    errored_barcodes.append(barcode_value)
-                    continue
+        item.scanned_for_refile_queue = True
+        item.scanned_for_refile_queue_dt = update_dt
+        item.update_dt = update_dt
 
-            if item.scanned_for_refile_queue or item.status == "In":
-                errored_barcodes.append(barcode_value)
-                continue
+        session.add(item)
 
-            item.scanned_for_refile_queue = True
-            item.scanned_for_refile_queue_dt = update_dt
-            item.update_dt = update_dt
-            successful_items.append(item)
+    elif non_tray_item:
+        if non_tray_item.scanned_for_refile_queue:
+            raise ValidationException(detail="Item is already in the refile queue")
+        if non_tray_item.status == "In":
+            raise ValidationException(detail="Item is already has status 'In'")
 
-        elif non_tray_item:
-            existing_refile_non_tray_items = (
-                session.query(RefileNonTrayItem)
-                .filter(RefileNonTrayItem.non_tray_item_id == non_tray_item.id)
-                .all()
+        existing_refile_non_tray_items = (
+            session.query(RefileNonTrayItem)
+            .filter(RefileNonTrayItem.non_tray_item_id == non_tray_item.id)
+            .all()
+        )
+
+        if existing_refile_non_tray_items:
+            refile_items_id = [
+                refile.refile_job_id for refile in existing_refile_non_tray_items
+            ]
+            existing_refile_job = (
+                session.query(RefileJob)
+                .filter(
+                    RefileJob.id.in_(refile_items_id),
+                    RefileJob.status != "Completed",
+                )
+                .first()
             )
 
-            if existing_refile_non_tray_items:
-                refile_items_id = [
-                    refile.refile_job_id for refile in existing_refile_non_tray_items
-                ]
-                existing_refile_job = (
-                    session.query(RefileJob)
-                    .filter(
-                        RefileJob.id.in_(refile_items_id),
-                        RefileJob.status != "Completed",
-                    )
-                    .all()
+            if existing_refile_job:
+                raise ValidationException(
+                    detail=f"Non TrayItem already exists in an "
+                    "uncompleted "
+                    "refile "
+                    f"Job ID: {existing_refile_job.id}"
                 )
 
-                if existing_refile_job:
-                    errored_barcodes.append(barcode_value)
-                    continue
+        non_tray_item.scanned_for_refile_queue = True
+        non_tray_item.scanned_for_refile_queue_dt = update_dt
+        non_tray_item.update_dt = update_dt
 
-            if non_tray_item.scanned_for_refile_queue or non_tray_item.status == "In":
-                errored_barcodes.append(barcode_value)
-                continue
-
-            non_tray_item.scanned_for_refile_queue = True
-            non_tray_item.scanned_for_refile_queue_dt = update_dt
-            non_tray_item.update_dt = update_dt
-            successful_non_tray_items.append(non_tray_item)
+        session.add(non_tray_item)
 
     session.commit()
 
-    added_successfully = list(set(lookup_barcode_values) - set(errored_barcodes))
-
-    if not added_successfully:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to add Barcodes: {lookup_barcode_values} from refile "
-            f"queue",
-        )
+    if item:
+        session.refresh(item)
+    if non_tray_item:
+        session.refresh(non_tray_item)
 
     results = {
-        "errored_barcodes": errored_barcodes,
-        "items": successful_items,
-        "non_tray_items": successful_non_tray_items,
+        "item": item,
+        "non_tray_item": non_tray_item,
     }
 
     return results

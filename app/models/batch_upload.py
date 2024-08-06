@@ -28,7 +28,7 @@ class BatchUpload(SQLModel, table=True):
             sa.Enum(
                 BatchUploadStatus,
                 nullable=False,
-                name="batch_upload_status",
+                name="batch_upload_status_enum",
             )
         ),
         default=BatchUploadStatus.New,

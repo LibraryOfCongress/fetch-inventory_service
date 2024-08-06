@@ -1,9 +1,6 @@
-import sqlalchemy as sa
-
 from typing import Optional
-from datetime import datetime
 
-from sqlalchemy import UniqueConstraint
+import sqlalchemy as sa
 from sqlmodel import SQLModel, Field
 
 
@@ -14,15 +11,17 @@ class RefileNonTrayItem(SQLModel, table=True):
 
     __tablename__ = "refile_non_tray_items"
     __table_args__ = (
-        UniqueConstraint(
+        sa.UniqueConstraint(
             "non_tray_item_id",
             "refile_job_id",
             name="uq_non_tray_item_id_refile_job_id",
         ),
     )
+
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
     non_tray_item_id: Optional[int] = Field(
-        foreign_key="non_tray_items.id", nullable=False, primary_key=True
+        default=None, nullable=False, foreign_key="non_tray_items.id"
     )
     refile_job_id: Optional[int] = Field(
-        default=None, foreign_key="refile_jobs.id", nullable=True
+        default=None, nullable=False, foreign_key="refile_jobs.id"
     )

@@ -217,7 +217,9 @@ def update_shelving_job(
         if not existing_shelving_job:
             raise NotFound(detail=f"Shelving Job ID {id} Not Found")
 
-        mutated_data = shelving_job.model_dump(exclude_unset=True)
+        mutated_data = shelving_job.model_dump(
+            exclude_unset=True, exclude={"run_timestamp"}
+        )
 
         for key, value in mutated_data.items():
             setattr(existing_shelving_job, key, value)

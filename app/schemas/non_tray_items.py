@@ -22,6 +22,7 @@ class NonTrayItemInput(BaseModel):
     scanned_for_accession: Optional[bool] = None
     scanned_for_verification: Optional[bool] = None
     scanned_for_shelving: Optional[bool] = None
+    scanned_for_refile_queue: Optional[bool] = None
     verification_job_id: Optional[int] = None
     shelving_job_id: Optional[int] = None
     shelf_position_id: Optional[int] = None
@@ -52,6 +53,7 @@ class NonTrayItemInput(BaseModel):
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
                 "scanned_for_shelving": False,
+                "scanned_for_refile_queue": False,
                 "verification_job_id": 1,
                 "shelving_job_id": 1,
                 "shelf_position_id": 1,
@@ -78,6 +80,7 @@ class NonTrayItemUpdateInput(NonTrayItemInput):
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,
                 "scanned_for_shelving": False,
+                "scanned_for_refile_queue": False,
                 "verification_job_id": 1,
                 "shelving_job_id": 1,
                 "shelf_position_id": 1,

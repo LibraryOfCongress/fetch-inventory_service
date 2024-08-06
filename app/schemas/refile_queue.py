@@ -8,17 +8,12 @@ from app.schemas.container_types import ContainerTypeDetailReadOutput
 
 
 class RefileQueueInput(BaseModel):
-    barcode_values: List[str]
+    barcode_value: str
 
     class Config:
         json_schema_extra = {
             "example": {
-                "barcode_values": [
-                    "1234567890",
-                    "1234567891",
-                    "1234567892",
-                    "..."
-                ]
+                "barcode_values": "1234567890"
             }
         }
 
@@ -182,70 +177,59 @@ class NonTrayNestedForRefileQueue(BaseModel):
 
 
 class RefileQueueWriteOutput(BaseModel):
-    items: Optional[list[TrayNestedForRefileQueue]] = None
-    non_tray_items: Optional[list[NonTrayNestedForRefileQueue]] = None
-    errored_barcodes: Optional[list] = None
+    item: Optional[TrayNestedForRefileQueue] = None
+    non_tray_item: Optional[NonTrayNestedForRefileQueue] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "items": [
-                    {
+                "items": {
+                    "id": 1,
+                    "status": "Out",
+                    "accession_job_id": 1,
+                    "scanned_for_accession": False,
+                    "scanned_for_verification": False,
+                    "verification_job_id": 1,
+                    "container_type_id": 1,
+                    "tray_id": 1,
+                    "owner_id": 1,
+                    "title": "Lord of The Rings",
+                    "volume": "I",
+                    "condition": "Good",
+                    "arbitrary_data": "Signed copy",
+                    "subcollection_id": 1,
+                    "media_type_id": 1,
+                    "size_class_id": 1,
+                    "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                    "accession_dt": "2023-10-08T20:46:56.764426",
+                    "withdrawal_dt": "2023-10-08T20:46:56.764426"
+                },
+                "non_tray_items": {
+                    "id": 1,
+                    "status": "Out",
+                    "accession_job_id": 1,
+                    "scanned_for_accession": False,
+                    "scanned_for_verification": False,
+                    "scanned_for_shelving": False,
+                    "verification_job_id": 1,
+                    "shelving_job_id": 1,
+                    "shelf_position_id": 1,
+                    "shelf_position": {
                         "id": 1,
-                        "status": "Out",
-                        "accession_job_id": 1,
-                        "scanned_for_accession": False,
-                        "scanned_for_verification": False,
-                        "verification_job_id": 1,
-                        "container_type_id": 1,
-                        "tray_id": 1,
-                        "owner_id": 1,
-                        "title": "Lord of The Rings",
-                        "volume": "I",
-                        "condition": "Good",
-                        "arbitrary_data": "Signed copy",
-                        "subcollection_id": 1,
-                        "media_type_id": 1,
-                        "size_class_id": 1,
-                        "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
-                        "accession_dt": "2023-10-08T20:46:56.764426",
-                        "withdrawal_dt": "2023-10-08T20:46:56.764426"
-                    }
-                ],
-                "non_tray_items": [
-                    {
-                        "id": 1,
-                        "status": "Out",
-                        "accession_job_id": 1,
-                        "scanned_for_accession": False,
-                        "scanned_for_verification": False,
-                        "scanned_for_shelving": False,
-                        "verification_job_id": 1,
-                        "shelving_job_id": 1,
-                        "shelf_position_id": 1,
-                        "shelf_position": {
-                            "id": 1,
-                            "shelf_id": 1,
-                            "shelf_position_number": {
-                                "number": 1
-                            },
+                        "shelf_id": 1,
+                        "shelf_position_number": {
+                            "number": 1
                         },
-                        "shelf_position_proposed_id": 1,
-                        "container_type_id": 1,
-                        "owner_id": 1,
-                        "subcollection_id": 1,
-                        "media_type_id": 1,
-                        "size_class_id": 1,
-                        "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
-                        "accession_dt": "2023-10-08T20:46:56.764426",
-                        "withdrawal_dt": "2023-10-08T20:46:56.764426",
-                    }
-                ],
-                "errored_barcodes": [
-                    "1234567890",
-                    "1234567891",
-                    "1234567892",
-                    "..."
-                ],
+                    },
+                    "shelf_position_proposed_id": 1,
+                    "container_type_id": 1,
+                    "owner_id": 1,
+                    "subcollection_id": 1,
+                    "media_type_id": 1,
+                    "size_class_id": 1,
+                    "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                    "accession_dt": "2023-10-08T20:46:56.764426",
+                    "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                }
             }
         }
