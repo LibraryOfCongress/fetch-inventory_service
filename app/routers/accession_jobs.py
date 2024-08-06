@@ -123,6 +123,9 @@ def create_accession_job(
         new_accession_job.container_type_id = container_type.id
         # generate a new workflow and attach
         workflow = Workflow()
+        session.add(workflow)
+        session.commit()
+        session.refresh(workflow)
         new_accession_job.workflow_id = workflow.id
         session.add(new_accession_job)
         session.commit()
