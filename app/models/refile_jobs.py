@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.refile_items import RefileItem
-from app.models.refile_non_tray_item import RefileNonTrayItem
+from app.models.refile_non_tray_items import RefileNonTrayItem
 
 
 class RefileJobStatus(str, Enum):
