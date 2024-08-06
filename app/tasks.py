@@ -29,7 +29,8 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
     if original_status == "Running":
         time_difference = datetime.utcnow() - accession_job.last_transition
         accession_job.run_time += time_difference
-        accession_job.last_transition = datetime.utcnow()
+
+    accession_job.last_transition = datetime.utcnow()
     commit_record(session, accession_job)
 
     verification_job_input = VerificationJobInput(

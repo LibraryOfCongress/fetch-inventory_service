@@ -441,14 +441,17 @@ async def batch_upload_withdraw_job(
                 status_code=status.HTTP_400_BAD_REQUEST, content=errored_barcodes
             )
 
-    session.bulk_save_objects(withdraw_items)
-    session.bulk_save_objects(withdraw_non_tray_items)
-    session.bulk_save_objects(withdraw_trays)
-
     session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
         {"status": "Completed", "update_dt": datetime.utcnow()},
         synchronize_session=False,
     )
+
+    if withdraw_items:
+        session.bulk_save_objects(withdraw_items)
+    if withdraw_non_tray_items:
+        session.bulk_save_objects(withdraw_non_tray_items)
+    if withdraw_trays:
+        session.bulk_save_objects(withdraw_trays)
 
     session.commit()
     session.refresh(withdraw_job)
