@@ -10,6 +10,7 @@ from app.database.session import get_session, commit_record
 from app.models.accession_jobs import AccessionJob
 from app.models.verification_jobs import VerificationJob
 from app.models.container_types import ContainerType
+from app.models.workflows import Workflow
 from app.tasks import complete_accession_job, manage_accession_job_transition
 from app.config.exceptions import (
     NotFound,
@@ -89,6 +90,29 @@ def get_accession_job_detail(id: int, session: Session = Depends(get_session)):
 
     raise NotFound(detail=f"Accession Job ID {id} Not Found")
 
+@router.get("/workflow/{id}", response_model=AccessionJobDetailOutput)
+def get_accession_job_detail_by_workflow(id: int, session: Session = Depends(get_session)):
+    """
+    Retrieves the accession job detail for the given workflow id.
+
+    **Args:**
+    - id: The ID of the accession job workflow.
+
+    **Returns:**
+    - Accession Job Detail Output: The accession job detail.
+
+    **Raises:**
+    - HTTPException: If the accession job with the given ID is not found.
+    """
+    accession_job = session.exec(select(AccessionJob).where(
+        AccessionJob.workflow_id == id
+    )).first()
+
+    if accession_job:
+        return accession_job
+
+    raise NotFound(detail=f"Accession Job ID {id} Not Found")
+
 
 @router.post("/", response_model=AccessionJobDetailOutput, status_code=201)
 def create_accession_job(
@@ -120,6 +144,12 @@ def create_accession_job(
                 ContainerType.type == 'Non-Tray'
             ).first()
         new_accession_job.container_type_id = container_type.id
+        # generate a new workflow and attach
+        workflow = Workflow()
+        session.add(workflow)
+        session.commit()
+        session.refresh(workflow)
+        new_accession_job.workflow_id = workflow.id
         session.add(new_accession_job)
         session.commit()
         session.refresh(new_accession_job)

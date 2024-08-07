@@ -15,6 +15,7 @@ from app.schemas.users import UserDetailReadOutput
 
 class AccessionJobInput(BaseModel):
     trayed: bool
+    workflow_id: Optional[int] = None
     status: str
     media_type_id: Optional[int] = None
     user_id: Optional[int] = None
@@ -37,6 +38,7 @@ class AccessionJobInput(BaseModel):
         json_schema_extra = {
             "example": {
                 "trayed": True,
+                "workflow_id": None,
                 "status": "Created",
                 "user_id": 1,
                 "run_time": "03:25:15",
@@ -82,6 +84,7 @@ class AccessionJobUpdateInput(BaseModel):
 
 class AccessionJobBaseOutput(BaseModel):
     id: int
+    workflow_id: Optional[int] = None
     trayed: bool
     status: Optional[str]
     user_id: Optional[int] = None
@@ -96,6 +99,7 @@ class AccessionJobListOutput(AccessionJobBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "workflow_id": 1,
                 "trayed": True,
                 "user_id": 1,
                 "owner_id": 1,
@@ -205,6 +209,7 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "workflow_id": 1,
                 "trayed": True,
                 "status": "Paused",
                 "user_id": 1,

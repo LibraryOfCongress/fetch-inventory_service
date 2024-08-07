@@ -70,7 +70,8 @@ class ShelvingJobUpdateInput(BaseModel):
             "example": {
                 "status": "Created",
                 "user_id": 1,
-                "building_id": 1
+                "building_id": 1,
+                "run_timestamp": "2023-10-08T20:46:56.764426"
             }
         }
 

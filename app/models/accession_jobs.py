@@ -36,6 +36,7 @@ class AccessionJob(SQLModel, table=True):
     __tablename__ = "accession_jobs"
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    workflow_id: Optional[int] = Field(foreign_key="workflow.id", nullable=True)
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     trayed: bool = Field(sa_column=sa.Boolean, default=True, nullable=False)
     status: str = Field(
@@ -86,6 +87,7 @@ class AccessionJob(SQLModel, table=True):
     verification_jobs: List["VerificationJob"] = Relationship(
         back_populates="accession_job"
     )
+    workflow: Optional["Workflow"] = Relationship(back_populates="accession_job")
 
     # TODO add item_count (Returns a count of related items)
     # TODO add tray_count (Returns a count of related trays)

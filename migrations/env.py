@@ -39,6 +39,13 @@ from migrations.models import *
 # target_metadata = mymodel.Base.metadata
 target_metadata = SQLModel.metadata
 
+# Filter out raw sql tables
+def include_object(object, name, type_, reflected, compare_to):
+    # remove this from filtering after we change to class based approach
+    if type_ == "table" and name == "audit_log":
+        return False
+    return True
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -62,6 +69,7 @@ def run_migrations_offline() -> None:
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
+        include_object=include_object,
         dialect_opts={"paramstyle": "named"},
     )
 
@@ -97,6 +105,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            include_object=include_object,
             process_revision_directives=process_revision_directives
         )
 
