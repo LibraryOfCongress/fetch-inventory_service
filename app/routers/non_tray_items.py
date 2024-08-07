@@ -129,54 +129,67 @@ def update_non_tray_item(
     """
     Update a non_tray_item record in the database
     """
+    # Get the existing non_tray_item record from the database
+    existing_non_tray_item = session.get(NonTrayItem, id)
 
-    try:
-        # Get the existing non_tray_item record from the database
-        existing_non_tray_item = session.get(NonTrayItem, id)
+    # Check if the non_tray_item record exists
+    if not existing_non_tray_item:
+        raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
 
-        # Check if the non_tray_item record exists
-        if not existing_non_tray_item:
-            raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
+    if (
+        non_tray_item.shelf_position_id
+        and non_tray_item.shelf_position_id
+        != existing_non_tray_item.shelf_position_id
+    ):
+        existing_non_tray_item_shelf_position = (
+            session.query(NonTrayItem)
+            .filter(
+                NonTrayItem.shelf_position_id == non_tray_item.shelf_position_id
+            )
+            .first()
+        )
 
-        if (
-            non_tray_item.shelf_position_id
-            and non_tray_item.shelf_position_id
-            != existing_non_tray_item.shelf_position_id
-        ):
-            existing_non_tray_item_shelf_position = (
-                session.query(NonTrayItem)
-                .filter(
-                    NonTrayItem.shelf_position_id == non_tray_item.shelf_position_id
-                )
-                .first()
+        if existing_non_tray_item_shelf_position:
+            raise ValidationException(
+                detail=f"Non Tray Item already exists at "
+                f"shelf position {non_tray_item.shelf_position_id}"
             )
 
-            if existing_non_tray_item_shelf_position:
-                raise ValidationException(
-                    detail=f"Non Tray Item already exists at "
-                    f"shelf position {non_tray_item.shelf_position_id}"
-                )
+        shelf_position = (
+            session.query(ShelfPosition)
+            .filter(ShelfPosition.id == non_tray_item.shelf_position_id)
+            .first()
+        )
 
-            background_tasks.add_task(
-                manage_shelf_available_space, session, existing_non_tray_item
+        if not shelf_position:
+            raise NotFound(
+                detail=f"Shelf Position ID {non_tray_item.shelf_position_id} Not Found"
             )
 
-        # Update the non_tray_item record with the mutated data
-        mutated_data = non_tray_item.model_dump(exclude_unset=True)
+        shelf = session.query(Shelf).filter(
+            Shelf.id == shelf_position.shelf_id
+        ).first()
 
-        for key, value in mutated_data.items():
-            setattr(existing_non_tray_item, key, value)
-        setattr(existing_non_tray_item, "update_dt", datetime.utcnow())
+        if not shelf:
+            raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
 
-        # Commit the changes to the database
-        session.add(existing_non_tray_item)
-        session.commit()
-        session.refresh(existing_non_tray_item)
+        background_tasks.add_task(
+            manage_shelf_available_space, session, shelf, existing_non_tray_item_shelf_position
+        )
 
-        return existing_non_tray_item
+    # Update the non_tray_item record with the mutated data
+    mutated_data = non_tray_item.model_dump(exclude_unset=True)
 
-    except Exception as e:
-        raise InternalServerError(detail=f"{e}")
+    for key, value in mutated_data.items():
+        setattr(existing_non_tray_item, key, value)
+    setattr(existing_non_tray_item, "update_dt", datetime.utcnow())
+
+    # Commit the changes to the database
+    session.add(existing_non_tray_item)
+    session.commit()
+    session.refresh(existing_non_tray_item)
+
+    return existing_non_tray_item
 
 
 @router.delete("/{id}")

@@ -130,46 +130,60 @@ def update_tray(
     """
     Update a tray record in the database
     """
-    try:
-        # Get the existing tray record from the database
-        existing_tray = session.get(Tray, id)
+    # Get the existing tray record from the database
+    existing_tray = session.get(Tray, id)
 
-        # Check if the tray record exists
-        if not existing_tray:
-            raise NotFound(detail=f"Tray ID {id} Not Found")
+    # Check if the tray record exists
+    if not existing_tray:
+        raise NotFound(detail=f"Tray ID {id} Not Found")
 
-        if tray.shelf_position_id != existing_tray.shelf_position_id:
-            existing_tray_shelf_position = (
-                session.query(Tray)
-                .filter(Tray.shelf_position_id == tray.shelf_position_id)
-                .first()
+    if tray.shelf_position_id != existing_tray.shelf_position_id:
+        existing_tray_shelf_position = (
+            session.query(Tray)
+            .filter(Tray.shelf_position_id == tray.shelf_position_id)
+            .first()
+        )
+
+        if existing_tray_shelf_position:
+            raise ValidationException(
+                detail=f"Tray already exists at shelf position {tray.shelf_position_id}"
             )
 
-            if existing_tray_shelf_position:
-                raise ValidationException(
-                    detail=f"Tray already exists at shelf position {tray.shelf_position_id}"
+        shelf_position = (
+            session.query(ShelfPosition)
+            .filter(ShelfPosition.id == tray.shelf_position_id)
+            .first()
+        )
+
+        if not shelf_position:
+            raise NotFound(
+                detail=f"Shelf Position ID {tray.shelf_position_id} Not Found"
                 )
 
-            background_tasks.add_task(
-                manage_shelf_available_space, session, existing_tray
-            )
+        shelf = session.query(Shelf).filter(
+            Shelf.id == shelf_position.shelf_id
+            ).first()
 
-        # Update the tray record with the mutated data
-        mutated_data = tray.model_dump(exclude_unset=True)
+        if not shelf:
+            raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
 
-        for key, value in mutated_data.items():
-            setattr(existing_tray, key, value)
-        setattr(existing_tray, "update_dt", datetime.utcnow())
+        background_tasks.add_task(
+            manage_shelf_available_space, session, shelf, existing_tray
+        )
 
-        # Commit the changes to the database
-        session.add(existing_tray)
-        session.commit()
-        session.refresh(existing_tray)
+    # Update the tray record with the mutated data
+    mutated_data = tray.model_dump(exclude_unset=True)
 
-        return existing_tray
+    for key, value in mutated_data.items():
+        setattr(existing_tray, key, value)
+    setattr(existing_tray, "update_dt", datetime.utcnow())
 
-    except Exception as e:
-        raise InternalServerError(detail=f"{e}")
+    # Commit the changes to the database
+    session.add(existing_tray)
+    session.commit()
+    session.refresh(existing_tray)
+
+    return existing_tray
 
 
 @router.delete("/{id}")
