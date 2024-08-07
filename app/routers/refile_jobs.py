@@ -13,7 +13,7 @@ from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.refile_jobs import RefileJob
 from app.models.refile_items import RefileItem
-from app.models.refile_non_tray_item import RefileNonTrayItem
+from app.models.refile_non_tray_items import RefileNonTrayItem
 from app.models.trays import Tray
 from app.schemas.refile_jobs import (
     RefileJobInput,

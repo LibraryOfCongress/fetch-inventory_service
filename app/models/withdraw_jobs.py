@@ -38,7 +38,7 @@ class WithdrawJob(SQLModel, table=True):
         sa_column=sa.Column(
             sa.Enum(
                 WithdrawJobStatus,
-                name="withdraw_job_status",
+                name="withdraw_status",
                 nullable=False,
             )
         ),

@@ -54,6 +54,7 @@ class ShelvingJobUpdateInput(BaseModel):
     status: Optional[str] = None
     user_id: Optional[int] = None
     building_id: Optional[int] = None
+    run_timestamp: Optional[datetime] = None
 
     @field_validator("status", mode="before", check_fields=True)
     @classmethod
@@ -69,7 +70,8 @@ class ShelvingJobUpdateInput(BaseModel):
             "example": {
                 "status": "Created",
                 "user_id": 1,
-                "building_id": 1
+                "building_id": 1,
+                "run_timestamp": "2023-10-08T20:46:56.764426"
             }
         }
 
