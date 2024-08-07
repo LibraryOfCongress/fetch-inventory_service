@@ -23,7 +23,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.tasks import manage_shelf_position
+from app.tasks import manage_shelf_available_space
 
 router = APIRouter(
     prefix="/non_tray_items",
@@ -158,7 +158,7 @@ def update_non_tray_item(
                 )
 
             background_tasks.add_task(
-                manage_shelf_position, session, existing_non_tray_item
+                manage_shelf_available_space, session, existing_non_tray_item
             )
 
         # Update the non_tray_item record with the mutated data

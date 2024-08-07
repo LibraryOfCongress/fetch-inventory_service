@@ -24,7 +24,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.tasks import manage_shelf_position
+from app.tasks import manage_shelf_available_space
 
 router = APIRouter(
     prefix="/trays",
@@ -149,7 +149,9 @@ def update_tray(
                     detail=f"Tray already exists at shelf position {tray.shelf_position_id}"
                 )
 
-            background_tasks.add_task(manage_shelf_position, session, existing_tray)
+            background_tasks.add_task(
+                manage_shelf_available_space, session, existing_tray
+            )
 
         # Update the tray record with the mutated data
         mutated_data = tray.model_dump(exclude_unset=True)

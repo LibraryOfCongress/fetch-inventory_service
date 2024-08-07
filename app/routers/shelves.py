@@ -104,42 +104,37 @@ def create_shelf(
     - **width**: Required numeric (scale 4, precision 2) width in inches
     - **depth**: Required numeric (scale 4, precision 2) depth in inches
     """
-    try:
-        # Check shelf capacity
-        if not shelf_input.capacity < 1:
-            raise ValidationException(detail="Shelf capacity may not be less than one.")
+    # Check shelf capacity
+    if shelf_input.capacity < 1:
+        raise ValidationException(detail="Shelf capacity may not be less than one.")
 
-        # Check if shelf # or shelf_number_id
-        shelf_number = shelf_input.shelf_number
-        shelf_number_id = shelf_input.shelf_number_id
-        mutated_data = shelf_input.model_dump(exclude="shelf_number")
-        if not shelf_number_id and not shelf_number:
+    # Check if shelf # or shelf_number_id
+    shelf_number = shelf_input.shelf_number
+    shelf_number_id = shelf_input.shelf_number_id
+    mutated_data = shelf_input.model_dump(exclude="shelf_number")
+
+    if not shelf_number_id and not shelf_number:
+        raise ValidationException(detail=f"shelf_number_id OR shelf_number required")
+    elif shelf_number and not shelf_number_id:
+        # get shelf_number_id from shelf number
+        shelf_num_object = (
+            session.query(ShelfNumber)
+            .filter(ShelfNumber.number == shelf_number)
+            .first()
+        )
+        if not shelf_num_object:
             raise ValidationException(
-                detail=f"shelf_number_id OR shelf_number required"
+                detail=f"No shelf_number entity exists for shelf number {shelf_number}"
             )
-        elif shelf_number and not shelf_number_id:
-            # get shelf_number_id from shelf number
-            shelf_num_object = (
-                session.query(ShelfNumber)
-                .filter(ShelfNumber.number == shelf_number)
-                .first()
-            )
-            if not shelf_num_object:
-                raise ValidationException(
-                    detail=f"No shelf_number entity exists for shelf number {shelf_number}"
-                )
-            mutated_data["shelf_number_id"] = shelf_num_object.id
+        mutated_data["shelf_number_id"] = shelf_num_object.id
 
-        # new_shelf = Shelf(**shelf_input.model_dump())
-        new_shelf = Shelf(**mutated_data)
-        session.add(new_shelf)
-        session.commit()
-        session.refresh(new_shelf)
+    # new_shelf = Shelf(**shelf_input.model_dump())
+    new_shelf = Shelf(**mutated_data)
+    session.add(new_shelf)
+    session.commit()
+    session.refresh(new_shelf)
 
-        return new_shelf
-
-    except IntegrityError as e:
-        raise ValidationException(detail=f"{e}")
+    return new_shelf
 
 
 @router.patch("/{id}", response_model=ShelfDetailWriteOutput)
@@ -160,39 +155,35 @@ def update_shelf(
     **Returns:**
     - Shelf Detail Write Output: The updated shelf.
     """
-    try:
-        existing_shelf = session.get(Shelf, id)
+    existing_shelf = session.get(Shelf, id)
 
-        if existing_shelf is None:
-            raise NotFound(detail=f"Shelf ID {id} Not Found")
+    if existing_shelf is None:
+        raise NotFound(detail=f"Shelf ID {id} Not Found")
 
-        # Check shelf capacity
-        if not shelf.capacity < 1:
-            raise ValidationException(detail="Shelf capacity may not be less than one.")
+    # Check shelf capacity
+    if shelf.capacity < 1:
+        raise ValidationException(detail="Shelf capacity may not be less than one.")
 
-        if shelf.capacity < existing_shelf.capacity:
-            if (
-                existing_shelf.available_space - shelf.capacity
-            ) > existing_shelf.available_space:
-                raise ValidationException(
-                    detail="Capacity cannot be reduced below "
-                    "currently shelved containers."
-                )
+    if shelf.capacity < existing_shelf.capacity:
+        if (
+            existing_shelf.available_space - shelf.capacity
+        ) > existing_shelf.available_space:
+            raise ValidationException(
+                detail="Capacity cannot be reduced below "
+                "currently shelved containers."
+            )
 
-        mutated_data = shelf.model_dump(exclude_unset=True)
+    mutated_data = shelf.model_dump(exclude_unset=True)
 
-        for key, value in mutated_data.items():
-            setattr(existing_shelf, key, value)
+    for key, value in mutated_data.items():
+        setattr(existing_shelf, key, value)
 
-        setattr(existing_shelf, "update_dt", datetime.utcnow())
-        session.add(existing_shelf)
-        session.commit()
-        session.refresh(existing_shelf)
+    setattr(existing_shelf, "update_dt", datetime.utcnow())
+    session.add(existing_shelf)
+    session.commit()
+    session.refresh(existing_shelf)
 
-        return existing_shelf
-
-    except Exception as e:
-        raise InternalServerError(detail=f"{e}")
+    return existing_shelf
 
 
 @router.delete("/{id}")

@@ -200,7 +200,7 @@ def manage_verification_job_transition(
     commit_record(session, verification_job)
 
 
-def manage_shelf_position(session, item):
+def manage_shelf_available_space(session, item):
     """
     Task manages transition logic for an item's shelf position.
         - updates available_space
