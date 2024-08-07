@@ -42,6 +42,7 @@ def upgrade() -> None:
         existing_type=sa.INTEGER(),
         nullable=False,
     )
+    op.drop_constraint("uq_item_id_refile_job_id", "refile_items", type_="unique")
     op.create_unique_constraint(
         "uq_item_id_refile_job_id", "refile_items", ["item_id", "refile_job_id"]
     )
