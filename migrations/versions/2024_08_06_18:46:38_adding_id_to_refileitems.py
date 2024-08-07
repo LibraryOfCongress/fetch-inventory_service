@@ -24,17 +24,17 @@ def upgrade() -> None:
     op.add_column(
         "refile_items", sa.Column("id", sa.Integer(), nullable=False, primary_key=True)
     )
-    op.add_column("refile_items", sa.Column("create_dt", sa.DateTime(), nullable=False))
-    op.add_column("refile_items", sa.Column("update_dt", sa.DateTime(), nullable=False))
+    op.add_column("refile_items", sa.Column("create_dt", sa.DateTime(), nullable=False, server_default=sa.func.current_timestamp()))
+    op.add_column("refile_items", sa.Column("update_dt", sa.DateTime(), nullable=False, server_default=sa.func.current_timestamp()))
     op.add_column(
         "refile_non_tray_items",
         sa.Column("id", sa.Integer(), nullable=False, primary_key=True),
     )
     op.add_column(
-        "refile_non_tray_items", sa.Column("create_dt", sa.DateTime(), nullable=False)
+        "refile_non_tray_items", sa.Column("create_dt", sa.DateTime(), nullable=False, server_default=sa.func.current_timestamp())
     )
     op.add_column(
-        "refile_non_tray_items", sa.Column("update_dt", sa.DateTime(), nullable=False)
+        "refile_non_tray_items", sa.Column("update_dt", sa.DateTime(), nullable=False, server_default=sa.func.current_timestamp())
     )
     op.alter_column(
         "refile_non_tray_items",
@@ -42,6 +42,7 @@ def upgrade() -> None:
         existing_type=sa.INTEGER(),
         nullable=False,
     )
+    op.drop_constraint("uq_item_id_refile_job_id", "refile_items", type_="unique")
     op.create_unique_constraint(
         "uq_item_id_refile_job_id", "refile_items", ["item_id", "refile_job_id"]
     )

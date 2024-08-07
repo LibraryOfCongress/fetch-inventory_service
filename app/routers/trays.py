@@ -26,6 +26,7 @@ from app.config.exceptions import (
 )
 from app.tasks import manage_shelf_available_space
 
+
 router = APIRouter(
     prefix="/trays",
     tags=["trays"],

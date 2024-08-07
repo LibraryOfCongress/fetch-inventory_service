@@ -126,7 +126,6 @@ def update_withdraw_job(
     """
 
     existing_withdraw_job = session.get(WithdrawJob, id)
-    errored_barcodes = []
 
     if not existing_withdraw_job:
         raise NotFound(detail=f"Withdraw job id {id} not found")
@@ -242,19 +241,42 @@ def update_withdraw_job(
 
     if withdraw_job_input.status == "Completed":
         item_ids = [item.id for item in existing_withdraw_job.items]
+        item_barcodes = [item.barcode_id for item in existing_withdraw_job.items]
         non_tray_item_ids = [
             non_tray_item.id for non_tray_item in existing_withdraw_job.non_tray_items
         ]
+        non_tray_item_barcodes = [
+            non_tray_item.barcode_id
+            for non_tray_item in existing_withdraw_job.non_tray_items
+        ]
         if item_ids:
             session.query(Item).filter(Item.id.in_(item_ids)).update(
-                {"withdrawal_dt": datetime.utcnow(), "status": "Withdrawn"},
+                {
+                    "withdrawal_dt": datetime.utcnow(),
+                    "update_dt": datetime.utcnow(),
+                    "status": "Withdrawn",
+                },
+                synchronize_session=False,
+            )
+            session.query(Barcode).filter(Barcode.barcode.in_(item_barcodes)).update(
+                {"withdrawn": True, "update_dt": datetime.utcnow()},
                 synchronize_session=False,
             )
         if non_tray_item_ids:
             session.query(NonTrayItem).filter(
                 NonTrayItem.id.in_(non_tray_item_ids)
             ).update(
-                {"withdrawal_dt": datetime.utcnow(), "status": "Withdrawn"},
+                {
+                    "withdrawal_dt": datetime.utcnow(),
+                    "update_dt": datetime.utcnow(),
+                    "status": "Withdrawn",
+                },
+                synchronize_session=False,
+            )
+            session.query(Barcode).filter(
+                Barcode.barcode.in_(non_tray_item_barcodes)
+            ).update(
+                {"withdrawn": True, "update_dt": datetime.utcnow()},
                 synchronize_session=False,
             )
 
@@ -274,10 +296,6 @@ def update_withdraw_job(
 
     session.commit()
     session.refresh(existing_withdraw_job)
-
-    if errored_barcodes:
-        existing_withdraw_job = existing_withdraw_job.__dict__
-        existing_withdraw_job["errored_barcodes"] = errored_barcodes
 
     return existing_withdraw_job
 
@@ -309,19 +327,19 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
     if withdraw_job.items:
         for item in withdraw_job.items:
             session.query(Item).filter(Item.id == item.id).update(
-                {"update_dt": update_dt}
+                {"update_dt": update_dt, "status": "In", "withdrawal_dt": None}
             )
     if withdraw_job.non_tray_items:
         for non_tray_item in withdraw_job.non_tray_items:
             session.query(NonTrayItem).filter(
                 NonTrayItem.id == non_tray_item.id
-            ).update({"update_dt": update_dt})
+            ).update({"update_dt": update_dt, "status": "In", "withdrawal_dt": None})
 
     if withdraw_job.trays:
         for tray in withdraw_job.trays:
             for item in tray.items:
                 session.query(Item).filter(Item.id == item.id).update(
-                    {"update_dt": update_dt}
+                    {"update_dt": update_dt, "withdrawal_dt": None}
                 )
 
     session.delete(withdraw_job)
@@ -339,11 +357,11 @@ def add_items_to_withdraw_job(
     withdraw_job_input: WithdrawJobInput,
     session: Session = Depends(get_session),
 ) -> WithdrawJobDetailOutput:
-    lookup_barcode_values = withdraw_job_input.barcode_values
+    lookup_barcode_value = withdraw_job_input.barcode_value
     update_dt = datetime.utcnow()
 
-    if not lookup_barcode_values:
-        raise BadRequest(detail="At least one barcode value must be provided")
+    if not lookup_barcode_value:
+        raise BadRequest(detail="A barcode value must be provided")
 
     withdraw_job = session.get(WithdrawJob, job_id)
     if not withdraw_job:
@@ -351,36 +369,87 @@ def add_items_to_withdraw_job(
 
     errored_barcodes = []
     withdraw_items = []
-    withdraw_non_tray_items = []
-    withdraw_trays = []
 
-    barcodes = (
-        session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
+    barcode = (
+        session.query(Barcode).filter(Barcode.value == lookup_barcode_value).first()
     )
 
-    items = {
-        barcode.id: session.query(Item).filter(Item.barcode_id == barcode.id).first()
-        for barcode in barcodes
-    }
-    non_tray_items = {
-        barcode.id: session.query(NonTrayItem)
-        .filter(NonTrayItem.barcode_id == barcode.id)
-        .first()
-        for barcode in barcodes
-    }
-    trays = {
-        barcode.id: session.query(Tray).filter(Tray.barcode_id == barcode.id).first()
-        for barcode in barcodes
-    }
+    item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    non_tray_item = (
+        session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
+    )
+    tray = session.query(Tray).filter(Tray.barcode_id == barcode.id).first()
 
-    for barcode in barcodes:
-        item = items[barcode.id]
-        non_tray_item = non_tray_items[barcode.id]
-        tray = trays[barcode.id]
+    if item:
+        if item.status == "Requested":
+            raise BadRequest(detail="Item is already requested for withdrawal")
 
-        if item:
+        existing_item_withdrawals = (
+            session.query(ItemWithdrawal)
+            .filter(ItemWithdrawal.item_id == item.id)
+            .all()
+        )
+
+        if validate_withdraw_item(
+            existing_item_withdrawals, job_id, "Completed", session
+        ):
+            raise BadRequest(detail="Item is in existing withdrawals job")
+
+        session.add(ItemWithdrawal(item_id=item.id, withdraw_job_id=withdraw_job.id))
+
+        item.update_dt = update_dt
+        session.add(item)
+
+    elif non_tray_item:
+        if non_tray_item.status == "Requested":
+            raise BadRequest(detail="Non Tray Item is already requested for withdrawal")
+
+        existing_non_tray_item_withdrawals = (
+            session.query(NonTrayItemWithdrawal)
+            .filter(NonTrayItemWithdrawal.non_tray_item_id == non_tray_item.id)
+            .all()
+        )
+
+        if validate_withdraw_item(
+            existing_non_tray_item_withdrawals, job_id, "Completed", session
+        ):
+            raise BadRequest(detail="Non Tray Item is in existing withdrawals job")
+
+        session.add(
+            NonTrayItemWithdrawal(
+                non_tray_item_id=non_tray_item.id, withdraw_job_id=withdraw_job.id
+            )
+        )
+
+        non_tray_item.update_dt = update_dt
+        session.add(non_tray_item)
+
+    elif tray:
+        if not tray.items:
+            raise BadRequest(detail="Tray is empty")
+
+        existing_tray_withdrawal = (
+            session.query(TrayWithdrawal)
+            .filter(
+                TrayWithdrawal.tray_id == tray.id,
+                TrayWithdrawal.withdraw_job_id == job_id,
+            )
+            .first()
+        )
+
+        if not existing_tray_withdrawal:
+            session.add(
+                TrayWithdrawal(tray_id=tray.id, withdraw_job_id=withdraw_job.id)
+            )
+
+        for item in tray.items:
             if item.status == "Requested":
-                errored_barcodes.append(barcode.value)
+                errored_barcodes.append(
+                    {
+                        "barcode": barcode.value,
+                        "error": "Item is already requested for withdrawal",
+                    }
+                )
                 continue
             existing_item_withdrawals = (
                 session.query(ItemWithdrawal)
@@ -390,7 +459,12 @@ def add_items_to_withdraw_job(
             if validate_withdraw_item(
                 existing_item_withdrawals, job_id, "Completed", session
             ):
-                errored_barcodes.append(barcode.value)
+                errored_barcodes.append(
+                    {
+                        "barcode": barcode.value,
+                        "error": "Item is in existing withdrawals job",
+                    }
+                )
                 continue
             withdraw_items.append(
                 ItemWithdrawal(item_id=item.id, withdraw_job_id=withdraw_job.id)
@@ -398,70 +472,21 @@ def add_items_to_withdraw_job(
             item.update_dt = update_dt
             session.add(item)
 
-        elif non_tray_item:
-            if non_tray_item.status == "Requested":
-                errored_barcodes.append(barcode.value)
-                continue
-            existing_non_tray_item_withdrawals = (
-                session.query(NonTrayItemWithdrawal)
-                .filter(NonTrayItemWithdrawal.non_tray_item_id == non_tray_item.id)
-                .all()
-            )
-            if validate_withdraw_item(
-                existing_non_tray_item_withdrawals, job_id, "Completed", session
-            ):
-                errored_barcodes.append(barcode.value)
-                continue
-            withdraw_non_tray_items.append(
-                NonTrayItemWithdrawal(
-                    non_tray_item_id=non_tray_item.id, withdraw_job_id=withdraw_job.id
-                )
-            )
-            non_tray_item.update_dt = update_dt
-            session.add(non_tray_item)
+    else:
+        raise BadRequest(
+            detail=f"No Items or Tray Items with Barcode value "
+            f"{barcode.value} found"
+        )
 
-        elif tray:
-            existing_tray_withdrawal = (
-                session.query(TrayWithdrawal)
-                .filter(
-                    TrayWithdrawal.tray_id == tray.id,
-                    TrayWithdrawal.withdraw_job_id == job_id,
-                )
-                .first()
-            )
-            if not existing_tray_withdrawal:
-                withdraw_trays.append(
-                    TrayWithdrawal(tray_id=tray.id, withdraw_job_id=withdraw_job.id)
-                )
-            for item in tray.items:
-                if item.status == "Requested":
-                    inventory_logger.filter("HERE 1")
-                    errored_barcodes.append(barcode.value)
-                    continue
-                existing_item_withdrawals = (
-                    session.query(ItemWithdrawal)
-                    .filter(ItemWithdrawal.item_id == item.id)
-                    .all()
-                )
-                if validate_withdraw_item(
-                    existing_item_withdrawals, job_id, "Completed", session
-                ):
-                    errored_barcodes.append(barcode.value)
-                    continue
-                withdraw_items.append(
-                    ItemWithdrawal(item_id=item.id, withdraw_job_id=withdraw_job.id)
-                )
-                item.update_dt = update_dt
-                session.add(item)
+    if withdraw_items:
+        session.bulk_save_objects(withdraw_items)
 
-        else:
-            errored_barcodes.append(barcode.value)
-
-    session.bulk_save_objects(withdraw_items)
-    session.bulk_save_objects(withdraw_non_tray_items)
-    session.bulk_save_objects(withdraw_trays)
     session.commit()
     session.refresh(withdraw_job)
+
+    if errored_barcodes:
+        withdraw_job = WithdrawJobDetailOutput.model_dump(withdraw_job)
+        withdraw_job.errors = errored_barcodes
 
     return withdraw_job
 
@@ -484,86 +509,71 @@ def remove_items_from_withdraw_job(
     **Raises**:
     - HTTPException: If the withdraw job is not found in the database.
     """
-    lookup_barcode_values = withdraw_job_input.barcode_values
+    lookup_barcode_value = withdraw_job_input.barcode_value
     update_dt = datetime.utcnow()
 
-    errored_barcodes = []
-
-    if not lookup_barcode_values:
-        raise BadRequest(detail="At least one barcode value must be provided")
+    if not lookup_barcode_value:
+        raise BadRequest(detail="A barcode value must be provided")
 
     withdraw_job = session.get(WithdrawJob, job_id)
 
     if not withdraw_job:
         raise NotFound(detail=f"Withdraw job id {job_id} not found")
 
-    barcodes = (
-        session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
+    barcode = (
+        session.query(Barcode).filter(Barcode.value == lookup_barcode_value).first()
     )
 
-    for barcode in barcodes:
-        item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
-        non_tray_item = (
-            session.query(NonTrayItem)
-            .where(NonTrayItem.barcode_id == barcode.id)
-            .first()
-        )
-        tray = session.query(Tray).filter(Tray.barcode_id == barcode.id).first()
+    item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    non_tray_item = (
+        session.query(NonTrayItem).where(NonTrayItem.barcode_id == barcode.id).first()
+    )
+    tray = session.query(Tray).filter(Tray.barcode_id == barcode.id).first()
 
-        if item:
+    if item:
+        session.query(ItemWithdrawal).where(
+            ItemWithdrawal.item_id == item.id,
+            ItemWithdrawal.withdraw_job_id == job_id,
+        ).delete()
+        session.query(Item).where(Item.id == item.id).update(
+            {"update_dt": update_dt, "status": "In", "withdrawal_dt": None}
+        )
+
+    elif non_tray_item:
+        session.query(NonTrayItemWithdrawal).where(
+            NonTrayItemWithdrawal.non_tray_item_id == non_tray_item.id,
+            NonTrayItemWithdrawal.withdraw_job_id == job_id,
+        ).delete()
+        session.query(NonTrayItem).where(NonTrayItem.id == non_tray_item.id).update(
+            {"update_dt": update_dt, "status": "In", "withdrawal_dt": None}
+        )
+    elif tray:
+        session.query(TrayWithdrawal).where(
+            TrayWithdrawal.tray_id == tray.id,
+            TrayWithdrawal.withdraw_job_id == job_id,
+        ).delete()
+
+        session.query(Tray).where(Tray.id == tray.id).update(
+            {"update_dt": update_dt, "withdrawal_dt": None}
+        )
+
+        items = tray.items
+
+        for item in items:
             session.query(ItemWithdrawal).where(
                 ItemWithdrawal.item_id == item.id,
                 ItemWithdrawal.withdraw_job_id == job_id,
             ).delete()
             session.query(Item).where(Item.id == item.id).update(
-                {
-                    "update_dt": update_dt,
-                }
+                {"update_dt": update_dt, "status": "In", "withdrawal_dt": None}
             )
-
-        elif non_tray_item:
-            session.query(NonTrayItemWithdrawal).where(
-                NonTrayItemWithdrawal.non_tray_item_id == non_tray_item.id,
-                NonTrayItemWithdrawal.withdraw_job_id == job_id,
-            ).delete()
-            session.query(NonTrayItem).where(NonTrayItem.id == non_tray_item.id).update(
-                {
-                    "update_dt": update_dt,
-                }
-            )
-        elif tray:
-            session.query(TrayWithdrawal).where(
-                TrayWithdrawal.tray_id == tray.id,
-                TrayWithdrawal.withdraw_job_id == job_id,
-            ).delete()
-
-            session.query(Tray).where(Tray.id == tray.id).update(
-                {
-                    "update_dt": update_dt,
-                }
-            )
-
-            items = tray.items
-
-            for item in items:
-                session.query(ItemWithdrawal).where(
-                    ItemWithdrawal.item_id == item.id,
-                    ItemWithdrawal.withdraw_job_id == job_id,
-                ).delete()
-                session.query(Item).where(Item.id == item.id).update(
-                    {
-                        "update_dt": update_dt,
-                    }
-                )
-        else:
-            errored_barcodes.append(barcode.value)
-            continue
+    else:
+        raise BadRequest(
+            detail=f"No Items or Tray Items with Barcode value "
+            f"{lookup_barcode_value} found"
+        )
 
     session.commit()
     session.refresh(withdraw_job)
-
-    if errored_barcodes:
-        withdraw_job = withdraw_job.__dict__
-        withdraw_job["errored_barcodes"] = errored_barcodes
 
     return withdraw_job

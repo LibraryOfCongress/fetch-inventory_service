@@ -20,6 +20,7 @@ class BarcodeInput(BaseModel):
 
 class BarcodeMutationInput(BaseModel):
     """This is not user facing"""
+
     value: str
     type_id: int
 
@@ -27,12 +28,14 @@ class BarcodeMutationInput(BaseModel):
 class BarcodeUpdateInput(BaseModel):
     value: Optional[str] = None
     type: Optional[str] = None
+    withdrawn: Optional[bool] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "value": "5901234123457",
-                "type": "Item"
+                "type": "Item",
+                "withdrawn": True
             }
         }
 
@@ -51,6 +54,7 @@ class BarcodeListOutput(BaseModel):
             }
         }
 
+
 class NestedBarcodeTypeOutputForBarcode(BaseModel):
     id: int
     name: str
@@ -59,6 +63,7 @@ class NestedBarcodeTypeOutputForBarcode(BaseModel):
 class BarcodeDetailWriteOutput(BaseModel):
     id: uuid.UUID | None
     value: str
+    withdrawn: bool
     type_id: int
     type: NestedBarcodeTypeOutputForBarcode
     create_dt: datetime
@@ -81,7 +86,6 @@ class BarcodeDetailWriteOutput(BaseModel):
 
 
 class BarcodeDetailReadOutput(BarcodeDetailWriteOutput):
-
     class Config:
         json_schema_extra = {
             "example": {

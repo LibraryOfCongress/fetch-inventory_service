@@ -20,16 +20,19 @@ class Barcode(SQLModel, table=True):
 
     __tablename__ = "barcodes"
 
-    id: Optional[uuid.UUID] = Field(sa_column=sa.Column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        unique=True,
-        default=uuid.uuid4,
-        index=True
-    ))
+    id: Optional[uuid.UUID] = Field(
+        sa_column=sa.Column(
+            UUID(as_uuid=True),
+            primary_key=True,
+            unique=True,
+            default=uuid.uuid4,
+            index=True,
+        )
+    )
     value: str = Field(
         max_length=255, sa_column=sa.VARCHAR, nullable=False, unique=True
     )
+    withdrawn: bool = Field(default=False, nullable=False)
     type_id: int = Field(foreign_key="barcode_types.id")
     update_dt: datetime = Field(
         sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False

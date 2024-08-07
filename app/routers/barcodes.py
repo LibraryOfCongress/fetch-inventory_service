@@ -87,7 +87,6 @@ def get_barcode_by_value(value: str, session: Session = Depends(get_session)):
     return barcode
 
 
-
 @router.post("/", response_model=BarcodeDetailWriteOutput, status_code=201)
 def create_barcode(
     barcode_input: BarcodeInput, session: Session = Depends(get_session)
@@ -110,15 +109,29 @@ def create_barcode(
             raise NotFound(detail=f"Barcode type '{barcode_type_string}' not found.")
         else:
             mutated_barcode_input = barcode_input.model_dump()
-            mutated_barcode_input['type_id'] = barcode_type.id
+            mutated_barcode_input["type_id"] = barcode_type.id
             # Use muttion input to avoid missing type_id validation
             mutated_barcode_input = BarcodeMutationInput(**mutated_barcode_input)
 
         # validate value against barcode_type allowed_pattern
         if not re.fullmatch(barcode_type.allowed_pattern, barcode_input.value):
-            raise ValidationException(detail=f"Barcode value is invalid for {barcode_type.name} barcode rules.")
+            raise ValidationException(
+                detail=f"Barcode value is invalid for {barcode_type.name} barcode rules."
+            )
 
-        new_barcode = Barcode(**mutated_barcode_input.model_dump(exclude={'type'}))
+        existing_barcode = session.exec(
+            select(Barcode).where(Barcode.value == barcode_input.value)
+        ).first()
+
+        if existing_barcode:
+            if not existing_barcode.withdrawn:
+                raise ValidationException(
+                    detail=f"Barcode with value {barcode_input.value} already exists."
+                )
+            else:
+                return existing_barcode
+
+        new_barcode = Barcode(**mutated_barcode_input.model_dump(exclude={"type"}))
         session.add(new_barcode)
         session.commit()
         session.refresh(new_barcode)
@@ -170,11 +183,17 @@ def update_barcode(
             if barcode.value:
                 # Validate against incoming value
                 if not re.fullmatch(new_barcode_type.allowed_pattern, barcode.value):
-                    raise ValidationException(detail=f"Barcode value is invalid for {new_barcode_type.name} barcode rules.")
+                    raise ValidationException(
+                        detail=f"Barcode value is invalid for {new_barcode_type.name} barcode rules."
+                    )
             else:
                 # Validate existing value
-                if not re.fullmatch(new_barcode_type.allowed_pattern, existing_barcode.value):
-                    raise ValidationException(detail=f"Barcode type {new_barcode_type.name} would make existing barcode value invalid.")
+                if not re.fullmatch(
+                    new_barcode_type.allowed_pattern, existing_barcode.value
+                ):
+                    raise ValidationException(
+                        detail=f"Barcode type {new_barcode_type.name} would make existing barcode value invalid."
+                    )
         else:
             # use existing allowed pattern to validate
             existing_barcode_type = session.exec(
@@ -182,17 +201,18 @@ def update_barcode(
             ).first()
             if barcode.value:
                 # Validate incoming against existing allowed_pattern
-                if not re.fullmatch(existing_barcode_type.allowed_pattern, barcode.value):
-                    raise ValidationException(detail=f"New Barcode value is invalid for {existing_barcode_type.name} barcode rules.")
+                if not re.fullmatch(
+                    existing_barcode_type.allowed_pattern, barcode.value
+                ):
+                    raise ValidationException(
+                        detail=f"New Barcode value is invalid for {existing_barcode_type.name} barcode rules."
+                    )
             # Else neither type or barcode value changed, nothing to validate
 
-        mutated_data = barcode.model_dump(
-            exclude={'type'},
-            exclude_unset=True
-        )
+        mutated_data = barcode.model_dump(exclude={"type"}, exclude_unset=True)
 
         if mutated_barcode_type_id:
-            mutated_data['type_id'] = mutated_barcode_type_id
+            mutated_data["type_id"] = mutated_barcode_type_id
 
         for key, value in mutated_data.items():
             setattr(existing_barcode, key, value)
@@ -230,8 +250,7 @@ def delete_barcode(id: uuid.UUID, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Barcode ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Barcode ID {id} Deleted " f"Successfully"
         )
 
     raise NotFound(detail=f"Barcode ID {id} Not Found")

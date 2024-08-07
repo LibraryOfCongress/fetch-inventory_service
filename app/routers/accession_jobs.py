@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
 from app.models.accession_jobs import AccessionJob
+from app.models.barcodes import Barcode
 from app.models.verification_jobs import VerificationJob
 from app.models.container_types import ContainerType
 from app.models.workflows import Workflow
@@ -90,8 +91,11 @@ def get_accession_job_detail(id: int, session: Session = Depends(get_session)):
 
     raise NotFound(detail=f"Accession Job ID {id} Not Found")
 
+
 @router.get("/workflow/{id}", response_model=AccessionJobDetailOutput)
-def get_accession_job_detail_by_workflow(id: int, session: Session = Depends(get_session)):
+def get_accession_job_detail_by_workflow(
+    id: int, session: Session = Depends(get_session)
+):
     """
     Retrieves the accession job detail for the given workflow id.
 
@@ -104,9 +108,9 @@ def get_accession_job_detail_by_workflow(id: int, session: Session = Depends(get
     **Raises:**
     - HTTPException: If the accession job with the given ID is not found.
     """
-    accession_job = session.exec(select(AccessionJob).where(
-        AccessionJob.workflow_id == id
-    )).first()
+    accession_job = session.exec(
+        select(AccessionJob).where(AccessionJob.workflow_id == id)
+    ).first()
 
     if accession_job:
         return accession_job
@@ -136,13 +140,17 @@ def create_accession_job(
         new_accession_job = AccessionJob(**accession_job_input.model_dump())
         # Set container_type_id based on trayed status
         if new_accession_job.trayed:
-            container_type = session.query(ContainerType).filter(
-                ContainerType.type == 'Tray'
-            ).first()
+            container_type = (
+                session.query(ContainerType)
+                .filter(ContainerType.type == "Tray")
+                .first()
+            )
         else:
-            container_type = session.query(ContainerType).filter(
-                ContainerType.type == 'Non-Tray'
-            ).first()
+            container_type = (
+                session.query(ContainerType)
+                .filter(ContainerType.type == "Non-Tray")
+                .first()
+            )
         new_accession_job.container_type_id = container_type.id
         # generate a new workflow and attach
         workflow = Workflow()
@@ -195,24 +203,69 @@ def update_accession_job(
     setattr(existing_accession_job, "update_dt", datetime.utcnow())
     # Update container_type_id based on trayed status
     if existing_accession_job.trayed:
-        container_type = session.query(ContainerType).filter(
-            ContainerType.type == 'Tray'
-        ).first()
+        container_type = (
+            session.query(ContainerType).filter(ContainerType.type == "Tray").first()
+        )
     else:
-        container_type = session.query(ContainerType).filter(
-            ContainerType.type == 'Non-Tray'
-        ).first()
+        container_type = (
+            session.query(ContainerType)
+            .filter(ContainerType.type == "Non-Tray")
+            .first()
+        )
     setattr(existing_accession_job, "container_type_id", container_type.id)
 
     existing_accession_job = commit_record(session, existing_accession_job)
 
     # conditional to avoid transaction concurrency issues
     if mutated_data.get("status") == "Completed":
+        if existing_accession_job.items:
+            items_barcode_ids = [
+                item.barcode_id for item in existing_accession_job.items
+            ]
+
+            session.query(Barcode).filter(
+                Barcode.id.in_(items_barcode_ids), Barcode.withdrawn == True
+            ).update(
+                {"withdrawn": False, "update_dt": datetime.utcnow()},
+                synchronize_session=False,
+            )
+
+        if existing_accession_job.non_tray_items:
+            non_tray_items_barcode_ids = [
+                item.barcode_id for item in existing_accession_job.non_tray_items
+            ]
+
+            session.query(Barcode).filter(
+                Barcode.id.in_(non_tray_items_barcode_ids), Barcode.withdrawn == True
+            ).update(
+                {"withdrawn": False, "update_dt": datetime.utcnow()},
+                synchronize_session=False,
+            )
+        if existing_accession_job.trays:
+            trays_barcode_ids = [
+                tray.barcode_id for tray in existing_accession_job.trays
+            ]
+
+            session.query(Barcode).filter(
+                Barcode.id.in_(trays_barcode_ids), Barcode.withdrawn == True
+            ).update(
+                {"withdrawn": False, "update_dt": datetime.utcnow()},
+                synchronize_session=False,
+            )
+
+            for tray in existing_accession_job.trays:
+                if tray.items:
+                    items_barcode_ids = [item.barcode_id for item in tray.items]
+
+                    session.query(Barcode).filter(
+                        Barcode.id.in_(items_barcode_ids), Barcode.withdrawn == True
+                    ).update(
+                        {"withdrawn": False, "update_dt": datetime.utcnow()},
+                        synchronize_session=False,
+                    )
+
         background_tasks.add_task(
-            complete_accession_job,
-            session,
-            existing_accession_job,
-            original_status
+            complete_accession_job, session, existing_accession_job, original_status
         )
     else:
         background_tasks.add_task(
@@ -222,6 +275,7 @@ def update_accession_job(
             original_status,
         )
 
+        session.commit()
         session.refresh(existing_accession_job)
 
     return existing_accession_job
