@@ -100,38 +100,34 @@ def create_shelf_position(
     - HTTPException: If there is an integrity error when adding the shelf position to
     the database.
     """
-    try:
-        shelf = session.query(Shelf).get(shelf_position_input.shelf_id)
-        shelf_position_number = session.query(ShelfPositionNumber).get(
-            shelf_position_input.shelf_position_number_id
+    shelf = session.query(Shelf).get(shelf_position_input.shelf_id)
+    shelf_position_number = session.query(ShelfPositionNumber).get(
+        shelf_position_input.shelf_position_number_id
+    )
+    if not shelf:
+        raise NotFound(detail=f"Shelf ID {shelf_position_input.shelf_id} Not Found")
+
+    if not shelf_position_number:
+        raise NotFound(
+            detail=f"Shelf Position Number ID {shelf_position_input.shelf_position_number_id} Not Found"
         )
-        if not shelf:
-            raise NotFound(detail=f"Shelf ID {shelf_position_input.shelf_id} Not Found")
 
-        if not shelf_position_number:
-            raise NotFound(
-                detail=f"Shelf Position Number ID {shelf_position_input.shelf_position_number_id} Not Found"
-            )
+    shelf_position = shelf_position_number.number
 
-        shelf_position = shelf_position_number.number
+    if shelf_position >= shelf.capacity:
+        raise ValidationException(
+            detail=f"Shelf Position Number {shelf_position} can not exceed shelf capacity {shelf.capacity}"
+        )
+    else:
+        shelf.available_space += 1
 
-        if shelf_position >= shelf.capacity:
-            raise ValidationException(
-                detail=f"Shelf Position Number {shelf_position} can not exceed shelf capacity {shelf.capacity}"
-            )
-        else:
-            shelf.available_space += 1
+    new_shelf_position = ShelfPosition(**shelf_position_input.model_dump())
+    session.add(shelf)
+    session.add(new_shelf_position)
+    session.commit()
+    session.refresh(new_shelf_position)
 
-        new_shelf_position = ShelfPosition(**shelf_position_input.model_dump())
-        session.add(shelf)
-        session.add(new_shelf_position)
-        session.commit()
-        session.refresh(new_shelf_position)
-
-        return new_shelf_position
-
-    except IntegrityError as e:
-        raise ValidationException(detail=f"{e}")
+    return new_shelf_position
 
 
 @router.patch("/{id}", response_model=ShelfPositionDetailWriteOutput)
