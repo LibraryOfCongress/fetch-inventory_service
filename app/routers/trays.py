@@ -32,14 +32,14 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[TrayListOutput])
 def get_tray_list(
-        session: Session = Depends(get_session),
-        owner_id: int = Query(default=None),
-        size_class_id: int = Query(default=None),
-        media_type_id: int = Query(default=None),
-        barcode_value: str = Query(default=None),
-        from_dt: datetime = Query(default=None),
-        to_dt: datetime = Query(default=None)
-    ) -> list:
+    session: Session = Depends(get_session),
+    owner_id: int = Query(default=None),
+    size_class_id: int = Query(default=None),
+    media_type_id: int = Query(default=None),
+    barcode_value: str = Query(default=None),
+    from_dt: datetime = Query(default=None),
+    to_dt: datetime = Query(default=None),
+) -> list:
     """
     Get a paginated list of trays from the database
     """
@@ -96,25 +96,34 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
     """
     Create a new tray record
     """
-    try:
-        # Create a new tray
-        new_tray = Tray(**tray_input.model_dump())
-        # default to tray container_type
-        container_type = session.query(ContainerType).filter(
-            ContainerType.type == 'Tray'
-        ).first()
-        # trays are created at accession, set accession date
-        if not new_tray.accession_dt:
-            new_tray.accession_dt = datetime.utcnow()
-        new_tray.container_type_id = container_type.id
-        session.add(new_tray)
-        session.commit()
-        session.refresh(new_tray)
+    # Check if a tray with the same barcode already exists
+    if tray_input.barcode_id:
+        existing_tray = (
+            session.query(Tray).filter(Tray.barcode_id == tray_input.barcode_id).first()
+        )
 
-        return new_tray
+        if existing_tray:
+            barcode = existing_tray.barcode
+            raise ValidationException(
+                detail=f"Tray with barcode {barcode.value} " f"already exists"
+            )
 
-    except IntegrityError as e:
-        raise ValidationException(detail=f"{e}")
+    # Create a new tray
+    new_tray = Tray(**tray_input.model_dump())
+
+    # default to tray container_type
+    container_type = (
+        session.query(ContainerType).filter(ContainerType.type == "Tray").first()
+    )
+    # trays are created at accession, set accession date
+    if not new_tray.accession_dt:
+        new_tray.accession_dt = datetime.utcnow()
+    new_tray.container_type_id = container_type.id
+    session.add(new_tray)
+    session.commit()
+    session.refresh(new_tray)
+
+    return new_tray
 
 
 @router.patch("/{id}", response_model=TrayDetailWriteOutput)
@@ -158,7 +167,9 @@ def delete_tray(id: int, session: Session = Depends(get_session)):
     tray = session.get(Tray, id)
 
     if tray:
-        items_to_delete = session.exec(select(Item).where(Item.tray_id == id).distinct())
+        items_to_delete = session.exec(
+            select(Item).where(Item.tray_id == id).distinct()
+        )
         for item in items_to_delete:
             session.delete(item)
             session.commit()

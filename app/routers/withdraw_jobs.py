@@ -354,7 +354,7 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
     )
 
 
-@router.post("/{job_id}/add_items")
+@router.post("/{job_id}/add_items", response_model=WithdrawJobDetailOutput)
 def add_items_to_withdraw_job(
     job_id: int,
     withdraw_job_input: WithdrawJobInput,
@@ -468,7 +468,6 @@ def add_items_to_withdraw_job(
                 continue
 
             items_for_withdrawal = True
-
             withdraw_items.append(
                 ItemWithdrawal(item_id=item.id, withdraw_job_id=withdraw_job.id)
             )
@@ -499,7 +498,8 @@ def add_items_to_withdraw_job(
     if withdraw_items:
         session.bulk_save_objects(withdraw_items)
 
-    withdraw_job = WithdrawJobDetailOutput.model_dump(withdraw_job)
+    session.commit()
+    session.refresh(withdraw_job)
 
     if errored_barcodes:
         if not withdraw_items:
@@ -507,10 +507,14 @@ def add_items_to_withdraw_job(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={"errors": errored_barcodes},
             )
-        withdraw_job["errors"] = errored_barcodes
+        else:
+            withdraw_job_output = WithdrawJobDetailOutput.model_dump(withdraw_job)
+            withdraw_job_output["items"] = withdraw_job.items
+            withdraw_job_output["trays"] = withdraw_job.trays
+            withdraw_job_output["non_tray_items"] = withdraw_job.non_tray_items
+            withdraw_job_output["errors"] = errored_barcodes
 
-    session.commit()
-    session.refresh(withdraw_job)
+            return withdraw_job_output
 
     return withdraw_job
 
