@@ -866,7 +866,9 @@ def _validate_non_tray_item_shelved(item, index, errors, error_message):
 def _validate_withdraw_item(session, item, withdraw_job_id, barcode, index, errors):
     item_errors = []
 
-    _validate_item_status(item, index, item_errors, "Item is invalid status")
+    _validate_item_status(
+        item, index, item_errors, "Item must be have status if [" "'In', 'Out']"
+    )
     shelf_position = (
         session.query(ShelfPosition).join(Tray).filter(Tray.id == item.tray_id).first()
     )
@@ -938,7 +940,10 @@ def process_withdraw_job_data(
                 session.add(item)
         elif non_tray_item:
             _validate_item_status(
-                non_tray_item, index + 1, errors, "Non Tray Item is invalid status"
+                non_tray_item,
+                index + 1,
+                errors,
+                "Non Tray Item must be have status if [" "'In', 'Out']",
             )
             _validate_non_tray_item_shelved(
                 non_tray_item, index + 1, errors, "Non Tray Item is not shelved"
@@ -968,7 +973,20 @@ def process_withdraw_job_data(
                 non_tray_item.update_dt = update_dt
                 session.add(non_tray_item)
         elif tray:
+            items_for_withdrawal = False
+
             if tray.items:
+                for tray_item in tray.items:
+                    item_withdrawal, item_errors = _validate_withdraw_item(
+                        session, tray_item, withdraw_job_id, barcode, index + 1, errors
+                    )
+
+                    if item_withdrawal:
+                        items_for_withdrawal = True
+                        withdraw_items.append(item_withdrawal)
+                        tray_item.update_dt = update_dt
+                        session.add(tray_item)
+
                 existing_tray_withdrawal = (
                     session.query(TrayWithdrawal)
                     .filter(
@@ -978,20 +996,11 @@ def process_withdraw_job_data(
                     .first()
                 )
 
-                if not existing_tray_withdrawal:
+                if not existing_tray_withdrawal and items_for_withdrawal:
                     withdraw_trays.append(
                         TrayWithdrawal(tray_id=tray.id, withdraw_job_id=withdraw_job_id)
                     )
 
-                for tray_item in tray.items:
-                    item_withdrawal, item_errors = _validate_withdraw_item(
-                        session, tray_item, withdraw_job_id, barcode, index + 1, errors
-                    )
-
-                    if item_withdrawal:
-                        withdraw_items.append(item_withdrawal)
-                        tray_item.update_dt = update_dt
-                        session.add(tray_item)
             else:
                 errors.append(
                     {
@@ -1007,9 +1016,7 @@ async def start_session_with_user_id(user_email: str, session):
     """
     This method is to add the user id for any database change.
     """
-    session.execute(
-        text(f"select set_config('audit.user_id', '{user_email}', true)")
-    )
+    session.execute(text(f"select set_config('audit.user_id', '{user_email}', true)"))
 
 
 async def set_session_to_request(
@@ -1017,12 +1024,9 @@ async def set_session_to_request(
     session: Session,
     user_email: str,
 ):
-
     if request.method != "GET":
         request.state.db_session = session
 
-        await start_session_with_user_id(
-            user_email, session=request.state.db_session
-        )
+        await start_session_with_user_id(user_email, session=request.state.db_session)
 
     return request
