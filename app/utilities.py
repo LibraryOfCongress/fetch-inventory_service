@@ -867,7 +867,7 @@ def _validate_withdraw_item(session, item, withdraw_job_id, barcode, index, erro
     item_errors = []
 
     _validate_item_status(
-        item, index, item_errors, "Item must be have status if [" "'In', 'Out']"
+        item, index, item_errors, "Item must be have status if ['In', 'Out']"
     )
     shelf_position = (
         session.query(ShelfPosition).join(Tray).filter(Tray.id == item.tray_id).first()
@@ -943,7 +943,7 @@ def process_withdraw_job_data(
                 non_tray_item,
                 index + 1,
                 errors,
-                "Non Tray Item must be have status if [" "'In', 'Out']",
+                "Non Tray Item must be have status if ['In', 'Out']",
             )
             _validate_non_tray_item_shelved(
                 non_tray_item, index + 1, errors, "Non Tray Item is not shelved"
