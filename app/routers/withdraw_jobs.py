@@ -261,7 +261,7 @@ def update_withdraw_job(
                 },
                 synchronize_session=False,
             )
-            session.query(Barcode).filter(Barcode.barcode.in_(item_barcodes)).update(
+            session.query(Barcode).filter(Barcode.id.in_(item_barcodes)).update(
                 {"withdrawn": True, "update_dt": datetime.utcnow()},
                 synchronize_session=False,
             )
@@ -277,7 +277,7 @@ def update_withdraw_job(
                 synchronize_session=False,
             )
             session.query(Barcode).filter(
-                Barcode.barcode.in_(non_tray_item_barcodes)
+                Barcode.id.in_(non_tray_item_barcodes)
             ).update(
                 {"withdrawn": True, "update_dt": datetime.utcnow()},
                 synchronize_session=False,
