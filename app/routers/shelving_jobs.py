@@ -226,7 +226,7 @@ def update_shelving_job(
 
         setattr(existing_shelving_job, "update_dt", datetime.utcnow())
 
-        if shelving_job.run_timestamp:
+        if shelving_job.status and shelving_job.run_timestamp:
             existing_shelving_job = manage_transition(
                 existing_shelving_job, shelving_job
             )

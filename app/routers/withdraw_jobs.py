@@ -290,7 +290,8 @@ def update_withdraw_job(
     for key, value in mutated_data.items():
         setattr(existing_withdraw_job, key, value)
 
-    if withdraw_job_input.run_timestamp:
+    # Manage transitions and calculate run time if needed
+    if withdraw_job_input.status and withdraw_job_input.run_timestamp:
         existing_withdraw_job = manage_transition(
             existing_withdraw_job, withdraw_job_input
         )

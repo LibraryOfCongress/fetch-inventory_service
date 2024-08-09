@@ -305,14 +305,27 @@ def manage_transition(original_record, update_record):
     if original_record.run_time is None:
         original_record.run_time = timedelta(0)
 
-    if original_record.last_transition:
-        last_transition = make_aware(original_record.last_transition)
-        original_record.run_time += run_timestamp - last_transition
-    else:
-        create_dt = make_aware(original_record.create_dt)
-        original_record.run_time += run_timestamp - create_dt
+    should_update_run_time = False
 
-    original_record.last_transition = run_timestamp
+    # Define transitions where run_time should be updated
+    transition_pairs = {
+        ("Running", "Paused"),
+        ("Running", "Completed"),
+        ("Running", "Canceled"),
+    }
+
+    if (original_record.status, update_record.status) in transition_pairs:
+        should_update_run_time = True
+
+    if should_update_run_time:
+        if original_record.last_transition:
+            last_transition = make_aware(original_record.last_transition)
+            original_record.run_time += run_timestamp - last_transition
+        elif not original_record.last_transition:
+            create_dt = make_aware(original_record.create_dt)
+            original_record.run_time += run_timestamp - create_dt
+
+        original_record.last_transition = run_timestamp
 
     return original_record
 
