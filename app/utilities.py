@@ -866,12 +866,13 @@ def _validate_item_status(item, index, errors, error_message):
         errors.append({"line": int(index), "error": error_message})
 
 
-def _validate_item_shelved(shelf_position, index, errors, error_message):
+def validate_item_not_shelved(shelf_position):
     if not shelf_position or not shelf_position.tray.scanned_for_shelving:
-        errors.append({"line": int(index), "error": error_message})
+        return True
+    return False
 
 
-def _validate_non_tray_item_shelved(item):
+def validate_non_tray_item_not_shelved(item):
     if not item or not item.shelf_position_id or not item.scanned_for_shelving:
         return True
     return False
@@ -886,7 +887,8 @@ def _validate_withdraw_item(session, item, withdraw_job_id, barcode, index, erro
     shelf_position = (
         session.query(ShelfPosition).join(Tray).filter(Tray.id == item.tray_id).first()
     )
-    _validate_item_shelved(shelf_position, index, item_errors, "Item is not shelved")
+    if validate_item_not_shelved(shelf_position):
+        errors.append({"line": int(index), "error": "Item is not shelved"})
     existing_withdrawals = (
         session.query(WithdrawJob)
         .join(ItemWithdrawal, WithdrawJob.id == ItemWithdrawal.withdraw_job_id)
@@ -980,7 +982,7 @@ def process_withdraw_job_data(
                         "error": "Non Tray Item is in existing withdrawals job",
                     }
                 )
-            elif _validate_non_tray_item_shelved(non_tray_item):
+            elif validate_non_tray_item_not_shelved(non_tray_item):
                 errors.append(
                     {"line": int(index) + 1, "error": "Non Tray Item is not shelved"}
                 )

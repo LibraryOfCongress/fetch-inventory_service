@@ -19,11 +19,13 @@ from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.request_types import RequestType
+from app.models.shelf_positions import ShelfPosition
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
 from app.models.withdraw_jobs import WithdrawJob
 from app.models.pick_lists import PickList
 from app.models.requests import Request
+from app.utilities import validate_item_not_shelved, validate_non_tray_item_not_shelved
 from starlette import status
 from app.routers.requests import create_request
 from app.schemas.withdraw_jobs import (
@@ -378,6 +380,9 @@ def add_items_to_withdraw_job(
         session.query(Barcode).filter(Barcode.value == lookup_barcode_value).first()
     )
 
+    if not barcode:
+        raise NotFound(detail=f"Barcode {lookup_barcode_value} not found")
+
     item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
     non_tray_item = (
         session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
@@ -385,7 +390,7 @@ def add_items_to_withdraw_job(
     tray = session.query(Tray).filter(Tray.barcode_id == barcode.id).first()
 
     if item:
-        if item.status == "Requested":
+        if item.status == "Requested" or item.status == "Withdrawn":
             raise ValidationException(
                 detail="Item must be have status if ['In', 'Out']"
             )
@@ -395,6 +400,16 @@ def add_items_to_withdraw_job(
             .filter(ItemWithdrawal.item_id == item.id)
             .all()
         )
+
+        shelf_position = (
+            session.query(ShelfPosition)
+            .join(Tray)
+            .filter(Tray.id == item.tray_id)
+            .first()
+        )
+
+        if validate_item_not_shelved(shelf_position):
+            raise ValidationException(detail="Item is not shelved")
 
         if validate_withdraw_item(
             existing_item_withdrawals, job_id, "Completed", session
@@ -407,9 +422,12 @@ def add_items_to_withdraw_job(
         session.add(item)
 
     elif non_tray_item:
-        if non_tray_item.status == "Requested":
+        if validate_non_tray_item_not_shelved(non_tray_item):
+            raise ValidationException(detail="None Tray Item is not shelved")
+
+        if non_tray_item.status == "Requested" or non_tray_item.status == "Withdrawn":
             raise ValidationException(
-                detail="Non Tray Item must be have status if ['In', 'Out']"
+                detail="Non Tray Item must have status of ['In', 'Out']"
             )
 
         existing_non_tray_item_withdrawals = (
@@ -422,7 +440,7 @@ def add_items_to_withdraw_job(
             existing_non_tray_item_withdrawals, job_id, "Completed", session
         ):
             raise ValidationException(
-                detail="Non Tray Item is in existing withdrawals job"
+                detail="Non Tray Item is in existing withdraw job"
             )
 
         session.add(
@@ -442,7 +460,24 @@ def add_items_to_withdraw_job(
 
         for item in tray.items:
             item_barcode = item.barcode
-            if item.status == "Requested":
+            if item.status == "Requested" or item.status == "Withdrawn":
+                errored_barcodes.append(
+                    {
+                        "barcode": item_barcode.value,
+                        "error": "Item must have status of ['In', 'Out']",
+                    }
+                )
+                continue
+
+            existing_withdrawals = (
+                session.query(ItemWithdrawal)
+                .filter(ItemWithdrawal.item_id == item.id)
+                .all()
+            )
+
+            if validate_withdraw_item(
+                existing_withdrawals, job_id, "Completed", session
+            ):
                 errored_barcodes.append(
                     {
                         "barcode": item_barcode.value,
@@ -463,7 +498,7 @@ def add_items_to_withdraw_job(
                 errored_barcodes.append(
                     {
                         "barcode": item_barcode.value,
-                        "error": "Item is in existing withdrawals job",
+                        "error": "Item is in existing withdraw job",
                     }
                 )
                 continue
