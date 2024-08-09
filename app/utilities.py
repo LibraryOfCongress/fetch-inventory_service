@@ -899,7 +899,7 @@ def _validate_withdraw_item(session, item, withdraw_job_id, barcode, index, erro
         existing_withdrawals, withdraw_job_id, "Completed"
     ):
         item_errors.append(
-            {"line": int(index), "error": "Item is in existing withdrawals job"}
+            {"line": int(index), "error": "Item is in existing withdraw job"}
         )
 
     if not item_errors:
@@ -979,7 +979,7 @@ def process_withdraw_job_data(
                 errors.append(
                     {
                         "line": int(index) + 1,
-                        "error": "Non Tray Item is in existing withdrawals job",
+                        "error": "Non Tray Item is in existing withdraw job",
                     }
                 )
             elif validate_non_tray_item_not_shelved(non_tray_item):

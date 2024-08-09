@@ -414,7 +414,7 @@ def add_items_to_withdraw_job(
         if validate_withdraw_item(
             existing_item_withdrawals, job_id, "Completed", session
         ):
-            raise ValidationException(detail="Item is in existing withdrawals job")
+            raise ValidationException(detail="Item is in existing withdraw job")
 
         session.add(ItemWithdrawal(item_id=item.id, withdraw_job_id=withdraw_job.id))
 
