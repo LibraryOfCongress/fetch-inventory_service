@@ -376,6 +376,7 @@ async def batch_upload_withdraw_job(
     )
     session.commit()
 
+    lookup_barcode_values = list(set(lookup_barcode_values))
     barcodes = (
         session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
     )
@@ -441,6 +442,7 @@ async def batch_upload_withdraw_job(
         {"status": "Completed", "update_dt": datetime.utcnow()},
         synchronize_session=False,
     )
+
     if withdraw_trays:
         session.bulk_save_objects(withdraw_trays)
     if withdraw_items:

@@ -973,41 +973,21 @@ def process_withdraw_job_data(
                 non_tray_item.update_dt = update_dt
                 session.add(non_tray_item)
         elif tray:
-            items_for_withdrawal = False
-
-            if tray.items:
-                for tray_item in tray.items:
-                    item_withdrawal, item_errors = _validate_withdraw_item(
-                        session, tray_item, withdraw_job_id, barcode, index + 1, errors
-                    )
-
-                    if item_withdrawal:
-                        items_for_withdrawal = True
-                        withdraw_items.append(item_withdrawal)
-                        tray_item.update_dt = update_dt
-                        session.add(tray_item)
-
-                existing_tray_withdrawal = (
-                    session.query(TrayWithdrawal)
-                    .filter(
-                        TrayWithdrawal.tray_id == tray.id,
-                        TrayWithdrawal.withdraw_job_id == withdraw_job_id,
-                    )
-                    .first()
+            existing_tray_withdrawal = (
+                session.query(TrayWithdrawal)
+                .filter(
+                    TrayWithdrawal.tray_id == tray.id,
+                    TrayWithdrawal.withdraw_job_id == withdraw_job_id,
                 )
+                .first()
+            )
 
-                if not existing_tray_withdrawal and items_for_withdrawal:
-                    withdraw_trays.append(
-                        TrayWithdrawal(tray_id=tray.id, withdraw_job_id=withdraw_job_id)
-                    )
-
-            else:
-                errors.append(
-                    {
-                        "line": int(index) + 1,
-                        "error": "Tray is empty",
-                    }
+            if not existing_tray_withdrawal:
+                withdraw_trays.append(
+                    TrayWithdrawal(tray_id=tray.id, withdraw_job_id=withdraw_job_id)
                 )
+        else:
+            errors.append({"line": int(index) + 1, "error": "Barcode not found"})
 
     return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
 
