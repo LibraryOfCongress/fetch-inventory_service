@@ -494,7 +494,7 @@ def _validate_field(
     if errored_values:
         indices = request_data[request_data[field_name].isin(errored_values)].index
         for index in indices:
-            errors.append({"line:": index + 1, "error": error_message})
+            errors.append({"line:": int(index) + 1, "error": error_message})
         return indices
 
     return set()
@@ -512,7 +512,7 @@ def _validate_items(session, items, request_data, errors):
                 request_data["Item Barcode"].astype(str) == barcode
             ].index[0]
             errors.append(
-                {"line": int(index + 1), "error": f"Barcode {barcode} not " f"found"}
+                {"line": int(index) + 1, "error": f"Barcode {barcode} not " f"found"}
             )
             errored_indices.add(index)
 
@@ -550,7 +550,7 @@ def _validate_items(session, items, request_data, errors):
         else:
             errors.append(
                 {
-                    "line": int(row_index + 1),
+                    "line": int(row_index) + 1,
                     "error": f"No items or non_trays found with barcode.",
                 }
             )
@@ -578,7 +578,7 @@ def _validate_item(
     if existing_request:
         errors.append(
             {
-                "line": int(row_index + 1),
+                "line": int(row_index) + 1,
                 "error": f"{item_type}" f" {barcode_value} is " f"already requested",
             }
         )
@@ -596,7 +596,7 @@ def _validate_item(
         ):
             errors.append(
                 {
-                    "line": int(row_index + 1),
+                    "line": int(row_index) + 1,
                     "error": f"{item_type}" f" {barcode_value} is not shelved",
                 }
             )
@@ -605,7 +605,7 @@ def _validate_item(
         if not item.scanned_for_shelving or not item.shelf_position_id:
             errors.append(
                 {
-                    "line": int(row_index + 1),
+                    "line": int(row_index) + 1,
                     "error": f"{item_type}" f" {barcode_value} is not shelved",
                 }
             )
@@ -639,7 +639,7 @@ def validate_request_data(session, request_data: pd.DataFrame):
         ].index
         for index in missing_indices:
             errors.append(
-                {"line": int(index + 1), "error": "External Request ID is required"}
+                {"line": int(index) + 1, "error": "External Request ID is required"}
             )
             barcodes_errored_indices.update(missing_indices)
             errored_indices.update(missing_indices)
@@ -959,7 +959,7 @@ def process_withdraw_job_data(
             ):
                 errors.append(
                     {
-                        "line": index + 1,
+                        "line": int(index) + 1,
                         "error": "Non Tray Item is in existing withdrawals job",
                     }
                 )
@@ -1004,7 +1004,7 @@ def process_withdraw_job_data(
             else:
                 errors.append(
                     {
-                        "line": index + 1,
+                        "line": int(index) + 1,
                         "error": "Tray is empty",
                     }
                 )
