@@ -672,7 +672,7 @@ def update_non_tray_item_in_refile_job(
     session: Session = Depends(get_session),
 ):
     """
-    Update a None Tray item in a refile job.
+    Update a Non Tray item in a refile job.
 
     **Args:**
     - job_id: The ID of the refile job to update the item in.

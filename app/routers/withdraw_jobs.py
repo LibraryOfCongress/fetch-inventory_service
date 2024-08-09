@@ -423,7 +423,7 @@ def add_items_to_withdraw_job(
 
     elif non_tray_item:
         if validate_non_tray_item_not_shelved(non_tray_item):
-            raise ValidationException(detail="None Tray Item is not shelved")
+            raise ValidationException(detail="Non Tray Item is not shelved")
 
         if non_tray_item.status == "Requested" or non_tray_item.status == "Withdrawn":
             raise ValidationException(
