@@ -99,25 +99,34 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
     """
     Create a new tray record
     """
-    try:
-        # Create a new tray
-        new_tray = Tray(**tray_input.model_dump())
-        # default to tray container_type
-        container_type = (
-            session.query(ContainerType).filter(ContainerType.type == "Tray").first()
+    # Check if a tray with the same barcode already exists
+    if tray_input.barcode_id:
+        existing_tray = (
+            session.query(Tray).filter(Tray.barcode_id == tray_input.barcode_id).first()
         )
-        # trays are created at accession, set accession date
-        if not new_tray.accession_dt:
-            new_tray.accession_dt = datetime.utcnow()
-        new_tray.container_type_id = container_type.id
-        session.add(new_tray)
-        session.commit()
-        session.refresh(new_tray)
 
-        return new_tray
+        if existing_tray:
+            barcode = existing_tray.barcode
+            raise ValidationException(
+                detail=f"Tray with barcode {barcode.value} " f"already exists"
+            )
 
-    except IntegrityError as e:
-        raise ValidationException(detail=f"{e}")
+    # Create a new tray
+    new_tray = Tray(**tray_input.model_dump())
+
+    # default to tray container_type
+    container_type = (
+        session.query(ContainerType).filter(ContainerType.type == "Tray").first()
+    )
+    # trays are created at accession, set accession date
+    if not new_tray.accession_dt:
+        new_tray.accession_dt = datetime.utcnow()
+    new_tray.container_type_id = container_type.id
+    session.add(new_tray)
+    session.commit()
+    session.refresh(new_tray)
+
+    return new_tray
 
 
 @router.patch("/{id}", response_model=TrayDetailWriteOutput)

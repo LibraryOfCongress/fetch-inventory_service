@@ -100,18 +100,14 @@ async def delete_batch_upload(id: int, session: Session = Depends(get_session)):
 
     if not batch_upload:
         raise NotFound(detail=f"Batch Upload ID {id} not found")
-    if batch_upload.withdraw_job_id:
-        session.query(WithdrawJob).filter(
-            WithdrawJob.id == batch_upload.withdraw_job_id
-        ).delete()
-    else:
-        session.query(Request).filter(Request.batch_upload_id == id).delete()
 
     session.delete(batch_upload)
     session.commit()
-    session.refresh(batch_upload)
 
-    return batch_upload
+    return JSONResponse(
+        status_code=status.HTTP_204_NO_CONTENT,
+        content=f"Batch " f"Upload ID {id} has been successfully deleted",
+    )
 
 
 @router.patch("/{id}", response_model=BatchUploadDetailOutput)
@@ -380,6 +376,7 @@ async def batch_upload_withdraw_job(
     )
     session.commit()
 
+    lookup_barcode_values = list(set(lookup_barcode_values))
     barcodes = (
         session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
     )
@@ -446,12 +443,12 @@ async def batch_upload_withdraw_job(
         synchronize_session=False,
     )
 
+    if withdraw_trays:
+        session.bulk_save_objects(withdraw_trays)
     if withdraw_items:
         session.bulk_save_objects(withdraw_items)
     if withdraw_non_tray_items:
         session.bulk_save_objects(withdraw_non_tray_items)
-    if withdraw_trays:
-        session.bulk_save_objects(withdraw_trays)
 
     session.commit()
     session.refresh(withdraw_job)

@@ -282,7 +282,7 @@ def update_pick_list(
                     NonTrayItem.id.in_(withdraw_non_tray_item_ids)
                 ).update({"status": "Out"}, synchronize_session=False)
 
-    if pick_list.run_timestamp:
+    if pick_list.status and pick_list.run_timestamp:
         existing_pick_list = manage_transition(existing_pick_list, pick_list)
 
     mutated_data = pick_list.model_dump(exclude_unset=True, exclude={"run_timestamp"})

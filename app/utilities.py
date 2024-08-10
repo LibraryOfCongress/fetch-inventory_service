@@ -305,14 +305,27 @@ def manage_transition(original_record, update_record):
     if original_record.run_time is None:
         original_record.run_time = timedelta(0)
 
-    if original_record.last_transition:
-        last_transition = make_aware(original_record.last_transition)
-        original_record.run_time += run_timestamp - last_transition
-    else:
-        create_dt = make_aware(original_record.create_dt)
-        original_record.run_time += run_timestamp - create_dt
+    should_update_run_time = False
 
-    original_record.last_transition = run_timestamp
+    # Define transitions where run_time should be updated
+    transition_pairs = {
+        ("Running", "Paused"),
+        ("Running", "Completed"),
+        ("Running", "Canceled"),
+    }
+
+    if (original_record.status, update_record.status) in transition_pairs:
+        should_update_run_time = True
+
+    if should_update_run_time:
+        if original_record.last_transition:
+            last_transition = make_aware(original_record.last_transition)
+            original_record.run_time += run_timestamp - last_transition
+        elif not original_record.last_transition:
+            create_dt = make_aware(original_record.create_dt)
+            original_record.run_time += run_timestamp - create_dt
+
+        original_record.last_transition = run_timestamp
 
     return original_record
 
@@ -494,7 +507,7 @@ def _validate_field(
     if errored_values:
         indices = request_data[request_data[field_name].isin(errored_values)].index
         for index in indices:
-            errors.append({"line:": index + 1, "error": error_message})
+            errors.append({"line:": int(index) + 1, "error": error_message})
         return indices
 
     return set()
@@ -512,7 +525,7 @@ def _validate_items(session, items, request_data, errors):
                 request_data["Item Barcode"].astype(str) == barcode
             ].index[0]
             errors.append(
-                {"line": int(index + 1), "error": f"Barcode {barcode} not " f"found"}
+                {"line": int(index) + 1, "error": f"Barcode {barcode} not " f"found"}
             )
             errored_indices.add(index)
 
@@ -550,7 +563,7 @@ def _validate_items(session, items, request_data, errors):
         else:
             errors.append(
                 {
-                    "line": int(row_index + 1),
+                    "line": int(row_index) + 1,
                     "error": f"No items or non_trays found with barcode.",
                 }
             )
@@ -578,7 +591,7 @@ def _validate_item(
     if existing_request:
         errors.append(
             {
-                "line": int(row_index + 1),
+                "line": int(row_index) + 1,
                 "error": f"{item_type}" f" {barcode_value} is " f"already requested",
             }
         )
@@ -596,7 +609,7 @@ def _validate_item(
         ):
             errors.append(
                 {
-                    "line": int(row_index + 1),
+                    "line": int(row_index) + 1,
                     "error": f"{item_type}" f" {barcode_value} is not shelved",
                 }
             )
@@ -605,7 +618,7 @@ def _validate_item(
         if not item.scanned_for_shelving or not item.shelf_position_id:
             errors.append(
                 {
-                    "line": int(row_index + 1),
+                    "line": int(row_index) + 1,
                     "error": f"{item_type}" f" {barcode_value} is not shelved",
                 }
             )
@@ -639,7 +652,7 @@ def validate_request_data(session, request_data: pd.DataFrame):
         ].index
         for index in missing_indices:
             errors.append(
-                {"line": int(index + 1), "error": "External Request ID is required"}
+                {"line": int(index) + 1, "error": "External Request ID is required"}
             )
             barcodes_errored_indices.update(missing_indices)
             errored_indices.update(missing_indices)
@@ -841,10 +854,10 @@ def _get_existing_withdrawals(session: Session, item_ids, item_type):
     )
 
 
-def _validate_withdraw_existing_item(existing_withdraws, job_id, status):
+def _validate_withdraw_job_existing_item(existing_withdraws, job_id, status):
+    inventory_logger.info(f"Existing Withdraws: {existing_withdraws}")
     return any(
-        item.withdraw_job_id == job_id or item.status != status
-        for item in existing_withdraws
+        item.id != job_id and item.status != status for item in existing_withdraws
     )
 
 
@@ -853,33 +866,40 @@ def _validate_item_status(item, index, errors, error_message):
         errors.append({"line": int(index), "error": error_message})
 
 
-def _validate_item_shelved(shelf_position, index, errors, error_message):
+def validate_item_not_shelved(shelf_position):
     if not shelf_position or not shelf_position.tray.scanned_for_shelving:
-        errors.append({"line": int(index), "error": error_message})
+        return True
+    return False
 
 
-def _validate_non_tray_item_shelved(item, index, errors, error_message):
+def validate_non_tray_item_not_shelved(item):
     if not item or not item.shelf_position_id or not item.scanned_for_shelving:
-        errors.append({"line": int(index), "error": error_message})
+        return True
+    return False
 
 
 def _validate_withdraw_item(session, item, withdraw_job_id, barcode, index, errors):
     item_errors = []
 
-    _validate_item_status(item, index, item_errors, "Item is invalid status")
+    _validate_item_status(
+        item, index, item_errors, "Item must have status of ['In', 'Out']"
+    )
     shelf_position = (
         session.query(ShelfPosition).join(Tray).filter(Tray.id == item.tray_id).first()
     )
-    _validate_item_shelved(shelf_position, index, item_errors, "Item is not shelved")
-
+    if validate_item_not_shelved(shelf_position):
+        errors.append({"line": int(index), "error": "Item is not shelved"})
     existing_withdrawals = (
-        session.query(ItemWithdrawal).filter(ItemWithdrawal.item_id == item.id).all()
+        session.query(WithdrawJob)
+        .join(ItemWithdrawal, WithdrawJob.id == ItemWithdrawal.withdraw_job_id)
+        .filter(ItemWithdrawal.item_id == item.id)
+        .all()
     )
-    if _validate_withdraw_existing_item(
+    if _validate_withdraw_job_existing_item(
         existing_withdrawals, withdraw_job_id, "Completed"
     ):
         item_errors.append(
-            {"line": int(index), "error": "Item is in existing withdrawals job"}
+            {"line": int(index), "error": "Item is in existing withdraw job"}
         )
 
     if not item_errors:
@@ -938,25 +958,33 @@ def process_withdraw_job_data(
                 session.add(item)
         elif non_tray_item:
             _validate_item_status(
-                non_tray_item, index + 1, errors, "Non Tray Item is invalid status"
-            )
-            _validate_non_tray_item_shelved(
-                non_tray_item, index + 1, errors, "Non Tray Item is not shelved"
+                non_tray_item,
+                index + 1,
+                errors,
+                "Non Tray Item must have status of ['In', 'Out']",
             )
 
             existing_withdrawals = (
-                session.query(NonTrayItemWithdrawal)
+                session.query(WithdrawJob)
+                .join(
+                    NonTrayItemWithdrawal,
+                    WithdrawJob.id == NonTrayItemWithdrawal.withdraw_job_id,
+                )
                 .filter(NonTrayItemWithdrawal.non_tray_item_id == non_tray_item.id)
                 .all()
             )
-            if _validate_withdraw_existing_item(
+            if _validate_withdraw_job_existing_item(
                 existing_withdrawals, withdraw_job_id, "Completed"
             ):
                 errors.append(
                     {
-                        "line": index + 1,
-                        "error": "Non Tray Item is in existing withdrawals job",
+                        "line": int(index) + 1,
+                        "error": "Non Tray Item is in existing withdraw job",
                     }
+                )
+            elif validate_non_tray_item_not_shelved(non_tray_item):
+                errors.append(
+                    {"line": int(index) + 1, "error": "Non Tray Item is not shelved"}
                 )
             else:
                 withdraw_non_tray_items.append(
@@ -968,37 +996,21 @@ def process_withdraw_job_data(
                 non_tray_item.update_dt = update_dt
                 session.add(non_tray_item)
         elif tray:
-            if tray.items:
-                existing_tray_withdrawal = (
-                    session.query(TrayWithdrawal)
-                    .filter(
-                        TrayWithdrawal.tray_id == tray.id,
-                        TrayWithdrawal.withdraw_job_id == withdraw_job_id,
-                    )
-                    .first()
+            existing_tray_withdrawal = (
+                session.query(TrayWithdrawal)
+                .filter(
+                    TrayWithdrawal.tray_id == tray.id,
+                    TrayWithdrawal.withdraw_job_id == withdraw_job_id,
                 )
+                .first()
+            )
 
-                if not existing_tray_withdrawal:
-                    withdraw_trays.append(
-                        TrayWithdrawal(tray_id=tray.id, withdraw_job_id=withdraw_job_id)
-                    )
-
-                for tray_item in tray.items:
-                    item_withdrawal, item_errors = _validate_withdraw_item(
-                        session, tray_item, withdraw_job_id, barcode, index + 1, errors
-                    )
-
-                    if item_withdrawal:
-                        withdraw_items.append(item_withdrawal)
-                        tray_item.update_dt = update_dt
-                        session.add(tray_item)
-            else:
-                errors.append(
-                    {
-                        "line": index + 1,
-                        "error": "Tray is empty",
-                    }
+            if not existing_tray_withdrawal:
+                withdraw_trays.append(
+                    TrayWithdrawal(tray_id=tray.id, withdraw_job_id=withdraw_job_id)
                 )
+        else:
+            errors.append({"line": int(index) + 1, "error": "Barcode not found"})
 
     return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
 
@@ -1007,9 +1019,7 @@ async def start_session_with_user_id(user_email: str, session):
     """
     This method is to add the user id for any database change.
     """
-    session.execute(
-        text(f"select set_config('audit.user_id', '{user_email}', true)")
-    )
+    session.execute(text(f"select set_config('audit.user_id', '{user_email}', true)"))
 
 
 async def set_session_to_request(
@@ -1017,12 +1027,9 @@ async def set_session_to_request(
     session: Session,
     user_email: str,
 ):
-
     if request.method != "GET":
         request.state.db_session = session
 
-        await start_session_with_user_id(
-            user_email, session=request.state.db_session
-        )
+        await start_session_with_user_id(user_email, session=request.state.db_session)
 
     return request

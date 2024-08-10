@@ -309,7 +309,7 @@ def update_refile_job(
     if not existing_refile_job:
         raise NotFound(detail=f"Refile Job ID {id} Not Found")
 
-    if refile_job.run_timestamp:
+    if refile_job.status and refile_job.run_timestamp:
         existing_refile_job = manage_transition(existing_refile_job, refile_job)
 
     mutated_data = refile_job.model_dump(exclude_unset=True, exclude={"run_timestamp"})
@@ -672,7 +672,7 @@ def update_non_tray_item_in_refile_job(
     session: Session = Depends(get_session),
 ):
     """
-    Update a None Tray item in a refile job.
+    Update a Non Tray item in a refile job.
 
     **Args:**
     - job_id: The ID of the refile job to update the item in.
