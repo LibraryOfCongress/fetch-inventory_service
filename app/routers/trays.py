@@ -110,6 +110,7 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
 
     # Create a new tray
     new_tray = Tray(**tray_input.model_dump())
+    new_tray.withdrawal_dt = None
 
     # default to tray container_type
     container_type = (

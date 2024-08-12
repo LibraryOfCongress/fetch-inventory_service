@@ -20,6 +20,7 @@ from app.config.exceptions import (
     NotFound,
     ValidationException,
     InternalServerError,
+    BadRequest,
 )
 
 
@@ -31,13 +32,13 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[NonTrayItemListOutput])
 def get_non_tray_item_list(
-        session: Session = Depends(get_session),
-        owner_id: int = Query(default=None),
-        size_class_id: int = Query(default=None),
-        media_type_id: int = Query(default=None),
-        from_dt: datetime = Query(default=None),
-        to_dt: datetime = Query(default=None)
-    ) -> list:
+    session: Session = Depends(get_session),
+    owner_id: int = Query(default=None),
+    size_class_id: int = Query(default=None),
+    media_type_id: int = Query(default=None),
+    from_dt: datetime = Query(default=None),
+    to_dt: datetime = Query(default=None),
+) -> list:
     """
     Get a paginated list of non tray items from the database
     """
@@ -79,10 +80,13 @@ def get_non_tray_by_barcode_value(value: str, session: Session = Depends(get_ses
     **Parameters:**
     - value (str): The value of the barcode to retrieve.
     """
+    if not value:
+        raise ValidationException(detail="Non Tray Item barcode value is required")
+
     statement = select(NonTrayItem).join(Barcode).where(Barcode.value == value)
     non_tray = session.exec(statement).first()
     if not non_tray:
-        raise NotFound()
+        raise NotFound(detail=f"Non Tray Item barcode value {value} Not Found")
     return non_tray
 
 
@@ -97,10 +101,13 @@ def create_non_tray_item(
     try:
         # Create a new non_tray_item
         new_non_tray_item = NonTrayItem(**item_input.model_dump())
+        new_non_tray_item.withdrawal_dt = None
         # default to non-tray container_type
-        container_type = session.query(ContainerType).filter(
-            ContainerType.type == 'Non-Tray'
-        ).first()
+        container_type = (
+            session.query(ContainerType)
+            .filter(ContainerType.type == "Non-Tray")
+            .first()
+        )
         new_non_tray_item.container_type_id = container_type.id
         # non-trays are created in accession, set accession date
         if not new_non_tray_item.accession_dt:
@@ -150,6 +157,7 @@ def update_non_tray_item(
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
+
 @router.delete("/{id}")
 def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
     """
@@ -162,9 +170,7 @@ def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Non Tray Item ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Non Tray Item ID {id} Deleted " f"Successfully"
         )
-
 
     raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
