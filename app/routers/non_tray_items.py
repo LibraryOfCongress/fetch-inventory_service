@@ -22,6 +22,7 @@ from app.config.exceptions import (
     NotFound,
     ValidationException,
     InternalServerError,
+    BadRequest,
 )
 from app.tasks import manage_shelf_available_space
 
@@ -81,10 +82,13 @@ def get_non_tray_by_barcode_value(value: str, session: Session = Depends(get_ses
     **Parameters:**
     - value (str): The value of the barcode to retrieve.
     """
+    if not value:
+        raise ValidationException(detail="Non Tray Item barcode value is required")
+
     statement = select(NonTrayItem).join(Barcode).where(Barcode.value == value)
     non_tray = session.exec(statement).first()
     if not non_tray:
-        raise NotFound()
+        raise NotFound(detail=f"Non Tray Item barcode value {value} Not Found")
     return non_tray
 
 
@@ -99,6 +103,7 @@ def create_non_tray_item(
     try:
         # Create a new non_tray_item
         new_non_tray_item = NonTrayItem(**item_input.model_dump())
+        new_non_tray_item.withdrawal_dt = None
         # default to non-tray container_type
         container_type = (
             session.query(ContainerType)
@@ -190,6 +195,7 @@ def update_non_tray_item(
     session.refresh(existing_non_tray_item)
 
     return existing_non_tray_item
+
 
 
 @router.delete("/{id}")

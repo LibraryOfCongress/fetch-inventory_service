@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.schemas.items import (
     ItemInput,
@@ -29,13 +30,13 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[ItemListOutput])
 def get_item_list(
-        session: Session = Depends(get_session),
-        owner_id: int = Query(default=None),
-        size_class_id: int = Query(default=None),
-        media_type_id: int = Query(default=None),
-        from_dt: datetime = Query(default=None),
-        to_dt: datetime = Query(default=None)
-    ) -> list:
+    session: Session = Depends(get_session),
+    owner_id: int = Query(default=None),
+    size_class_id: int = Query(default=None),
+    media_type_id: int = Query(default=None),
+    from_dt: datetime = Query(default=None),
+    to_dt: datetime = Query(default=None),
+) -> list:
     """
     Retrieve a paginated list of items from the database.
 
@@ -80,6 +81,24 @@ def get_item_detail(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Item ID {id} Not Found")
 
 
+@router.get("/barcode/{value}", response_model=ItemDetailReadOutput)
+def get_item_by_barcode_value(value: str, session: Session = Depends(get_session)):
+    """
+    Retrieve a item using a barcode value
+
+    **Parameters:**
+    - value (str): The value of the barcode to retrieve.
+    """
+    if not value:
+        raise ValidationException(detail="Item barcode value is required")
+
+    statement = select(Item).join(Barcode).where(Barcode.value == value)
+    item = session.exec(statement).first()
+    if not item:
+        raise NotFound(detail=f"Item with barcode value {value} not found")
+    return item
+
+
 @router.post("/", response_model=ItemDetailWriteOutput, status_code=201)
 def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
     """
@@ -94,6 +113,7 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
     try:
         # Create a new item
         new_item = Item(**item_input.model_dump())
+        new_item.withdrawal_dt = None
         # accession is how items are created. Set accession_dt
         if not new_item.accession_dt:
             new_item.accession_dt = datetime.utcnow()
@@ -166,8 +186,7 @@ def delete_item(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Item ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Item ID {id} Deleted " f"Successfully"
         )
 
     raise NotFound(detail=f"Item ID {id} Not Found")

@@ -87,10 +87,13 @@ def get_tray_by_barcode_value(value: str, session: Session = Depends(get_session
     **Parameters:**
     - value (str): The value of the barcode to retrieve.
     """
+    if not value:
+        raise ValidationException(detail="Tray barcode value is required")
+
     statement = select(Tray).join(Barcode).where(Barcode.value == value)
     tray = session.exec(statement).first()
     if not tray:
-        raise NotFound()
+        raise NotFound(detail=f"Tray barcode value {value} not found")
     return tray
 
 
@@ -113,6 +116,7 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
 
     # Create a new tray
     new_tray = Tray(**tray_input.model_dump())
+    new_tray.withdrawal_dt = None
 
     # default to tray container_type
     container_type = (
