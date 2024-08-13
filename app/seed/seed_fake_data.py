@@ -189,7 +189,11 @@ fake_data = [
     ('types', 'ladder_numbers.json'),
     ('types', 'shelf_position_numbers.json'),
     ('types', 'shelf_numbers.json'),
+    ('types', 'permissions.json'),
     ('entities', 'users.json'),
+    ('entities', 'groups.json'),
+    ('entities', 'group_permissions.json'),
+    ('entities', 'user_groups.json'),
     ('types', 'request_types.json'),
     ('types', 'priorities.json'),
     ('entities', 'delivery_locations.json')

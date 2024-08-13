@@ -2,8 +2,24 @@
   "model": "app.models.users.User",
   "data": [
     {
-      "first_name": "Frodo",
-      "last_name": "Baggins"
+      "first_name": "Gregory",
+      "last_name": "Wolfe",
+      "email": "gwolfe@loc.gov"
+    },
+    {
+      "first_name": "Matt",
+      "last_name": "Martin",
+      "email": "mamartin@loc.gov"
+    },
+    {
+      "first_name": "Cathy",
+      "last_name": "Martyniak",
+      "email": "cmartyniak@loc.gov"
+    },
+    {
+      "first_name": "Admin",
+      "last_name": "Istrator",
+      "email": "admin@loctest.gov"
     },
     {
       "first_name": "Tester",
@@ -14,10 +30,6 @@
       "first_name": "Tester",
       "last_name": "Two",
       "email": "tester2@loctest.gov"
-    },
-    {
-      "first_name": "Cat",
-      "last_name": "Mathy"
     }
   ]
 }

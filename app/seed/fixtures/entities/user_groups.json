@@ -1,0 +1,61 @@
+{
+  "model": "app.models.user_groups.UserGroup",
+  "data": [
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "gwolfe@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Administrator"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "admin@loctest.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Administrator"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "mamartin@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Administrator"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "cmartyniak@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Administrator"
+        }
+      }
+    }
+  ]
+}

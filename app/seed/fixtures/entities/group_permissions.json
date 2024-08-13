@@ -1,0 +1,33 @@
+{
+  "model": "app.models.group_permissions.GroupPermission",
+  "data": [
+    {
+      "!permission_id": {
+        "model": "app.models.permissions.Permission",
+        "filter": {
+          "name": "can_access_admin"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Administrator"
+        }
+      }
+    },
+    {
+      "!permission_id": {
+        "model": "app.models.permissions.Permission",
+        "filter": {
+          "name": "can_manage_groups_and_permissions"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Administrator"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "model": "app.models.permissions.Permission",
+  "data": [
+    {
+      "name": "can_access_admin",
+      "description": "Can view the admin dashboard."
+    },
+    {
+      "name": "can_manage_groups_and_permissions",
+      "description": "Can modify group permissions."
+    }
+  ]
+}
