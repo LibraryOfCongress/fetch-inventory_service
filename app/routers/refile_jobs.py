@@ -32,6 +32,73 @@ router = APIRouter(
 )
 
 
+def sort_order_priority(session, item_type, item):
+    if item_type == "item":
+        tray = session.get(Tray, item.tray_id)
+        location = get_location(session, tray.shelf_position)
+    else:
+        location = get_location(session, item.shelf_position)
+
+    aisle_priority = (
+        location["aisle"].sort_priority or location["aisle"].aisle_number_id
+    )
+
+    ladder_priority = (
+        location["ladder"].sort_priority or location["ladder"].ladder_number_id
+    )
+
+    shelf_priority = (
+        location["shelf"].sort_priority or location["shelf"].shelf_number_id
+    )
+
+    return {
+        item_type: item,
+        "aisle_priority": aisle_priority,
+        "ladder_priority": ladder_priority,
+        "shelf_priority": shelf_priority,
+    }
+
+
+def sorted_requests(session, refile_job):
+    request_data = []
+    items = refile_job.items
+    non_tray_items = refile_job.non_tray_items
+
+    if items:
+        for item in items:
+            request_data.append(sort_order_priority(session, "item", item))
+
+    if non_tray_items:
+        for non_tray_item in non_tray_items:
+            if not non_tray_item.shelf_position:
+                raise NotFound(detail=f"Shelf Position Not Found")
+            request_data.append(
+                sort_order_priority(session, "non_tray_item", non_tray_item)
+            )
+
+    sort_requests = sorted(
+        request_data,
+        key=lambda x: (
+            x["aisle_priority"],
+            x["ladder_priority"],
+            x["shelf_priority"],
+        ),
+    )
+
+    sorted_list = []
+    for item in sort_requests:
+        if item.get("item"):
+            sorted_list.append(item["item"])
+        elif item.get("non_tray_item"):
+            sorted_list.append(item["non_tray_item"])
+
+    refile_job = refile_job.model_dump()
+    refile_job["refile_job_items"] = sorted_list
+    refile_job["items"] = items
+    refile_job["non_tray_items"] = non_tray_items
+    return refile_job
+
+
 @router.get("/", response_model=Page[RefileJobListOutput])
 def get_refile_job_list(
     all: bool = Query(default=False), session: Session = Depends(get_session)
@@ -65,99 +132,12 @@ def get_refile_job_detail(id: int, session: Session = Depends(get_session)):
     - Not Found HTTPException: If the refile job is not found.
     """
     refile_job = session.get(RefileJob, id)
-    request_data = []
 
     if refile_job:
-        items = refile_job.items
-        non_tray_items = refile_job.non_tray_items
-
-        if items:
-            for item in items:
-                tray = session.get(Tray, item.tray_id)
-
-                location = get_location(session, tray.shelf_position)
-
-                aisle_priority = (
-                    location["aisle"].sort_priority or location["aisle"].aisle_number_id
-                )
-
-                ladder_priority = (
-                    location["ladder"].sort_priority
-                    or location["ladder"].ladder_number_id
-                )
-
-                shelf_priority = (
-                    location["shelf"].sort_priority or location["shelf"].shelf_number_id
-                )
-
-                request_data.append(
-                    {
-                        "item": item,
-                        "aisle_priority": aisle_priority,
-                        "ladder_priority": ladder_priority,
-                        "shelf_priority": shelf_priority,
-                    }
-                )
-
-            sorted_requests = sorted(
-                request_data,
-                key=lambda x: (
-                    x["aisle_priority"],
-                    x["ladder_priority"],
-                    x["shelf_priority"],
-                ),
-            )
-
-            # Extract the sorted request objects
-            refile_job.items = [
-                data["item"] for data in sorted_requests if data.get("item")
-            ]
-
-        if non_tray_items:
-            for non_tray_item in non_tray_items:
-                if not non_tray_item.shelf_position:
-                    raise NotFound(detail=f"Shelf Position Not Found")
-
-                location = get_location(session, non_tray_item.shelf_position)
-
-                aisle_priority = (
-                    location["aisle"].sort_priority or location["aisle"].aisle_number_id
-                )
-                ladder_priority = (
-                    location["ladder"].sort_priority
-                    or location["ladder"].ladder_number_id
-                )
-                shelf_priority = (
-                    location["shelf"].sort_priority or location["shelf"].shelf_number_id
-                )
-
-                request_data.append(
-                    {
-                        "non_tray_item": non_tray_item,
-                        "aisle_priority": aisle_priority,
-                        "ladder_priority": ladder_priority,
-                        "shelf_priority": shelf_priority,
-                    }
-                )
-
-            sorted_requests = sorted(
-                request_data,
-                key=lambda x: (
-                    x["aisle_priority"],
-                    x["ladder_priority"],
-                    x["shelf_priority"],
-                ),
-            )
-
-            # Extract the sorted request objects
-            refile_job.non_tray_items = [
-                data["non_tray_item"]
-                for data in sorted_requests
-                if data.get("non_tray_item")
-            ]
-
+        if not refile_job.items and not refile_job.non_tray_items:
+            raise refile_job
+        refile_job = sorted_requests(session, refile_job)
         return refile_job
-
     else:
         raise NotFound(detail=f"Refile Job ID {id} Not Found")
 
@@ -284,7 +264,9 @@ def create_refile_job(
     session.commit()
     session.refresh(new_refile_job)
 
-    return new_refile_job
+    if not new_refile_job.items and not new_refile_job.non_tray_items:
+        raise new_refile_job
+    return sorted_requests(session, new_refile_job)
 
 
 @router.patch("/{id}", response_model=RefileJobDetailOutput)
@@ -323,7 +305,9 @@ def update_refile_job(
     session.commit()
     session.refresh(existing_refile_job)
 
-    return existing_refile_job
+    if not existing_refile_job.items and not existing_refile_job.non_tray_items:
+        raise existing_refile_job
+    return sorted_requests(session, existing_refile_job)
 
 
 @router.delete("/{id}")
@@ -519,7 +503,9 @@ def add_items_to_refile_job(
     session.commit()
     session.refresh(refile_job)
 
-    return refile_job
+    if not refile_job.items and not refile_job.non_tray_items:
+        raise refile_job
+    return sorted_requests(session, refile_job)
 
 
 @router.delete("/{job_id}/remove_items", response_model=RefileJobDetailOutput)
@@ -609,7 +595,9 @@ def remove_item_from_refile_job(
     session.commit()
     session.refresh(refile_job)
 
-    return refile_job
+    if not refile_job.items and not refile_job.non_tray_items:
+        raise refile_job
+    return sorted_requests(session, refile_job)
 
 
 @router.patch("/{job_id}/update_item/{item_id}", response_model=RefileJobDetailOutput)
@@ -658,7 +646,9 @@ def update_item_in_refile_job(
 
     session.refresh(refile_job)
 
-    return refile_job
+    if not refile_job.items and not refile_job.non_tray_items:
+        raise refile_job
+    return sorted_requests(session, refile_job)
 
 
 @router.patch(
@@ -712,4 +702,6 @@ def update_non_tray_item_in_refile_job(
 
     session.refresh(refile_job)
 
-    return refile_job
+    if not refile_job.items and not refile_job.non_tray_items:
+        raise refile_job
+    return sorted_requests(session, refile_job)
