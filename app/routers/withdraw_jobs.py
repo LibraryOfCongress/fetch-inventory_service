@@ -151,6 +151,7 @@ def update_withdraw_job(
             session.refresh(pick_list)
         elif withdraw_job_input.add_to_picklist:
             pick_list = session.get(PickList, existing_withdraw_job.pick_list_id)
+            inventory_logger.info(f"Pick List: {pick_list}")
             if not pick_list:
                 raise NotFound(
                     detail=f"Pick list id {withdraw_job_input.pick_list_id} not found"
@@ -171,26 +172,15 @@ def update_withdraw_job(
                 session.commit()
                 session.refresh(pick_list)
 
-            if item.status in ["Requested", "In"]:
-                existing_request = (
-                    session.query(Request).filter(Request.item_id == item.id).first()
+            if item.status == "In":
+                new_request.append(
+                    Request(
+                        building_id=building_id,
+                        item_id=item.id,
+                        pick_list_id=pick_list.id,
+                    )
                 )
-                if existing_request and not existing_request.pick_list_id:
-                    session.query(Request).filter(
-                        Request.id == existing_request.id
-                    ).update(
-                        {"pick_list_id": pick_list.id, "update_dt": datetime.utcnow()}
-                    )
-                elif not existing_request:
-                    new_request.append(
-                        Request(
-                            building_id=building_id,
-                            item_id=item.id,
-                            pick_list_id=pick_list.id,
-                        )
-                    )
-                if item.status == "In":
-                    item_ids.append(item.id)
+                item_ids.append(item.id)
 
         for non_tray_item in existing_withdraw_job.non_tray_items:
             if not building_id:
@@ -203,28 +193,15 @@ def update_withdraw_job(
                 session.commit()
                 session.refresh(pick_list)
 
-            if non_tray_item.status in ["Requested", "In"]:
-                existing_request = (
-                    session.query(Request)
-                    .filter(Request.non_tray_item_id == non_tray_item.id)
-                    .first()
+            if non_tray_item.status == "In":
+                new_request.append(
+                    Request(
+                        building_id=building_id,
+                        non_tray_item_id=non_tray_item.id,
+                        pick_list_id=pick_list.id,
+                    )
                 )
-                if existing_request and not existing_request.pick_list_id:
-                    session.query(Request).filter(
-                        Request.id == existing_request.id
-                    ).update(
-                        {"pick_list_id": pick_list.id, "update_dt": datetime.utcnow()}
-                    )
-                elif not existing_request:
-                    new_request.append(
-                        Request(
-                            building_id=building_id,
-                            non_tray_item_id=non_tray_item.id,
-                            pick_list_id=pick_list.id,
-                        )
-                    )
-                if non_tray_item.status == "In":
-                    non_tray_item_ids.append(non_tray_item.id)
+                non_tray_item_ids.append(non_tray_item.id)
 
         if new_request:
             session.bulk_save_objects(new_request)
