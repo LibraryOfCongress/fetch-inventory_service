@@ -1,12 +1,10 @@
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel, field_validator, computed_field
 from datetime import timedelta, datetime
 
 from app.models.refile_jobs import RefileJobStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
-from app.schemas.items import ItemDetailReadOutput
-from app.schemas.non_tray_items import NonTrayItemDetailReadOutput
 from app.schemas.users import UserDetailReadOutput
 
 
@@ -492,7 +490,7 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 }],
-                "refile_job_items": [{"...."}],
+                "refile_job_items": [{"....": "...."}],
                 "item_count": 1,
                 "item_shelved_refiled_count": 1,
                 "non_tray_item_count": 1,

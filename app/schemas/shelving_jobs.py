@@ -154,7 +154,7 @@ class NestedModuleForShelvingJob(BaseModel):
 
 class NestedBuildingForShelvingJob(BaseModel):
     id: int
-    name: str
+    name: Optional[str] = None
 
 
 class NestedAisleForShelvingJob(BaseModel):
@@ -226,11 +226,6 @@ class NonTrayNestedForShelvingJob(BaseModel):
     barcode: BarcodeDetailReadOutput
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
-
-
-class NestedBuildingForShelvingJob(BaseModel):
-    id: int
-    name: Optional[str] = None
 
 
 class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
