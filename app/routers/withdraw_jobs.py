@@ -285,18 +285,19 @@ def update_withdraw_job(
                 synchronize_session=False,
             )
 
-    mutated_data = withdraw_job_input.model_dump(
-        exclude_unset=True,
-        exclude={"run_timestamp", "create_pick_list", "add_to_picklist"},
-    )
-    for key, value in mutated_data.items():
-        setattr(existing_withdraw_job, key, value)
-
     # Manage transitions and calculate run time if needed
     if withdraw_job_input.status and withdraw_job_input.run_timestamp:
         existing_withdraw_job = manage_transition(
             existing_withdraw_job, withdraw_job_input
         )
+
+    mutated_data = withdraw_job_input.model_dump(
+        exclude_unset=True,
+        exclude={"run_timestamp", "create_pick_list", "add_to_picklist"},
+    )
+
+    for key, value in mutated_data.items():
+        setattr(existing_withdraw_job, key, value)
 
     setattr(existing_withdraw_job, "update_dt", datetime.utcnow())
 
