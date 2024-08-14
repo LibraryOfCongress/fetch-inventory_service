@@ -134,8 +134,10 @@ def get_refile_job_detail(id: int, session: Session = Depends(get_session)):
     refile_job = session.get(RefileJob, id)
 
     if refile_job:
+        inventory_logger.info(f"Refile items: {refile_job.items }")
+        inventory_logger.info(f"Refile non_tray_items: {refile_job.non_tray_items}")
         if not refile_job.items and not refile_job.non_tray_items:
-            raise refile_job
+            return refile_job
         refile_job = sorted_requests(session, refile_job)
         return refile_job
     else:
@@ -265,7 +267,7 @@ def create_refile_job(
     session.refresh(new_refile_job)
 
     if not new_refile_job.items and not new_refile_job.non_tray_items:
-        raise new_refile_job
+        return new_refile_job
     return sorted_requests(session, new_refile_job)
 
 
@@ -306,7 +308,7 @@ def update_refile_job(
     session.refresh(existing_refile_job)
 
     if not existing_refile_job.items and not existing_refile_job.non_tray_items:
-        raise existing_refile_job
+        return existing_refile_job
     return sorted_requests(session, existing_refile_job)
 
 
@@ -504,7 +506,7 @@ def add_items_to_refile_job(
     session.refresh(refile_job)
 
     if not refile_job.items and not refile_job.non_tray_items:
-        raise refile_job
+        return refile_job
     return sorted_requests(session, refile_job)
 
 
@@ -596,7 +598,7 @@ def remove_item_from_refile_job(
     session.refresh(refile_job)
 
     if not refile_job.items and not refile_job.non_tray_items:
-        raise refile_job
+        return refile_job
     return sorted_requests(session, refile_job)
 
 
@@ -647,7 +649,7 @@ def update_item_in_refile_job(
     session.refresh(refile_job)
 
     if not refile_job.items and not refile_job.non_tray_items:
-        raise refile_job
+        return refile_job
     return sorted_requests(session, refile_job)
 
 
@@ -703,5 +705,5 @@ def update_non_tray_item_in_refile_job(
     session.refresh(refile_job)
 
     if not refile_job.items and not refile_job.non_tray_items:
-        raise refile_job
+        return refile_job
     return sorted_requests(session, refile_job)

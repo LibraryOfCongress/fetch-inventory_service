@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.logger import inventory_logger
 from app.utilities import process_containers_for_shelving, manage_transition
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
@@ -175,7 +176,6 @@ def create_shelving_job(
             session.commit()
 
         # else, shelving_job.origin == "Direct", return shelving_job
-
         session.refresh(new_shelving_job)
 
         return new_shelving_job
@@ -217,6 +217,11 @@ def update_shelving_job(
         if not existing_shelving_job:
             raise NotFound(detail=f"Shelving Job ID {id} Not Found")
 
+        if shelving_job.status and shelving_job.run_timestamp:
+            existing_shelving_job = manage_transition(
+                existing_shelving_job, shelving_job
+            )
+
         mutated_data = shelving_job.model_dump(
             exclude_unset=True, exclude={"run_timestamp"}
         )
@@ -225,11 +230,6 @@ def update_shelving_job(
             setattr(existing_shelving_job, key, value)
 
         setattr(existing_shelving_job, "update_dt", datetime.utcnow())
-
-        if shelving_job.status and shelving_job.run_timestamp:
-            existing_shelving_job = manage_transition(
-                existing_shelving_job, shelving_job
-            )
 
         session.add(existing_shelving_job)
         session.commit()
