@@ -128,7 +128,6 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
                 setattr(previous_item, field, value)
             new_item = previous_item
             new_item.scanned_for_verification = False
-            new_item.scanned_for_shelving = False
             new_item.scanned_for_refile_queue = False
         session.add(new_item)
         session.commit()
