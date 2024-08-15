@@ -114,6 +114,24 @@ def create_non_tray_item(
         # non-trays are created in accession, set accession date
         if not new_non_tray_item.accession_dt:
             new_non_tray_item.accession_dt = datetime.utcnow()
+        # check if existing withdrawn non-tray with this barcode
+        previous_non_tray_item = session.exec(select(NonTrayItem).where(
+            NonTrayItem.barcode_id == new_non_tray_item.barcode_id
+        )).first()
+        if previous_non_tray_item:
+            # use existing, and patch values
+            for field, value in new_non_tray_item.dict(exclude={'id'}).items():
+                setattr(previous_non_tray_item, field, value)
+            new_non_tray_item = previous_non_tray_item
+            new_non_tray_item.scanned_for_verification = False
+            new_non_tray_item.scanned_for_shelving = False
+            new_non_tray_item.scanned_for_refile_queue = False
+            barcode = select(Barcode).where(
+                Barcode.id == new_non_tray_item.barcode_id
+            )
+            barcode.withdrawn = False
+            session.add(barcode)
+
         session.add(new_non_tray_item)
         session.commit()
         session.refresh(new_non_tray_item)

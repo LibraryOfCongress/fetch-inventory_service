@@ -117,6 +117,23 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
         # accession is how items are created. Set accession_dt
         if not new_item.accession_dt:
             new_item.accession_dt = datetime.utcnow()
+
+        # check if existing withdrawn item with this barcode
+        previous_item = session.exec(select(Item).where(
+            Item.barcode_id == new_item.barcode_id
+        )).first()
+        if previous_item:
+            # use existing, and patch values
+            for field, value in new_item.dict(exclude={'id'}).items():
+                setattr(previous_item, field, value)
+            new_item = previous_item
+            new_item.scanned_for_verification = False
+            new_item.scanned_for_refile_queue = False
+            barcode = select(Barcode).where(
+                Barcode.id == new_item.barcode_id
+            )
+            barcode.withdrawn = False
+            session.add(barcode)
         session.add(new_item)
         session.commit()
         session.refresh(new_item)
