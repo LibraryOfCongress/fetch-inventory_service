@@ -42,6 +42,8 @@ build_image:
     - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
     - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
     - echo $DEVELOP_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
     - /kaniko/executor
       --context $CI_PROJECT_DIR
@@ -72,6 +74,8 @@ build_mr:
     - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
     - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
     - echo $DEVELOP_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
     - /kaniko/executor
       --context $CI_PROJECT_DIR
@@ -100,6 +104,8 @@ build_image_test:
     - echo $TEST_ENABLE_ORM_SQL_LOGGING >> .env
     - echo $TEST_ALLOWED_ORIGINS_REGEX >> .env
     - echo $TEST_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
     - /kaniko/executor
       --context $CI_PROJECT_DIR
@@ -130,6 +136,8 @@ build_image_staging:
     - echo $STAGING_ENABLE_ORM_SQL_LOGGING >> .env
     - echo $STAGING_ALLOWED_ORIGINS_REGEX >> .env
     - echo $STAGING_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
     - docker build -t $IMAGE_FULL_TAG .
     - docker push $IMAGE_FULL_TAG
