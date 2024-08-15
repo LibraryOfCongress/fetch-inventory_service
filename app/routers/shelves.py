@@ -160,9 +160,8 @@ def update_shelf(
 
     if existing_shelf is None:
         raise NotFound(detail=f"Shelf ID {id} Not Found")
-    inventory_logger.info(f"shelf: {shelf}")
     # Check shelf capacity
-    if shelf.capacity:
+    if shelf.capacity is not None:
         if shelf.capacity < 1:
             raise ValidationException(detail="Shelf capacity may not be less than one.")
         if shelf.capacity < existing_shelf.capacity:
