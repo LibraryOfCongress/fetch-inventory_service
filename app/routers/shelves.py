@@ -164,7 +164,10 @@ def update_shelf(
     if shelf.capacity is not None:
         if shelf.capacity < 1:
             raise ValidationException(detail="Shelf capacity may not be less than one.")
-        if shelf.capacity < existing_shelf.capacity:
+        if (
+            len(existing_shelf.shelf_positions) > 0
+            and shelf.capacity < existing_shelf.capacity
+        ):
             if (
                 existing_shelf.capacity - shelf.capacity
             ) > existing_shelf.available_space:
