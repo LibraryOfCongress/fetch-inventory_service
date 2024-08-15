@@ -189,6 +189,8 @@ def delete_shelf_position(id: int, session: Session = Depends(get_session)):
     - None
     """
     shelf_position = session.get(ShelfPosition, id)
+    if not shelf_position:
+        raise NotFound(detail=f"Shelf Position ID {id} Not Found")
 
     if shelf_position:
         if shelf_position.tray or shelf_position.non_tray_item:
@@ -196,33 +198,16 @@ def delete_shelf_position(id: int, session: Session = Depends(get_session)):
                 detail="Can not delete shelf position associated tray and non-tray items"
             )
 
-    if shelf_position:
-        shelf = session.query(Shelf).get(shelf_position.shelf_id)
-        shelf_position_number = session.query(ShelfPositionNumber).get(
-            shelf_position.shelf_position_number_id
-        )
-        if not shelf:
-            raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
+    shelf = session.query(Shelf).get(shelf_position.shelf_id)
 
-        if not shelf_position_number:
-            raise NotFound(
-                detail=f"Shelf Position Number ID {shelf_position.shelf_position_number_id} Not Found"
-            )
-
-        shelf_position = shelf_position_number.number
-
-        if shelf_position <= shelf.capacity:
-            raise ValidationException(
-                detail=f"Shelf Position Number {shelf_position} can not subceed shelf capacity {shelf.capacity}"
-            )
-        else:
-            shelf.available_space -= 1
-
-        session.delete(shelf_position)
-        session.commit()
-
-        return HTTPException(
-            status_code=204, detail=f"Shelf Position ID {id} Deleted " f"Successfully"
+    if shelf:
+        session.query(Shelf).filter(Shelf.id == shelf.id).update(
+            {"available_space": shelf.available_space - 1}
         )
 
-    raise NotFound(detail=f"Shelf Position ID {id} Not Found")
+    session.delete(shelf_position)
+    session.commit()
+
+    return HTTPException(
+        status_code=204, detail=f"Shelf Position ID {id} Deleted Successfully"
+    )
