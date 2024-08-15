@@ -129,6 +129,11 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
             new_item = previous_item
             new_item.scanned_for_verification = False
             new_item.scanned_for_refile_queue = False
+            barcode = select(Barcode).where(
+                Barcode.id == new_item.barcode_id
+            )
+            barcode.withdrawn = False
+            session.add(barcode)
         session.add(new_item)
         session.commit()
         session.refresh(new_item)

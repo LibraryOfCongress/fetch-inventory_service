@@ -126,6 +126,11 @@ def create_non_tray_item(
             new_non_tray_item.scanned_for_verification = False
             new_non_tray_item.scanned_for_shelving = False
             new_non_tray_item.scanned_for_refile_queue = False
+            barcode = select(Barcode).where(
+                Barcode.id == new_non_tray_item.barcode_id
+            )
+            barcode.withdrawn = False
+            session.add(barcode)
 
         session.add(new_non_tray_item)
         session.commit()
