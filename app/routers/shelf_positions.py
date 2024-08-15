@@ -114,9 +114,11 @@ def create_shelf_position(
 
     shelf_position = shelf_position_number.number
 
-    if shelf_position >= shelf.capacity:
+    if len(shelf.shelf_positions) >= shelf.capacity:
         raise ValidationException(
-            detail=f"Shelf Position Number {shelf_position} can not exceed shelf capacity {shelf.capacity}"
+            detail=f"Shelf Position {shelf_position} for Shelf ID"
+            f" {shelf.id} exceeds "
+            f"capacity of {shelf.capacity}"
         )
     else:
         shelf.available_space += 1

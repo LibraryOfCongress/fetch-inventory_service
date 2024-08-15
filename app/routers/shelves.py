@@ -8,6 +8,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
+from app.logger import inventory_logger
 from app.models.shelves import Shelf
 from app.models.barcodes import Barcode
 from app.models.shelf_numbers import ShelfNumber
@@ -159,19 +160,18 @@ def update_shelf(
 
     if existing_shelf is None:
         raise NotFound(detail=f"Shelf ID {id} Not Found")
-
     # Check shelf capacity
-    if shelf.capacity < 1:
-        raise ValidationException(detail="Shelf capacity may not be less than one.")
-
-    if shelf.capacity < existing_shelf.capacity:
-        if (
-            existing_shelf.available_space - shelf.capacity
-        ) > existing_shelf.available_space:
-            raise ValidationException(
-                detail="Capacity cannot be reduced below "
-                "currently shelved containers."
-            )
+    if shelf.capacity is not None:
+        if shelf.capacity < 1:
+            raise ValidationException(detail="Shelf capacity may not be less than one.")
+        if shelf.capacity < existing_shelf.capacity:
+            if (
+                existing_shelf.capacity - shelf.capacity
+            ) > existing_shelf.available_space:
+                raise ValidationException(
+                    detail="Capacity cannot be reduced below "
+                    "currently shelved containers."
+                )
 
     mutated_data = shelf.model_dump(exclude_unset=True)
 
