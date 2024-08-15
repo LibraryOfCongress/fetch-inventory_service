@@ -200,17 +200,18 @@ def manage_verification_job_transition(
     commit_record(session, verification_job)
 
 
-def manage_shelf_available_space(session, shelf: Shelf, item):
+def manage_shelf_available_space(session, existing_shelf_position, new_shelf_position):
     """
     Task manages transition logic for an item's shelf position.
         - updates available_space
     """
 
-    if item.shelf_position_id is None:
-        shelf.available_space -= 1
-    else:
-        shelf.available_space += 1
+    if existing_shelf_position.shelf_id != new_shelf_position.shelf_id:
+        session.query(Shelf).filter(
+            Shelf.id == existing_shelf_position.shelf_id
+        ).update({"available_space": existing_shelf_position.shelf.available_space + 1})
+        session.query(Shelf).filter(Shelf.id == new_shelf_position.shelf_id).update(
+            {"available_space": new_shelf_position.shelf.available_space - 1}
+        )
 
-    session.add(shelf)
     session.commit()
-    session.refresh(shelf)

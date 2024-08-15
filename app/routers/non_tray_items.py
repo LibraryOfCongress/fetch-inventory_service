@@ -141,16 +141,65 @@ def update_non_tray_item(
     if not existing_non_tray_item:
         raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
 
+    if non_tray_item.shelf_position_id is not None:
+        new_shelf_position = (
+            session.query(ShelfPosition)
+            .filter(ShelfPosition.id == non_tray_item.shelf_position_id)
+            .first()
+        )
+
+        if not new_shelf_position:
+            raise NotFound(
+                detail=f"Shelf Position ID {non_tray_item.shelf_position_id} Not Found"
+            )
+
+        shelf = (
+            session.query(Shelf).filter(Shelf.id == new_shelf_position.shelf_id).first()
+        )
+
+        if not shelf:
+            raise NotFound(detail=f"Shelf ID {new_shelf_position.shelf_id} Not Found")
+
+        if shelf.available_space == 0:
+            raise ValidationException(
+                detail=f"Shelf id {shelf.id} has no available space"
+            )
+
+        if existing_non_tray_item.shelf_position_id is None:
+            session.query(Shelf).filter(Shelf.id == shelf.id).update(
+                {"available_space": shelf.available_space - 1}
+            )
+
+        if (
+            existing_non_tray_item.shelf_position_id
+            and non_tray_item.shelf_position_id
+            != existing_non_tray_item.shelf_position_id
+        ):
+            existing_shelf_position = (
+                session.query(ShelfPosition)
+                .filter(ShelfPosition.id == existing_non_tray_item.shelf_position_id)
+                .first()
+            )
+
+            if not existing_shelf_position:
+                raise NotFound(
+                    detail=f"Shelf Position ID {existing_non_tray_item.shelf_position_id} Not Found"
+                )
+
+            background_tasks.add_task(
+                manage_shelf_available_space,
+                session,
+                existing_shelf_position,
+                new_shelf_position,
+            )
+
     if (
         non_tray_item.shelf_position_id
-        and non_tray_item.shelf_position_id
-        != existing_non_tray_item.shelf_position_id
+        and non_tray_item.shelf_position_id != existing_non_tray_item.shelf_position_id
     ):
         existing_non_tray_item_shelf_position = (
             session.query(NonTrayItem)
-            .filter(
-                NonTrayItem.shelf_position_id == non_tray_item.shelf_position_id
-            )
+            .filter(NonTrayItem.shelf_position_id == non_tray_item.shelf_position_id)
             .first()
         )
 
@@ -171,15 +220,16 @@ def update_non_tray_item(
                 detail=f"Shelf Position ID {non_tray_item.shelf_position_id} Not Found"
             )
 
-        shelf = session.query(Shelf).filter(
-            Shelf.id == shelf_position.shelf_id
-        ).first()
+        shelf = session.query(Shelf).filter(Shelf.id == shelf_position.shelf_id).first()
 
         if not shelf:
             raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
 
         background_tasks.add_task(
-            manage_shelf_available_space, session, shelf, existing_non_tray_item_shelf_position
+            manage_shelf_available_space,
+            session,
+            shelf,
+            existing_non_tray_item_shelf_position,
         )
 
     # Update the non_tray_item record with the mutated data
@@ -195,7 +245,6 @@ def update_non_tray_item(
     session.refresh(existing_non_tray_item)
 
     return existing_non_tray_item
-
 
 
 @router.delete("/{id}")

@@ -150,39 +150,68 @@ def update_tray(
     if not existing_tray:
         raise NotFound(detail=f"Tray ID {id} Not Found")
 
-    if tray.shelf_position_id != existing_tray.shelf_position_id:
-        existing_tray_shelf_position = (
-            session.query(Tray)
-            .filter(Tray.shelf_position_id == tray.shelf_position_id)
-            .first()
-        )
-
-        if existing_tray_shelf_position:
-            raise ValidationException(
-                detail=f"Tray already exists at shelf position {tray.shelf_position_id}"
-            )
-
-        shelf_position = (
+    if tray.shelf_position_id is not None:
+        new_shelf_position = (
             session.query(ShelfPosition)
             .filter(ShelfPosition.id == tray.shelf_position_id)
             .first()
         )
 
-        if not shelf_position:
+        if not new_shelf_position:
             raise NotFound(
                 detail=f"Shelf Position ID {tray.shelf_position_id} Not Found"
-                )
+            )
 
-        shelf = session.query(Shelf).filter(
-            Shelf.id == shelf_position.shelf_id
-            ).first()
+        shelf = (
+            session.query(Shelf).filter(Shelf.id == new_shelf_position.shelf_id).first()
+        )
 
         if not shelf:
-            raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
+            raise NotFound(detail=f"Shelf ID {new_shelf_position.shelf_id} Not Found")
 
-        background_tasks.add_task(
-            manage_shelf_available_space, session, shelf, existing_tray
-        )
+        if shelf.available_space == 0:
+            raise ValidationException(
+                detail=f"Shelf id {shelf.id} has no available space"
+            )
+
+        if existing_tray.shelf_position_id is None:
+            session.query(Shelf).filter(Shelf.id == shelf.id).update(
+                {"available_space": shelf.available_space - 1}
+            )
+
+        if (
+            existing_tray.shelf_position_id
+            and tray.shelf_position_id != existing_tray.shelf_position_id
+        ):
+            # Check if a tray already exists at the new shelf position
+            existing_tray_shelf_position = (
+                session.query(Tray)
+                .filter(Tray.shelf_position_id == tray.shelf_position_id)
+                .first()
+            )
+
+            if existing_tray_shelf_position:
+                raise ValidationException(
+                    detail=f"Tray already exists at shelf position {tray.shelf_position_id}"
+                )
+
+            existing_shelf_position = (
+                session.query(ShelfPosition)
+                .filter(ShelfPosition.id == existing_tray.shelf_position_id)
+                .first()
+            )
+
+            if not existing_shelf_position:
+                raise NotFound(
+                    detail=f"Shelf Position ID {existing_tray.shelf_position_id} Not Found"
+                )
+
+            background_tasks.add_task(
+                manage_shelf_available_space,
+                session,
+                existing_shelf_position,
+                new_shelf_position,
+            )
 
     # Update the tray record with the mutated data
     mutated_data = tray.model_dump(exclude_unset=True)
