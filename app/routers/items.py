@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database.session import get_session
 from app.models.barcodes import Barcode
 from app.models.items import Item
+from app.models.non_tray_items import NonTrayItem
 from app.schemas.items import (
     ItemInput,
     ItemUpdateInput,
@@ -110,38 +111,48 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
     **Returns:**
     - Item Detail Write Output: Newly created item details.
     """
-    try:
-        # Create a new item
-        new_item = Item(**item_input.model_dump())
-        new_item.withdrawal_dt = None
-        # accession is how items are created. Set accession_dt
-        if not new_item.accession_dt:
-            new_item.accession_dt = datetime.utcnow()
+    # check if barcode is already in use
+    # check if non tray item already exists with barcode
+    non_tray_item = (
+        session.query(NonTrayItem)
+        .filter(NonTrayItem.barcode_id == item_input.barcode_id)
+        .first()
+    )
+    item = session.query(Item).filter(Item.barcode_id == item_input.barcode_id).first()
+    if non_tray_item or item:
+        barcode = (
+            session.query(Barcode).where(Barcode.id == item_input.barcode_id).first()
+        )
+        raise ValidationException(
+            detail=f"Item " f"with barcode value" f" {barcode.value} already exists"
+        )
 
-        # check if existing withdrawn item with this barcode
-        previous_item = session.exec(select(Item).where(
-            Item.barcode_id == new_item.barcode_id
-        )).first()
-        if previous_item:
-            # use existing, and patch values
-            for field, value in new_item.dict(exclude={'id'}).items():
-                setattr(previous_item, field, value)
-            new_item = previous_item
-            new_item.scanned_for_verification = False
-            new_item.scanned_for_refile_queue = False
-            barcode = select(Barcode).where(
-                Barcode.id == new_item.barcode_id
-            )
-            barcode.withdrawn = False
-            session.add(barcode)
-        session.add(new_item)
-        session.commit()
-        session.refresh(new_item)
+    # Create a new item
+    new_item = Item(**item_input.model_dump())
+    new_item.withdrawal_dt = None
+    # accession is how items are created. Set accession_dt
+    if not new_item.accession_dt:
+        new_item.accession_dt = datetime.utcnow()
 
-        return new_item
+    # check if existing withdrawn item with this barcode
+    previous_item = session.exec(
+        select(Item).where(Item.barcode_id == new_item.barcode_id)
+    ).first()
+    if previous_item:
+        # use existing, and patch values
+        for field, value in new_item.dict(exclude={"id"}).items():
+            setattr(previous_item, field, value)
+        new_item = previous_item
+        new_item.scanned_for_verification = False
+        new_item.scanned_for_refile_queue = False
+        barcode = select(Barcode).where(Barcode.id == new_item.barcode_id)
+        barcode.withdrawn = False
+        session.add(barcode)
+    session.add(new_item)
+    session.commit()
+    session.refresh(new_item)
 
-    except IntegrityError as e:
-        raise ValidationException(detail=f"{e}")
+    return new_item
 
 
 @router.patch("/{id}", response_model=ItemDetailWriteOutput)

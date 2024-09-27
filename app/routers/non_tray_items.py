@@ -11,6 +11,7 @@ from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
+from app.models.items import Item
 from app.schemas.non_tray_items import (
     NonTrayItemInput,
     NonTrayItemUpdateInput,
@@ -99,47 +100,56 @@ def create_non_tray_item(
     """
     Create a new non_tray_item record
     """
-
-    try:
-        # Create a new non_tray_item
-        new_non_tray_item = NonTrayItem(**item_input.model_dump())
-        new_non_tray_item.withdrawal_dt = None
-        # default to non-tray container_type
-        container_type = (
-            session.query(ContainerType)
-            .filter(ContainerType.type == "Non-Tray")
-            .first()
+    # check if barcode is already in use
+    # check if item already exists with barcode
+    item = session.query(Item).where(Item.barcode_id == item_input.barcode_id).first()
+    non_tray_item = (
+        session.query(NonTrayItem)
+        .where(NonTrayItem.barcode_id == item_input.barcode_id)
+        .first()
+    )
+    if item or non_tray_item:
+        barcode = (
+            session.query(Barcode).where(Barcode.id == item_input.barcode_id).first()
         )
-        new_non_tray_item.container_type_id = container_type.id
-        # non-trays are created in accession, set accession date
-        if not new_non_tray_item.accession_dt:
-            new_non_tray_item.accession_dt = datetime.utcnow()
-        # check if existing withdrawn non-tray with this barcode
-        previous_non_tray_item = session.exec(select(NonTrayItem).where(
+        raise ValidationException(
+            detail=f"Item " f"with barcode value" f" {barcode.value} already exists"
+        )
+
+    # Create a new non_tray_item
+    new_non_tray_item = NonTrayItem(**item_input.model_dump())
+    new_non_tray_item.withdrawal_dt = None
+    # default to non-tray container_type
+    container_type = (
+        session.query(ContainerType).filter(ContainerType.type == "Non-Tray").first()
+    )
+    new_non_tray_item.container_type_id = container_type.id
+    # non-trays are created in accession, set accession date
+    if not new_non_tray_item.accession_dt:
+        new_non_tray_item.accession_dt = datetime.utcnow()
+    # check if existing withdrawn non-tray with this barcode
+    previous_non_tray_item = session.exec(
+        select(NonTrayItem).where(
             NonTrayItem.barcode_id == new_non_tray_item.barcode_id
-        )).first()
-        if previous_non_tray_item:
-            # use existing, and patch values
-            for field, value in new_non_tray_item.dict(exclude={'id'}).items():
-                setattr(previous_non_tray_item, field, value)
-            new_non_tray_item = previous_non_tray_item
-            new_non_tray_item.scanned_for_verification = False
-            new_non_tray_item.scanned_for_shelving = False
-            new_non_tray_item.scanned_for_refile_queue = False
-            barcode = select(Barcode).where(
-                Barcode.id == new_non_tray_item.barcode_id
-            )
-            barcode.withdrawn = False
-            session.add(barcode)
+        )
+    ).first()
+    if previous_non_tray_item:
+        # use existing, and patch values
+        for field, value in new_non_tray_item.dict(exclude={"id"}).items():
+            setattr(previous_non_tray_item, field, value)
+        new_non_tray_item = previous_non_tray_item
+        new_non_tray_item.scanned_for_verification = False
+        new_non_tray_item.scanned_for_shelving = False
+        new_non_tray_item.scanned_for_refile_queue = False
+        barcode = select(Barcode).where(Barcode.id == new_non_tray_item.barcode_id)
+        barcode.withdrawn = False
+        session.add(barcode)
 
-        session.add(new_non_tray_item)
-        session.commit()
-        session.refresh(new_non_tray_item)
+    session.add(new_non_tray_item)
+    session.commit()
+    session.refresh(new_non_tray_item)
 
-        return new_non_tray_item
-
-    except IntegrityError as e:
-        raise ValidationException(detail=f"{e}")
+    return new_non_tray_item
 
 
 @router.patch("/{id}", response_model=NonTrayItemDetailWriteOutput)
