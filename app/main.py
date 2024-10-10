@@ -1,5 +1,4 @@
 import subprocess, os
-from urllib.parse import urlparse
 from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -87,14 +86,16 @@ def alembic_context():
         if get_settings().APP_ENVIRONMENT not in ["debug"]:
             # Create Schema-Docs
             print("Updating Schema Docs...")
-            # Parse the connection string using urlparse
-            parsed_url = urlparse(get_settings().DATABASE_URL)
-            # Extract the username, password, hostname, and port
-            db_user = parsed_url.username
-            db_password = parsed_url.password
-            db_host = parsed_url.hostname
-            db_port = parsed_url.port
-
+            bat_pos = get_settings().DATABASE_URL.find("@")
+            at_pos = get_settings().DATABASE_URL.find("@") + 1
+            last_colon_pos = get_settings().DATABASE_URL.rfind(":")
+            last_slash_pos = get_settings().DATABASE_URL.find("/") + 1
+            db_host = get_settings().DATABASE_URL[at_pos:last_colon_pos]
+            db_port = get_settings().DATABASE_URL[
+                last_colon_pos + 1 : last_colon_pos + 5
+            ]
+            db_user_password = get_settings().DATABASE_URL[last_slash_pos + 1 : bat_pos]
+            db_user, db_password = db_user_password.split(":")
             create_schemaspy = [
                 "java",
                 "-jar",
