@@ -2,6 +2,8 @@ import subprocess, os
 from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.logger import inventory_logger
 from app.middlware import JWTMiddleware
 
 from fastapi import FastAPI, Request
@@ -87,6 +89,9 @@ def alembic_context():
             at_pos = get_settings().DATABASE_URL.find("@") + 1
             last_colon_pos = get_settings().DATABASE_URL.rfind(":")
             db_host = get_settings().DATABASE_URL[at_pos:last_colon_pos]
+            db_port = get_settings().DATABASE_URL[
+                last_colon_pos + 1 : last_colon_pos + 5
+            ]
             create_schemaspy = [
                 "java",
                 "-jar",
@@ -108,7 +113,7 @@ def alembic_context():
                 "-host",
                 f"{db_host}",
                 "-port",
-                "5432",
+                f"{db_port}",
             ]
             subprocess.run(create_schemaspy)
         # Only allow fake data seeding in local, dev, test, or stage
