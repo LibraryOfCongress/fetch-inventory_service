@@ -4,6 +4,8 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
+from sqlalchemy.sql import exists
 
 from app.database.session import get_session
 from app.logger import inventory_logger
@@ -263,11 +265,7 @@ def delete_shelving_job(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Shelving Job ID {id} Not Found")
 
 
-@router.post(
-    "/{id}/reassign-container-location",
-    response_model=ReAssignmentOutput,
-    status_code=200,
-)
+@router.post("/{id}/reassign-container-location", response_model=ReAssignmentOutput)
 def reassign_container_location(
     id: int,
     reassignment_input: ReAssignmentInput,
@@ -337,6 +335,36 @@ def reassign_container_location(
         else:
             container = tray_container
 
+        # Checking and verifying Verification Job
+        if container.verification_job_id:
+            verification_job_shelved = True
+            verification_job = session.get(
+                VerificationJob, container.verification_job_id
+            )
+
+            if verification_job:
+                trays = verification_job.trays
+                non_tray_items = verification_job.non_tray_items
+
+                if trays:
+                    for tray in trays:
+                        if (
+                            tray.id != container.id
+                            and not verification_job.shelving_job_id
+                        ):
+                            verification_job_shelved = False
+                if non_tray_items:
+                    for non_tray_item in non_tray_items:
+                        if (
+                            non_tray_item.id != container.id
+                            and not verification_job.shelving_job_id
+                        ):
+                            verification_job_shelved = False
+                if verification_job_shelved:
+                    verification_job.shelving_job_id = id
+                    session.add(verification_job)
+                    session.commit()
+                    session.refresh(verification_job)
     # get shelf
     if reassignment_input.shelf_id:
         shelf_id = reassignment_input.shelf_id
@@ -360,9 +388,57 @@ def reassign_container_location(
         .where(ShelfPosition.shelf_id == shelf_id)
         .where(ShelfPositionNumber.number == reassignment_input.shelf_position_number)
     )
+
     shelf_position_position_number_join = list(
         session.exec(shelf_position_position_number_join)
     )[0]
+
+    if reassignment_input.trayed:
+        tray_exists = (
+            session.query(Tray)
+            .filter(
+                Tray.shelf_position_id
+                == shelf_position_position_number_join.ShelfPosition.id
+            )
+            .where(Tray.id != container.id)
+            .first()
+        )
+
+        non_tray_exists = (
+            session.query(NonTrayItem)
+            .join(Barcode)
+            .filter(
+                NonTrayItem.shelf_position_id
+                == shelf_position_position_number_join.ShelfPosition.id
+            )
+            .first()
+        )
+    else:
+        tray_exists = (
+            session.query(Tray)
+            .filter(
+                Tray.shelf_position_id
+                == shelf_position_position_number_join.ShelfPosition.id
+            )
+            .first()
+        )
+
+        non_tray_exists = (
+            session.query(NonTrayItem)
+            .join(Barcode)
+            .filter(
+                NonTrayItem.shelf_position_id
+                == shelf_position_position_number_join.ShelfPosition.id
+            )
+            .where(NonTrayItem.id != container.id)
+            .first()
+        )
+
+    if tray_exists or non_tray_exists:
+        raise ValidationException(
+            detail=f"Shelf Position {reassignment_input.shelf_position_number} "
+            f"assigned."
+        )
 
     # only reassign actual, not proposed
     container.shelving_job_id = id
