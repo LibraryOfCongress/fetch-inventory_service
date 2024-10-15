@@ -1,5 +1,5 @@
-import uuid
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime
@@ -21,10 +21,10 @@ class Building(SQLModel, table=True):
         max_length=25, sa_column=sa.VARCHAR, nullable=True, default=None
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     # modules in a building

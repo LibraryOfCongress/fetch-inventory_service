@@ -1,5 +1,5 @@
-import uuid
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime
@@ -21,17 +21,19 @@ class Side(SQLModel, table=True):
 
     __tablename__ = "sides"
     __table_args__ = (
-        UniqueConstraint("aisle_id", "side_orientation_id", name="uq_aisle_id_side_orientation_id"),
+        UniqueConstraint(
+            "aisle_id", "side_orientation_id", name="uq_aisle_id_side_orientation_id"
+        ),
     )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     aisle_id: int = Field(foreign_key="aisles.id", nullable=False)
     side_orientation_id: int = Field(foreign_key="side_orientations.id", nullable=False)
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     # side orientation belonging to a side
@@ -39,4 +41,4 @@ class Side(SQLModel, table=True):
     # aisle in which the side is located
     aisle: Aisle = Relationship(back_populates="sides")
     # Ladders on a side (test for plurality on back_populates)
-    ladders: List['Ladder'] = Relationship(back_populates="side")
+    ladders: List["Ladder"] = Relationship(back_populates="side")

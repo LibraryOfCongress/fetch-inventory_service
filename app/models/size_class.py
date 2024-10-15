@@ -1,4 +1,5 @@
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime
@@ -21,10 +22,10 @@ class SizeClass(SQLModel, table=True):
         max_length=10, sa_column=sa.VARCHAR, nullable=False, unique=True
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     items: List["Item"] = Relationship(back_populates="size_class")
     # trays (could support if needed)

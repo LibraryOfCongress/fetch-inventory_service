@@ -1,5 +1,6 @@
 import uuid
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime
@@ -74,10 +75,10 @@ class Tray(SQLModel, table=True):
         sa_column=sa.DateTime, default=None, nullable=True
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     # derived item count

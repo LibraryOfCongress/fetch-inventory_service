@@ -1,4 +1,5 @@
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime
@@ -25,10 +26,10 @@ class ContainerType(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     type: str = Field(max_length=25, sa_column=sa.VARCHAR, nullable=False, unique=True)
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     # shelves assigned this container type

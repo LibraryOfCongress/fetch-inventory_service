@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
 
@@ -29,8 +30,8 @@ class NonTrayItemWithdrawal(SQLModel, table=True):
         default=None, nullable=False, foreign_key="withdraw_jobs.id"
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )

@@ -1,6 +1,7 @@
 from enum import Enum
 
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime, timedelta
@@ -42,16 +43,16 @@ class PickList(SQLModel, table=True):
         default=None, foreign_key="buildings.id", nullable=True
     )
     last_transition: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     run_time: Optional[timedelta] = Field(
         sa_column=sa.Interval, nullable=False, default=timedelta()
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     user: Optional["User"] = Relationship(back_populates="pick_lists")

@@ -4,6 +4,7 @@ from typing import Optional, List
 from enum import Enum
 from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import Column, DateTime
 
 from app.models.users import User
 from app.models.owners import Owner
@@ -51,12 +52,10 @@ class AccessionJob(SQLModel, table=True):
     )
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     run_time: Optional[timedelta] = Field(
-        sa_column=sa.Interval,
-        nullable=False,
-        default=timedelta()
+        sa_column=sa.Interval, nullable=False, default=timedelta()
     )
     last_transition: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     size_class_id: Optional[int] = Field(
         foreign_key="size_class.id", nullable=True, default=None
@@ -66,12 +65,11 @@ class AccessionJob(SQLModel, table=True):
         foreign_key="container_types.id", nullable=True
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
-
     container_type: Optional[ContainerType] = Relationship(
         back_populates="accession_jobs"
     )

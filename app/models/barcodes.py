@@ -7,6 +7,7 @@ from typing import Optional
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
+from sqlalchemy import Column, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 
 
@@ -35,10 +36,10 @@ class Barcode(SQLModel, table=True):
     withdrawn: bool = Field(default=False, nullable=False)
     type_id: int = Field(foreign_key="barcode_types.id")
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     type: Optional["BarcodeType"] = Relationship(back_populates="barcodes")

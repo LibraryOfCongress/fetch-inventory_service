@@ -1,4 +1,5 @@
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime
@@ -33,10 +34,10 @@ class User(SQLModel, table=True):
         sa_column=sa.DateTime, nullable=True, default=None, unique=False
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     accession_jobs: List["AccessionJob"] = Relationship(back_populates="user")

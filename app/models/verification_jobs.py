@@ -1,4 +1,5 @@
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from enum import Enum
@@ -50,12 +51,10 @@ class VerificationJob(SQLModel, table=True):
     )
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     last_transition: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     run_time: Optional[timedelta] = Field(
-        sa_column=sa.Interval(6),
-        nullable=False,
-        default=timedelta()
+        sa_column=sa.Interval(6), nullable=False, default=timedelta()
     )
     accession_job_id: Optional[int] = Field(
         sa_column=sa.Column(
@@ -74,10 +73,10 @@ class VerificationJob(SQLModel, table=True):
         foreign_key="size_class.id", nullable=True, default=None
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     user: Optional[User] = Relationship(back_populates="verification_jobs")

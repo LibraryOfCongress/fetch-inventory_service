@@ -1,5 +1,6 @@
 import uuid
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime
@@ -16,21 +17,18 @@ class ConveyanceBin(SQLModel, table=True):
 
     __tablename__ = "conveyance_bins"
 
-    id: Optional[int] = Field(
-        sa_column=sa.Column(sa.Integer, primary_key=True)
-    )
+    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True))
     barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id",
-        nullable=False,
-        unique=True,
-        default=None
+        foreign_key="barcodes.id", nullable=False, unique=True, default=None
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     trays: List["Tray"] = Relationship(back_populates="conveyance_bin")
-    barcode: Optional["Barcode"] = Relationship(sa_relationship_kwargs={"uselist": False})
+    barcode: Optional["Barcode"] = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )

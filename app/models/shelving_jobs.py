@@ -1,4 +1,6 @@
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
+
 from enum import Enum
 from typing import Optional, List
 from datetime import datetime, timedelta
@@ -55,13 +57,13 @@ class ShelvingJob(SQLModel, table=True):
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     run_time: Optional[timedelta] = Field(sa_column=sa.Interval, nullable=True)
     last_transition: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=True
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     verification_jobs: List["VerificationJob"] = Relationship(
         back_populates="shelving_job"

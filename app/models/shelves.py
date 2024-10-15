@@ -1,6 +1,7 @@
 import uuid
 
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime
@@ -60,10 +61,10 @@ class Shelf(SQLModel, table=True):
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     ladder_id: int = Field(foreign_key="ladders.id", nullable=False)
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     ladder: Ladder = Relationship(back_populates="shelves")

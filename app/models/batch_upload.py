@@ -3,6 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -41,10 +42,10 @@ class BatchUpload(SQLModel, table=True):
     file_size: int = Field(sa_column=sa.BigInteger, nullable=True, default=None)
     file_type: str = Field(sa_column=sa.VARCHAR, nullable=True, default=None)
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     requests: List["Request"] = Relationship(back_populates="batch_upload")

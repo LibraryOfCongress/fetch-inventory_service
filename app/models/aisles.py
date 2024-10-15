@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy import Column, DateTime
 
 from app.models.modules import Module
 from app.models.aisle_numbers import AisleNumber
@@ -38,10 +39,10 @@ class Aisle(SQLModel, table=True):
         foreign_key="modules.id", nullable=True, default=None
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     # aisle number belonging to an aisle

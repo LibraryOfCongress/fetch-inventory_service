@@ -1,6 +1,7 @@
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -61,10 +62,10 @@ class Request(SQLModel, table=True):
         max_length=50, sa_column=sa.VARCHAR, nullable=True, unique=False, default=None
     )
     create_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.DateTime, default=datetime.utcnow(), nullable=False
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     item: Optional["Item"] = Relationship(back_populates="requests")
