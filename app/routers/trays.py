@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.logger import inventory_logger
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.models.trays import Tray
@@ -211,6 +212,19 @@ def update_tray(
                 session,
                 existing_shelf_position,
                 new_shelf_position,
+            )
+
+    # Checking if size class has changed
+    if tray.size_class_id and tray.size_class_id != existing_tray.size_class_id:
+        for item in existing_tray.items:
+            session.query(Item).filter(Item.id == item.id).update(
+                {"size_class_id": tray.size_class_id, "update_dt": datetime.utcnow()}
+            )
+    # Checking if media type class has changed
+    if tray.media_type_id and tray.media_type_id != existing_tray.media_type_id:
+        for item in existing_tray.items:
+            session.query(Item).filter(Item.id == item.id).update(
+                {"media_type_id": tray.media_type_id, "update_dt": datetime.utcnow()}
             )
 
     # Update the tray record with the mutated data
