@@ -3,7 +3,6 @@ import uuid, re
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
-from typing import List
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database.session import get_session
 from app.models.barcodes import Barcode
 from app.models.barcode_types import BarcodeType
+from app.models.size_class import SizeClass
 from app.schemas.barcodes import (
     BarcodeInput,
     BarcodeUpdateInput,
@@ -19,11 +19,7 @@ from app.schemas.barcodes import (
     BarcodeDetailReadOutput,
     BarcodeMutationInput,
 )
-from app.config.exceptions import (
-    NotFound,
-    ValidationException,
-    InternalServerError,
-)
+from app.config.exceptions import NotFound, ValidationException
 
 router = APIRouter(
     prefix="/barcodes",
@@ -105,6 +101,7 @@ def create_barcode(
         barcode_type = session.exec(
             select(BarcodeType).where(BarcodeType.name == barcode_type_string)
         ).first()
+
         if not barcode_type:
             raise NotFound(detail=f"Barcode type '{barcode_type_string}' not found.")
         else:
@@ -118,6 +115,22 @@ def create_barcode(
             raise ValidationException(
                 detail=f"Barcode value is invalid for {barcode_type.name} barcode rules."
             )
+
+        # validate tray barcode value first two characters which is the tray short
+        # name against available tray short names
+        if barcode_type.name == "Tray":
+            short_name = barcode_input.value[:2]
+            container_size = (
+                session.query(SizeClass)
+                .filter(SizeClass.short_name == short_name)
+                .first()
+            )
+
+            if not container_size:
+                raise ValidationException(
+                    detail=f"The tray can not be added, the container size "
+                    f"{short_name} doesnt exist in the system. Please add it and try again."
+                )
 
         existing_barcode = session.exec(
             select(Barcode).where(Barcode.value == barcode_input.value)
@@ -159,73 +172,92 @@ def update_barcode(
     **Raises:**
     - HTTPException: If the barcode is not found.
     """
-    try:
-        # First check if new barcode type and if exists
-        new_barcode_type = None
-        mutated_barcode_type_id = None
-        if barcode.type:
-            new_barcode_type = session.exec(
-                select(BarcodeType).where(BarcodeType.name == barcode.type)
-            ).first()
-            if not new_barcode_type:
-                raise NotFound(detail=f"Barcode type {barcode.type} not found.")
-            else:
-                # barcode['type_id'] = new_barcode_type.id
-                mutated_barcode_type_id = new_barcode_type.id
-
-        existing_barcode = session.get(Barcode, id)
-
-        if not existing_barcode:
-            raise NotFound(detail=f"Barcode ID {id} Not Found")
-
-        if new_barcode_type:
-            # use new allowed pattern to validate
-            if barcode.value:
-                # Validate against incoming value
-                if not re.fullmatch(new_barcode_type.allowed_pattern, barcode.value):
-                    raise ValidationException(
-                        detail=f"Barcode value is invalid for {new_barcode_type.name} barcode rules."
-                    )
-            else:
-                # Validate existing value
-                if not re.fullmatch(
-                    new_barcode_type.allowed_pattern, existing_barcode.value
-                ):
-                    raise ValidationException(
-                        detail=f"Barcode type {new_barcode_type.name} would make existing barcode value invalid."
-                    )
+    # First check if new barcode type and if exists
+    new_barcode_type = None
+    mutated_barcode_type_id = None
+    if barcode.type:
+        new_barcode_type = session.exec(
+            select(BarcodeType).where(BarcodeType.name == barcode.type)
+        ).first()
+        if not new_barcode_type:
+            raise NotFound(detail=f"Barcode type {barcode.type} not found.")
         else:
-            # use existing allowed pattern to validate
-            existing_barcode_type = session.exec(
-                select(BarcodeType).where(BarcodeType.id == existing_barcode.type_id)
-            ).first()
-            if barcode.value:
-                # Validate incoming against existing allowed_pattern
-                if not re.fullmatch(
-                    existing_barcode_type.allowed_pattern, barcode.value
-                ):
-                    raise ValidationException(
-                        detail=f"New Barcode value is invalid for {existing_barcode_type.name} barcode rules."
-                    )
-            # Else neither type or barcode value changed, nothing to validate
+            # barcode['type_id'] = new_barcode_type.id
+            mutated_barcode_type_id = new_barcode_type.id
 
-        mutated_data = barcode.model_dump(exclude={"type"}, exclude_unset=True)
+    existing_barcode = session.get(Barcode, id)
 
-        if mutated_barcode_type_id:
-            mutated_data["type_id"] = mutated_barcode_type_id
+    if not existing_barcode:
+        raise NotFound(detail=f"Barcode ID {id} Not Found")
 
-        for key, value in mutated_data.items():
-            setattr(existing_barcode, key, value)
+    if new_barcode_type:
+        # use new allowed pattern to validate
+        if barcode.value:
+            # Validate against incoming value
+            if not re.fullmatch(new_barcode_type.allowed_pattern, barcode.value):
+                raise ValidationException(
+                    detail=f"Barcode value is invalid for {new_barcode_type.name} barcode rules."
+                )
+        else:
+            # Validate existing value
+            if not re.fullmatch(
+                new_barcode_type.allowed_pattern, existing_barcode.value
+            ):
+                raise ValidationException(
+                    detail=f"Barcode type {new_barcode_type.name} would make existing barcode value invalid."
+                )
+    else:
+        # use existing allowed pattern to validate
+        existing_barcode_type = session.exec(
+            select(BarcodeType).where(BarcodeType.id == existing_barcode.type_id)
+        ).first()
+        if barcode.value:
+            # Validate incoming against existing allowed_pattern
+            if not re.fullmatch(existing_barcode_type.allowed_pattern, barcode.value):
+                raise ValidationException(
+                    detail=f"New Barcode value is invalid for {existing_barcode_type.name} barcode rules."
+                )
+        # Else neither type or barcode value changed, nothing to validate
 
-        setattr(existing_barcode, "update_dt", datetime.utcnow())
+    # validate tray barcode value first two characters which is the tray short
+    # name against available tray short names
+    if barcode.value:
+        existing_barcode_type = session.exec(
+            select(BarcodeType).where(BarcodeType.id == existing_barcode.type_id)
+        ).first()
+        if (
+            barcode.type
+            and barcode.type == "Tray"
+            or existing_barcode_type.name == "Tray"
+        ):
+            short_name = barcode.value[:2]
+            container_size = (
+                session.query(SizeClass)
+                .filter(SizeClass.short_name == short_name)
+                .first()
+            )
 
-        session.add(existing_barcode)
-        session.commit()
-        session.refresh(existing_barcode)
+            if not container_size:
+                raise ValidationException(
+                    detail=f"The tray can not be added, the container size "
+                    f"{short_name} doesnt exist in the system. Please add it and try again."
+                )
 
-        return existing_barcode
-    except Exception as e:
-        raise InternalServerError(detail=f"{e}")
+    mutated_data = barcode.model_dump(exclude={"type"}, exclude_unset=True)
+
+    if mutated_barcode_type_id:
+        mutated_data["type_id"] = mutated_barcode_type_id
+
+    for key, value in mutated_data.items():
+        setattr(existing_barcode, key, value)
+
+    setattr(existing_barcode, "update_dt", datetime.utcnow())
+
+    session.add(existing_barcode)
+    session.commit()
+    session.refresh(existing_barcode)
+
+    return existing_barcode
 
 
 @router.delete("/{id}")
