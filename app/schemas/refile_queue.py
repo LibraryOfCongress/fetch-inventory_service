@@ -183,7 +183,7 @@ class RefileQueueWriteOutput(BaseModel):
                                 }
                             },
                             "location": "Cabin Branch-04-57-L-23-10-08",
-                            "internal_location": "57-L-23-10-08"
+                            "internal_location": "01-04-57-L-23-10-08",
                         }
                     },
                     "barcode": {
@@ -241,7 +241,7 @@ class RefileQueueWriteOutput(BaseModel):
                             }
                         },
                         "location": "Cabin Branch-04-57-L-23-10-08",
-                        "internal_location": "57-L-23-10-08"
+                        "internal_location": "01-04-57-L-23-10-08"
                     },
                     "shelf_position_proposed_id": 1,
                     "barcode": {

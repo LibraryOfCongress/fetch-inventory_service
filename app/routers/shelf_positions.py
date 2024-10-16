@@ -185,12 +185,24 @@ def update_shelf_position(
             raise NotFound(
                 detail=f"Shelf Position Number ID {existing_shelf_position.shelf_position_number_id} Not Found"
             )
-
-        background_tasks.add_task(
-            location_address_processing(
-                session, shelf, shelf_position_number.number, existing_shelf_position.id
+        if shelf_position.shelf_position_number_id:
+            background_tasks.add_task(
+                location_address_processing(
+                    session,
+                    shelf,
+                    shelf_position_number.number,
+                    shelf_position.shelf_position_number_id,
+                )
             )
-        )
+        else:
+            background_tasks.add_task(
+                location_address_processing(
+                    session,
+                    shelf,
+                    shelf_position_number.number,
+                    existing_shelf_position.id,
+                )
+            )
 
         mutated_data = shelf_position.model_dump(exclude_unset=True)
 

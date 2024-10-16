@@ -323,7 +323,7 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                             },
                             "shelf_position": {
                                 "location": "Cabin Branch-04-57-L-23-10-08",
-                                "internal_location": "57-L-23-10-08",
+                                "internal_location": "01-04-57-L-23-10-08",
                                 "shelf_position_number": {
                                     "number": 1
                                 },
@@ -378,7 +378,7 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                         "shelf_position_id": 1,
                         "shelf_position": {
                             "location": "Cabin Branch-04-57-L-23-10-08",
-                            "internal_location": "57-L-23-10-08",
+                            "internal_location": "01-04-57-L-23-10-08",
                             "shelf_position_number": {
                                 "number": 1
                             },
@@ -445,7 +445,7 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                             },
                             "shelf_position": {
                                 "location": "Cabin Branch-04-57-L-23-10-08",
-                                "internal_location": "57-L-23-10-08",
+                                "internal_location": "01-04-57-L-23-10-08",
                                 "shelf_position_number": {
                                     "number": 1
                                 },
@@ -471,7 +471,7 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                         "shelf_position_id": 1,
                         "shelf_position": {
                             "location": "Cabin Branch-04-57-L-23-10-08",
-                            "internal_location": "57-L-23-10-08",
+                            "internal_location": "01-04-57-L-23-10-08",
                             "shelf_position_number": {
                                 "number": 1
                             },

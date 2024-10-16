@@ -261,7 +261,7 @@ class RequestDetailWriteOutput(RequestBaseOutput):
                             "id": 1,
                             "shelf_id": 1,
                             "location": "Cabin Branch-04-57-L-23-10-08",
-                            "internal_location": "57-L-23-10-08",
+                            "internal_location": "01-04-57-L-23-10-08",
                             "shelf_position_number": {
                                 "number": 1
                             },
@@ -389,7 +389,7 @@ class RequestListOutput(RequestBaseOutput):
                             "id": 1,
                             "shelf_id": 1,
                             "location": "Cabin Branch-04-57-L-23-10-08",
-                            "internal_location": "57-L-23-10-08",
+                            "internal_location": "01-04-57-L-23-10-08",
                             "shelf_position_number": {
                                 "number": 2
                             },

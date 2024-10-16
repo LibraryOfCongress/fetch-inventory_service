@@ -22,15 +22,11 @@ class ShelfPositionInput(BaseModel):
 
 class ShelfPositionUpdateInput(BaseModel):
     shelf_position_number_id: Optional[conint(ge=0, le=9223372036854775807)] = None
-    location: Optional[constr(max_length=75)] = None
-    internal_location: Optional[constr(max_length=100)] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "shelf_position_number_id": 1,
-                "location": "Cabin Branch-04-57-L-23-10-08",
-                "internal_location": "57-L-23-10-08"
+                "shelf_position_number_id": 1
             }
         }
 
@@ -49,7 +45,7 @@ class ShelfPositionBaseReadOutput(BaseModel):
                 "shelf_id": 1,
                 "shelf_position_number_id": 1,
                 "location": "Cabin Branch-04-57-L-23-10-08",
-                "internal_location": "57-L-23-10-08"
+                "internal_location": "01-04-57-L-23-10-08"
             }
         }
 
@@ -89,7 +85,7 @@ class ShelfPositionDetailWriteOutput(BaseModel):
                 "shelf_id": 1,
                 "shelf_position_number_id": 1,
                 "location": "Cabin Branch-04-57-L-23-10-08",
-                "internal_location": "57-L-23-10-08",
+                "internal_location": "01-04-57-L-23-10-08",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
