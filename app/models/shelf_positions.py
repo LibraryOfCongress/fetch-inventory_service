@@ -30,7 +30,12 @@ class ShelfPosition(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True))
-
+    location: Optional[str] = Field(
+        max_length=75, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
+    )
+    internal_location: Optional[str] = Field(
+        max_length=100, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
+    )
     shelf_position_number_id: int = Field(
         foreign_key="shelf_position_numbers.id", nullable=False
     )
@@ -41,7 +46,6 @@ class ShelfPosition(SQLModel, table=True):
     update_dt: datetime = Field(
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
-
     shelf_position_number: ShelfPositionNumber = Relationship(
         back_populates="shelf_positions"
     )

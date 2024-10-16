@@ -91,19 +91,6 @@ class ShelfPositionNumberNestedForRequest(BaseModel):
     number: int
 
 
-class LadderNumberNestedForRequest(BaseModel):
-    number: int
-
-
-class SideOrientationNestedForRequest(BaseModel):
-    id: int
-    name: str
-
-
-class AisleNumberNestedForRequest(BaseModel):
-    number: int
-
-
 class NestedBuildingRequestModule(BaseModel):
     id: int
     name: Optional[str] = None
@@ -120,25 +107,6 @@ class BuildingNestedForRequest(BaseModel):
     name: Optional[str] = None
 
 
-class AisleNestedForRequest(BaseModel):
-    id: int
-    aisle_number: AisleNumberNestedForRequest
-    module: Optional[ModuleNestedForRequest] = None
-    building: Optional[BuildingNestedForRequest] = None
-
-
-class SideNestedForRequest(BaseModel):
-    id: int
-    aisle: AisleNestedForRequest
-    side_orientation: SideOrientationNestedForRequest
-
-
-class LadderNestedForRequest(BaseModel):
-    id: int
-    ladder_number: LadderNumberNestedForRequest
-    side: SideNestedForRequest
-
-
 class ShelfNumberNestedForRequest(BaseModel):
     id: int
     number: int
@@ -147,7 +115,6 @@ class ShelfNumberNestedForRequest(BaseModel):
 class ShelfNestedForRequest(BaseModel):
     id: int
     shelf_number: ShelfNumberNestedForRequest
-    ladder: LadderNestedForRequest
 
 
 class ShelfPositionNestedForRequest(BaseModel):
@@ -155,6 +122,8 @@ class ShelfPositionNestedForRequest(BaseModel):
     shelf_id: int
     shelf_position_number: ShelfPositionNumberNestedForRequest
     shelf: Optional[ShelfNestedForRequest] = None
+    location: Optional[str] = None
+    internal_location: Optional[str] = None
 
 
 class TrayNestedForRequest(BaseModel):
@@ -239,8 +208,14 @@ class RequestDetailWriteOutput(RequestBaseOutput):
                 "delivery_location_id": 1,
                 "priority_id": 1,
                 "batch_upload_id": 1,
-                "priority": {"id": 1, "value": "Medium"},
-                "request_type": {"id": 1, "type": "General Delivery"},
+                "priority": {
+                    "id": 1,
+                    "value": "Medium"
+                },
+                "request_type": {
+                    "id": 1,
+                    "type": "General Delivery"
+                },
                 "delivery_location": {
                     "name": "Senator McSenator",
                     "address": "1234 Example St, Washington D.C 12345",
@@ -255,11 +230,17 @@ class RequestDetailWriteOutput(RequestBaseOutput):
                         "name": "Record Storage",
                         "short_name": "RS",
                     },
-                    "owner": {"id": 1, "name": "CMD"},
+                    "owner": {
+                        "id": 1,
+                        "name": "CMD"
+                    },
                     "accession_dt": "2023-10-08T20:46:56.764426",
                     "withdrawal_dt": "2023-10-08T20:46:56.764426",
                     "status": "In",
-                    "media_type": {"id": 1, "name": "Book"},
+                    "media_type": {
+                        "id": 1,
+                        "name": "Book"
+                    },
                     "barcode": {
                         "id": "550e8400-e29b-41d4-a716-446655440001",
                         "value": "5901234123457",
@@ -279,7 +260,11 @@ class RequestDetailWriteOutput(RequestBaseOutput):
                         "shelf_position": {
                             "id": 1,
                             "shelf_id": 1,
-                            "shelf_position_number": {"number": 2},
+                            "location": "Cabin Branch-04-57-L-23-10-08",
+                            "internal_location": "57-L-23-10-08",
+                            "shelf_position_number": {
+                                "number": 1
+                            },
                         },
                     },
                 },
@@ -351,11 +336,17 @@ class RequestListOutput(RequestBaseOutput):
                 "delivery_location_id": 1,
                 "priority_id": 1,
                 "batch_upload_id": 1,
-                "priority": {"id": 1, "value": "Medium"},
-                "request_type": {"id": 1, "type": "General Delivery"},
+                "priority": {
+                    "id": 1,
+                    "value": "Medium"
+                },
+                "request_type": {
+                    "id": 1,
+                    "type": "General Delivery"
+                },
                 "delivery_location": {
                     "name": "Senator McSenator",
-                    "address": "1234 Example St, Washington D.C 12345",
+                    "address": "1234 Example St, Washington D.C 12345"
                 },
                 "item": {
                     "id": 1,
@@ -365,19 +356,25 @@ class RequestListOutput(RequestBaseOutput):
                     "size_class": {
                         "id": 1,
                         "name": "Record Storage",
-                        "short_name": "RS",
+                        "short_name": "RS"
                     },
-                    "owner": {"id": 1, "name": "CMD"},
+                    "owner": {
+                        "id": 1,
+                        "name": "CMD"
+                    },
                     "accession_dt": "2023-10-08T20:46:56.764426",
                     "withdrawal_dt": "2023-10-08T20:46:56.764426",
                     "status": "In",
-                    "media_type": {"id": 1, "name": "Book"},
+                    "media_type": {
+                        "id": 1,
+                        "name": "Book"
+                    },
                     "barcode": {
                         "id": "550e8400-e29b-41d4-a716-446655440001",
                         "value": "5901234123457",
                         "type_id": 1,
                         "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398",
+                        "update_dt": "2023-10-08T20:46:56.764398"
                     },
                     "tray": {
                         "id": 1,
@@ -386,12 +383,16 @@ class RequestListOutput(RequestBaseOutput):
                             "value": "3301234123457",
                             "type_id": 1,
                             "create_dt": "2023-10-08T20:46:56.764426",
-                            "update_dt": "2023-10-08T20:46:56.764398",
+                            "update_dt": "2023-10-08T20:46:56.764398"
                         },
                         "shelf_position": {
                             "id": 1,
                             "shelf_id": 1,
-                            "shelf_position_number": {"number": 2},
+                            "location": "Cabin Branch-04-57-L-23-10-08",
+                            "internal_location": "57-L-23-10-08",
+                            "shelf_position_number": {
+                                "number": 2
+                            },
                         },
                     },
                 },
@@ -404,7 +405,7 @@ class RequestListOutput(RequestBaseOutput):
                 "requestor_name": "Bilbo Baggins",
                 "external_request_id": "12345",
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398",
+                "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
 
@@ -514,15 +515,21 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
                 "delivery_location_id": 1,
                 "priority_id": 1,
                 "batch_upload_id": 1,
-                "priority": {"id": 1, "value": "Medium"},
-                "request_type": {"id": 1, "type": "General Delivery"},
+                "priority": {
+                    "id": 1,
+                    "value": "Medium"
+                },
+                "request_type": {
+                    "id": 1,
+                    "type": "General Delivery"
+                },
                 "building": {
-                  "id": 1,
-                  "name": "Southpoint Circle"
+                    "id": 1,
+                    "name": "Southpoint Circle"
                 },
                 "delivery_location": {
                     "name": "Senator McSenator",
-                    "address": "1234 Example St, Washington D.C 12345",
+                    "address": "1234 Example St, Washington D.C 12345"
                 },
                 "item": {
                     "id": 1,
@@ -532,19 +539,25 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
                     "size_class": {
                         "id": 1,
                         "name": "Record Storage",
-                        "short_name": "RS",
+                        "short_name": "RS"
                     },
-                    "owner": {"id": 1, "name": "CMD"},
+                    "owner": {
+                        "id": 1,
+                        "name": "CMD"
+                    },
                     "accession_dt": "2023-10-08T20:46:56.764426",
                     "withdrawal_dt": "2023-10-08T20:46:56.764426",
                     "status": "In",
-                    "media_type": {"id": 1, "name": "Book"},
+                    "media_type": {
+                        "id": 1,
+                        "name": "Book"
+                    },
                     "barcode": {
                         "id": "550e8400-e29b-41d4-a716-446655440001",
                         "value": "5901234123457",
                         "type_id": 1,
                         "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398",
+                        "update_dt": "2023-10-08T20:46:56.764398"
                     },
                     "tray": {
                         "id": 1,
@@ -553,12 +566,14 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
                             "value": "3301234123457",
                             "type_id": 1,
                             "create_dt": "2023-10-08T20:46:56.764426",
-                            "update_dt": "2023-10-08T20:46:56.764398",
+                            "update_dt": "2023-10-08T20:46:56.764398"
                         },
                         "shelf_position": {
                             "id": 1,
                             "shelf_id": 1,
-                            "shelf_position_number": {"number": 2},
+                            "shelf_position_number": {
+                                "number": 2
+                            },
                         },
                     },
                 },
@@ -566,6 +581,6 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
                 "requestor_name": "Bilbo Baggins",
                 "external_request_id": "12345",
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398",
+                "update_dt": "2023-10-08T20:46:56.764398"
             }
         }

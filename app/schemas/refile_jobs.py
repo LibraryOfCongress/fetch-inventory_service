@@ -199,51 +199,14 @@ class NestedShelfPositionNumberForRefileJob(BaseModel):
     number: int
 
 
-class NestedLadderNumberForRefileJob(BaseModel):
-    number: int
-
-
-class NestedSideOrientationForRefileJob(BaseModel):
-    name: str
-
-
-class NestedAisleNumberForRefileJob(BaseModel):
-    number: int
-
-
-class NestedModuleForRefileJob(BaseModel):
-    id: int
-    module_number: str
-
-
 class NestedBuildingForRefileJob(BaseModel):
     id: int
     name: str
 
 
-class NestedAisleForRefileJob(BaseModel):
-    id: int
-    aisle_number: NestedAisleNumberForRefileJob
-    module: Optional[NestedModuleForRefileJob] = None
-    building: Optional[NestedBuildingForRefileJob] = None
-
-
-class NestedSideForRefileJob(BaseModel):
-    id: int
-    side_orientation: NestedSideOrientationForRefileJob
-    aisle: NestedAisleForRefileJob
-
-
-class NestedLadderForRefileJob(BaseModel):
-    id: int
-    ladder_number: NestedLadderNumberForRefileJob
-    side: NestedSideForRefileJob
-
-
 class NestedShelfForRefileJob(BaseModel):
     id: int
     barcode: BarcodeDetailReadOutput
-    ladder: NestedLadderForRefileJob
     shelf_number: NestedShelfNumberForRefileJob
 
 
@@ -251,6 +214,8 @@ class ShelfPositionNestedForRefileJob(BaseModel):
     id: int
     shelf_position_number: NestedShelfPositionNumberForRefileJob
     shelf: NestedShelfForRefileJob
+    location: Optional[str] = None
+    internal_location: Optional[str] = None
 
 
 class NestedTrayForRefileJob(BaseModel):
@@ -330,167 +295,221 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
-                "items": [{
-                    "id": 1,
-                    "status": "In",
-                    "accession_job_id": 1,
-                    "scanned_for_accession": False,
-                    "scanned_for_verification": False,
-                    "verification_job_id": 1,
-                    "container_type_id": 1,
-                    "tray_id": 1,
-                    "owner_id": 1,
-                    "title": "Lord of The Rings",
-                    "volume": "I",
-                    "condition": "Good",
-                    "arbitrary_data": "Signed copy",
-                    "subcollection_id": 1,
-                    "media_type_id": 1,
-                    "size_class_id": 1,
-                    "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
-                    "barcode": {
-                        "id": "550e8400-e29b-41d4-a716-446655440001",
-                        "value": "5901234123457",
-                        "type_id": 1,
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "media_type": {
+                "items": [
+                    {
                         "id": 1,
-                        "name": "Book",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "size_class": {
-                        "id": 1,
-                        "name": "C-Low",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398",
-                    },
-                    "accession_job": {
-                        "id": 1,
-                        "trayed": True,
-                        "status": "Verified"
-                    },
-                    "verification_job": {
-                        "id": 1,
-                        "trayed": True,
-                        "status": "Created"
-                    },
-                    "owner": {
-                        "id": 1,
-                        "name": "Special Collection Directorate",
-                        "owner_tier_id": 2,
-                        "owner_tier": {
+                        "status": "In",
+                        "owner": {
                             "id": 1,
-                            "level": 2,
-                            "name": "division",
+                            "name": "Special Collection Directorate"
+                        },
+                        "size_class": {
+                            "id": 1,
+                            "name": "C-Low",
+                            "short_name": "CL"
+                        },
+                        "tray": {
+                            "id": 1,
+                            "barcode": {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "value": "5901234123457",
+                                "type_id": 1,
+                                "type": {
+                                    "id": 1,
+                                    "name": "Item"
+                                },
+                                "create_dt": "2023-10-08T20:46:56.764426",
+                                "update_dt": "2023-10-08T20:46:56.764398"
+                            },
+                            "shelf_position": {
+                                "location": "Cabin Branch-04-57-L-23-10-08",
+                                "internal_location": "57-L-23-10-08",
+                                "shelf_position_number": {
+                                    "number": 1
+                                },
+                                "shelf": {
+                                    "id": 1,
+                                    "shelf_number": {
+                                        "number": 1
+                                    },
+                                    "barcode": {
+                                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                                        "value": "5901234123457",
+                                        "type_id": 1,
+                                        "type": {
+                                            "id": 1,
+                                            "name": "Item"
+                                        },
+                                        "create_dt": "2023-10-08T20:46:56.764426",
+                                        "update_dt": "2023-10-08T20:46:56.764398"
+                                    },
+                                }
+                            }
+                        },
+                        "barcode": {
+                            "id": "550e8400-e29b-41d4-a716-446655440001",
+                            "value": "5901234123457",
+                            "type_id": 1,
                             "create_dt": "2023-10-08T20:46:56.764426",
                             "update_dt": "2023-10-08T20:46:56.764398"
                         },
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "subcollection": {
-                        "id": 1,
-                        "name": "A Song of Ice and Fire",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "accession_dt": "2023-10-08T20:46:56.764426",
-                    "withdrawal_dt": "2023-10-08T20:46:56.764426",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
-                }],
-                "non_tray_items": [{
-                    "id": 1,
-                    "status": "In",
-                    "accession_job_id": 1,
-                    "scanned_for_accession": False,
-                    "scanned_for_verification": False,
-                    "scanned_for_shelving": False,
-                    "verification_job_id": 1,
-                    "shelving_job_id": 1,
-                    "shelving_job": {
-                        "id": 1,
-                        "status": "Created"
-                    },
-                    "shelf_position_id": 1,
-                    "shelf_position": {
-                        "id": 1,
-                        "shelf_id": 1,
-                        "shelf_position_number": {
-                            "number": 1
-                        }
-                    },
-                    "shelf_position_proposed_id": 1,
-                    "container_type_id": 2,
-                    "owner_id": 1,
-                    "subcollection_id": 1,
-                    "media_type_id": 1,
-                    "size_class_id": 1,
-                    "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
-                    "barcode": {
-                        "id": "550e8400-e29b-41d4-a716-446655440001",
-                        "value": "5901234123457",
-                        "type_id": 1,
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "container_type": {
-                        "id": 2,
-                        "type": "Non-Tray",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "media_type": {
-                        "id": 1,
-                        "name": "Book",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "size_class": {
-                        "id": 1,
-                        "name": "C-Low",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398",
-                    },
-                    "accession_job": {
-                        "id": 1,
-                        "trayed": True,
-                        "status": "Verified"
-                    },
-                    "verification_job": {
-                        "id": 1,
-                        "trayed": True,
-                        "status": "Created"
-                    },
-                    "owner": {
-                        "id": 1,
-                        "name": "Special Collection Directorate",
-                        "owner_tier_id": 2,
-                        "owner_tier": {
+                        "container_type": {
                             "id": 1,
-                            "level": 2,
-                            "name": "division",
+                            "type": "Tray",
                             "create_dt": "2023-10-08T20:46:56.764426",
                             "update_dt": "2023-10-08T20:46:56.764398"
                         },
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "subcollection": {
+                        "scanned_for_shelving": True
+                    }
+                ],
+                "non_tray_items": [
+                    {
                         "id": 1,
-                        "name": "A Song of Ice and Fire",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "accession_dt": "2023-10-08T20:46:56.764426",
-                    "withdrawal_dt": "2023-10-08T20:46:56.764426",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
-                }],
-                "refile_job_items": [{"....": "...."}],
+                        "status": "In",
+                        "owner": {
+                            "id": 1,
+                            "name": "Special Collection Directorate"
+                        },
+                        "size_class": {
+                            "id": 1,
+                            "name": "C-Low",
+                            "short_name": "CL"
+                        },
+                        "shelf_position_id": 1,
+                        "shelf_position": {
+                            "location": "Cabin Branch-04-57-L-23-10-08",
+                            "internal_location": "57-L-23-10-08",
+                            "shelf_position_number": {
+                                "number": 1
+                            },
+                            "shelf": {
+                                "id": 1,
+                                "shelf_number": {
+                                    "number": 1
+                                },
+                                "barcode": {
+                                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                                    "value": "5901234123457",
+                                    "type_id": 1,
+                                    "type": {
+                                        "id": 1,
+                                        "name": "Item"
+                                    },
+                                    "create_dt": "2023-10-08T20:46:56.764426",
+                                    "update_dt": "2023-10-08T20:46:56.764398"
+                                },
+                            }
+                        },
+                        "shelf_position_proposed_id": 1,
+                        "barcode": {
+                            "id": "550e8400-e29b-41d4-a716-446655440001",
+                            "value": "5901234123457",
+                            "type_id": 1,
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "container_type": {
+                            "id": 1,
+                            "type": "Tray",
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "scanned_for_shelving": True
+                    }
+                ],
+                "refile_job_items": [
+                    {
+                        "id": 1,
+                        "status": "In",
+                        "owner": {
+                            "id": 1,
+                            "name": "Special Collection Directorate"
+                        },
+                        "size_class": {
+                            "id": 1,
+                            "name": "C-Low",
+                            "short_name": "CL"
+                        },
+                        "tray": {
+                            "id": 1,
+                            "barcode": {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "value": "5901234123457",
+                                "type_id": 1,
+                                "type": {
+                                    "id": 1,
+                                    "name": "Item"
+                                },
+                                "create_dt": "2023-10-08T20:46:56.764426",
+                                "update_dt": "2023-10-08T20:46:56.764398"
+                            },
+                            "shelf_position": {
+                                "location": "Cabin Branch-04-57-L-23-10-08",
+                                "internal_location": "57-L-23-10-08",
+                                "shelf_position_number": {
+                                    "number": 1
+                                },
+                                "shelf": {
+                                    "id": 1,
+                                    "shelf_number": {
+                                        "number": 1
+                                    },
+                                    "barcode": {
+                                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                                        "value": "5901234123457",
+                                        "type_id": 1,
+                                        "type": {
+                                            "id": 1,
+                                            "name": "Item"
+                                        },
+                                        "create_dt": "2023-10-08T20:46:56.764426",
+                                        "update_dt": "2023-10-08T20:46:56.764398"
+                                    },
+                                }
+                            }
+                        },
+                        "shelf_position_id": 1,
+                        "shelf_position": {
+                            "location": "Cabin Branch-04-57-L-23-10-08",
+                            "internal_location": "57-L-23-10-08",
+                            "shelf_position_number": {
+                                "number": 1
+                            },
+                            "shelf": {
+                                "id": 1,
+                                "shelf_number": {
+                                    "number": 1
+                                },
+                                "barcode": {
+                                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                                    "value": "5901234123457",
+                                    "type_id": 1,
+                                    "type": {
+                                        "id": 1,
+                                        "name": "Item"
+                                    },
+                                    "create_dt": "2023-10-08T20:46:56.764426",
+                                    "update_dt": "2023-10-08T20:46:56.764398"
+                                },
+                            }
+                        },
+                        "shelf_position_proposed_id": 1,
+                        "barcode": {
+                            "id": "550e8400-e29b-41d4-a716-446655440001",
+                            "value": "5901234123457",
+                            "type_id": 1,
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "container_type": {
+                            "id": 1,
+                            "type": "Tray",
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "scanned_for_shelving": True
+                    }
+                ],
                 "item_count": 1,
                 "item_shelved_refiled_count": 1,
                 "non_tray_item_count": 1,

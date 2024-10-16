@@ -135,45 +135,9 @@ class NestedShelfPositionNumberForShelvingJob(BaseModel):
     number: int
 
 
-class NestedLadderNumberForShelvingJob(BaseModel):
-    number: int
-
-
-class NestedSideOrientationForShelvingJob(BaseModel):
-    name: str
-
-
-class NestedAisleNumberForShelvingJob(BaseModel):
-    number: int
-
-
-class NestedModuleForShelvingJob(BaseModel):
-    id: int
-    module_number: str
-
-
 class NestedBuildingForShelvingJob(BaseModel):
     id: int
     name: Optional[str] = None
-
-
-class NestedAisleForShelvingJob(BaseModel):
-    id: int
-    aisle_number: NestedAisleNumberForShelvingJob
-    module: Optional[NestedModuleForShelvingJob] = None
-    building: Optional[NestedBuildingForShelvingJob] = None
-
-
-class NestedSideForShelvingJob(BaseModel):
-    id: int
-    side_orientation: NestedSideOrientationForShelvingJob
-    aisle: NestedAisleForShelvingJob
-
-
-class NestedLadderForShelvingJob(BaseModel):
-    id: int
-    ladder_number: NestedLadderNumberForShelvingJob
-    side: NestedSideForShelvingJob
 
 
 class NestedShelfNumberForShelvingJob(BaseModel):
@@ -183,7 +147,6 @@ class NestedShelfNumberForShelvingJob(BaseModel):
 class NestedShelfForShelvingJob(BaseModel):
     id: int
     barcode: BarcodeDetailReadOutput
-    ladder: NestedLadderForShelvingJob
     shelf_number: NestedShelfNumberForShelvingJob
 
 
@@ -191,6 +154,8 @@ class ShelfPositionNestedForShelvingJob(BaseModel):
     id: int
     shelf_position_number: NestedShelfPositionNumberForShelvingJob
     shelf: NestedShelfForShelvingJob
+    location: Optional[str] = None
+    internal_location: Optional[str] = None
 
 
 class NestedOwnerForShelvingJob(BaseModel):
@@ -306,6 +271,8 @@ class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
                             "shelf_position_number": {
                                 "number": 5
                             },
+                            "location": "Cabin Branch-04-57-L-23-10-08",
+                            "internal_location": "57-L-23-10-08",
                             "shelf": {
                                 "id": 1,
                                 "shelf_number": {
@@ -318,32 +285,6 @@ class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
                                     "create_dt": "2023-10-08T20:46:56.764426",
                                     "update_dt": "2023-10-08T20:46:56.764398"
                                 },
-                                "ladder": {
-                                    "id": 1,
-                                    "ladder_number": {
-                                        "number": 1
-                                    },
-                                    "side": {
-                                        "id": 27,
-                                        "side_orientation": {
-                                            "name": "Left"
-                                        },
-                                        "aisle": {
-                                            "id": 1,
-                                            "aisle_number": {
-                                                "number": 1
-                                            },
-                                            "module": {
-                                                "id": 1,
-                                                "module_number": "1"
-                                            },
-                                            "building": {
-                                                "id": 1,
-                                                "name": "Southpoint Circle"
-                                            }
-                                        }
-                                    }
-                                }
                             }
                         }
                     }

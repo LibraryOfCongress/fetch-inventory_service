@@ -103,6 +103,9 @@ class ShelfPositionNestedForTrayOutput(BaseModel):
     id: int
     shelf_id: int
     shelf_position_number: NestedShelfPositionNumber
+    location: Optional[str] = None
+    internal_location: Optional[str] = None
+
 
 
 class TrayBaseOutput(TrayInput):
@@ -326,6 +329,8 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
                 "shelf_position": {
                     "id": 1,
                     "shelf_id": 1,
+                    "location": "Cabin Branch-04-57-L-23-10-08",
+                    "internal_location": "57-L-23-10-08",
                     "shelf_position_number": {
                         "number": 1
                     }

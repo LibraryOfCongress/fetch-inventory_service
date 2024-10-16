@@ -3,9 +3,10 @@ import os, json, random
 from sqlalchemyseed import load_entities_from_json, HybridSeeder
 from sqlalchemy.orm import Session
 
+from app.models.shelf_positions import ShelfPosition
 from app.seed.seeder_session import get_session
 from app.logger import inventory_logger
-
+from app.tasks import location_address_processing
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -16,100 +17,112 @@ def get_seeder_session() -> Session:
 
 
 def load_seed(fixture_type, json_file):
-    fixture_path = os.path.join(current_dir, 'fixtures', fixture_type, json_file)
+    fixture_path = os.path.join(current_dir, "fixtures", fixture_type, json_file)
     return load_entities_from_json(fixture_path)
 
 
 def generate_ladders_for_system():
-    inventory_logger.info('Generating ladders')
+    inventory_logger.info("Generating ladders")
     ladder_session = get_seeder_session()
     ladder_seeder = HybridSeeder(ladder_session)
     # number_of_ladders = 304 # 38 ladders x 8 sides (4 aisles)
     number_of_sides = 8
-    ladder_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'ladders.json')
-    with open(ladder_fixture_path, 'r') as file:
+    ladder_fixture_path = os.path.join(
+        current_dir, "fixtures", "entities", "ladders.json"
+    )
+    with open(ladder_fixture_path, "r") as file:
         template_dict = json.load(file)
         for i in range(0, number_of_sides):
             ladder_dict = template_dict.copy()
-            for ladder in ladder_dict['data']:
-                ladder['!side_id']['filter']['id'] = i + 1
-            generated_file_path = os.path.join(current_dir, 'fixtures', 'entities', 'gen_ladders.json')
-            with open(generated_file_path, 'w') as file:
+            for ladder in ladder_dict["data"]:
+                ladder["!side_id"]["filter"]["id"] = i + 1
+            generated_file_path = os.path.join(
+                current_dir, "fixtures", "entities", "gen_ladders.json"
+            )
+            with open(generated_file_path, "w") as file:
                 json.dump(ladder_dict, file)
             # And seed
 
-            inventory_logger.info(f'\nGenerating {i + 1} of {number_of_sides} ladders')
+            inventory_logger.info(f"\nGenerating {i + 1} of {number_of_sides} ladders")
 
             ladder_seeder.seed(load_entities_from_json(generated_file_path))
             ladder_seeder.session.commit()
 
 
 def generate_shelf_barcodes_for_system():
-    inventory_logger.info('Generating shelf barcodes')
+    inventory_logger.info("Generating shelf barcodes")
     barcode_session = get_seeder_session()
     barcode_seeder = HybridSeeder(barcode_session)
-    barcode_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'shelf_barcodes.json')
-    with open(barcode_fixture_path, 'r') as file:
+    barcode_fixture_path = os.path.join(
+        current_dir, "fixtures", "entities", "shelf_barcodes.json"
+    )
+    with open(barcode_fixture_path, "r") as file:
         template_dict = json.load(file)
         # we need 2432 barcodes, template has 1
-        num_barcodes = 2432 # generate 2,432 barcodes
+        num_barcodes = 2432  # generate 2,432 barcodes
         for i in range(0, num_barcodes):
             barcode_dict = template_dict.copy()
-            for barcode in barcode_dict['data']:
-                old_value = int(barcode['value'])
+            for barcode in barcode_dict["data"]:
+                old_value = int(barcode["value"])
                 # barcode['value'] = str(old_value + 1)
                 if i < 1:
-                    barcode['value'] = str(old_value)
+                    barcode["value"] = str(old_value)
                 else:
-                    barcode['value'] = str(old_value + 1)
-            generated_file_path = os.path.join(current_dir, 'fixtures', 'entities', 'gen_shelf_barcodes.json')
-            with open(generated_file_path, 'w') as file:
+                    barcode["value"] = str(old_value + 1)
+            generated_file_path = os.path.join(
+                current_dir, "fixtures", "entities", "gen_shelf_barcodes.json"
+            )
+            with open(generated_file_path, "w") as file:
                 json.dump(barcode_dict, file)
             # And seed
 
-            inventory_logger.info(f'\nGenerating {i + 1} of {num_barcodes} shelf barcodes')
+            inventory_logger.info(
+                f"\nGenerating {i + 1} of {num_barcodes} shelf barcodes"
+            )
 
             barcode_seeder.seed(load_entities_from_json(generated_file_path))
             barcode_seeder.session.commit()
 
 
 def generate_shelves_for_system():
-    inventory_logger.info('Generating shelves')
+    inventory_logger.info("Generating shelves")
     shelf_session = get_seeder_session()
     shelf_seeder = HybridSeeder(shelf_session)
-    shelf_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'shelves.json')
-    with open(shelf_fixture_path, 'r') as file:
+    shelf_fixture_path = os.path.join(
+        current_dir, "fixtures", "entities", "shelves.json"
+    )
+    with open(shelf_fixture_path, "r") as file:
         template_dict = json.load(file)
         # we need 2432 shelves, template has 1
         num_files = 2432
-        for i in range(0, num_files): # had num_files + 1
+        for i in range(0, num_files):  # had num_files + 1
             shelf_dict = template_dict.copy()
-            for shelf in shelf_dict['data']:
+            for shelf in shelf_dict["data"]:
                 # here
-                old_barcode_val = shelf['!barcode_id']['filter']['value']
+                old_barcode_val = shelf["!barcode_id"]["filter"]["value"]
                 # shelf['!barcode_id']['filter']['value'] = str((i + 1) + 100100) # was + 1
                 if i < 1:
                     # shelf['!barcode_id']['filter']['value'] = str(int(old_barcode_val) + i + 1)
-                    shelf['!barcode_id']['filter']['value'] = str(old_barcode_val)
+                    shelf["!barcode_id"]["filter"]["value"] = str(old_barcode_val)
                 else:
                     new_barcode_value = str(int(old_barcode_val) + 1)
-                    shelf['!barcode_id']['filter']['value'] = new_barcode_value
-                cont_type = 'Non-Tray'
-                size_class_list_one = ['AH', 'BH', 'CH', 'DH', 'EH', 'RS']
+                    shelf["!barcode_id"]["filter"]["value"] = new_barcode_value
+                cont_type = "Non-Tray"
+                size_class_list_one = ["AH", "BH", "CH", "DH", "EH", "RS"]
                 size_class = random.choice(size_class_list_one)
                 owner_list = [
                     "Collections & Management",
-                    "Congressional Research Services"
+                    "Congressional Research Services",
                 ]
                 owner = random.choice(owner_list)
                 if i % 3:
-                    cont_type = 'Tray'
-                    size_class_list_two = ['AL', 'BL', 'CL', 'DL', 'EL', 'SM']
+                    cont_type = "Tray"
+                    size_class_list_two = ["AL", "BL", "CL", "DL", "EL", "SM"]
                     size_class = random.choice(size_class_list_two)
-                shelf['!container_type_id']['filter']['type'] = cont_type
-                shelf['!size_class_id']['filter']['short_name'] = size_class
-                shelf['!owner_id']['filter']['name'] = owner
-                old_shelf_num = shelf['!shelf_number_id']['filter']['number']
+                shelf["!container_type_id"]["filter"]["type"] = cont_type
+                shelf["!size_class_id"]["filter"]["short_name"] = size_class
+                shelf["!owner_id"]["filter"]["name"] = owner
+                old_shelf_num = shelf["!shelf_number_id"]["filter"]["number"]
                 # if old_shelf_num == 1:
                 #     if i > 0: #skip first pass
                 #         new_shelf_num = 2
@@ -125,90 +138,112 @@ def generate_shelves_for_system():
                     new_shelf_num = 1
                 else:
                     new_shelf_num = old_shelf_num + 1
-                shelf['!shelf_number_id']['filter']['number'] = new_shelf_num
-                old_ladder_id = shelf['!ladder_id']['filter']['id']
+                shelf["!shelf_number_id"]["filter"]["number"] = new_shelf_num
+                old_ladder_id = shelf["!ladder_id"]["filter"]["id"]
                 if new_shelf_num == 1:
-                    if i > 0: #skip first pass
+                    if i > 0:  # skip first pass
                         new_ladder_id = old_ladder_id + 1
                     else:
                         new_ladder_id = old_ladder_id
                 else:
                     new_ladder_id = old_ladder_id
-                shelf['!ladder_id']['filter']['id'] = new_ladder_id
-            generated_file_path = os.path.join(current_dir, 'fixtures', 'entities', 'gen_shelves.json')
-            with open(generated_file_path, 'w') as file:
+                shelf["!ladder_id"]["filter"]["id"] = new_ladder_id
+            generated_file_path = os.path.join(
+                current_dir, "fixtures", "entities", "gen_shelves.json"
+            )
+            with open(generated_file_path, "w") as file:
                 json.dump(shelf_dict, file)
             # And seed
 
-            inventory_logger.info(f'\nGenerating {i + 1} of {num_files} shelves')
+            inventory_logger.info(f"\nGenerating {i + 1} of {num_files} shelves")
             shelf_seeder.seed(load_entities_from_json(generated_file_path))
             shelf_seeder.session.commit()
 
 
 def generate_shelf_positions_for_system():
-    inventory_logger.info('Generating shelf positions')
+    inventory_logger.info("Generating shelf positions")
     shelf_pos_session = get_seeder_session()
     shelf_pos_seeder = HybridSeeder(shelf_pos_session)
-    shelf_pos_fixture_path = os.path.join(current_dir, 'fixtures', 'entities', 'shelf_positions.json')
-    with open(shelf_pos_fixture_path, 'r') as file:
+    shelf_pos_fixture_path = os.path.join(
+        current_dir, "fixtures", "entities", "shelf_positions.json"
+    )
+    with open(shelf_pos_fixture_path, "r") as file:
         template_dict = json.load(file)
         # we need 3 positions per shelf, template has 3
         # 8 pos * 2432
         num_shelves = 2432
         for i in range(0, num_shelves):
             shelf_pos_dict = template_dict.copy()
-            for shelf_position in shelf_pos_dict['data']:
-                old_shelf_id = shelf_position['!shelf_id']['filter']['id']
+            for shelf_position in shelf_pos_dict["data"]:
+                old_shelf_id = shelf_position["!shelf_id"]["filter"]["id"]
                 if i > 0:
-                    shelf_position['!shelf_id']['filter']['id'] = 1 + old_shelf_id
-            generated_file_path = os.path.join(current_dir, 'fixtures', 'entities', 'gen_shelf_positions.json')
-            with open(generated_file_path, 'w') as file:
+                    shelf_position["!shelf_id"]["filter"]["id"] = 1 + old_shelf_id
+            generated_file_path = os.path.join(
+                current_dir, "fixtures", "entities", "gen_shelf_positions.json"
+            )
+            with open(generated_file_path, "w") as file:
                 json.dump(shelf_pos_dict, file)
             # And seed
 
-            inventory_logger.info(f'\nGenerating {i + 1} of {num_shelves} shelf positions')
+            inventory_logger.info(
+                f"\nGenerating {i + 1} of {num_shelves} shelf positions"
+            )
             shelf_pos_seeder.seed(load_entities_from_json(generated_file_path))
             shelf_pos_seeder.session.commit()
+            shelf_position = (
+                shelf_pos_seeder.session.query(ShelfPosition)
+                .filter(ShelfPosition.id == shelf_position["!shelf_id"]["filter"]["id"])
+                .first()
+            )
+
+            # Generating the location and internal location strings for the
+            # shelf position
+            location_address_processing(
+                shelf_pos_seeder.session,
+                shelf_position.shelf,
+                shelf_position.shelf_position_number.number,
+                shelf_position.id,
+            )
 
 
 # Tuple-List of fixtures to load
 fake_data = [
-    ('types', 'owner_tiers.json'),
-    ('entities', 'tier_one_owners.json'),
-    ('entities', 'tier_two_owners.json'),
-    ('entities', 'buildings.json'),
-    ('entities', 'modules.json'),
-    ('types', 'aisle_numbers.json'),
-    ('entities', 'fort_meade_aisles.json'), # 2 modules
-    ('types', 'side_orientations.json'),
-    ('entities', 'sides.json'),
-    ('types', 'size_classes.json'),
-    ('types', 'media_types.json'),
-    ('types', 'container_types.json'),
-    ('types', 'barcode_types.json'),
-    ('types', 'ladder_numbers.json'),
-    ('types', 'shelf_position_numbers.json'),
-    ('types', 'shelf_numbers.json'),
-    ('types', 'permissions.json'),
-    ('entities', 'users.json'),
-    ('entities', 'groups.json'),
-    ('entities', 'group_permissions.json'),
-    ('entities', 'user_groups.json'),
-    ('types', 'request_types.json'),
-    ('types', 'priorities.json'),
-    ('entities', 'delivery_locations.json')
+    ("types", "owner_tiers.json"),
+    ("entities", "tier_one_owners.json"),
+    ("entities", "tier_two_owners.json"),
+    ("entities", "buildings.json"),
+    ("entities", "modules.json"),
+    ("types", "aisle_numbers.json"),
+    ("entities", "fort_meade_aisles.json"),  # 2 modules
+    ("types", "side_orientations.json"),
+    ("entities", "sides.json"),
+    ("types", "size_classes.json"),
+    ("types", "media_types.json"),
+    ("types", "container_types.json"),
+    ("types", "barcode_types.json"),
+    ("types", "ladder_numbers.json"),
+    ("types", "shelf_position_numbers.json"),
+    ("types", "shelf_numbers.json"),
+    ("types", "permissions.json"),
+    ("entities", "users.json"),
+    ("entities", "groups.json"),
+    ("entities", "group_permissions.json"),
+    ("entities", "user_groups.json"),
+    ("types", "request_types.json"),
+    ("types", "priorities.json"),
+    ("entities", "delivery_locations.json"),
 ]
 
 
 def seed_data():
-    inventory_logger.info('Staring process to seed fake data...')
+    inventory_logger.info("Staring process to seed fake data...")
     session = get_seeder_session()
     seeder = HybridSeeder(session)
 
     for data in fake_data:
         elements = list(data)
 
-        inventory_logger.info(f'\nSeeding element: {elements[0]} from {elements[1]}\n')
+        inventory_logger.info(f"\nSeeding element: {elements[0]} from {elements[1]}\n")
 
         seeder.seed(load_seed(elements[0], elements[1]))
         seeder.session.commit()

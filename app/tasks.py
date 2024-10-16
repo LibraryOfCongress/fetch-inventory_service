@@ -215,3 +215,32 @@ def manage_shelf_available_space(session, existing_shelf_position, new_shelf_pos
         )
 
     session.commit()
+
+
+def location_address_processing(
+    session: Session, shelf: Shelf, shelf_position_number, shelf_position_id
+):
+    shelf_number = shelf.shelf_number.number
+    ladder = shelf.ladder
+    ladder_number = ladder.ladder_number.number
+    side = ladder.side
+    side_orientation = side.side_orientation.name
+    aisle = side.aisle
+    aisle_number = aisle.aisle_number.number
+    module = aisle.module
+    building = module.building
+
+    location = (
+        f"{building.name}-{module.module_number}-{aisle_number}-"
+        f"{side_orientation[0]}-{ladder_number}-{shelf_number}-{shelf_position_number}"
+    )
+
+    internal_location = (
+        f"{building.id}-{module.id}-{aisle.id}-{side.id}"
+        f"-{ladder.id}-{shelf.id}-{shelf_position_id}"
+    )
+
+    session.query(ShelfPosition).filter(ShelfPosition.id == shelf_position_id).update(
+        {"location": location, "internal_location": internal_location}
+    )
+    session.commit()

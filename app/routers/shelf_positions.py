@@ -1,7 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from sqlmodel import Session, select
 from datetime import datetime
-from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
@@ -21,7 +20,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.tasks import location_address_processing
 
 router = APIRouter(
     prefix="/shelves/positions",
@@ -85,7 +84,9 @@ def get_shelf_position_detail(id: int, session: Session = Depends(get_session)):
 
 @router.post("/", response_model=ShelfPositionDetailWriteOutput, status_code=201)
 def create_shelf_position(
-    shelf_position_input: ShelfPositionInput, session: Session = Depends(get_session)
+    shelf_position_input: ShelfPositionInput,
+    session: Session = Depends(get_session),
+    background_tasks: BackgroundTasks = None,
 ) -> ShelfPosition:
     """
     Create a new shelf position.
@@ -124,8 +125,18 @@ def create_shelf_position(
         shelf.available_space += 1
 
     new_shelf_position = ShelfPosition(**shelf_position_input.model_dump())
+
     session.add(shelf)
     session.add(new_shelf_position)
+    session.commit()
+    session.refresh(new_shelf_position)
+
+    background_tasks.add_task(
+        location_address_processing(
+            session, shelf, shelf_position, new_shelf_position.id
+        )
+    )
+
     session.commit()
     session.refresh(new_shelf_position)
 
@@ -137,6 +148,7 @@ def update_shelf_position(
     id: int,
     shelf_position: ShelfPositionUpdateInput,
     session: Session = Depends(get_session),
+    background_tasks: BackgroundTasks = None,
 ):
     """
     Update a shelf position with the given ID.
@@ -157,6 +169,28 @@ def update_shelf_position(
 
         if existing_shelf_position is None:
             raise NotFound(detail=f"Shelf Position ID {id} Not Found")
+
+        shelf = session.get(Shelf, existing_shelf_position.shelf_id)
+
+        if not shelf:
+            raise NotFound(
+                detail=f"Shelf ID {existing_shelf_position.shelf_id} Not Found"
+            )
+
+        shelf_position_number = session.get(
+            ShelfPositionNumber, existing_shelf_position.shelf_position_number_id
+        )
+
+        if not shelf_position_number:
+            raise NotFound(
+                detail=f"Shelf Position Number ID {existing_shelf_position.shelf_position_number_id} Not Found"
+            )
+
+        background_tasks.add_task(
+            location_address_processing(
+                session, shelf, shelf_position_number.number, existing_shelf_position.id
+            )
+        )
 
         mutated_data = shelf_position.model_dump(exclude_unset=True)
 
