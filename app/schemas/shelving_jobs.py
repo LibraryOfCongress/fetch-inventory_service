@@ -135,9 +135,46 @@ class NestedShelfPositionNumberForShelvingJob(BaseModel):
     number: int
 
 
+class NestedLadderNumberForShelvingJob(BaseModel):
+    number: int
+
+
+class NestedSideOrientationForShelvingJob(BaseModel):
+    name: str
+
+
+class NestedAisleNumberForShelvingJob(BaseModel):
+    number: int
+
+
+class NestedModuleForShelvingJob(BaseModel):
+    id: int
+    module_number: str
+
+
+
 class NestedBuildingForShelvingJob(BaseModel):
     id: int
     name: Optional[str] = None
+
+
+class NestedAisleForShelvingJob(BaseModel):
+    id: int
+    aisle_number: NestedAisleNumberForShelvingJob
+    module: Optional[NestedModuleForShelvingJob] = None
+    building: Optional[NestedBuildingForShelvingJob] = None
+
+
+class NestedSideForShelvingJob(BaseModel):
+    id: int
+    side_orientation: NestedSideOrientationForShelvingJob
+    aisle: NestedAisleForShelvingJob
+
+
+class NestedLadderForShelvingJob(BaseModel):
+    id: int
+    ladder_number: NestedLadderNumberForShelvingJob
+    side: NestedSideForShelvingJob
 
 
 class NestedShelfNumberForShelvingJob(BaseModel):
@@ -147,6 +184,7 @@ class NestedShelfNumberForShelvingJob(BaseModel):
 class NestedShelfForShelvingJob(BaseModel):
     id: int
     barcode: BarcodeDetailReadOutput
+    ladder: NestedLadderForShelvingJob
     shelf_number: NestedShelfNumberForShelvingJob
 
 
@@ -275,13 +313,43 @@ class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
                             "internal_location": "01-04-57-L-23-10-08",
                             "shelf": {
                                 "id": 1,
+                                "ladder": {
+                                    "id": 1,
+                                    "ladder_number": {
+                                        "number": 1
+                                    },
+                                    "side": {
+                                        "id": 1,
+                                        "side_orientation": {
+                                            "name": "Left"
+                                        },
+                                        "aisle": {
+                                            "id": 1,
+                                            "aisle_number": {
+                                                "number": 1
+                                            },
+                                            "module": {
+                                                "id": 1,
+                                                "module_number": "1"
+                                            },
+                                            "building": {
+                                                "id": 1,
+                                                "name": "Cabin Branch"
+                                            }
+                                        }
+                                    }
+                                },
                                 "shelf_number": {
-                                    "number": 1,
+                                    "number": 1
                                 },
                                 "barcode": {
-                                    "id": "44ffs-e29b-41d4-a716-446655440000",
-                                    "value": "4401234123457",
+                                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                                    "value": "5901234123457",
                                     "type_id": 1,
+                                    "type": {
+                                        "id": 1,
+                                        "name": "Item"
+                                    },
                                     "create_dt": "2023-10-08T20:46:56.764426",
                                     "update_dt": "2023-10-08T20:46:56.764398"
                                 },
@@ -324,23 +392,13 @@ class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
                             },
                             "shelf": {
                                 "id": 1,
-                                "shelf_number": {
-                                    "number": 1,
-                                },
-                                "barcode": {
-                                    "id": "44ffs-e29b-41d4-a716-446655440000",
-                                    "value": "4401234123457",
-                                    "type_id": 1,
-                                    "create_dt": "2023-10-08T20:46:56.764426",
-                                    "update_dt": "2023-10-08T20:46:56.764398"
-                                },
                                 "ladder": {
                                     "id": 1,
                                     "ladder_number": {
                                         "number": 1
                                     },
                                     "side": {
-                                        "id": 27,
+                                        "id": 1,
                                         "side_orientation": {
                                             "name": "Left"
                                         },
@@ -355,11 +413,25 @@ class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
                                             },
                                             "building": {
                                                 "id": 1,
-                                                "name": "Southpoint Circle"
+                                                "name": "Cabin Branch"
                                             }
                                         }
                                     }
-                                }
+                                },
+                                "shelf_number": {
+                                    "number": 1
+                                },
+                                "barcode": {
+                                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                                    "value": "5901234123457",
+                                    "type_id": 1,
+                                    "type": {
+                                        "id": 1,
+                                        "name": "Item"
+                                    },
+                                    "create_dt": "2023-10-08T20:46:56.764426",
+                                    "update_dt": "2023-10-08T20:46:56.764398"
+                                },
                             }
                         }
                     }
@@ -449,40 +521,47 @@ class ReAssignmentOutput(BaseModel):
                     "number": 5
                 },
                 "shelf": {
-                    "id": 1,
-                    "barcode": {
-                        "id": "44ffs-e29b-41d4-a716-446655440000",
-                        "value": "4401234123457",
-                        "type_id": 1,
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398"
-                    },
-                    "ladder": {
-                        "id": 1,
-                        "ladder_number": {
-                            "number": 1
-                        },
-                        "side": {
-                            "id": 27,
-                            "side_orientation": {
-                                "name": "Left"
-                            },
-                            "aisle": {
                                 "id": 1,
-                                "aisle_number": {
+                                "ladder": {
+                                    "id": 1,
+                                    "ladder_number": {
+                                        "number": 1
+                                    },
+                                    "side": {
+                                        "id": 1,
+                                        "side_orientation": {
+                                            "name": "Left"
+                                        },
+                                        "aisle": {
+                                            "id": 1,
+                                            "aisle_number": {
+                                                "number": 1
+                                            },
+                                            "module": {
+                                                "id": 1,
+                                                "module_number": "1"
+                                            },
+                                            "building": {
+                                                "id": 1,
+                                                "name": "Cabin Branch"
+                                            }
+                                        }
+                                    }
+                                },
+                                "shelf_number": {
                                     "number": 1
                                 },
-                                "module": {
-                                    "id": 1,
-                                    "module_number": "1"
+                                "barcode": {
+                                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                                    "value": "5901234123457",
+                                    "type_id": 1,
+                                    "type": {
+                                        "id": 1,
+                                        "name": "Item"
+                                    },
+                                    "create_dt": "2023-10-08T20:46:56.764426",
+                                    "update_dt": "2023-10-08T20:46:56.764398"
                                 },
-                                "building": {
-                                    "id": 1,
-                                    "name": "Southpoint Circle"
-                                }
                             }
-                        }
-                    }
-                }
             }
         }

@@ -75,9 +75,51 @@ class NestedShelfPositionNumberForRefileQueue(BaseModel):
     number: int
 
 
+class NestedLadderNumberForRefileQueue(BaseModel):
+    number: int
+
+
+class NestedSideOrientationForRefileQueue(BaseModel):
+    name: str
+
+
+class NestedAisleNumberForRefileQueue(BaseModel):
+    number: int
+
+
+class NestedModuleForRefileQueue(BaseModel):
+    id: int
+    module_number: str
+
+
+class NestedBuildingForRefileQueue(BaseModel):
+    id: int
+    name: str
+
+
+class NestedAisleForRefileQueue(BaseModel):
+    id: int
+    aisle_number: NestedAisleNumberForRefileQueue
+    module: Optional[NestedModuleForRefileQueue] = None
+    building: Optional[NestedBuildingForRefileQueue] = None
+
+
+class NestedSideForRefileQueue(BaseModel):
+    id: int
+    side_orientation: NestedSideOrientationForRefileQueue
+    aisle: NestedAisleForRefileQueue
+
+
+class NestedLadderForRefileQueue(BaseModel):
+    id: int
+    ladder_number: NestedLadderNumberForRefileQueue
+    side: NestedSideForRefileQueue
+
+
 class NestedShelfForRefileQueue(BaseModel):
     id: int
     barcode: BarcodeDetailReadOutput
+    ladder: NestedLadderForRefileQueue
     shelf_number: NestedShelfNumberForRefileQueue
 
 
@@ -158,7 +200,13 @@ class RefileQueueWriteOutput(BaseModel):
                     "tray": {
                         "id": 1,
                         "barcode": {
-
+                            "id": "550e8400-e29b-41d4-a716-446655440000",
+                            "value": "5901234123457",
+                            "type_id": 1,
+                            "type": {
+                                "id": 1,
+                                "name": "Item"
+                            },
                         },
                         "shelf_position": {
                             "id": 1,
@@ -167,6 +215,35 @@ class RefileQueueWriteOutput(BaseModel):
                             },
                             "shelf": {
                                 "id": 1,
+                                "ladder": {
+                                    "id": 1,
+                                    "ladder_number": {
+                                        "number": 1
+                                    },
+                                    "side": {
+                                        "id": 1,
+                                        "side_orientation": {
+                                            "name": "Left"
+                                        },
+                                        "aisle": {
+                                            "id": 1,
+                                            "aisle_number": {
+                                                "number": 1
+                                            },
+                                            "module": {
+                                                "id": 1,
+                                                "module_number": "1"
+                                            },
+                                            "building": {
+                                                "id": 1,
+                                                "name": "Cabin Branch"
+                                            }
+                                        }
+                                    }
+                                },
+                                "shelf_number": {
+                                    "number": 1
+                                },
                                 "barcode": {
                                     "id": "550e8400-e29b-41d4-a716-446655440000",
                                     "value": "5901234123457",
@@ -178,9 +255,6 @@ class RefileQueueWriteOutput(BaseModel):
                                     "create_dt": "2023-10-08T20:46:56.764426",
                                     "update_dt": "2023-10-08T20:46:56.764398"
                                 },
-                                "shelf_number": {
-                                    "number": 1
-                                }
                             },
                             "location": "Cabin Branch-04-57-L-23-10-08",
                             "internal_location": "01-04-57-L-23-10-08",
@@ -203,7 +277,7 @@ class RefileQueueWriteOutput(BaseModel):
                         "create_dt": "2023-10-08T20:46:56.764426",
                         "update_dt": "2023-10-08T20:46:56.764398"
                     },
-                    "scanned_for_shelving": True,
+                    "scanned_for_shelving": True
                 },
                 "non_tray_items": {
                     "id": 1,
@@ -225,6 +299,35 @@ class RefileQueueWriteOutput(BaseModel):
                         },
                         "shelf": {
                             "id": 1,
+                            "ladder": {
+                                "id": 1,
+                                "ladder_number": {
+                                    "number": 1
+                                },
+                                "side": {
+                                    "id": 1,
+                                    "side_orientation": {
+                                        "name": "Left"
+                                    },
+                                    "aisle": {
+                                        "id": 1,
+                                        "aisle_number": {
+                                            "number": 1
+                                        },
+                                        "module": {
+                                            "id": 1,
+                                            "module_number": "1"
+                                        },
+                                        "building": {
+                                            "id": 1,
+                                            "name": "Cabin Branch"
+                                        }
+                                    }
+                                }
+                            },
+                            "shelf_number": {
+                                "number": 1
+                            },
                             "barcode": {
                                 "id": "550e8400-e29b-41d4-a716-446655440000",
                                 "value": "5901234123457",
@@ -236,9 +339,6 @@ class RefileQueueWriteOutput(BaseModel):
                                 "create_dt": "2023-10-08T20:46:56.764426",
                                 "update_dt": "2023-10-08T20:46:56.764398"
                             },
-                            "shelf_number": {
-                                "number": 1
-                            }
                         },
                         "location": "Cabin Branch-04-57-L-23-10-08",
                         "internal_location": "01-04-57-L-23-10-08"
@@ -261,7 +361,7 @@ class RefileQueueWriteOutput(BaseModel):
                         "create_dt": "2023-10-08T20:46:56.764426",
                         "update_dt": "2023-10-08T20:46:56.764398"
                     },
-                    "scanned_for_shelving": True,
+                    "scanned_for_shelving": True
                 }
             }
         }
