@@ -113,12 +113,11 @@ build_image_test:
 
 build_image_staging:
   stage: build
-  tags:
-    - stage-shell
-  before_script:
-    - docker info
+  image:
+    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
+    entrypoint: [""]
   variables:
-    IMAGE_FULL_TAG: $REGISTRY_STAGE/inventory-service/stage:latest
+    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/stage:latest
   script:
     - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
     - cp -v images/api.stage.Containerfile Dockerfile
@@ -136,11 +135,13 @@ build_image_staging:
     - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
-    - docker build -t $IMAGE_FULL_TAG .
-    - docker push $IMAGE_FULL_TAG
-  # when: manual
+    - /kaniko/executor
+      --context $CI_PROJECT_DIR
+      --dockerfile $CI_PROJECT_DIR/Dockerfile
+      --destination $IMAGE_FULL_TAG
   rules:
     - if: $CI_COMMIT_BRANCH == 'staging'
+    - when: manual
 
 deploy_dev:
   stage: deploy
@@ -197,11 +198,10 @@ deploy_stage:
     - export TF_VAR_vault_deployer_password=$VAULT_DEPLOYER_PASSWORD_STAGE
     - export TF_VAR_vault_addr=$VAULT_ADDR_STAGE
     - export TF_VAR_app_name="inventory-service"
-    - export TF_VAR_image="${REGISTRY_STAGE}/inventory-service/stage:latest"
+    - export TF_VAR_image='git.loc.gov:4567/fetch/inventory_service/stage:latest'
     - export TF_VAR_timestamp=$CI_COMMIT_TIMESTAMP
     - terraform --version
     - cd terraform
-    - cp -Rv /root/terraform.d/ terraform.d/
     - cp -v $FETCH_DEPLOYER_K8S_CONFIG_STAGE kubeconfig
     - export TF_STATE_NAME=stage
     - envsubst < backend.hcl.tmpl > backend.hcl
@@ -209,6 +209,7 @@ deploy_stage:
     - terraform apply -auto-approve
   rules:
     - if: $CI_COMMIT_BRANCH == 'staging'
+    - when: manual
 
 set_replica_to_0_dev:
   stage: controls
