@@ -75,51 +75,9 @@ class NestedShelfPositionNumberForRefileQueue(BaseModel):
     number: int
 
 
-class NestedLadderNumberForRefileQueue(BaseModel):
-    number: int
-
-
-class NestedSideOrientationForRefileQueue(BaseModel):
-    name: str
-
-
-class NestedAisleNumberForRefileQueue(BaseModel):
-    number: int
-
-
-class NestedModuleForRefileQueue(BaseModel):
-    id: int
-    module_number: str
-
-
-class NestedBuildingForRefileQueue(BaseModel):
-    id: int
-    name: str
-
-
-class NestedAisleForRefileQueue(BaseModel):
-    id: int
-    aisle_number: NestedAisleNumberForRefileQueue
-    module: Optional[NestedModuleForRefileQueue] = None
-    building: Optional[NestedBuildingForRefileQueue] = None
-
-
-class NestedSideForRefileQueue(BaseModel):
-    id: int
-    side_orientation: NestedSideOrientationForRefileQueue
-    aisle: NestedAisleForRefileQueue
-
-
-class NestedLadderForRefileQueue(BaseModel):
-    id: int
-    ladder_number: NestedLadderNumberForRefileQueue
-    side: NestedSideForRefileQueue
-
-
 class NestedShelfForRefileQueue(BaseModel):
     id: int
     barcode: BarcodeDetailReadOutput
-    ladder: NestedLadderForRefileQueue
     shelf_number: NestedShelfNumberForRefileQueue
 
 
@@ -215,32 +173,6 @@ class RefileQueueWriteOutput(BaseModel):
                             },
                             "shelf": {
                                 "id": 1,
-                                "ladder": {
-                                    "id": 1,
-                                    "ladder_number": {
-                                        "number": 1
-                                    },
-                                    "side": {
-                                        "id": 1,
-                                        "side_orientation": {
-                                            "name": "Left"
-                                        },
-                                        "aisle": {
-                                            "id": 1,
-                                            "aisle_number": {
-                                                "number": 1
-                                            },
-                                            "module": {
-                                                "id": 1,
-                                                "module_number": "1"
-                                            },
-                                            "building": {
-                                                "id": 1,
-                                                "name": "Cabin Branch"
-                                            }
-                                        }
-                                    }
-                                },
                                 "shelf_number": {
                                     "number": 1
                                 },
@@ -299,32 +231,6 @@ class RefileQueueWriteOutput(BaseModel):
                         },
                         "shelf": {
                             "id": 1,
-                            "ladder": {
-                                "id": 1,
-                                "ladder_number": {
-                                    "number": 1
-                                },
-                                "side": {
-                                    "id": 1,
-                                    "side_orientation": {
-                                        "name": "Left"
-                                    },
-                                    "aisle": {
-                                        "id": 1,
-                                        "aisle_number": {
-                                            "number": 1
-                                        },
-                                        "module": {
-                                            "id": 1,
-                                            "module_number": "1"
-                                        },
-                                        "building": {
-                                            "id": 1,
-                                            "name": "Cabin Branch"
-                                        }
-                                    }
-                                }
-                            },
                             "shelf_number": {
                                 "number": 1
                             },

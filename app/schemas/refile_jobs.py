@@ -207,50 +207,14 @@ class NestedShelfPositionNumberForRefileJob(BaseModel):
     number: int
 
 
-class NestedLadderNumberForRefileJob(BaseModel):
-    number: int
-
-
-class NestedSideOrientationForRefileJob(BaseModel):
-    name: str
-
-
-class NestedAisleNumberForRefileJob(BaseModel):
-    number: int
-
-
-class NestedModuleForRefileJob(BaseModel):
-    id: int
-    module_number: str
-
-
 class NestedBuildingForRefileJob(BaseModel):
     id: int
     name: str
-
-class NestedAisleForRefileJob(BaseModel):
-    id: int
-    aisle_number: NestedAisleNumberForRefileJob
-    module: Optional[NestedModuleForRefileJob] = None
-    building: Optional[NestedBuildingForRefileJob] = None
-
-
-class NestedSideForRefileJob(BaseModel):
-    id: int
-    side_orientation: NestedSideOrientationForRefileJob
-    aisle: NestedAisleForRefileJob
-
-
-class NestedLadderForRefileJob(BaseModel):
-    id: int
-    ladder_number: NestedLadderNumberForRefileJob
-    side: NestedSideForRefileJob
 
 
 class NestedShelfForRefileJob(BaseModel):
     id: int
     barcode: BarcodeDetailReadOutput
-    ladder: NestedLadderForRefileJob
     shelf_number: NestedShelfNumberForRefileJob
 
 
@@ -373,32 +337,6 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                                 },
                                 "shelf": {
                                     "id": 1,
-                                    "ladder": {
-                                        "id": 1,
-                                        "ladder_number": {
-                                            "number": 1
-                                        },
-                                        "side": {
-                                            "id": 1,
-                                            "side_orientation": {
-                                                "name": "Left"
-                                            },
-                                            "aisle": {
-                                                "id": 1,
-                                                "aisle_number": {
-                                                    "number": 1
-                                                },
-                                                "module": {
-                                                    "id": 1,
-                                                    "module_number": "1"
-                                                },
-                                                "building": {
-                                                    "id": 1,
-                                                    "name": "Cabin Branch"
-                                                }
-                                            }
-                                        }
-                                    },
                                     "shelf_number": {
                                         "number": 1
                                     },
@@ -454,32 +392,6 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                             },
                             "shelf": {
                                 "id": 1,
-                                "ladder": {
-                                    "id": 1,
-                                    "ladder_number": {
-                                        "number": 1
-                                    },
-                                    "side": {
-                                        "id": 1,
-                                        "side_orientation": {
-                                            "name": "Left"
-                                        },
-                                        "aisle": {
-                                            "id": 1,
-                                            "aisle_number": {
-                                                "number": 1
-                                            },
-                                            "module": {
-                                                "id": 1,
-                                                "module_number": "1"
-                                            },
-                                            "building": {
-                                                "id": 1,
-                                                "name": "Cabin Branch"
-                                            }
-                                        }
-                                    }
-                                },
                                 "shelf_number": {
                                     "number": 1
                                 },
@@ -494,7 +406,7 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                                     "create_dt": "2023-10-08T20:46:56.764426",
                                     "update_dt": "2023-10-08T20:46:56.764398"
                                 },
-                            },
+                            }
                         },
                         "shelf_position_proposed_id": 1,
                         "barcode": {

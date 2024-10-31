@@ -15,6 +15,7 @@ from fastapi_pagination import add_pagination
 from alembic.config import Config
 from alembic import command
 
+from app import events # registers events, do not remove
 from app.seed.seed_fake_data import seed_data
 from app.config.config import get_settings
 from app.config.exceptions import (

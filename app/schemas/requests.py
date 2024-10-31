@@ -91,15 +91,6 @@ class ShelfPositionNumberNestedForRequest(BaseModel):
     number: int
 
 
-class LadderNumberNestedForRequest(BaseModel):
-    number: int
-
-
-class SideOrientationNestedForRequest(BaseModel):
-    id: int
-    name: str
-
-
 class AisleNumberNestedForRequest(BaseModel):
     number: int
 
@@ -120,34 +111,9 @@ class BuildingNestedForRequest(BaseModel):
     name: Optional[str] = None
 
 
-class AisleNestedForRequest(BaseModel):
-    id: int
-    aisle_number: AisleNumberNestedForRequest
-    module: Optional[ModuleNestedForRequest] = None
-    building: Optional[BuildingNestedForRequest] = None
-
-
-class SideNestedForRequest(BaseModel):
-    id: int
-    aisle: AisleNestedForRequest
-    side_orientation: SideOrientationNestedForRequest
-
-
-class LadderNestedForRequest(BaseModel):
-    id: int
-    ladder_number: LadderNumberNestedForRequest
-    side: SideNestedForRequest
-
-
-class ShelfNumberNestedForRequest(BaseModel):
-    id: int
-    number: int
-
-
 class ShelfNestedForRequest(BaseModel):
     id: int
-    shelf_number: ShelfNumberNestedForRequest
-    ladder: LadderNestedForRequest
+    # barcode: BarcodeDetailReadOutput
 
 
 class ShelfPositionNestedForRequest(BaseModel):
@@ -295,35 +261,6 @@ class RequestDetailWriteOutput(RequestBaseOutput):
                             "shelf_id": 1,
                             "shelf": {
                                 "id": 1,
-                                "ladder": {
-                                    "id": 1,
-                                    "ladder_number": {
-                                        "number": 1
-                                    },
-                                    "side": {
-                                        "id": 1,
-                                        "side_orientation": {
-                                            "name": "Left"
-                                        },
-                                        "aisle": {
-                                            "id": 1,
-                                            "aisle_number": {
-                                                "number": 1
-                                            },
-                                            "module": {
-                                                "id": 1,
-                                                "module_number": "1"
-                                            },
-                                            "building": {
-                                                "id": 1,
-                                                "name": "Cabin Branch"
-                                            }
-                                        }
-                                    }
-                                },
-                                "shelf_number": {
-                                    "number": 1
-                                },
                                 "barcode": {
                                     "id": "550e8400-e29b-41d4-a716-446655440000",
                                     "value": "5901234123457",
@@ -466,35 +403,6 @@ class RequestListOutput(RequestBaseOutput):
                             "shelf_id": 1,
                             "shelf": {
                                 "id": 1,
-                                "ladder": {
-                                    "id": 1,
-                                    "ladder_number": {
-                                        "number": 1
-                                    },
-                                    "side": {
-                                        "id": 1,
-                                        "side_orientation": {
-                                            "name": "Left"
-                                        },
-                                        "aisle": {
-                                            "id": 1,
-                                            "aisle_number": {
-                                                "number": 1
-                                            },
-                                            "module": {
-                                                "id": 1,
-                                                "module_number": "1"
-                                            },
-                                            "building": {
-                                                "id": 1,
-                                                "name": "Cabin Branch"
-                                            }
-                                        }
-                                    }
-                                },
-                                "shelf_number": {
-                                    "number": 1
-                                },
                                 "barcode": {
                                     "id": "550e8400-e29b-41d4-a716-446655440000",
                                     "value": "5901234123457",
@@ -595,35 +503,6 @@ class RequestDetailReadOutput(RequestDetailWriteOutput):
                             "shelf_id": 1,
                             "shelf": {
                                 "id": 1,
-                                "ladder": {
-                                    "id": 1,
-                                    "ladder_number": {
-                                        "number": 1
-                                    },
-                                    "side": {
-                                        "id": 1,
-                                        "side_orientation": {
-                                            "name": "Left"
-                                        },
-                                        "aisle": {
-                                            "id": 1,
-                                            "aisle_number": {
-                                                "number": 1
-                                            },
-                                            "module": {
-                                                "id": 1,
-                                                "module_number": "1"
-                                            },
-                                            "building": {
-                                                "id": 1,
-                                                "name": "Cabin Branch"
-                                            }
-                                        }
-                                    }
-                                },
-                                "shelf_number": {
-                                    "number": 1
-                                },
                                 "barcode": {
                                     "id": "550e8400-e29b-41d4-a716-446655440000",
                                     "value": "5901234123457",
@@ -735,35 +614,6 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
                             "shelf_id": 1,
                             "shelf": {
                                 "id": 1,
-                                "ladder": {
-                                    "id": 1,
-                                    "ladder_number": {
-                                        "number": 1
-                                    },
-                                    "side": {
-                                        "id": 1,
-                                        "side_orientation": {
-                                            "name": "Left"
-                                        },
-                                        "aisle": {
-                                            "id": 1,
-                                            "aisle_number": {
-                                                "number": 1
-                                            },
-                                            "module": {
-                                                "id": 1,
-                                                "module_number": "1"
-                                            },
-                                            "building": {
-                                                "id": 1,
-                                                "name": "Cabin Branch"
-                                            }
-                                        }
-                                    }
-                                },
-                                "shelf_number": {
-                                    "number": 1
-                                },
                                 "barcode": {
                                     "id": "550e8400-e29b-41d4-a716-446655440000",
                                     "value": "5901234123457",

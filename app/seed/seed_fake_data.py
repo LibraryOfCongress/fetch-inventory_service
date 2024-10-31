@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.models.shelf_positions import ShelfPosition
 from app.seed.seeder_session import get_session
 from app.logger import inventory_logger
-from app.tasks import location_address_processing
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -190,20 +189,6 @@ def generate_shelf_positions_for_system():
             )
             shelf_pos_seeder.seed(load_entities_from_json(generated_file_path))
             shelf_pos_seeder.session.commit()
-            shelf_position = (
-                shelf_pos_seeder.session.query(ShelfPosition)
-                .filter(ShelfPosition.id == shelf_position["!shelf_id"]["filter"]["id"])
-                .first()
-            )
-
-            # Generating the location and internal location strings for the
-            # shelf position
-            location_address_processing(
-                shelf_pos_seeder.session,
-                shelf_position.shelf,
-                shelf_position.shelf_position_number.number,
-                shelf_position.id,
-            )
 
 
 # Tuple-List of fixtures to load

@@ -20,7 +20,6 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.tasks import location_address_processing
 
 router = APIRouter(
     prefix="/shelves/positions",
@@ -86,7 +85,6 @@ def get_shelf_position_detail(id: int, session: Session = Depends(get_session)):
 def create_shelf_position(
     shelf_position_input: ShelfPositionInput,
     session: Session = Depends(get_session),
-    background_tasks: BackgroundTasks = None,
 ) -> ShelfPosition:
     """
     Create a new shelf position.
@@ -131,15 +129,6 @@ def create_shelf_position(
     session.commit()
     session.refresh(new_shelf_position)
 
-    background_tasks.add_task(
-        location_address_processing(
-            session, shelf, shelf_position, new_shelf_position.id
-        )
-    )
-
-    session.commit()
-    session.refresh(new_shelf_position)
-
     return new_shelf_position
 
 
@@ -148,7 +137,6 @@ def update_shelf_position(
     id: int,
     shelf_position: ShelfPositionUpdateInput,
     session: Session = Depends(get_session),
-    background_tasks: BackgroundTasks = None,
 ):
     """
     Update a shelf position with the given ID.
@@ -184,24 +172,6 @@ def update_shelf_position(
         if not shelf_position_number:
             raise NotFound(
                 detail=f"Shelf Position Number ID {existing_shelf_position.shelf_position_number_id} Not Found"
-            )
-        if shelf_position.shelf_position_number_id:
-            background_tasks.add_task(
-                location_address_processing(
-                    session,
-                    shelf,
-                    shelf_position_number.number,
-                    shelf_position.shelf_position_number_id,
-                )
-            )
-        else:
-            background_tasks.add_task(
-                location_address_processing(
-                    session,
-                    shelf,
-                    shelf_position_number.number,
-                    existing_shelf_position.id,
-                )
             )
 
         mutated_data = shelf_position.model_dump(exclude_unset=True)
