@@ -78,7 +78,9 @@ build_mr:
       --context $CI_PROJECT_DIR
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
-  when: manual
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
 
 build_image_test:
   stage: build
@@ -140,8 +142,8 @@ build_image_staging:
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
   rules:
-    - if: $CI_COMMIT_BRANCH == 'staging'
-    - when: manual
+    - if: '$CI_PIPELINE_SOURCE == "staging"'
+      when: manual
 
 deploy_dev:
   stage: deploy
@@ -208,31 +210,5 @@ deploy_stage:
     - TF_LOG=1 terraform init -backend-config=backend.hcl
     - terraform apply -auto-approve
   rules:
-    - if: $CI_COMMIT_BRANCH == 'staging'
-    - when: manual
-
-set_replica_to_0_dev:
-  stage: controls
-  image:
-    name: git.loc.gov:4567/fetch/build/terraform:alt
-    entrypoint: [""]
-  script:
-    - kubectl config use-context fetch/build:fetch -v=6
-    - cp -v $KUBECONFIG kubeconfig
-    - kubectl -n fetch scale deployment inventory-service --replicas=0
-    - kubectl -n fetch get pods
-    - kubectl -n fetch get deployments
-  when: manual
-
-set_replica_to_1_dev:
-  stage: controls
-  image:
-    name: git.loc.gov:4567/fetch/build/terraform:alt
-    entrypoint: [""]
-  script:
-    - kubectl config use-context fetch/build:fetch -v=6
-    - cp -v $KUBECONFIG kubeconfig
-    - kubectl -n fetch scale deployment inventory-service --replicas=1
-    - kubectl -n fetch get pods
-    - kubectl -n fetch get deployments
-  when: manual
+    - if: '$CI_PIPELINE_SOURCE == "staging"'
+      when: manual
