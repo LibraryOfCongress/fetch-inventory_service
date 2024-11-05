@@ -187,65 +187,44 @@ def remove_from_refile_queue(
     **Raises:**
     - HTTPException: If the item is not found.
     """
-    lookup_barcode_values = refile_input.barcode_values
-    errored_barcodes = []
+    lookup_barcode_value = refile_input.barcode_value
     update_dt = datetime.utcnow()
 
-    if not lookup_barcode_values:
+    if not lookup_barcode_value:
         raise BadRequest(detail="No barcode values found in request")
 
-    for barcode_value in lookup_barcode_values:
-        barcode = session.query(Barcode).where(Barcode.value == barcode_value).first()
+    barcode = (
+        session.query(Barcode).where(Barcode.value == lookup_barcode_value).first()
+    )
 
-        if not barcode:
-            errored_barcodes.append(barcode_value)
-            continue
+    if not barcode:
+        raise NotFound(detail=f"Barcode Value {lookup_barcode_value} not found")
 
-        item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
 
-        if item:
-            if not item.scanned_for_refile_queue:
-                errored_barcodes.append(barcode_value)
-                continue
+    if item:
+        if not item or not item.scanned_for_refile_queue:
+            raise BadRequest(detail=f"Item not found or not in refile queue")
 
-            item.scanned_for_refile_queue = False
-            item.scanned_for_refile_queue_dt = None
-            item.update_dt = update_dt
+        item.scanned_for_refile_queue = False
+        item.scanned_for_refile_queue_dt = None
+        item.update_dt = update_dt
 
-        else:
-            non_tray_item = (
-                session.query(NonTrayItem).where(barcode.id == NonTrayItem.barcode_id)
-            ).first()
+    else:
+        non_tray_item = (
+            session.query(NonTrayItem).where(barcode.id == NonTrayItem.barcode_id)
+        ).first()
 
-            if not non_tray_item or not non_tray_item.scanned_for_refile_queue:
-                errored_barcodes.append(barcode_value)
-                continue
+        if not non_tray_item or not non_tray_item.scanned_for_refile_queue:
+            raise BadRequest(detail=f"Non Tray Item not found or not in refile queue")
 
-            non_tray_item.scanned_for_refile_queue = False
-            non_tray_item.scanned_for_refile_queue_dt = None
-            non_tray_item.update_dt = update_dt
+        non_tray_item.scanned_for_refile_queue = False
+        non_tray_item.scanned_for_refile_queue_dt = None
+        non_tray_item.update_dt = update_dt
 
     session.commit()
 
-    if errored_barcodes:
-        added_successfully = list(set(lookup_barcode_values) - set(errored_barcodes))
-
-        if not added_successfully:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to removed barcodes: {lookup_barcode_values} from "
-                f"refile "
-                f"queue",
-            )
-
-        raise HTTPException(
-            status_code=status.HTTP_200_OK,
-            detail=f"Removed barcodes: {added_successfully} and failed to remove "
-            f"barcodes:"
-            f" {errored_barcodes} to refile queue",
-        )
-
     raise HTTPException(
         status_code=status.HTTP_200_OK,
-        detail=f"Removed barcodes: {lookup_barcode_values} items from refile queue",
+        detail=f"Removed barcode: {lookup_barcode_value} item from refile queue",
     )

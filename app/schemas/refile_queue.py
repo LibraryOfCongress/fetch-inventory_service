@@ -13,7 +13,7 @@ class RefileQueueInput(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "barcode_values": "1234567890"
+                "barcode_value": "1234567890"
             }
         }
 
