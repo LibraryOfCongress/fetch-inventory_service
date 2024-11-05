@@ -4,7 +4,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import OAuth2PasswordBearer
-from app.logger import inventory_logger, data_activity_logger
+from app.logger import inventory_logger, data_activity_logger, security_log_route_filter
 from app.config.config import get_settings
 from app.database.session import get_session, session_manager
 from app.models.users import User
@@ -95,11 +95,12 @@ class JWTMiddleware(BaseHTTPMiddleware):
             'process_time': process_time
         }
 
-        if response.status_code > 399:
-            inventory_logger.warn(request_log_dict)
+        if response.status_code == (401 or 403):
+            # always log 401 & 403 regardless of route
             data_activity_logger.warn(security_log_dict)
         else:
-            inventory_logger.info(request_log_dict)
-            data_activity_logger.info(security_log_dict)
+            # else log on routes in filter
+            if any(request.url.path.startswith(route) for route in security_log_route_filter):
+                data_activity_logger.info(security_log_dict)
 
         return response

@@ -1,5 +1,5 @@
 # Stage 1: Requirements stage
-FROM python:3.11.4-slim as requirements-stage
+FROM python:3.11.4-slim AS requirements-stage
 
 ENV SEED_FAKE_DATA=${SEED_FAKE_DATA_ARG:-false}
 

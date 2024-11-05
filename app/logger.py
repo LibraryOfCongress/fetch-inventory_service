@@ -46,3 +46,11 @@ inventory_logger.propagate = False
 inventory_logger.disabled = False
 data_activity_logger.propagate = False
 data_activity_logger.disabled = False
+
+# This filter is used to restrict logging only to these routes
+security_log_route_filter = [
+    '/auth',
+    '/groups',
+    '/users',
+    '/permissions'
+]
