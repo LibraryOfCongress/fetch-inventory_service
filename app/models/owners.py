@@ -9,6 +9,7 @@ from sqlalchemy.orm import backref
 
 from app.models.owner_tiers import OwnerTier
 from app.models.items import Item
+from app.models.owners_size_classes import OwnersSizeClassesLink
 
 
 class Owner(SQLModel, table=True):
@@ -53,5 +54,8 @@ class Owner(SQLModel, table=True):
         )
     )
     items: List[Item] = Relationship(back_populates="owner")
+    size_classes: List["SizeClass"] = Relationship(
+        back_populates="owners", link_model=OwnersSizeClassesLink
+    )
     # trays (could support if needed)
     # non-tray-items (could support if needed)

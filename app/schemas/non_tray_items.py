@@ -213,8 +213,13 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                 "size_class": {
                     "id": 1,
                     "name": "C-Low",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
+                    "short_name": "CL",
+                    "assigned": False,
+                    "height": 15.7,
+                    "width": 30.33,
+                    "depth": 27,
+                    "create_dt": "2023-11-27T12:34:56.789123Z",
+                    "update_dt": "2023-11-27T12:34:56.789123Z"
                 },
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426",
@@ -282,8 +287,13 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                 "size_class": {
                     "id": 1,
                     "name": "C-Low",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
+                    "short_name": "CL",
+                    "assigned": False,
+                    "height": 15.7,
+                    "width": 30.33,
+                    "depth": 27,
+                    "create_dt": "2023-11-27T12:34:56.789123Z",
+                    "update_dt": "2023-11-27T12:34:56.789123Z"
                 },
                 "accession_job": {
                     "id": 1,

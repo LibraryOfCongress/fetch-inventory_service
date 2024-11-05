@@ -21,7 +21,6 @@
     "side_orientation_id": 2
   },
   "shelves": {
-      "capacity": 35,
       "container_type_id": 1,
       "depth": 30,
       "height": 18,

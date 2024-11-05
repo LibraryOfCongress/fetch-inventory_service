@@ -8,7 +8,6 @@
           "value": 100100
         }
       },
-      "capacity": 8,
       "available_space": 8,
       "height": 27.35,
       "width": 70,
@@ -25,10 +24,10 @@
           "number": 1
         }
       },
-      "!size_class_id": {
-        "model": "app.models.size_class.SizeClass",
+      "!shelf_type_id": {
+        "model": "app.models.shelf_types.ShelfType",
         "filter": {
-          "short_name": "BH"
+          "id": 1
         }
       },
       "!owner_id": {

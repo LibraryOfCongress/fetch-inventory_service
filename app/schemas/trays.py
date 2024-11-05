@@ -147,8 +147,13 @@ class TrayListOutput(TrayBaseOutput):
                     "size_class": {
                         "id": 1,
                         "name": "C-Low",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398",
+                        "short_name": "CL",
+                        "assigned": False,
+                        "height": 15.7,
+                        "width": 30.33,
+                        "depth": 27,
+                        "create_dt": "2023-11-27T12:34:56.789123Z",
+                        "update_dt": "2023-11-27T12:34:56.789123Z"
                     },
                     "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                     "barcode": {
@@ -269,8 +274,13 @@ class TrayDetailWriteOutput(TrayBaseOutput):
                 "size_class": {
                     "id": 1,
                     "name": "C-Low",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
+                    "short_name": "CL",
+                    "assigned": False,
+                    "height": 15.7,
+                    "width": 30.33,
+                    "depth": 27,
+                    "create_dt": "2023-11-27T12:34:56.789123Z",
+                    "update_dt": "2023-11-27T12:34:56.789123Z"
                 },
                 "owner": {
                     "id": 1,
@@ -379,8 +389,13 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
                 "size_class": {
                     "id": 1,
                     "name": "C-Low",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
+                    "short_name": "CL",
+                    "assigned": False,
+                    "height": 15.7,
+                    "width": 30.33,
+                    "depth": 27,
+                    "create_dt": "2023-11-27T12:34:56.789123Z",
+                    "update_dt": "2023-11-27T12:34:56.789123Z"
                 },
                 "conveyance_bin": {
                     "id": 1,

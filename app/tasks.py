@@ -4,7 +4,9 @@ from datetime import datetime
 from app.config.exceptions import NotFound
 from app.models.accession_jobs import AccessionJob
 from app.models.shelf_positions import ShelfPosition
+from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
+from app.models.size_class import SizeClass
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
@@ -213,5 +215,40 @@ def manage_shelf_available_space(session, existing_shelf_position, new_shelf_pos
         session.query(Shelf).filter(Shelf.id == new_shelf_position.shelf_id).update(
             {"available_space": new_shelf_position.shelf.available_space - 1}
         )
+
+    session.commit()
+
+
+def handle_size_class_assigned_status(
+    session: Session, size_class: SizeClass, model, job
+):
+    """
+    Task manages transition logic for an item's size class.
+        - updates assigned
+        - if size class has no other jobs, it is no longer assigned
+    """
+    # if size class has already been assigned to any other job, items, tray,
+    # non trays, or shelf
+    existing_jobs = (
+        session.query(model)
+        .filter(AccessionJob.size_class_id == job.size_class_id)
+        .all()
+    )
+    items = session.query(Item).filter(Item.size_class_id == job.size_class_id).all()
+    non_tray_items = (
+        session.query(NonTrayItem)
+        .filter(NonTrayItem.size_class_id == job.size_class_id)
+        .all()
+    )
+    tray = (
+        session.query(Tray)
+        .join(ShelfType)
+        .where(Tray.shelf_type_id == ShelfType.id)
+        .filter(ShelfType.size_class_id == job.size_class_id)
+        .all()
+    )
+
+    if not existing_jobs and not items and not non_tray_items and not tray:
+        size_class.assigned = False
 
     session.commit()

@@ -100,6 +100,7 @@ def create_shelf_position(
     the database.
     """
     shelf = session.query(Shelf).get(shelf_position_input.shelf_id)
+    shelf_type = shelf.shelf_type
     shelf_position_number = session.query(ShelfPositionNumber).get(
         shelf_position_input.shelf_position_number_id
     )
@@ -113,11 +114,11 @@ def create_shelf_position(
 
     shelf_position = shelf_position_number.number
 
-    if len(shelf.shelf_positions) >= shelf.capacity:
+    if len(shelf.shelf_positions) > shelf_type.max_capacity:
         raise ValidationException(
             detail=f"Shelf Position {shelf_position} for Shelf ID"
             f" {shelf.id} exceeds "
-            f"capacity of {shelf.capacity}"
+            f"capacity of {shelf_type.max_capacity}"
         )
     else:
         shelf.available_space += 1

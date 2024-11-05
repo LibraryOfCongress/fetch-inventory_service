@@ -9,18 +9,17 @@ from app.schemas.ladders import LadderDetailWriteOutput
 from app.schemas.shelf_numbers import ShelfNumberDetailOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
 from app.schemas.barcodes import BarcodeDetailReadOutput
-from app.schemas.size_class import SizeClassDetailReadOutput
+from app.schemas.shelf_types import ShelfTypeDetailOutput
 
 
 class ShelfInput(BaseModel):
     sort_priority: Optional[conint(ge=0, le=32767)] = None
     ladder_id: conint(ge=0, le=2147483647)
     container_type_id: conint(ge=0, le=2147483647)
-    size_class_id: conint(ge=0, le=32767)
+    shelf_type_id: conint(ge=0, le=2147483647)
     shelf_number_id: Optional[conint(ge=0, le=32767)] = None
     shelf_number: Optional[int] = None
     owner_id: conint(ge=0, le=32767)
-    capacity: conint(ge=0, le=32767)
     height: condecimal(decimal_places=2)
     width: condecimal(decimal_places=2)
     depth: condecimal(decimal_places=2)
@@ -32,11 +31,9 @@ class ShelfInput(BaseModel):
                 "sort_priority": 1,
                 "ladder_id": 1,
                 "container_type_id": 1,
-                "size_class_id": 1,
                 "shelf_number_id": 1,
                 "shelf_number": None,
                 "owner_id": 1,
-                "capacity": 33,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
@@ -45,15 +42,13 @@ class ShelfInput(BaseModel):
         }
 
 
-
 class ShelfUpdateInput(BaseModel):
     sort_priority: Optional[conint(ge=0, le=32767)] = None
     ladder_id: Optional[conint(ge=0, le=2147483647)] = None
     container_type_id: Optional[conint(ge=0, le=2147483647)] = None
-    size_class_id: Optional[conint(ge=0, le=32767)] = None
+    shelf_type_id: Optional[conint(ge=0, le=2147483647)] = None
     shelf_number_id: Optional[conint(ge=0, le=32767)] = None
     owner_id: Optional[conint(ge=0, le=32767)] = None
-    capacity: Optional[conint(ge=0, le=32767)] = None
     available_space: Optional[conint(ge=0, le=32767)] = None
     height: Optional[condecimal(decimal_places=2)] = None
     width: Optional[condecimal(decimal_places=2)] = None
@@ -66,10 +61,9 @@ class ShelfUpdateInput(BaseModel):
                 "sort_priority": 1,
                 "ladder_id": 1,
                 "container_type_id": 1,
-                "size_class_id": 1,
+                "shelf_type_id": 1,
                 "shelf_number_id": 1,
                 "owner_id": 1,
-                "capacity": 33,
                 "available_space": 33,
                 "height": 15.7,
                 "width": 30.33,
@@ -87,7 +81,8 @@ class ShelfListOutput(ShelfBaseOutput):
     sort_priority: Optional[int] = None
     ladder_id: int
     container_type_id: Optional[int] = None
-    size_class_id: Optional[int] = None
+    shelf_type_id: int
+    shelf_type: ShelfTypeDetailOutput
     owner_id: Optional[int] = None
     barcode: BarcodeDetailReadOutput
 
@@ -98,7 +93,25 @@ class ShelfListOutput(ShelfBaseOutput):
                 "sort_priority": 1,
                 "ladder_id": 1,
                 "container_type_id": 1,
-                "size_class_id": 1,
+                "shelf_type_id": 1,
+                "shelf_type": {
+                    "id": 1,
+                    "type": "Long",
+                    "size_class_id": 1,
+                    "size_class": {
+                        "id": 1,
+                        "name": "C-Low",
+                        "short_name": "CL",
+                        "assigned": False,
+                        "height": 15.7,
+                        "width": 30.33,
+                        "depth": 27,
+                        "create_dt": "2023-11-27T12:34:56.789123Z",
+                        "update_dt": "2023-11-27T12:34:56.789123Z"
+                    },
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "owner_id": 1,
                 "barcode": {
                     "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -116,16 +129,15 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
     barcode_id: uuid.UUID
     ladder_id: int
     container_type_id: Optional[int] = None
-    size_class_id: Optional[int] = None
+    shelf_type_id: int
     shelf_number_id: int
     owner_id: Optional[int] = None
-    capacity: int
     available_space: int
     height: float
     width: float
     depth: float
-    size_class: Optional[SizeClassDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None
+    shelf_type: ShelfTypeDetailOutput
     ladder: LadderDetailWriteOutput
     owner: Optional[OwnerDetailReadOutput] = None
     barcode: BarcodeDetailReadOutput
@@ -138,24 +150,34 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
                 "id": 1,
                 "sort_priority": 1,
                 "ladder_id": 1,
-                "capacity": 33,
                 "available_space": 33,
                 "shelf_number_id": 1,
                 "container_type_id": 1,
-                "size_class_id": 1,
+                "shelf_type_id": 1,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
-                "size_class": {
-                    "id": 1,
-                    "name": "C-Low",
-                    "short_name": "CL",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
-                },
                 "container_type": {
                     "id": 1,
                     "type": "Tray",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "shelf_type": {
+                    "id": 1,
+                    "type": "Shelf",
+                    "size_class_id": 1,
+                    "size_class": {
+                        "id": 1,
+                        "name": "C-Low",
+                        "short_name": "CL",
+                        "assigned": False,
+                        "height": 15.7,
+                        "width": 30.33,
+                        "depth": 27,
+                        "create_dt": "2023-11-27T12:34:56.789123Z",
+                        "update_dt": "2023-11-27T12:34:56.789123Z"
+                    },
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
@@ -225,10 +247,10 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
     sort_priority: Optional[int] = None
     ladder: LadderDetailWriteOutput
     shelf_number: ShelfNumberDetailOutput
+    shelf_type_id: int
+    shelf_type: ShelfTypeDetailOutput
     container_type: Optional[ContainerTypeDetailReadOutput] = None
-    size_class: Optional[SizeClassDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
-    capacity: int
     available_space: int
     height: float
     width: float
@@ -257,15 +279,28 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                     "create_dt": "2023-10-09T17:04:09.812257",
                     "update_dt": "2023-10-10T01:00:28.576069",
                 },
-                "container_type": {
+                "shelf_type_id": 1,
+                "shelf_type": {
                     "id": 1,
-                    "type": "Tray",
+                    "type": "Long",
+                    "size_class_id": 1,
+                    "size_class": {
+                        "id": 1,
+                        "name": "C-Low",
+                        "short_name": "CL",
+                        "assigned": False,
+                        "height": 15.7,
+                        "width": 30.33,
+                        "depth": 27,
+                        "create_dt": "2023-11-27T12:34:56.789123Z",
+                        "update_dt": "2023-11-27T12:34:56.789123Z"
+                    },
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398",
                 },
-                "size_class": {
+                "container_type": {
                     "id": 1,
-                    "name": "C-Low",
+                    "type": "Tray",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398",
                 },
@@ -290,7 +325,6 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
-                "capacity": 33,
                 "available_space": 33,
                 "height": 15.7,
                 "width": 30.33,

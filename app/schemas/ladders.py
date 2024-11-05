@@ -4,6 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel, conint
 from datetime import datetime
 
+from app.schemas.shelf_types import ShelfTypeDetailOutput
 from app.schemas.sides import SideDetailWriteOutput
 from app.schemas.ladder_numbers import LadderNumberDetailOutput
 from app.schemas.barcodes import BarcodeDetailReadOutput
@@ -90,11 +91,6 @@ class ShelfNumberNestedForLadderOutput(BaseModel):
     number: int
 
 
-class SizeClassNestedForLadderOutput(BaseModel):
-    id: int
-    name: str
-
-
 class ContainerTypeNestedForLadderOutput(BaseModel):
     id: int
     type: str
@@ -109,8 +105,7 @@ class ShelvesNestedForLadderOutput(BaseModel):
     width: Optional[float] = None
     height: Optional[float] = None
     depth: Optional[float] = None
-    capacity: Optional[int] = None
-    size_class: SizeClassNestedForLadderOutput
+    shelf_type: ShelfTypeDetailOutput
     container_type: Optional[ContainerTypeNestedForLadderOutput] = None
     create_dt: Optional[datetime] = None
     update_dt: Optional[datetime] = None
@@ -152,6 +147,19 @@ class LadderDetailReadOutput(LadderBaseOutput):
                         "id": 1,
                         "shelf_number": {
                             "number": 3
+                        },
+                        "shelf_type": {
+                            "id": 1,
+                            "type": "Long",
+                            "size_class_id": 1,
+                            "size_class": {
+                                "id": 1,
+                                "name": "C-Low",
+                                "short_name": "CL",
+                                "assigned": False
+                            },
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398",
                         },
                         "owner": {
                             "id": 1,

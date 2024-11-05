@@ -6,7 +6,16 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.tasks import complete_verification_job, manage_verification_job_transition
+from app.models.items import Item
+from app.models.non_tray_items import NonTrayItem
+from app.models.shelf_types import ShelfType
+from app.models.size_class import SizeClass
+from app.models.trays import Tray
+from app.tasks import (
+    complete_verification_job,
+    manage_verification_job_transition,
+    handle_size_class_assigned_status,
+)
 from app.models.verification_jobs import VerificationJob
 from app.schemas.verification_jobs import (
     VerificationJobInput,
@@ -27,7 +36,9 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[VerificationJobListOutput])
-def get_verification_job_list(unshelved: bool | None = False, session: Session = Depends(get_session)) -> list:
+def get_verification_job_list(
+    unshelved: bool | None = False, session: Session = Depends(get_session)
+) -> list:
     """
     Retrieve a paginated list of verification jobs.
 
@@ -35,9 +46,11 @@ def get_verification_job_list(unshelved: bool | None = False, session: Session =
     - Verification Job List Output: The paginated list of verification jobs.
     """
     if unshelved:
-        verification_job_list = select(VerificationJob).where(
-            VerificationJob.shelving_job_id == None
-        ).where(VerificationJob.status == "Completed")
+        verification_job_list = (
+            select(VerificationJob)
+            .where(VerificationJob.shelving_job_id == None)
+            .where(VerificationJob.status == "Completed")
+        )
     else:
         verification_job_list = select(VerificationJob)
     return paginate(session, verification_job_list)
@@ -64,8 +77,11 @@ def get_verification_job_detail(id: int, session: Session = Depends(get_session)
 
     raise NotFound(detail=f"Verification Job ID {id} Not Found")
 
+
 @router.get("/workflow/{id}", response_model=VerificationJobDetailOutput)
-def get_verification_job_detail_by_workflow(id: int, session: Session = Depends(get_session)):
+def get_verification_job_detail_by_workflow(
+    id: int, session: Session = Depends(get_session)
+):
     """
     Retrieves the verification job detail for the given workflow ID.
 
@@ -78,14 +94,15 @@ def get_verification_job_detail_by_workflow(id: int, session: Session = Depends(
     **Raises:**
     - HTTPException: If the verification job with the given ID is not found.
     """
-    verification_job = session.exec(select(VerificationJob).where(
-        VerificationJob.workflow_id == id
-    )).first()
+    verification_job = session.exec(
+        select(VerificationJob).where(VerificationJob.workflow_id == id)
+    ).first()
 
     if verification_job:
         return verification_job
 
     raise NotFound(detail=f"Verification Job ID {id} Not Found")
+
 
 @router.post("/", response_model=VerificationJobDetailOutput, status_code=201)
 def create_verification_job(
@@ -104,6 +121,16 @@ def create_verification_job(
     """
     try:
         verification_job = VerificationJob(**verification_job_input.model_dump())
+
+        # Check if the size_class_id has already been assigned if not assign it
+        if verification_job_input.size_class_id:
+            size_class = session.get(SizeClass, verification_job_input.size_class_id)
+
+            if size_class and not size_class.assigned:
+                session.query(SizeClass).filter(
+                    SizeClass.id == verification_job_input.size_class_id
+                ).update({"assigned": True})
+
         session.add(verification_job)
         session.commit()
         session.refresh(verification_job)
@@ -154,6 +181,25 @@ def update_verification_job(
 
         existing_verification_job = commit_record(session, existing_verification_job)
 
+        # Check if size class has already been assigned
+        if verification_job.size_class_id and (
+            verification_job.size_class_id != existing_verification_job.size_class_id
+        ):
+            updated_size_class = session.get(SizeClass, verification_job.size_class_id)
+            if updated_size_class and not updated_size_class.assigned:
+                session.query(SizeClass).filter(
+                    SizeClass.id == verification_job.size_class_id
+                ).update({"assigned": True}, synchronize_session=False)
+            else:
+                background_tasks.add_task(
+                    handle_size_class_assigned_status(
+                        session,
+                        updated_size_class,
+                        VerificationJob,
+                        existing_verification_job,
+                    )
+                )
+
         if mutated_data.get("status") == "Completed":
             background_tasks.add_task(
                 complete_verification_job, session, existing_verification_job
@@ -188,6 +234,12 @@ def delete_verification_job(id: int, session: Session = Depends(get_session)):
     verification_job = session.get(VerificationJob, id)
 
     if verification_job:
+        # Check if size class has already been assigned
+        size_class = session.get(SizeClass, verification_job.size_class_id)
+        handle_size_class_assigned_status(
+            session, size_class, VerificationJob, verification_job
+        )
+
         session.delete(verification_job)
         session.commit()
 

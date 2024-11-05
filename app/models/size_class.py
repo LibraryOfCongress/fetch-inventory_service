@@ -1,9 +1,12 @@
-import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
-
 from typing import Optional, List
 from datetime import datetime
+
+import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
+from pydantic import condecimal
 from sqlmodel import SQLModel, Field, Relationship
+
+from app.models.owners_size_classes import OwnersSizeClassesLink
 
 
 class SizeClass(SQLModel, table=True):
@@ -21,12 +24,26 @@ class SizeClass(SQLModel, table=True):
     short_name: str = Field(
         max_length=10, sa_column=sa.VARCHAR, nullable=False, unique=True
     )
+    assigned: bool = Field(default=False)
+    height: condecimal(decimal_places=2) = Field(
+        sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
+    )
+    width: condecimal(decimal_places=2) = Field(
+        sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
+    )
+    depth: condecimal(decimal_places=2) = Field(
+        sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
+    )
     update_dt: datetime = Field(
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     create_dt: datetime = Field(
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
+    trays: List["Tray"] = Relationship(back_populates="size_class")
     items: List["Item"] = Relationship(back_populates="size_class")
-    # trays (could support if needed)
-    # non-tray-items (could support if needed)
+    non_tray_items: List["NonTrayItem"] = Relationship(back_populates="size_class")
+    owners: List["Owner"] = Relationship(
+        back_populates="size_classes", link_model=OwnersSizeClassesLink
+    )
+    shelf_types: List["ShelfType"] = Relationship(back_populates="size_class")

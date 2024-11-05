@@ -242,7 +242,7 @@ def process_containers_for_shelving(
         available_positions_for_size = [
             position
             for position in available_shelf_positions
-            if position.Shelf.size_class_id == container_object.size_class_id
+            if position.Shelf.shelf_type.size_class_id == container_object.size_class_id
         ]
 
         if not available_positions_for_size:

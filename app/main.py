@@ -15,7 +15,6 @@ from fastapi_pagination import add_pagination
 from alembic.config import Config
 from alembic import command
 
-from app import events # registers events, do not remove
 from app.seed.seed_fake_data import seed_data
 from app.config.config import get_settings
 from app.config.exceptions import (
@@ -74,6 +73,7 @@ from app.routers import (
     auth,
     status,
     batch_upload,
+    shelf_types,
     reporting,
 )
 
@@ -216,6 +216,7 @@ app.include_router(container_types.router)
 app.include_router(shelf_position_numbers.router)
 app.include_router(shelf_positions.router)
 app.include_router(shelf_numbers.router)
+app.include_router(shelf_types.router)
 app.include_router(shelves.router)
 app.include_router(owner_tiers.router)
 app.include_router(owners.router)

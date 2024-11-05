@@ -42,6 +42,7 @@ class OwnerBaseOutput(BaseModel):
     name: str
     owner_tier_id: int
     parent_owner_id: Optional[int] = None
+    size_classes: Optional[list] = None
 
 
 class OwnerListOutput(OwnerBaseOutput):
@@ -51,7 +52,18 @@ class OwnerListOutput(OwnerBaseOutput):
                 "id": 1,
                 "name": "Special Collection Directorate",
                 "owner_tier_id": 2,
-                "parent_owner_id": 2
+                "parent_owner_id": 2,
+                "size_classes": [
+                    {
+                        "id": 1,
+                        "name": "C-Low",
+                        "short_name": "CL",
+                        "assigned": False,
+                        "height": 15.7,
+                        "width": 30.33,
+                        "depth": 27
+                    }
+                ]
             }
         }
 
@@ -67,6 +79,17 @@ class OwnerDetailWriteOutput(OwnerBaseOutput):
                 "name": "Special Collection Directorate",
                 "owner_tier_id": 2,
                 "parent_owner_id": 2,
+                "size_classes": [
+                    {
+                        "id": 1,
+                        "name": "C-Low",
+                        "short_name": "CL",
+                        "assigned": False,
+                        "height": 15.7,
+                        "width": 30.33,
+                        "depth": 27
+                    }
+                ],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -110,6 +133,17 @@ class OwnerDetailReadOutput(OwnerBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
+                "size_classes": [
+                    {
+                        "id": 1,
+                        "name": "C-Low",
+                        "short_name": "CL",
+                        "assigned": False,
+                        "height": 15.7,
+                        "width": 30.33,
+                        "depth": 27
+                    }
+                ],
                 "children": [],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"

@@ -125,7 +125,20 @@ class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):
                 "shelf": {
                     "id": 1,
                     "ladder_id": 1,
-                    "capacity": 33,
+                    "shelf_type": {
+                        "id": 1,
+                        "type": "Long",
+                        "size_class_id": 1,
+                        "size_class": {
+                            "id": 1,
+                            "name": "C-Low",
+                            "short_name": "CL",
+                            "assigned": False
+                        },
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398",
+                    },
+                    "available_space": 30,
                     "shelf_number_id": 1,
                     "container_type_id": 1,
                     "height": 15.7,

@@ -100,15 +100,10 @@ def create_shelf(
     - **container_type_id**: Required integer id for related container type
     - **shelf_number_id**: Required integer id for related shelf number
     - **barcode_id**: Optional uuid for related barcode
-    - **capacity**: Required integer representing maximum shelf positions supported
     - **height**: Required numeric (scale 4, precision 2) height in inches
     - **width**: Required numeric (scale 4, precision 2) width in inches
     - **depth**: Required numeric (scale 4, precision 2) depth in inches
     """
-    # Check shelf capacity
-    if shelf_input.capacity < 1:
-        raise ValidationException(detail="Shelf capacity may not be less than one.")
-
     # Check if shelf # or shelf_number_id
     shelf_number = shelf_input.shelf_number
     shelf_number_id = shelf_input.shelf_number_id
@@ -160,21 +155,6 @@ def update_shelf(
 
     if existing_shelf is None:
         raise NotFound(detail=f"Shelf ID {id} Not Found")
-    # Check shelf capacity
-    if shelf.capacity is not None:
-        if shelf.capacity < 1:
-            raise ValidationException(detail="Shelf capacity may not be less than one.")
-        if (
-            len(existing_shelf.shelf_positions) > 0
-            and shelf.capacity < existing_shelf.capacity
-        ):
-            if (
-                existing_shelf.capacity - shelf.capacity
-            ) > existing_shelf.available_space:
-                raise ValidationException(
-                    detail="Capacity cannot be reduced below "
-                    "currently shelved containers."
-                )
 
     mutated_data = shelf.model_dump(exclude_unset=True)
 

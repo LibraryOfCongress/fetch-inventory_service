@@ -107,19 +107,24 @@ def generate_shelves_for_system():
                     new_barcode_value = str(int(old_barcode_val) + 1)
                     shelf["!barcode_id"]["filter"]["value"] = new_barcode_value
                 cont_type = "Non-Tray"
-                size_class_list_one = ["AH", "BH", "CH", "DH", "EH", "RS"]
-                size_class = random.choice(size_class_list_one)
+                shelf_type_list_one = [5, 7, 9, 11, 12, 3]
+                shelf_type_id = random.choice(shelf_type_list_one)
                 owner_list = [
+                    "Library of Congress",
+                    "Consortium of Hobbits",
+                    "Brethren of the Coast",
                     "Collections & Management",
                     "Congressional Research Services",
+                    "Department of Buried Treasure",
+                    "The Fellowship of the Ring",
                 ]
                 owner = random.choice(owner_list)
                 if i % 3:
                     cont_type = "Tray"
-                    size_class_list_two = ["AL", "BL", "CL", "DL", "EL", "SM"]
-                    size_class = random.choice(size_class_list_two)
+                    shelf_type__list_two = [4, 6, 8, 10, 12, 14]
+                    shelf_type_id = random.choice(shelf_type__list_two)
                 shelf["!container_type_id"]["filter"]["type"] = cont_type
-                shelf["!size_class_id"]["filter"]["short_name"] = size_class
+                shelf["!shelf_type_id"]["filter"]["id"] = shelf_type_id
                 shelf["!owner_id"]["filter"]["name"] = owner
                 old_shelf_num = shelf["!shelf_number_id"]["filter"]["number"]
                 # if old_shelf_num == 1:
@@ -203,6 +208,7 @@ fake_data = [
     ("types", "side_orientations.json"),
     ("entities", "sides.json"),
     ("types", "size_classes.json"),
+    ("types", "shelf_types.json"),
     ("types", "media_types.json"),
     ("types", "container_types.json"),
     ("types", "barcode_types.json"),

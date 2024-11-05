@@ -180,9 +180,8 @@ def update_tray(
                 {"available_space": shelf.available_space - 1}
             )
 
-        if (
-            existing_tray.shelf_position_id
-            and tray.shelf_position_id != existing_tray.shelf_position_id
+        if existing_tray.shelf_position_id and (
+            tray.shelf_position_id != existing_tray.shelf_position_id
         ):
             # Check if a tray already exists at the new shelf position
             existing_tray_shelf_position = (
@@ -256,6 +255,18 @@ def delete_tray(id: int, session: Session = Depends(get_session)):
         for item in items_to_delete:
             session.delete(item)
             session.commit()
+
+        if tray.shelf_position_id:
+            shelf_position = session.query(ShelfPosition).get(tray.shelf_position_id)
+
+            if shelf_position:
+                shelf = session.query(Shelf).get(shelf_position.shelf_id)
+
+                if shelf:
+                    session.query(Shelf).filter(Shelf.id == shelf.id).update(
+                        {"available_space": shelf.available_space + 1}
+                    )
+
         session.delete(tray)
         session.commit()
         for item in items_to_delete:

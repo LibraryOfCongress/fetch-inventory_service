@@ -47,3 +47,5 @@ from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.withdraw_jobs import WithdrawJob
 from app.models.batch_upload import BatchUpload
 from app.models.workflows import Workflow
+from app.models.shelf_types import ShelfType
+from app.models.owners_size_classes import OwnersSizeClassesLink

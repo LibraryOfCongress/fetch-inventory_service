@@ -135,7 +135,7 @@ def create_non_tray_item(
     ).first()
     if previous_non_tray_item:
         # use existing, and patch values
-        for field, value in new_non_tray_item.dict(exclude={"id"}).items():
+        for field, value in new_non_tray_item.model_dump(exclude={"id"}).items():
             setattr(previous_non_tray_item, field, value)
         new_non_tray_item = previous_non_tray_item
         new_non_tray_item.scanned_for_verification = False
@@ -198,10 +198,8 @@ def update_non_tray_item(
                 {"available_space": shelf.available_space - 1}
             )
 
-        if (
-            existing_non_tray_item.shelf_position_id
-            and non_tray_item.shelf_position_id
-            != existing_non_tray_item.shelf_position_id
+        if existing_non_tray_item.shelf_position_id and (
+            non_tray_item.shelf_position_id != existing_non_tray_item.shelf_position_id
         ):
             existing_shelf_position = (
                 session.query(ShelfPosition)
@@ -220,45 +218,6 @@ def update_non_tray_item(
                 existing_shelf_position,
                 new_shelf_position,
             )
-
-    if (
-        non_tray_item.shelf_position_id
-        and non_tray_item.shelf_position_id != existing_non_tray_item.shelf_position_id
-    ):
-        existing_non_tray_item_shelf_position = (
-            session.query(NonTrayItem)
-            .filter(NonTrayItem.shelf_position_id == non_tray_item.shelf_position_id)
-            .first()
-        )
-
-        if existing_non_tray_item_shelf_position:
-            raise ValidationException(
-                detail=f"Non Tray Item already exists at "
-                f"shelf position {non_tray_item.shelf_position_id}"
-            )
-
-        shelf_position = (
-            session.query(ShelfPosition)
-            .filter(ShelfPosition.id == non_tray_item.shelf_position_id)
-            .first()
-        )
-
-        if not shelf_position:
-            raise NotFound(
-                detail=f"Shelf Position ID {non_tray_item.shelf_position_id} Not Found"
-            )
-
-        shelf = session.query(Shelf).filter(Shelf.id == shelf_position.shelf_id).first()
-
-        if not shelf:
-            raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
-
-        background_tasks.add_task(
-            manage_shelf_available_space,
-            session,
-            shelf,
-            existing_non_tray_item_shelf_position,
-        )
 
     # Update the non_tray_item record with the mutated data
     mutated_data = non_tray_item.model_dump(exclude_unset=True)
@@ -283,6 +242,19 @@ def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
     non_tray_item = session.get(NonTrayItem, id)
 
     if non_tray_item:
+        if non_tray_item.shelf_position_id:
+            shelf_position = session.query(ShelfPosition).get(
+                non_tray_item.shelf_position_id
+            )
+
+            if shelf_position:
+                shelf = session.query(Shelf).get(shelf_position.shelf_id)
+
+                if shelf:
+                    session.query(Shelf).filter(Shelf.id == shelf.id).update(
+                        {"available_space": shelf.available_space + 1}
+                    )
+
         session.delete(non_tray_item)
         session.commit()
 

@@ -50,7 +50,6 @@ def test_create_shelf_record(client):
     response = client.post("/shelves", json=data)
 
     assert response.status_code == status.HTTP_201_CREATED
-    assert response.json().get("capacity") == data.get("capacity")
     assert response.json().get("depth") == data.get("depth")
     assert response.json().get("height") == data.get("height")
     assert response.json().get("width") == data.get("width")
@@ -58,11 +57,10 @@ def test_create_shelf_record(client):
 
 def test_patch_shelf_record(client):
     response = client.patch(
-        f"/shelves/1/", json={"capacity": 35, "depth": 30, "height": 18, "width": 33}
+        f"/shelves/1/", json={"depth": 30, "height": 18, "width": 33}
     )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json().get("capacity") == 35
     assert response.json().get("depth") == 30
     assert response.json().get("height") == 18
     assert response.json().get("width") == 33
@@ -70,7 +68,7 @@ def test_patch_shelf_record(client):
 
 def test_update_shelf_record_not_found(client):
     response = client.patch(
-        "/shelves/999/", json={"capacity": 35, "depth": 30, "height": 18, "width": 33}
+        "/shelves/999/", json={"depth": 30, "height": 18, "width": 33}
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json().get("detail") == "Shelf ID 999 Not Found"

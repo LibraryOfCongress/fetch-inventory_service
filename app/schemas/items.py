@@ -170,8 +170,12 @@ class ItemListOutput(ItemBaseOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
+                    "assigned": False,
+                    "height": 15.7,
+                    "width": 30.33,
+                    "depth": 27,
+                    "create_dt": "2023-11-27T12:34:56.789123Z",
+                    "update_dt": "2023-11-27T12:34:56.789123Z"
                 },
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
@@ -266,8 +270,13 @@ class ItemDetailReadOutput(ItemDetailWriteOutput):
                 "size_class": {
                     "id": 1,
                     "name": "C-Low",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
+                    "short_name": "CL",
+                    "assigned": False,
+                    "height": 15.7,
+                    "width": 30.33,
+                    "depth": 27,
+                    "create_dt": "2023-11-27T12:34:56.789123Z",
+                    "update_dt": "2023-11-27T12:34:56.789123Z"
                 },
                 "accession_job": {
                     "id": 1,
