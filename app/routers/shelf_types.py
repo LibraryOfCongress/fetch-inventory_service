@@ -140,9 +140,7 @@ def update_shelf_type(
 
             if shelf_type.max_capacity < existing_shelf_type.max_capacity:
                 existing_shelves = (
-                    session.query(Shelf).filter(
-                        Shelf.shelf_type_id == existing_shelf_type.shelf_id
-                    )
+                    session.query(Shelf).filter(Shelf.shelf_type_id == id)
                 ).all()
 
                 for shelf in existing_shelves:
@@ -154,6 +152,19 @@ def update_shelf_type(
                             f"currently shelved {shelf.id} containers for "
                             f"Shelf ID {shelf.id}."
                         )
+
+                for shelf in existing_shelves:
+                    if len(shelf.shelf_positions) == 0:
+                        session.query(Shelf).filter(Shelf.id == shelf.id).update(
+                            {"available_space": shelf_type.max_capacity}
+                        )
+                    elif len(shelf.shelf_positions) > 0:
+                        if (
+                            len(shelf.shelf_positions) + shelf.available_space
+                        ) < shelf_type.max_capacity:
+                            session.query(Shelf).filter(Shelf.id == shelf.id).update(
+                                {"available_space": shelf_type.max_capacity}
+                            )
 
         mutated_data = shelf_type.model_dump(exclude_unset=True)
 

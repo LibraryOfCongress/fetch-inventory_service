@@ -6,7 +6,7 @@ from app.schemas.size_class import SizeClassListOutput, SizeClassDetailReadOutpu
 
 
 class ShelfTypeInput(BaseModel):
-    type: constr(max_length=50)
+    type: constr(min_length=1, max_length=50)
     size_class_id: int
     max_capacity: int
 
@@ -21,7 +21,7 @@ class ShelfTypeInput(BaseModel):
 
 
 class ShelfTypeUpdateInput(BaseModel):
-    type: Optional[constr(max_length=50)] = None
+    type: Optional[constr(min_length=1, max_length=50)] = None
     size_class_id: Optional[int] = None
     max_capacity: Optional[int] = None
     update_dt: Optional[datetime] = None

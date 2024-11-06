@@ -9,6 +9,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
 from app.logger import inventory_logger
+from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
 from app.models.barcodes import Barcode
 from app.models.shelf_numbers import ShelfNumber
@@ -124,6 +125,27 @@ def create_shelf(
             )
         mutated_data["shelf_number_id"] = shelf_num_object.id
 
+    if shelf_input.shelf_type_id and shelf_input.available_space:
+        shelf_type = session.get(ShelfType, shelf_input.shelf_type_id)
+        if not shelf_type:
+            raise ValidationException(
+                detail=f"Shelf Type ID {shelf_input.shelf_type_id} Not Found"
+            )
+
+        if shelf_input.available_space != shelf_type.max_capacity:
+            raise ValidationException(
+                detail=f"The available space on the shelf must match the max capacity of the shelf type"
+            )
+
+    elif shelf_input.shelf_type_id and not shelf_input.available_space:
+        shelf_type = session.get(ShelfType, shelf_input.shelf_type_id)
+        if not shelf_type:
+            raise ValidationException(
+                detail=f"Shelf Type ID {shelf_input.shelf_type_id} Not Found"
+            )
+
+        mutated_data["available_space"] = shelf_type.max_capacity
+
     # new_shelf = Shelf(**shelf_input.model_dump())
     new_shelf = Shelf(**mutated_data)
     session.add(new_shelf)
@@ -135,7 +157,7 @@ def create_shelf(
 
 @router.patch("/{id}", response_model=ShelfDetailWriteOutput)
 def update_shelf(
-    id: int, shelf: ShelfUpdateInput, session: Session = Depends(get_session)
+    id: int, shelf_input: ShelfUpdateInput, session: Session = Depends(get_session)
 ):
     """
     Update a shelf with the given ID.
@@ -156,7 +178,29 @@ def update_shelf(
     if existing_shelf is None:
         raise NotFound(detail=f"Shelf ID {id} Not Found")
 
-    mutated_data = shelf.model_dump(exclude_unset=True)
+    mutated_data = shelf_input.model_dump(exclude_unset=True)
+
+    if shelf_input.available_space:
+        shelf_type = session.get(ShelfType, existing_shelf.shelf_type_id)
+        if not shelf_type:
+            raise ValidationException(
+                detail=f"Shelf Type ID {shelf_input.shelf_type_id} Not Found"
+            )
+        if (
+            len(existing_shelf.shelf_positions) == 0
+            and shelf_input.available_space != shelf_type.max_capacity
+        ):
+            raise ValidationException(
+                detail=f"The available space on the shelf must match the max capacity of the shelf type"
+            )
+        elif len(existing_shelf.shelf_positions) > 0 and shelf_input.available_space:
+            if (
+                len(existing_shelf.shelf_positions) + shelf_input.available_space
+                != shelf_type.max_capacity
+            ):
+                raise ValidationException(
+                    detail=f"The available space on the shelf must match the max capacity of the shelf type"
+                )
 
     for key, value in mutated_data.items():
         setattr(existing_shelf, key, value)
