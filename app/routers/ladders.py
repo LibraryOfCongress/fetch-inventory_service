@@ -1,4 +1,8 @@
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import and_
+from sqlalchemy.orm import selectinload, joinedload
 from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
@@ -6,8 +10,11 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.logger import inventory_logger
 from app.models.ladders import Ladder
 from app.models.ladder_numbers import LadderNumber
+from app.models.shelf_types import ShelfType
+from app.models.shelves import Shelf
 from app.schemas.ladders import (
     LadderInput,
     LadderUpdateInput,
@@ -40,7 +47,12 @@ def get_ladder_list(session: Session = Depends(get_session)) -> list:
 
 
 @router.get("/{id}", response_model=LadderDetailReadOutput)
-def get_ladder_detail(id: int, session: Session = Depends(get_session)):
+def get_ladder_detail(
+    id: int,
+    owner_id: Optional[int] | None = None,
+    size_class_id: Optional[int] | None = None,
+    session: Session = Depends(get_session),
+):
     """
     Retrieve the details of a ladder by its ID.
 
@@ -55,10 +67,29 @@ def get_ladder_detail(id: int, session: Session = Depends(get_session)):
     """
     ladder = session.get(Ladder, id)
 
-    if ladder:
-        return ladder
+    if not ladder:
+        raise NotFound(detail=f"Ladder ID {id} Not Found")
 
-    raise NotFound(detail=f"Ladder ID {id} Not Found")
+    # Filter shelves if `owner_id` or `size_class_id` are provided
+    if owner_id or size_class_id:
+        filter_shelves = [
+            shelf
+            for shelf in ladder.shelves
+            if (not owner_id or shelf.owner_id == owner_id)
+            and (not size_class_id or shelf.shelf_type.size_class_id == size_class_id)
+        ]
+    else:
+        filter_shelves = ladder.shelves
+
+    # Return a new dictionary with `shelves` overridden, rather than modifying `ladder` directly
+    return {
+        "id": ladder.id,
+        "side": ladder.side,
+        "ladder_number": ladder.ladder_number,
+        "shelves": filter_shelves,  # Override shelves with filtered result
+        "create_dt": ladder.create_dt,
+        "update_dt": ladder.update_dt,
+    }
 
 
 @router.post("/", response_model=LadderDetailWriteOutput, status_code=201)
@@ -87,13 +118,21 @@ def create_ladder(
         ladder_number_id = ladder_input.ladder_number_id
         mutated_data = ladder_input.model_dump(exclude="ladder_number")
         if not ladder_number_id and not ladder_number:
-            raise ValidationException(detail=f"ladder_number_id OR ladder_number required")
+            raise ValidationException(
+                detail=f"ladder_number_id OR ladder_number required"
+            )
         elif ladder_number and not ladder_number_id:
             # get ladder_number_id from ladder number
-            ladder_num_object = session.query(LadderNumber).filter(LadderNumber.number == ladder_number).first()
+            ladder_num_object = (
+                session.query(LadderNumber)
+                .filter(LadderNumber.number == ladder_number)
+                .first()
+            )
             if not ladder_num_object:
-                raise ValidationException(detail=f"No ladder_number entity exists for ladder number {ladder_number}")
-            mutated_data['ladder_number_id'] = ladder_num_object.id
+                raise ValidationException(
+                    detail=f"No ladder_number entity exists for ladder number {ladder_number}"
+                )
+            mutated_data["ladder_number_id"] = ladder_num_object.id
 
         # new_ladder = Ladder(**ladder_input.model_dump())
         new_ladder = Ladder(**mutated_data)
@@ -169,8 +208,7 @@ def delete_ladder(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Ladder ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Ladder ID {id} Deleted " f"Successfully"
         )
 
     raise NotFound(detail=f"Ladder ID {id} Not Found")
