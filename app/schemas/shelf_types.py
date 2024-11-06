@@ -7,8 +7,8 @@ from app.schemas.size_class import SizeClassListOutput, SizeClassDetailReadOutpu
 
 class ShelfTypeInput(BaseModel):
     type: constr(max_length=50)
-    size_class_id: Optional[int] = None
-    max_capacity: Optional[int] = None
+    size_class_id: int
+    max_capacity: int
 
     class Config:
         json_schema_extra = {
