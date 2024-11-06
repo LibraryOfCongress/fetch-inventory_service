@@ -160,7 +160,7 @@ def delete_size_class(id: int, session: Session = Depends(get_session)):
         # Check if the owner is already linked to the size_class
         existing_size_class_owner = (
             session.query(OwnersSizeClassesLink)
-            .filter(size_class_id=size_class.id)
+            .filter(OwnersSizeClassesLink.size_class_id == size_class.id)
             .all()
         )
 
