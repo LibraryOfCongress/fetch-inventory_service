@@ -23,6 +23,7 @@ class ShelfTypeInput(BaseModel):
 class ShelfTypeUpdateInput(BaseModel):
     type: Optional[constr(max_length=50)] = None
     size_class_id: Optional[int] = None
+    max_capacity: Optional[int] = None
     update_dt: Optional[datetime] = None
 
     class Config:
