@@ -6,7 +6,7 @@ import logging
 
 import pandas as pd
 import pytz
-from sqlalchemy import and_, text
+from sqlalchemy import and_, text, desc
 from sqlalchemy.orm import joinedload, aliased
 from sqlmodel import select, Session
 from fastapi import Header, Depends
@@ -261,7 +261,13 @@ def process_containers_for_shelving(
             raise NotFound(
                 detail=f"No available positions on shelves for owner id {container_object.owner_id} at size class {container_object.size_class_id} needed for container with barcode {container_object.barcode.value}"
             )
-
+        # Sort available_positions_for_owner by the last segment of internal_location in descending order
+        available_positions_for_owner.sort(
+            key=lambda position: int(
+                position.ShelfPosition.internal_location.split("-")[-1]
+            ),
+            reverse=True,
+        )
         # both actual and proposed get set
         container_object.shelf_position_id = available_positions_for_owner[
             0
