@@ -98,6 +98,7 @@ class ContainerTypeNestedForLadderOutput(BaseModel):
 
 class ShelvesNestedForLadderOutput(BaseModel):
     id: int
+    available_space: Optional[int] = None
     sort_priority: Optional[int] = None
     barcode: BarcodeDetailReadOutput
     shelf_number: ShelfNumberNestedForLadderOutput
@@ -145,6 +146,7 @@ class LadderDetailReadOutput(LadderBaseOutput):
                 "shelves": [
                     {
                         "id": 1,
+                        "available_space": 30,
                         "shelf_number": {
                             "number": 3
                         },

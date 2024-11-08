@@ -157,15 +157,9 @@ def delete_size_class(id: int, session: Session = Depends(get_session)):
         if size_class.assigned:
             raise BadRequest(detail="Cannot delete size class that is assigned")
 
-        # Check if the owner is already linked to the size_class
-        existing_size_class_owner = (
-            session.query(OwnersSizeClassesLink)
-            .filter(OwnersSizeClassesLink.size_class_id == size_class.id)
-            .all()
-        )
-
-        if existing_size_class_owner:
-            session.delete(existing_size_class_owner)
+        session.query(OwnersSizeClassesLink).filter(
+            OwnersSizeClassesLink.size_class_id == id
+        ).delete(synchronize_session=False)
 
         session.delete(size_class)
         session.commit()
