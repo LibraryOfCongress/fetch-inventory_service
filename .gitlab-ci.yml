@@ -142,7 +142,7 @@ build_image_staging:
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "staging"'
+    - if: '$CI_COMMIT_BRANCH == "staging"'
       when: manual
 
 deploy_dev:
@@ -210,5 +210,5 @@ deploy_stage:
     - TF_LOG=1 terraform init -backend-config=backend.hcl
     - terraform apply -auto-approve
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "staging"'
+    - if: '$CI_COMMIT_BRANCH == "staging"'
       when: manual
