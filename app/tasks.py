@@ -230,9 +230,7 @@ def handle_size_class_assigned_status(
     # if size class has already been assigned to any other job, items, tray,
     # non trays, or shelf
     existing_jobs = (
-        session.query(model)
-        .filter(AccessionJob.size_class_id == job.size_class_id)
-        .all()
+        session.query(model).filter(model.size_class_id == job.size_class_id).all()
     )
     items = session.query(Item).filter(Item.size_class_id == job.size_class_id).all()
     non_tray_items = (
@@ -240,15 +238,11 @@ def handle_size_class_assigned_status(
         .filter(NonTrayItem.size_class_id == job.size_class_id)
         .all()
     )
-    tray = (
-        session.query(Tray)
-        .join(ShelfType)
-        .where(Tray.shelf_type_id == ShelfType.id)
-        .filter(ShelfType.size_class_id == job.size_class_id)
-        .all()
-    )
+    tray = session.query(Tray).where(Tray.size_class_id == job.size_class_id).all()
 
     if not existing_jobs and not items and not non_tray_items and not tray:
-        size_class.assigned = False
+        session.query(SizeClass).filter(SizeClass.id == job.size_class_id).update(
+            {"assigned": False}
+        )
 
     session.commit()
