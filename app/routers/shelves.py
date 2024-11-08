@@ -125,19 +125,7 @@ def create_shelf(
             )
         mutated_data["shelf_number_id"] = shelf_num_object.id
 
-    if shelf_input.shelf_type_id and shelf_input.available_space:
-        shelf_type = session.get(ShelfType, shelf_input.shelf_type_id)
-        if not shelf_type:
-            raise ValidationException(
-                detail=f"Shelf Type ID {shelf_input.shelf_type_id} Not Found"
-            )
-
-        if shelf_input.available_space != shelf_type.max_capacity:
-            raise ValidationException(
-                detail=f"The available space on the shelf must match the max capacity of the shelf type"
-            )
-
-    elif shelf_input.shelf_type_id and not shelf_input.available_space:
+    if shelf_input.shelf_type_id:
         shelf_type = session.get(ShelfType, shelf_input.shelf_type_id)
         if not shelf_type:
             raise ValidationException(
@@ -181,26 +169,18 @@ def update_shelf(
     mutated_data = shelf_input.model_dump(exclude_unset=True)
 
     if shelf_input.available_space:
-        shelf_type = session.get(ShelfType, existing_shelf.shelf_type_id)
-        if not shelf_type:
+        shelf_positions_count = len(existing_shelf.shelf_positions)
+        if shelf_positions_count == 0:
             raise ValidationException(
-                detail=f"Shelf Type ID {shelf_input.shelf_type_id} Not Found"
+                detail=f"The are no shelf position assigned to shelf"
             )
-        if (
-            len(existing_shelf.shelf_positions) == 0
-            and shelf_input.available_space != shelf_type.max_capacity
+        elif (
+            shelf_positions_count > 0
+            and shelf_input.available_space > shelf_positions_count
         ):
             raise ValidationException(
-                detail=f"The available space on the shelf must match the max capacity of the shelf type"
+                detail=f"The available space can exceed the number of shelf positions"
             )
-        elif len(existing_shelf.shelf_positions) > 0 and shelf_input.available_space:
-            if (
-                len(existing_shelf.shelf_positions) + shelf_input.available_space
-                != shelf_type.max_capacity
-            ):
-                raise ValidationException(
-                    detail=f"The available space on the shelf must match the max capacity of the shelf type"
-                )
 
     for key, value in mutated_data.items():
         setattr(existing_shelf, key, value)

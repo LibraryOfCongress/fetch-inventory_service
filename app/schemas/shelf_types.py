@@ -23,7 +23,6 @@ class ShelfTypeInput(BaseModel):
 class ShelfTypeUpdateInput(BaseModel):
     type: Optional[constr(min_length=1, max_length=50)] = None
     size_class_id: Optional[int] = None
-    max_capacity: Optional[int] = None
     update_dt: Optional[datetime] = None
 
     class Config:
@@ -31,7 +30,6 @@ class ShelfTypeUpdateInput(BaseModel):
             "example": {
                 "type": "Long",
                 "size_class_id": 1,
-                "max_capacity": 30,
                 "update_dt": "2023-11-27T12:34:56.789123Z"
             }
         }
@@ -64,6 +62,7 @@ class ShelfTypeListOutput(ShelfTypeReadOutput):
 
 class ShelfTypeDetailOutput(ShelfTypeReadOutput):
     size_class: Optional[SizeClassDetailReadOutput] = None
+    shelves: Optional[list] = None
     max_capacity: Optional[int] = None
     update_dt: Optional[datetime] = None
     create_dt: Optional[datetime] = None

@@ -106,7 +106,9 @@ def create_shelf_type(
 
 @router.patch("/{id}", response_model=ShelfTypeDetailOutput)
 def update_shelf_type(
-    id: int, shelf_type: ShelfTypeUpdateInput, session: Session = Depends(get_session)
+    id: int,
+    shelf_type_input: ShelfTypeUpdateInput,
+    session: Session = Depends(get_session),
 ):
     """
     Update an existing Shelf Type in the database.
@@ -131,42 +133,7 @@ def update_shelf_type(
         if not existing_shelf_type:
             raise NotFound(detail=f"Shelf Type ID {id} Not Found")
 
-        # Check shelf capacity
-        if shelf_type.max_capacity and existing_shelf_type.max_capacity is not None:
-            if shelf_type.max_capacity < 1:
-                raise ValidationException(
-                    detail="Shelf capacity may not be less than one."
-                )
-
-            if shelf_type.max_capacity < existing_shelf_type.max_capacity:
-                existing_shelves = (
-                    session.query(Shelf).filter(Shelf.shelf_type_id == id)
-                ).all()
-
-                for shelf in existing_shelves:
-                    if (
-                        existing_shelf_type.max_capacity - shelf_type.max_capacity
-                    ) > shelf.available_space:
-                        raise ValidationException(
-                            detail="Capacity cannot be reduced below "
-                            f"currently shelved {shelf.id} containers for "
-                            f"Shelf ID {shelf.id}."
-                        )
-
-                for shelf in existing_shelves:
-                    if len(shelf.shelf_positions) == 0:
-                        session.query(Shelf).filter(Shelf.id == shelf.id).update(
-                            {"available_space": shelf_type.max_capacity}
-                        )
-                    elif len(shelf.shelf_positions) > 0:
-                        if (
-                            len(shelf.shelf_positions) + shelf.available_space
-                        ) < shelf_type.max_capacity:
-                            session.query(Shelf).filter(Shelf.id == shelf.id).update(
-                                {"available_space": shelf_type.max_capacity}
-                            )
-
-        mutated_data = shelf_type.model_dump(exclude_unset=True)
+        mutated_data = shelf_type_input.model_dump(exclude_unset=True)
 
         for key, value in mutated_data.items():
             setattr(existing_shelf_type, key, value)
