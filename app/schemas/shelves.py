@@ -9,7 +9,6 @@ from app.schemas.ladders import LadderDetailWriteOutput
 from app.schemas.shelf_numbers import ShelfNumberDetailOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
 from app.schemas.barcodes import BarcodeDetailReadOutput
-from app.schemas.shelf_types import ShelfTypeDetailOutput
 
 
 class ShelfInput(BaseModel):
@@ -33,6 +32,7 @@ class ShelfInput(BaseModel):
                 "container_type_id": 1,
                 "shelf_number_id": 1,
                 "shelf_number": None,
+                "shelf_type_id": 1,
                 "owner_id": 1,
                 "height": 15.7,
                 "width": 30.33,
@@ -73,6 +73,28 @@ class ShelfUpdateInput(BaseModel):
         }
 
 
+class NestedSizeClassDetailOutput(BaseModel):
+    id: int
+    name: str
+    short_name: str
+    assigned: bool
+    height: Optional[condecimal(decimal_places=2)] = None
+    width: Optional[condecimal(decimal_places=2)] = None
+    depth: Optional[condecimal(decimal_places=2)] = None
+    create_dt: datetime
+    update_dt: datetime
+
+
+class NestedShelfTypeDetailOutput(BaseModel):
+    id: int
+    type: str
+    size_class_id: int
+    size_class: Optional[NestedSizeClassDetailOutput]
+    max_capacity: int
+    create_dt: datetime
+    update_dt: datetime
+
+
 class ShelfBaseOutput(BaseModel):
     id: int
 
@@ -82,7 +104,7 @@ class ShelfListOutput(ShelfBaseOutput):
     ladder_id: int
     container_type_id: Optional[int] = None
     shelf_type_id: int
-    shelf_type: ShelfTypeDetailOutput
+    shelf_type: NestedShelfTypeDetailOutput
     owner_id: Optional[int] = None
     barcode: BarcodeDetailReadOutput
 
@@ -137,7 +159,7 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
     width: float
     depth: float
     container_type: Optional[ContainerTypeDetailReadOutput] = None
-    shelf_type: ShelfTypeDetailOutput
+    shelf_type: NestedShelfTypeDetailOutput
     ladder: LadderDetailWriteOutput
     owner: Optional[OwnerDetailReadOutput] = None
     barcode: BarcodeDetailReadOutput
@@ -248,7 +270,7 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
     ladder: LadderDetailWriteOutput
     shelf_number: ShelfNumberDetailOutput
     shelf_type_id: int
-    shelf_type: ShelfTypeDetailOutput
+    shelf_type: NestedShelfTypeDetailOutput
     container_type: Optional[ContainerTypeDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
     available_space: int

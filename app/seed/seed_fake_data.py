@@ -92,6 +92,7 @@ def generate_shelves_for_system():
     shelf_fixture_path = os.path.join(
         current_dir, "fixtures", "entities", "shelves.json"
     )
+
     with open(shelf_fixture_path, "r") as file:
         template_dict = json.load(file)
         # we need 2432 shelves, template has 1
@@ -127,6 +128,8 @@ def generate_shelves_for_system():
                     shelf_type_id = random.choice(shelf_type__list_two)
                 shelf["!container_type_id"]["filter"]["type"] = cont_type
                 shelf["!shelf_type_id"]["filter"]["id"] = shelf_type_id
+                shelf["available_space"] = 8
+                # get max Ok,
                 shelf["!owner_id"]["filter"]["name"] = owner
                 old_shelf_num = shelf["!shelf_number_id"]["filter"]["number"]
                 # if old_shelf_num == 1:

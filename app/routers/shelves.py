@@ -125,15 +125,6 @@ def create_shelf(
             )
         mutated_data["shelf_number_id"] = shelf_num_object.id
 
-    if shelf_input.shelf_type_id:
-        shelf_type = session.get(ShelfType, shelf_input.shelf_type_id)
-        if not shelf_type:
-            raise ValidationException(
-                detail=f"Shelf Type ID {shelf_input.shelf_type_id} Not Found"
-            )
-
-        mutated_data["available_space"] = shelf_type.max_capacity
-
     # new_shelf = Shelf(**shelf_input.model_dump())
     new_shelf = Shelf(**mutated_data)
     session.add(new_shelf)

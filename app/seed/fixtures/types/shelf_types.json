@@ -4,37 +4,37 @@
     {
       "type": "Full",
       "size_class_id": 1,
-      "max_capacity": 16
+      "max_capacity": 8
     },
     {
       "type": "Full",
       "size_class_id": 2,
-      "max_capacity": 30
+      "max_capacity": 8
     },
     {
       "type": "Short",
       "size_class_id": 3,
-      "max_capacity": 6
+      "max_capacity": 8
     },
     {
       "type": "Full",
       "size_class_id": 4,
-      "max_capacity": 12
+      "max_capacity": 8
     },
     {
       "type": "Full",
       "size_class_id": 5,
-      "max_capacity": 12
+      "max_capacity": 8
     },
     {
       "type": "Short",
       "size_class_id": 6,
-      "max_capacity": 10
+      "max_capacity": 8
     },
     {
       "type": "Short",
       "size_class_id": 7,
-      "max_capacity": 10
+      "max_capacity": 8
     },
     {
       "type": "Short",
@@ -49,12 +49,12 @@
     {
       "type": "Short",
       "size_class_id": 10,
-      "max_capacity": 9
+      "max_capacity": 8
     },
     {
       "type": "Short",
       "size_class_id": 11,
-      "max_capacity": 9
+      "max_capacity": 8
     },
     {
       "type": "Short",

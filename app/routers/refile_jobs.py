@@ -134,8 +134,6 @@ def get_refile_job_detail(id: int, session: Session = Depends(get_session)):
     refile_job = session.get(RefileJob, id)
 
     if refile_job:
-        inventory_logger.info(f"Refile items: {refile_job.items }")
-        inventory_logger.info(f"Refile non_tray_items: {refile_job.non_tray_items}")
         if not refile_job.items and not refile_job.non_tray_items:
             return refile_job
         refile_job = sorted_requests(session, refile_job)
