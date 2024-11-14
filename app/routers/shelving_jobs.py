@@ -450,7 +450,7 @@ def reassign_container_location(
         session.query(Shelf).where(Shelf.id == shelf_position.shelf_id).first()
     )
 
-    if updated_shelf and updated_shelf.available_space <= 0:
+    if updated_shelf.available_space <= 0:
         raise ValidationException(
             detail=f"Shelf ID {updated_shelf.id} has no available space."
         )
