@@ -150,6 +150,9 @@ deploy_dev:
   image:
     name: git.loc.gov:4567/fetch/build/terraform:alt    # tf image w envsubst added
     entrypoint: [""]
+  environment:
+    name: develop
+    url: https://inventory.dev.fetch.loctest.gov/status/
   script:
     - export TF_VAR_vault_deployer_password=$VAULT_DEPLOYER_PASSWORD_DEV
     - export TF_VAR_vault_addr=$VAULT_ADDR_DEV
@@ -172,6 +175,9 @@ deploy_test:
   image:
     name: git.loc.gov:4567/fetch/build/terraform:alt    # tf image w envsubst added
     entrypoint: [""]
+  environment:
+    name: test
+    url: https://inventory.test.fetch.loctest.gov/status/
   script:
     - export TF_VAR_vault_deployer_password=$VAULT_DEPLOYER_PASSWORD_TEST
     - export TF_VAR_vault_addr=$VAULT_ADDR_TEST
@@ -196,6 +202,9 @@ deploy_stage:
   image:
     name: git.loc.gov:4567/fetch/build/terraform:alt
     entrypoint: [""]
+  environment:
+    name: staging
+    url: https://inventory.stage.fetch.loc.gov/status/
   script:
     - export TF_VAR_vault_deployer_password=$VAULT_DEPLOYER_PASSWORD_STAGE
     - export TF_VAR_vault_addr=$VAULT_ADDR_STAGE
