@@ -262,6 +262,8 @@ class ShelfPositionNumberNestedForShelf(BaseModel):
 
 class ShelfPositionNestedForShelf(BaseModel):
     id: int
+    location: Optional[str] = None
+    internal_location: Optional[str] = None
     shelf_position_number: ShelfPositionNumberNestedForShelf
 
 
@@ -357,6 +359,8 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                 "shelf_positions": [
                     {
                         "id": 278,
+                        "location": "Cabin Branch-04-57-L-23-10-08",
+                        "internal_location": "01-04-57-L-23-10-08",
                         "shelf_position_number": {
                             "number": 1
                         }

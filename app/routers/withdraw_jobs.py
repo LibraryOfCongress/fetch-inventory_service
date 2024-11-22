@@ -20,6 +20,7 @@ from app.models.non_tray_items import NonTrayItem
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.request_types import RequestType
 from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
 from app.models.withdraw_jobs import WithdrawJob
@@ -131,6 +132,7 @@ def update_withdraw_job(
     """
 
     existing_withdraw_job = session.get(WithdrawJob, id)
+    updated_dt = datetime.utcnow()
 
     if not existing_withdraw_job:
         raise NotFound(detail=f"Withdraw job id {id} not found")
@@ -142,8 +144,8 @@ def update_withdraw_job(
     if withdraw_job_input.create_pick_list or withdraw_job_input.add_to_picklist:
         if withdraw_job_input.create_pick_list:
             pick_list = PickList(
-                create_dt=datetime.utcnow(),
-                update_dt=datetime.utcnow(),
+                create_dt=updated_dt,
+                update_dt=updated_dt,
                 withdraw_job_id=id,
             )
             session.add(pick_list)
@@ -206,13 +208,13 @@ def update_withdraw_job(
         if new_request:
             session.bulk_save_objects(new_request)
             session.query(Item).filter(Item.id.in_(item_ids)).update(
-                {"status": "Requested", "update_dt": datetime.utcnow()},
+                {"status": "Requested", "update_dt": updated_dt},
                 synchronize_session=False,
             )
             session.query(NonTrayItem).filter(
                 NonTrayItem.id.in_(non_tray_item_ids)
             ).update(
-                {"status": "Requested", "update_dt": datetime.utcnow()},
+                {"status": "Requested", "update_dt": updated_dt},
                 synchronize_session=False,
             )
             session.commit()
@@ -222,6 +224,7 @@ def update_withdraw_job(
         )
 
     if withdraw_job_input.status == "Completed":
+        tray_ids = [item.tray_id for item in existing_withdraw_job.items]
         item_ids = [item.id for item in existing_withdraw_job.items]
         item_barcodes = [item.barcode_id for item in existing_withdraw_job.items]
         non_tray_item_ids = [
@@ -232,35 +235,79 @@ def update_withdraw_job(
             for non_tray_item in existing_withdraw_job.non_tray_items
         ]
         if item_ids:
+            # Updating items status to withdrawn
             session.query(Item).filter(Item.id.in_(item_ids)).update(
                 {
-                    "withdrawal_dt": datetime.utcnow(),
-                    "update_dt": datetime.utcnow(),
+                    "withdrawal_dt": updated_dt,
+                    "update_dt": updated_dt,
                     "status": "Withdrawn",
+                    "tray_id": None,
                 },
                 synchronize_session=False,
             )
+            # Updating items barcode status to withdrawn
             session.query(Barcode).filter(Barcode.id.in_(item_barcodes)).update(
-                {"withdrawn": True, "update_dt": datetime.utcnow()},
+                {"withdrawn": True, "update_dt": updated_dt},
                 synchronize_session=False,
             )
+            # Committing the changes
+            session.commit()
+
+            # updating available space for the shelf
+            for item_id in item_ids:
+                # updating available space for the shelf
+
+                shelf = (
+                    session.query(Shelf, Tray)
+                    .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id)
+                    .join(Item, Item.id == item_id)
+                    .join(Tray, Tray.id == Item.tray_id)
+                    .filter(ShelfPosition.id == Tray.shelf_position_id)
+                    .first()
+                )
+
+                if shelf:
+                    shelf.available_space += 1
+
+                    # Committing the changes
+                    commit_record(session, shelf)
+            # Checking if the tray is empty and updating the shelf position
+            if tray_ids:
+                trays = session.query(Tray).filter(Tray.id.in_(tray_ids)).all()
+                for tray in trays:
+                    if tray and len(tray.items) == 0:
+                        tray.shelf_position_id = None
+                        tray.shelf_position_proposed_id = None
+                        tray.update_dt = updated_dt
+                        session.add(tray)
+
         if non_tray_item_ids:
             session.query(NonTrayItem).filter(
                 NonTrayItem.id.in_(non_tray_item_ids)
             ).update(
                 {
-                    "withdrawal_dt": datetime.utcnow(),
-                    "update_dt": datetime.utcnow(),
+                    "withdrawal_dt": updated_dt,
+                    "update_dt": updated_dt,
                     "status": "Withdrawn",
+                    "shelf_position_id": None,
+                    "shelf_position_proposed_id": None,
                 },
                 synchronize_session=False,
             )
             session.query(Barcode).filter(
                 Barcode.id.in_(non_tray_item_barcodes)
             ).update(
-                {"withdrawn": True, "update_dt": datetime.utcnow()},
+                {"withdrawn": True, "update_dt": updated_dt},
                 synchronize_session=False,
             )
+            for non_tray_item_id in non_tray_item_ids:
+                session.query(Shelf).join(
+                    ShelfPosition, ShelfPosition.shelf_id == Shelf.id
+                ).join(NonTrayItem, NonTrayItem.id == non_tray_item_id).filter(
+                    ShelfPosition.id == NonTrayItem.shelf_position_id
+                ).update(
+                    {"available_space": Shelf.available_space + 1}
+                )
 
     # Manage transitions and calculate run time if needed
     if withdraw_job_input.status and withdraw_job_input.run_timestamp:
@@ -276,7 +323,7 @@ def update_withdraw_job(
     for key, value in mutated_data.items():
         setattr(existing_withdraw_job, key, value)
 
-    setattr(existing_withdraw_job, "update_dt", datetime.utcnow())
+    setattr(existing_withdraw_job, "update_dt", updated_dt)
 
     session.commit()
     session.refresh(existing_withdraw_job)

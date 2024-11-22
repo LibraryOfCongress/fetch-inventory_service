@@ -6,11 +6,16 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
+from app.models.trays import Tray
 from app.schemas.items import (
     ItemInput,
+    ItemMoveInput,
     ItemUpdateInput,
     ItemListOutput,
     ItemDetailWriteOutput,
@@ -20,6 +25,7 @@ from app.config.exceptions import (
     NotFound,
     ValidationException,
     InternalServerError,
+    BadRequest,
 )
 
 
@@ -218,3 +224,117 @@ def delete_item(id: int, session: Session = Depends(get_session)):
         )
 
     raise NotFound(detail=f"Item ID {id} Not Found")
+
+
+@router.post("/move/{barcode_value}", response_model=ItemDetailReadOutput)
+def move_item(
+    barcode_value: str,
+    item_input: ItemMoveInput,
+    session: Session = Depends(get_session),
+):
+    """
+    Move an item from one location to another.
+
+    **Parameters:**
+    - barcode_value: The value of the item to move.
+
+    **Returns:**
+    - Item Detail Write Output: The updated item details.
+    """
+    item_lookup_barcode_value = (
+        session.query(Barcode).where(Barcode.value == barcode_value).first()
+    )
+    if not item_lookup_barcode_value:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} Item with barcode not "
+            f"found"
+        )
+
+    tray_look_barcode_value = (
+        session.query(Barcode)
+        .where(Barcode.value == item_input.tray_barcode_value)
+        .first()
+    )
+    if not tray_look_barcode_value:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
+            f" {item_input.tray_barcode_value} not found"
+        )
+
+    item = (
+        session.query(Item)
+        .filter(Item.barcode_id == item_lookup_barcode_value.id)
+        .first()
+    )
+
+    if not item.scanned_for_accession or not item.scanned_for_verification:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} has not been verified."
+        )
+
+    source_tray = session.query(Tray).filter(Tray.id == item.tray_id).first()
+
+    if not source_tray:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Tray ID {item.tray_id} not found"
+        )
+
+    if not item:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Item barcode value"
+            f" {item_lookup_barcode_value.value} not found"
+        )
+    destination_tray = (
+        session.query(Tray).where(Tray.barcode_id == tray_look_barcode_value.id).first()
+    )
+    if not destination_tray:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
+            f" {item_input.tray_barcode_value} not found"
+        )
+
+    # Move the item to the destination tray and update the tray
+    item.tray_id = destination_tray.id
+    item.size_class_id = destination_tray.size_class_id
+    item.owner_id = destination_tray.owner_id
+    item.media_type_id = destination_tray.media_type_id
+    item.accession_job_id = destination_tray.accession_job_id
+    item.accession_dt = destination_tray.accession_dt
+    item.verification_job_id = destination_tray.verification_job_id
+
+    # update update_dt fields
+    update_dt = datetime.utcnow()
+    item.update_dt = update_dt
+    destination_tray.update_dt = update_dt
+
+    session.add(item)
+    session.add(destination_tray)
+    session.commit()
+    session.refresh(item)
+    session.refresh(source_tray)
+
+    # check if tray is empty if it is empty, withdraw the tray
+    if len(source_tray.items) == 0:
+        session.query(Tray).filter(Tray.id == source_tray.id).update(
+            {
+                "shelf_position_id": None,
+                "shelf_position_proposed_id": None,
+                "update_dt": update_dt,
+            }
+        )
+
+        source_shelf = (
+            session.query(ShelfPosition)
+            .join(ShelfPosition, Shelf.id == ShelfPosition.shelf_id)
+            .filter(ShelfPosition.id == source_tray.shelf_position_id)
+            .first()
+        )
+
+        if source_shelf:
+            session.query(Shelf).filter(Shelf.id == source_shelf.id).update(
+                {"available_space": source_shelf.available_space + 1}
+            )
+
+    session.commit()
+
+    return item

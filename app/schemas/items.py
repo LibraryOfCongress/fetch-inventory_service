@@ -100,6 +100,17 @@ class ItemUpdateInput(ItemInput):
         }
 
 
+class ItemMoveInput(BaseModel):
+    tray_barcode_value: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "tray_barcode_value": "5901234123457"
+            }
+        }
+
+
 class ItemBaseOutput(ItemInput):
     id: int
 

@@ -66,6 +66,19 @@ class NonTrayItemInput(BaseModel):
         }
 
 
+class NonTrayItemMoveInput(BaseModel):
+    shelf_barcode_value: str
+    shelf_position_number: int
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "shelf_barcode_value": "5901234123457",
+                "shelf_position_number": 1
+            }
+        }
+
+
 class NonTrayItemUpdateInput(NonTrayItemInput):
     shelf_position_id: Optional[int] = None
     shelf_position_proposed_id: Optional[int] = None

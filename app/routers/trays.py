@@ -7,6 +7,8 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.logger import inventory_logger
+from app.models.non_tray_items import NonTrayItem
+from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.models.trays import Tray
@@ -15,6 +17,7 @@ from app.models.container_types import ContainerType
 from app.models.items import Item
 from app.schemas.trays import (
     TrayInput,
+    TrayMoveInput,
     TrayUpdateInput,
     TrayListOutput,
     TrayDetailWriteOutput,
@@ -281,3 +284,122 @@ def delete_tray(id: int, session: Session = Depends(get_session)):
         )
 
     raise NotFound(detail=f"Tray ID {id} Not Found")
+
+
+@router.post("/move/{barcode_value}", response_model=TrayDetailReadOutput)
+def move_tray(
+    barcode_value: str,
+    tray_input: TrayMoveInput,
+    session: Session = Depends(get_session),
+):
+    """
+    Move a tray from one location to another.
+
+    **Parameters:**
+    - barcode_value: The value of the tray to move.
+
+    **Returns:**
+    - Tray Detail Write Output: The updated tray details.
+    """
+    # Retrieve the non_tray_item and shelves in a single query
+    query = (
+        session.query(Tray, Shelf)
+        .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id)
+        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+        .join(Barcode, Tray.barcode_id == Barcode.id)
+        .filter(Barcode.value == barcode_value)
+    )
+    result = query.first()
+    if not result:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Item with barcode not "
+            f"found"
+        )
+
+    tray, source_shelf = result
+
+    if not tray.scanned_for_accession or not tray.scanned_for_verification:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} has not been verified."
+        )
+
+    # Retrieve the destination shelf
+    destination_shelf = (
+        session.query(Shelf)
+        .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id)
+        .join(Barcode, Shelf.barcode_id == Barcode.id)
+        .filter(Barcode.value == tray_input.shelf_barcode_value)
+        .first()
+    )
+    if not destination_shelf:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Shelf with barcode value"
+            f" {tray_input.shelf_barcode_value} not found"
+        )
+
+    # Check if the source and destination shelves are of the same size class
+    if (
+        source_shelf.shelf_type.size_class_id
+        != destination_shelf.shelf_type.size_class_id
+        or source_shelf.owner_id != destination_shelf.owner_id
+    ):
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Shelf must be of the same "
+            f"size class and owner."
+        )
+
+    # Check the available space in the destination shelf
+    if destination_shelf.available_space < 1:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Shelf id"
+            f" {destination_shelf.id} has no "
+            f"available space"
+        )
+
+    destination_shelf_positions = destination_shelf.shelf_positions
+    destination_shelf_position_id = None
+    for destination_shelf_position in destination_shelf_positions:
+        shel_position_number = (
+            session.query(ShelfPositionNumber)
+            .filter(
+                ShelfPositionNumber.id
+                == destination_shelf_position.shelf_position_number_id
+            )
+            .first()
+        )
+        if shel_position_number.number == tray_input.shelf_position_number:
+            destination_shelf_position_id = destination_shelf_position.id
+            tray_shelf_position = (
+                session.query(Tray)
+                .filter(Tray.shelf_position_id == destination_shelf_position.id)
+                .first()
+            )
+            non_tray_shelf_position = (
+                session.query(NonTrayItem)
+                .filter(NonTrayItem.shelf_position_id == destination_shelf_position.id)
+                .first()
+            )
+
+            if tray_shelf_position or non_tray_shelf_position:
+                raise ValidationException(
+                    detail=f"Failed to transfer: {barcode_value} - Shelf Position"
+                    f" {tray_input.shelf_position_number} is already occupied"
+                )
+            break
+
+    tray.shelf_position_id = destination_shelf_position_id
+    source_shelf.available_space += 1
+    destination_shelf.available_space -= 1
+
+    # Update the update_dt field
+    update_dt = datetime.utcnow()
+    tray.update_dt = update_dt
+    source_shelf.update_dt = update_dt
+    destination_shelf.update_dt = update_dt
+
+    session.add(tray)
+    session.add(source_shelf)
+    session.add(destination_shelf)
+    session.commit()
+
+    return tray
