@@ -474,6 +474,17 @@ def reassign_container_location(
             {"available_space": Shelf.available_space - 1}
         )
 
+    shelf_type = updated_shelf.shelf_type
+    # Check if the container owner and size class match to shelf
+    if (
+        container.size_class_id != shelf_type.size_class_id
+        or container.owner_id != updated_shelf.owner_id
+    ):
+        raise ValidationException(
+            detail=f"Container Barcode {reassignment_input.container_barcode_value}  "
+            f"does not match Shelf owner and size class."
+        )
+
     # only reassign actual, not proposed
     container.shelving_job_id = id
     container.shelf_position_id = shelf_position_position_number_join.ShelfPosition.id
