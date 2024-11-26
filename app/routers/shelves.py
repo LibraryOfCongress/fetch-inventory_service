@@ -79,7 +79,7 @@ def get_shelf_by_barcode_value(value: str, session: Session = Depends(get_sessio
     statement = select(Shelf).join(Barcode).where(Barcode.value == value)
     shelf = session.exec(statement).first()
     if not shelf:
-        raise NotFound()
+        raise NotFound(detail=f"Shelf with barcode value {value} not found")
     return shelf
 
 

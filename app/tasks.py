@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 
 from app.config.exceptions import NotFound
+from app.logger import inventory_logger
 from app.models.accession_jobs import AccessionJob
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_types import ShelfType
@@ -60,6 +61,7 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
         for tray in trays:
             tray.verification_job_id = new_verification_job.id
             tray.owner_id = accession_job.owner_id
+            tray.scanned_for_accession = True
             session.add(tray)
 
     # Update Non Tray Item Records
@@ -71,6 +73,7 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
         for non_tray_item in non_trays_items:
             non_tray_item.verification_job_id = new_verification_job.id
             non_tray_item.owner_id = accession_job.owner_id
+            non_tray_item.scanned_for_accession = True
             session.add(non_tray_item)
 
     # Update Item Records
@@ -80,6 +83,7 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
         for item in items:
             item.verification_job_id = new_verification_job.id
             item.owner_id = accession_job.owner_id
+            item.scanned_for_accession = True
             session.add(item)
 
     session.commit()
@@ -246,3 +250,56 @@ def handle_size_class_assigned_status(
         )
 
     session.commit()
+
+
+def process_tray_item_move(
+    session: Session, item: Item, source_tray: Tray, destination_tray: Tray
+):
+    """
+    Task processes a tray item move
+    """
+    # Move the item to the destination tray and update the tray
+    item.tray_id = destination_tray.id
+    item.size_class_id = destination_tray.size_class_id
+    item.owner_id = destination_tray.owner_id
+    item.media_type_id = destination_tray.media_type_id
+    item.accession_job_id = destination_tray.accession_job_id
+    item.accession_dt = destination_tray.accession_dt
+    item.verification_job_id = destination_tray.verification_job_id
+
+    # update update_dt fields
+    update_dt = datetime.utcnow()
+    item.update_dt = update_dt
+    destination_tray.update_dt = update_dt
+
+    session.add(item)
+    session.add(destination_tray)
+    session.commit()
+    session.refresh(item)
+    session.refresh(source_tray)
+
+    # check if tray is empty if it is empty, withdraw the tray
+    updated_source_tray = session.query(Tray).filter(Tray.id == source_tray.id).first()
+
+    if updated_source_tray and len(updated_source_tray.items) == 0:
+        session.query(Tray).filter(Tray.id == source_tray.id).update(
+            {
+                "shelf_position_id": None,
+                "shelf_position_proposed_id": None,
+                "update_dt": update_dt,
+            }
+        )
+
+        source_shelf = (
+            session.query(Shelf)
+            .join(ShelfPosition, Shelf.id == ShelfPosition.shelf_id)
+            .filter(ShelfPosition.id == source_tray.shelf_position_id)
+            .first()
+        )
+
+        if source_shelf:
+            session.query(Shelf).filter(Shelf.id == source_shelf.id).update(
+                {"available_space": source_shelf.available_space + 1}
+            )
+
+        session.commit()

@@ -79,7 +79,7 @@ def get_barcode_by_value(value: str, session: Session = Depends(get_session)):
     statement = select(Barcode).where(Barcode.value == value)
     barcode = session.exec(statement).first()
     if not barcode:
-        raise NotFound()
+        raise NotFound(detail=f"Barcode with value {value} not found")
     return barcode
 
 
