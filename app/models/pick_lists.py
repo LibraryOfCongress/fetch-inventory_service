@@ -29,6 +29,7 @@ class PickList(SQLModel, table=True):
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True))
     user_id: Optional[int] = Field(default=None, foreign_key="users.id", nullable=True)
+    created_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     status: str = Field(
         sa_column=sa.Column(
             sa.Enum(
@@ -55,7 +56,22 @@ class PickList(SQLModel, table=True):
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
-    user: Optional["User"] = Relationship(back_populates="pick_lists")
+    user: Optional["User"] = Relationship(
+        back_populates="pick_lists",
+        sa_relationship_kwargs={
+            "primaryjoin": "PickList.user_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+
+    created_by: Optional["User"] = Relationship(
+        back_populates="created_pick_lists",
+        sa_relationship_kwargs={
+            "primaryjoin": "PickList.created_by_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+
     building: Optional[Building] = Relationship(back_populates="pick_lists")
     requests: List["Request"] = Relationship(back_populates="pick_list")
     withdraw_jobs: List["WithdrawJob"] = Relationship(back_populates="pick_list")

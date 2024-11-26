@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
+from typing import Optional
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy import or_
@@ -35,8 +36,11 @@ router = APIRouter(
 @router.get("/", response_model=Page[RequestListOutput])
 def get_request_list(
     building_id: int = None,
-    fulfilled: bool = False,
+    queue: bool = False,
     unassociated_pick_list: bool = False,
+    from_dt: Optional[datetime] = None,
+    to_dt: Optional[datetime] = None,
+    requestor_name: Optional[str] = None,
     session: Session = Depends(get_session),
 ) -> list:
     """
@@ -49,16 +53,23 @@ def get_request_list(
     **Returns:**
     - Request List Output: The paginated list of requests.
     """
-    requests = select(Request)
-    requests = requests.where(Request.fulfilled == fulfilled)
+    query = select(Request).distinct()
 
-    if building_id is not None:
-        requests = requests.where(Request.building_id == building_id)
-
+    if queue:
+        # only return unfulfilled requests
+        query = query.where(Request.fulfilled == False)
+    if requestor_name:
+        query = query.where(Request.requestor_name.like(f"%{requestor_name}%"))
+    if from_dt:
+        query = query.where(Request.create_dt >= from_dt)
+    if to_dt:
+        query = query.where(Request.create_dt <= to_dt)
+    if building_id:
+        query = query.where(Request.building_id == building_id)
     if unassociated_pick_list:
-        requests = requests.where(Request.pick_list_id == None)
+        query = query.where(Request.pick_list_id == None)
 
-    return paginate(session, requests)
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=RequestDetailReadOutput)

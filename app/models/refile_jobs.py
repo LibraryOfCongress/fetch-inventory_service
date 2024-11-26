@@ -29,6 +29,7 @@ class RefileJob(SQLModel, table=True):
     assigned_user_id: Optional[int] = Field(
         default=None, foreign_key="users.id", nullable=True
     )
+    created_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     run_time: Optional[timedelta] = Field(sa_column=sa.Interval, nullable=True)
     status: str = Field(
         sa_column=sa.Column(
@@ -55,4 +56,19 @@ class RefileJob(SQLModel, table=True):
     non_tray_items: List["NonTrayItem"] = Relationship(
         back_populates="refile_jobs", link_model=RefileNonTrayItem
     )
-    assigned_user: Optional["User"] = Relationship(back_populates="refile_jobs")
+
+    assigned_user: Optional["User"] = Relationship(
+        back_populates="refile_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "RefileJob.assigned_user_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+
+    created_by: Optional["User"] = Relationship(
+        back_populates="created_refile_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "RefileJob.created_by_id==User.id",
+            "lazy": "selectin"
+        }
+    )

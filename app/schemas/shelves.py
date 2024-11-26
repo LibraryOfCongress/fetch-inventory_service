@@ -97,6 +97,8 @@ class NestedShelfTypeDetailOutput(BaseModel):
 
 class ShelfBaseOutput(BaseModel):
     id: int
+    location: Optional[str] = None
+    internal_location: Optional[str] = None
 
 
 class ShelfListOutput(ShelfBaseOutput):
@@ -106,12 +108,15 @@ class ShelfListOutput(ShelfBaseOutput):
     shelf_type_id: int
     shelf_type: NestedShelfTypeDetailOutput
     owner_id: Optional[int] = None
+    owner: Optional[OwnerDetailReadOutput] = None
     barcode: BarcodeDetailReadOutput
 
     class Config:
         json_schema_extra = {
             "example": {
-                "id": 1,
+                "id": 10234,
+                "location": "Cabin Branch-1-52-L-23-3",
+                "internal_location": "02-14-575-1144-23-10234",
                 "sort_priority": 1,
                 "ladder_id": 1,
                 "container_type_id": 1,
@@ -135,6 +140,37 @@ class ShelfListOutput(ShelfBaseOutput):
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
                 "owner_id": 1,
+                "owner": {
+                    "id": 1,
+                    "name": "Special Collection Directorate",
+                    "owner_tier_id": 2,
+                    "parent_owner_id": 2,
+                    "owner_tier": {
+                        "id": 1,
+                        "level": 2,
+                        "name": "division",
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    },
+                    "parent_owner": {
+                        "id": 2,
+                        "name": "Library of Congress",
+                        "owner_tier_id": 1,
+                        "parent_owner_id": None,
+                        "owner_tier": {
+                            "id": 2,
+                            "level": 1,
+                            "name": "organization",
+                            "create_dt": "2023-10-08T20:46:56.764426",
+                            "update_dt": "2023-10-08T20:46:56.764398"
+                        },
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    },
+                    "children": [],
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "barcode": {
                     "id": "550e8400-e29b-41d4-a716-446655440000",
                     "value": "5901234123457",
@@ -169,9 +205,11 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
     class Config:
         json_schema_extra = {
             "example": {
-                "id": 1,
+                "id": 10234,
+                "location": "Cabin Branch-1-52-L-23-3",
+                "internal_location": "02-14-575-1144-23-10234",
                 "sort_priority": 1,
-                "ladder_id": 1,
+                "ladder_id": 23,
                 "available_space": 33,
                 "shelf_number_id": 1,
                 "container_type_id": 1,
@@ -288,7 +326,9 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
     class Config:
         json_schema_extra = {
             "example": {
-                "id": 1,
+                "id": 10234,
+                "location": "Cabin Branch-1-52-L-23-3",
+                "internal_location": "02-14-575-1144-23-10234",
                 "sort_priority": 1,
                 "ladder": {
                     "id": 1,

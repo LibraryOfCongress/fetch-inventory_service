@@ -46,6 +46,7 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
         media_type_id=accession_job.media_type_id,
         container_type_id=accession_job.container_type_id,
         user_id=accession_job.user_id,
+        created_by_id=accession_job.created_by_id,
         status="Created",
     )
 

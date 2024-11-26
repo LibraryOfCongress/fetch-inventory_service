@@ -71,7 +71,6 @@ class ShelfPosition(SQLModel, table=True):
         module = self.shelf.ladder.side.aisle.module
         building = self.shelf.ladder.side.aisle.module.building
 
-        # side orientation is sus...check
         self.location = (
             f"{building.name}-{module.module_number}-{aisle_number}-"
             f"{side_orientation[0]}-{ladder_number}-{shelf_number}-{self.shelf_position_number.number}"

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database.session import get_session
 from app.logger import inventory_logger
 from app.models.barcodes import Barcode
-from app.models.items import Item
+from app.models.items import Item, ItemStatus
 from app.models.non_tray_items import NonTrayItem
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
@@ -43,6 +43,7 @@ def get_item_list(
     media_type_id: int = Query(default=None),
     from_dt: datetime = Query(default=None),
     to_dt: datetime = Query(default=None),
+    status: ItemStatus | None = None
 ) -> list:
     """
     Retrieve a paginated list of items from the database.
@@ -51,20 +52,22 @@ def get_item_list(
     - Item List Output: The paginated list of items.
     """
     # Create a query to select all items from the database
-    query = select(Item).distinct()
+    item_queryset = select(Item).distinct()
 
+    if status:
+        item_queryset = item_queryset.where(Item.status == status.value)
     if owner_id:
-        query = query.where(Item.owner_id == owner_id)
+        item_queryset = item_queryset.where(Item.owner_id == owner_id)
     if size_class_id:
-        query = query.where(Item.size_class_id == size_class_id)
+        item_queryset = item_queryset.where(Item.size_class_id == size_class_id)
     if media_type_id:
-        query = query.where(Item.media_type_id == media_type_id)
+        item_queryset = item_queryset.where(Item.media_type_id == media_type_id)
     if from_dt:
-        query = query.where(Item.accession_dt >= from_dt)
+        item_queryset = item_queryset.where(Item.accession_dt >= from_dt)
     if to_dt:
-        query = query.where(Item.accession_dt <= to_dt)
+        item_queryset = item_queryset.where(Item.accession_dt <= to_dt)
 
-    return paginate(session, query)
+    return paginate(session, item_queryset)
 
 
 @router.get("/{id}", response_model=ItemDetailReadOutput)

@@ -130,6 +130,7 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
 
     class Config:
         json_schema_extra = {
@@ -159,6 +160,13 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
                 "media_type_id": 1,
                 "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }

@@ -1,6 +1,7 @@
 from sqlmodel import Session
 from sqlalchemy import event
 from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
 
 @event.listens_for(ShelfPosition, "after_insert")
 def generate_location(mapper, connection, target):
@@ -8,5 +9,14 @@ def generate_location(mapper, connection, target):
     with Session(bind=connection) as session:
         refreshed_target = session.query(ShelfPosition).filter_by(id=target.id).one()
         refreshed_target.update_position_address(session=session)
+        session.add(refreshed_target)
+        session.commit()
+
+@event.listens_for(Shelf, "after_insert")
+def generate_shelf_location(mapper, connection, target):
+    """Update the shelf location after the object has been inserted into the database."""
+    with Session(bind=connection) as session:
+        refreshed_target = session.query(Shelf).filter_by(id=target.id).one()
+        refreshed_target.update_shelf_address(session=session)
         session.add(refreshed_target)
         session.commit()

@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.models.non_tray_items import NonTrayItem
+from app.models.non_tray_items import NonTrayItem, NonTrayItemStatus
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
 from app.models.shelf_position_numbers import ShelfPositionNumber
@@ -44,6 +44,7 @@ def get_non_tray_item_list(
     media_type_id: int = Query(default=None),
     from_dt: datetime = Query(default=None),
     to_dt: datetime = Query(default=None),
+    status: NonTrayItemStatus | None = None
 ) -> list:
     """
     Get a paginated list of non tray items from the database
@@ -51,6 +52,8 @@ def get_non_tray_item_list(
     # Create a query to select all non tray items from the database
     query = select(NonTrayItem).distinct()
 
+    if status:
+        query = query.where(NonTrayItem.status == status.value)
     if owner_id:
         query = query.where(NonTrayItem.owner_id == owner_id)
     if size_class_id:

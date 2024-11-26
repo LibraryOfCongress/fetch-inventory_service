@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
+from app.filter_params import JobFilterParams
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.shelf_types import ShelfType
@@ -16,7 +17,7 @@ from app.tasks import (
     manage_verification_job_transition,
     handle_size_class_assigned_status,
 )
-from app.models.verification_jobs import VerificationJob
+from app.models.verification_jobs import VerificationJob, VerificationJobStatus
 from app.schemas.verification_jobs import (
     VerificationJobInput,
     VerificationJobUpdateInput,
@@ -37,7 +38,11 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[VerificationJobListOutput])
 def get_verification_job_list(
-    unshelved: bool | None = False, session: Session = Depends(get_session)
+    unshelved: bool | None = False,
+    queue: bool = Query(default=False),
+    session: Session = Depends(get_session),
+    params: JobFilterParams = Depends(),
+    status: VerificationJobStatus | None = None
 ) -> list:
     """
     Retrieve a paginated list of verification jobs.
@@ -45,15 +50,32 @@ def get_verification_job_list(
     **Returns:**
     - Verification Job List Output: The paginated list of verification jobs.
     """
+    query = select(VerificationJob).distinct()
+
     if unshelved:
-        verification_job_list = (
-            select(VerificationJob)
-            .where(VerificationJob.shelving_job_id == None)
-            .where(VerificationJob.status == "Completed")
+        # retrieve completed verification jobs that haven't been shelved
+        query = query.where(
+            VerificationJob.shelving_job_id == None
+        ).where(
+            VerificationJob.status == "Completed"
         )
-    else:
-        verification_job_list = select(VerificationJob)
-    return paginate(session, verification_job_list)
+    if queue:
+        # filter out completed.  maybe someday hide cancelled.
+        query = query.where(VerificationJob.status != "Completed")
+    if params.workflow_id:
+        query = query.where(VerificationJob.workflow_id == params.workflow_id)
+    if params.user_id:
+        query = query.where(VerificationJob.user_id == params.user_id)
+    if params.created_by_id:
+        query = query.where(VerificationJob.created_by_id == params.created_by_id)
+    if params.from_dt:
+        query = query.where(VerificationJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(VerificationJob.create_dt <= params.to_dt)
+    if status:
+        query = query.where(VerificationJob.status == status.value)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=VerificationJobDetailOutput)

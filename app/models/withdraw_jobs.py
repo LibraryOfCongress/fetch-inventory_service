@@ -35,6 +35,7 @@ class WithdrawJob(SQLModel, table=True):
     assigned_user_id: Optional[int] = Field(
         foreign_key="users.id", nullable=True, unique=False
     )
+    created_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     status: Optional[str] = Field(
         sa_column=sa.Column(
             sa.Enum(
@@ -58,7 +59,23 @@ class WithdrawJob(SQLModel, table=True):
     update_dt: datetime = Field(
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
-    assigned_user: Optional["User"] = Relationship(back_populates="withdraw_jobs")
+
+    assigned_user: Optional["User"] = Relationship(
+        back_populates="withdraw_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "WithdrawJob.assigned_user_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+
+    created_by: Optional["User"] = Relationship(
+        back_populates="created_withdraw_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "WithdrawJob.created_by_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+
     items: List["Item"] = Relationship(
         back_populates="withdraw_jobs", link_model=ItemWithdrawal
     )

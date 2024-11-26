@@ -12,6 +12,7 @@ from app.schemas.withdraw_jobs import WithdrawJobBaseOutput, WithdrawJobDetailOu
 
 
 class PickListInput(BaseModel):
+    created_by_id: Optional[int] = None
     request_ids: list[int]
     errored_request_ids: Optional[list[int]] = None
 
@@ -26,6 +27,7 @@ class PickListInput(BaseModel):
 
 class PickListUpdateInput(BaseModel):
     user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     status: Optional[str] = None
     building_id: Optional[int] = None
     last_transition: Optional[datetime] = None
@@ -45,6 +47,7 @@ class PickListUpdateInput(BaseModel):
         json_schema_extra = {
             "example": {
                 "user_id": 1,
+                "created_by_id": 2,
                 "status": "Created",
                 "building_id": 1,
                 "last_transition": "2023-11-27T12:34:56.789123Z",
@@ -62,6 +65,7 @@ class PickListUpdateRequestInput(RequestUpdateInput):
         json_schema_extra = {
             "example": {
                 "user_id": 1,
+                "created_by_id": 2,
                 "building_id": 1,
                 "status": "Out",
                 "run_timestamp": "2023-11-27T12:34:56.789123Z",
@@ -82,7 +86,9 @@ class PickListUpdateRequestInput(RequestUpdateInput):
 class PickListBaseOutput(BaseModel):
     id: int
     user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     user: Optional[UserListOutput] = None
+    created_by: Optional[UserListOutput] = None
     building_id: Optional[int] = None
     status: str
     last_transition: Optional[datetime] = None
@@ -114,9 +120,15 @@ class PickListBaseOutput(BaseModel):
             "example": {
                 "id": 1,
                 "user_id": 1,
+                "created_by_id": 2,
                 "user": {
                     "id": 1,
                     "first_name": "John",
+                    "last_name": "Doe",
+                },
+                "created_by": {
+                    "id": 2,
+                    "first_name": "Jane",
                     "last_name": "Doe",
                 },
                 "building_id": 1,
@@ -137,9 +149,15 @@ class PickListListOutput(PickListBaseOutput):
             "example": {
                 "id": 1,
                 "user_id": 1,
+                "created_by_id": 2,
                 "user": {
                     "id": 1,
                     "first_name": "John",
+                    "last_name": "Doe",
+                },
+                "created_by": {
+                    "id": 2,
+                    "first_name": "Jane",
                     "last_name": "Doe",
                 },
                 "building_id": 1,
@@ -170,6 +188,7 @@ class PickListListOutput(PickListBaseOutput):
 
 class PickListDetailOutput(PickListBaseOutput):
     user: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
     requests: Optional[list[RequestDetailReadOutputNoPickList]] = None
     withdraw_jobs: Optional[list[WithdrawJobDetailOutput]] = None
     building_id: Optional[int] = None
@@ -183,9 +202,16 @@ class PickListDetailOutput(PickListBaseOutput):
                 "status": "Created",
                 "request_count": 1,
                 "user_id": 1,
+                "created_by_id": 2,
                 "user": {
                     "id": 1,
                     "name": "Bilbo Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764426"
+                },
+                "created_by": {
+                    "id": 2,
+                    "name": "Frodo Baggins",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764426"
                 },

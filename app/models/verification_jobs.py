@@ -50,6 +50,7 @@ class VerificationJob(SQLModel, table=True):
         default=VerificationJobStatus.Created,
     )
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
+    created_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     last_transition: Optional[datetime] = Field(
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
@@ -79,7 +80,22 @@ class VerificationJob(SQLModel, table=True):
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
-    user: Optional[User] = Relationship(back_populates="verification_jobs")
+    user: Optional[User] = Relationship(
+        back_populates="verification_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "VerificationJob.user_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+
+    created_by: Optional[User] = Relationship(
+        back_populates="created_verification_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "VerificationJob.created_by_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+
     owner: Optional[Owner] = Relationship(back_populates="verification_jobs")
     media_type: Optional[MediaType] = Relationship(back_populates="verification_jobs")
     size_class: Optional["SizeClass"] = Relationship(

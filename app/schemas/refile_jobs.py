@@ -9,6 +9,7 @@ from app.schemas.users import UserDetailReadOutput
 
 
 class RefileJobInput(BaseModel):
+    created_by_id: Optional[int] = None
     barcode_values: list[str]
 
     class Config:
@@ -26,6 +27,7 @@ class RefileJobInput(BaseModel):
 
 class RefileJobUpdateInput(BaseModel):
     assigned_user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     run_timestamp: Optional[datetime] = None
     status: Optional[str] = None
 
@@ -42,6 +44,7 @@ class RefileJobUpdateInput(BaseModel):
         json_schema_extra = {
             "example": {
                 "assigned_user_id": 1,
+                "created_by_id": 2,
                 "run_timestamp": "2023-11-27T12:34:56.789123Z",
                 "status": "Created"
             }
@@ -51,6 +54,7 @@ class RefileJobUpdateInput(BaseModel):
 class RefileJobBaseOutput(BaseModel):
     id: int
     assigned_user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     status: Optional[str] = None
     run_time: Optional[timedelta] = None
     last_transition: Optional[datetime] = None
@@ -109,6 +113,7 @@ class RefileJobBaseOutput(BaseModel):
             "example": {
                 "id": 1,
                 "assigned_user_id": 1,
+                "created_by_id": 2,
                 "status": "Created",
                 "run_time": "03:25:15",
                 "last_transition": "2023-10-08T20:46:56.764426Z",
@@ -124,6 +129,8 @@ class RefileJobBaseOutput(BaseModel):
 
 class RefileJobListOutput(RefileJobBaseOutput):
     assigned_user: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
     items: Optional[list] = None
     non_tray_items: Optional[list] = None
 
@@ -132,11 +139,20 @@ class RefileJobListOutput(RefileJobBaseOutput):
             "example": {
                 "id": 1,
                 "assigned_user_id": 1,
+                "created_by_id": 2,
                 "assigned_user": {
                     "id": 1,
                     "first_name": "Frodo",
                     "last_name": "Baggins",
                     "email": "FBaggins@example.com",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "created_by": {
+                    "id": 2,
+                    "first_name": "Bilbo",
+                    "last_name": "Baggins",
+                    "email": "BBaggins@example.com",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
@@ -283,6 +299,7 @@ class NestedForRefileJob(BaseModel):
 
 class RefileJobDetailOutput(RefileJobBaseOutput):
     assigned_user: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
     items: Optional[list[TrayNestedForRefileJob]] = None
     non_tray_items: Optional[list[NonTrayNestedForRefileJob]] = None
     refile_job_items: Optional[list[NestedForRefileJob]] = None
@@ -292,6 +309,7 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
             "example": {
                 "id": 1,
                 "assigned_user_id": 1,
+                "created_by_id": 2,
                 "run_time": "03:25:15",
                 "status": "Created",
                 "create_dt": "2023-11-27T12:34:56.789123Z",
@@ -299,6 +317,13 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                 "assigned_user": {
                     "id": 1,
                     "first_name": "Frodo",
+                    "last_name": "Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "created_by": {
+                    "id": 2,
+                    "first_name": "Bilbo",
                     "last_name": "Baggins",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"

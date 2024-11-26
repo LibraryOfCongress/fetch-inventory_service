@@ -7,11 +7,12 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 
 from app.database.session import get_session, commit_record
+from app.filter_params import JobFilterParams
 from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
-from app.models.refile_jobs import RefileJob
+from app.models.refile_jobs import RefileJob, RefileJobStatus
 from app.models.refile_items import RefileItem
 from app.models.refile_non_tray_items import RefileNonTrayItem
 from app.models.trays import Tray
@@ -101,7 +102,10 @@ def sorted_requests(session, refile_job):
 
 @router.get("/", response_model=Page[RefileJobListOutput])
 def get_refile_job_list(
-    all: bool = Query(default=False), session: Session = Depends(get_session)
+    queue: bool = Query(default=False),
+    session: Session = Depends(get_session),
+    params: JobFilterParams = Depends(),
+    status: RefileJobStatus | None = None
 ) -> list:
     """
     Get a list of refile jobs
@@ -109,12 +113,24 @@ def get_refile_job_list(
     **Returns:**
     - Refile Job List Output: The paginated list of refile jobs
     """
-    if all:
-        return paginate(session, select(RefileJob))
-    else:
-        return paginate(
-            session, select(RefileJob).where(RefileJob.status != "Completed")
-        )
+    query = select(RefileJob).distinct()
+
+    if queue:
+        query = query.where(RefileJob.status != "Completed")
+    if params.workflow_id:
+        query = query.where(RefileJob.id == params.workflow_id)
+    if params.user_id:
+        query = query.where(RefileJob.assigned_user_id == params.user_id)
+    if params.created_by_id:
+        query = query.where(RefileJob.created_by_id == params.created_by_id)
+    if params.from_dt:
+        query = query.where(RefileJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(RefileJob.create_dt <= params.to_dt)
+    if status:
+        query = query.where(RefileJob.status == status.value)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=RefileJobDetailOutput)
@@ -165,7 +181,7 @@ def create_refile_job(
     if not lookup_barcode_values:
         raise BadRequest(detail="At least one barcode value must be provided")
 
-    new_refile_job = commit_record(session, RefileJob())
+    new_refile_job = commit_record(session, RefileJob(**refile_job_input.model_dump()))
     session.flush()
 
     refile_items = []

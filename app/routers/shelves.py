@@ -13,6 +13,11 @@ from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
 from app.models.barcodes import Barcode
 from app.models.shelf_numbers import ShelfNumber
+from app.models.buildings import Building
+from app.models.modules import Module
+from app.models.aisles import Aisle
+from app.models.sides import Side
+from app.models.ladders import Ladder
 from app.schemas.shelves import (
     ShelfInput,
     ShelfUpdateInput,
@@ -36,14 +41,90 @@ LOGGER = logging.getLogger("app.routers.shelves")
 
 
 @router.get("/", response_model=Page[ShelfListOutput])
-def get_shelf_list(session: Session = Depends(get_session)) -> list:
+def get_shelf_list(
+    session: Session = Depends(get_session),
+    building_id: int | None = None,
+    module_id: int | None = None,
+    aisle_id: int | None = None,
+    side_id: int | None = None,
+    ladder_id: int | None = None,
+    shelf_id: int | None = None,
+    owner_id: int | None = None,
+    size_class_id: int | None = None
+) -> list:
     """
     Get a list of shelves.
 
     **Returns:**
     - Shelf List Output: The paginated list of shelves.
     """
-    return paginate(session, select(Shelf))
+    shelf_queryset = select(Shelf).distinct()
+
+    if owner_id:
+        shelf_queryset = shelf_queryset.where(Shelf.owner_id == owner_id)
+
+    if size_class_id:
+        shelf_queryset = shelf_queryset.join(
+            ShelfType, Shelf.shelf_type_id == ShelfType.id
+        ).where(
+            ShelfType.size_class_id == size_class_id
+        )
+
+    # location from most to least constrained
+    if shelf_id:
+        shelf_queryset = shelf_queryset.where(Shelf.id == shelf_id)
+    elif ladder_id:
+        shelf_queryset = shelf_queryset.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).where(
+            Ladder.id == ladder_id
+        )
+    elif side_id:
+        shelf_queryset = shelf_queryset.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).where(
+            Side.id == side_id
+        )
+    elif aisle_id:
+        shelf_queryset = shelf_queryset.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).join(
+            Aisle, Side.aisle_id == Aisle.id
+        ).where(
+            Aisle.id == aisle_id
+        )
+    elif module_id:
+        shelf_queryset = shelf_queryset.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).join(
+            Aisle, Side.aisle_id == Aisle.id
+        ).join(
+            Module, Aisle.module_id == Module.id
+        ).where(
+            Module.id == module_id
+        )
+    elif building_id:
+        shelf_queryset = shelf_queryset.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).join(
+            Aisle, Side.aisle_id == Aisle.id
+        ).join(
+            Module, Aisle.module_id == Module.id
+        ).join(
+            Building, Module.building_id == Building.id
+        ).where(
+            Building.id == building_id
+        )
+
+    return paginate(session, shelf_queryset)
 
 
 @router.get("/{id}", response_model=ShelfDetailReadOutput)

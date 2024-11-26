@@ -6,7 +6,7 @@ from sqlalchemy import Column, DateTime
 from typing import Optional, List
 from datetime import datetime
 from pydantic import condecimal
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, Session
 from sqlalchemy.schema import UniqueConstraint
 
 from app.models.owners import Owner
@@ -35,6 +35,12 @@ class Shelf(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
+    location: Optional[str] = Field(
+        max_length=175, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
+    )
+    internal_location: Optional[str] = Field(
+        max_length=200, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
+    )
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id", nullable=False, default=None, unique=True
     )
@@ -74,3 +80,27 @@ class Shelf(SQLModel, table=True):
     shelf_number: ShelfNumber = Relationship(back_populates="shelves")
     container_type: ContainerType = Relationship(back_populates="shelves")
     shelf_positions: List["ShelfPosition"] = Relationship(back_populates="shelf")
+
+    def update_shelf_address(self, session: Optional[Session] = None) -> str:
+        if session and not self.ladder:
+            session.refresh(self)  # Refresh to load relationships if needed
+
+        shelf_number = self.shelf_number.number
+        ladder = self.ladder
+        ladder_number = self.ladder.ladder_number.number
+        side = self.ladder.side
+        side_orientation = self.ladder.side.side_orientation.name
+        aisle = self.ladder.side.aisle
+        aisle_number = self.ladder.side.aisle.aisle_number.number
+        module = self.ladder.side.aisle.module
+        building = self.ladder.side.aisle.module.building
+
+        self.location = (
+            f"{building.name}-{module.module_number}-{aisle_number}-"
+            f"{side_orientation[0]}-{ladder_number}-{shelf_number}"
+        )
+
+        self.internal_location = (
+            f"{building.id}-{module.id}-{aisle.id}-{side.id}"
+            f"-{ladder.id}-{self.id}"
+        )

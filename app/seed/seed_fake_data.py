@@ -4,8 +4,9 @@ from sqlalchemy import event
 from sqlalchemyseed import load_entities_from_json, HybridSeeder
 from sqlalchemy.orm import Session
 
-from app.events import generate_location
+from app.events import generate_location, generate_shelf_location
 from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
 from app.seed.seeder_session import get_session
 from app.logger import inventory_logger
 
@@ -85,6 +86,9 @@ def generate_shelf_barcodes_for_system():
             barcode_seeder.session.commit()
 
 
+def enable_shelf_insert_listener():
+    event.listen(Shelf, "after_insert", generate_shelf_location)
+
 def generate_shelves_for_system():
     inventory_logger.info("Generating shelves")
     shelf_session = get_seeder_session()
@@ -92,6 +96,8 @@ def generate_shelves_for_system():
     shelf_fixture_path = os.path.join(
         current_dir, "fixtures", "entities", "shelves.json"
     )
+
+    enable_shelf_insert_listener()
 
     with open(shelf_fixture_path, "r") as file:
         template_dict = json.load(file)

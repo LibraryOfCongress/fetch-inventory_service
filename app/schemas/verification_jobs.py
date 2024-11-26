@@ -22,6 +22,7 @@ class VerificationJobInput(BaseModel):
     size_class_id: Optional[int] = None
     status: Optional[str] = None
     user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     accession_job_id: Optional[int] = None
     owner_id: int
     container_type_id: Optional[int] = None
@@ -42,6 +43,7 @@ class VerificationJobInput(BaseModel):
                 "workflow_id": None,
                 "status": "Created",
                 "user_id": 1,
+                "created_by_id": 2,
                 "accession_job_id": 1,
                 "owner_id": 1,
                 "container_type_id": 1,
@@ -102,6 +104,11 @@ class VerificationJobListOutput(VerificationJobBaseOutput):
     trays: Optional[list] = None
     items: Optional[list] = None
     non_tray_items: Optional[list] = None
+    user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
+    user: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
+    create_dt: datetime
 
     @computed_field(title='Tray Count')
     @property
@@ -134,6 +141,22 @@ class VerificationJobListOutput(VerificationJobBaseOutput):
                 "shelving_job_id": 1,
                 "container_type_id": 1,
                 "status": "Created",
+                "user_id": 1,
+                "created_by_id": 2,
+                "user": {
+                    "id": 1,
+                    "first_name": "Frodo",
+                    "last_name": "Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "created_by": {
+                    "id": 2,
+                    "first_name": "Bilbo",
+                    "last_name": "Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "container_type": {
                     "id": 1,
                     "type": "Tray",
@@ -208,7 +231,8 @@ class VerificationJobListOutput(VerificationJobBaseOutput):
                 ],
                 "item_count": 1,
                 "non_tray_item_count": 1,
-                "tray_count": 1
+                "tray_count": 1,
+                "create_dt": "2023-10-08T20:46:56.764426"
             }
         }
 
@@ -288,7 +312,9 @@ class NonTrayItemDetailNestedForVerificationJob(BaseModel):
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
     user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     user: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
     last_transition: Optional[datetime]
     run_time: Optional[timedelta]
     accession_job_id: Optional[int]
@@ -326,9 +352,17 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                 "trayed": True,
                 "status": "Created",
                 "user_id": 1,
+                "created_by_id": 2,
                 "user": {
                     "id": 1,
                     "first_name": "Frodo",
+                    "last_name": "Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "created_by": {
+                    "id": 2,
+                    "first_name": "Bilbo",
                     "last_name": "Baggins",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"

@@ -51,6 +51,7 @@ class AccessionJob(SQLModel, table=True):
         default=AccessionJobStatus.Created,
     )
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
+    created_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     run_time: Optional[timedelta] = Field(
         sa_column=sa.Interval, nullable=False, default=timedelta()
     )
@@ -77,7 +78,20 @@ class AccessionJob(SQLModel, table=True):
     size_class: Optional["SizeClass"] = Relationship(
         sa_relationship_kwargs={"uselist": False}
     )
-    user: Optional[User] = Relationship(back_populates="accession_jobs")
+    user: Optional[User] = Relationship(
+        back_populates="accession_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "AccessionJob.user_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+    created_by: Optional[User] = Relationship(
+        back_populates="created_accession_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "AccessionJob.created_by_id==User.id",
+            "lazy": "selectin"
+        }
+    )
     owner: Optional[Owner] = Relationship(back_populates="accession_jobs")
     trays: List[Tray] = Relationship(back_populates="accession_job")
     items: List[Item] = Relationship(back_populates="accession_job")
@@ -86,9 +100,3 @@ class AccessionJob(SQLModel, table=True):
         back_populates="accession_job"
     )
     workflow: Optional["Workflow"] = Relationship(back_populates="accession_job")
-
-    # TODO add item_count (Returns a count of related items)
-    # TODO add tray_count (Returns a count of related trays)
-    # TODO determine if non_tray_count needed
-    # TODO return the above ordered by (item.create_dt) (tray.create_dt)
-    # TODO ^ all of that in the schema

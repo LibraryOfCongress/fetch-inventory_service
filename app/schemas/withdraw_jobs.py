@@ -13,11 +13,13 @@ from app.schemas.users import UserDetailReadOutput
 
 
 class WithdrawJobInput(BaseModel):
+    created_by_id: Optional[int] = None
     barcode_value: Optional[str] = None
 
     class Config:
         json_schema_extra = {
             "example": {
+                "created_by_id": 1,
                 "barcode_value": "1234567890"
             }
         }
@@ -28,6 +30,7 @@ class WithdrawJobUpdateInput(BaseModel):
     add_to_picklist: Optional[bool] = None
     status: Optional[str] = None
     assigned_user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     pick_list_id: Optional[int] = None
     run_time: Optional[timedelta] = None
     run_timestamp: Optional[datetime] = None
@@ -47,6 +50,7 @@ class WithdrawJobUpdateInput(BaseModel):
             "example": {
                 "status": "Created",
                 "assigned_user_id": 1,
+                "created_by_id": 2,
                 "pick_list_id": 1,
                 "run_time": "00:00:00",
                 "last_transition": "2022-01-01 00:00:00",
@@ -164,6 +168,7 @@ class WithdrawJobBaseOutput(BaseModel):
     id: int
     status: str
     assigned_user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -173,6 +178,7 @@ class WithdrawJobListOutput(WithdrawJobBaseOutput):
     run_timestamp: Optional[datetime] = None
     last_transition: Optional[datetime] = None
     assigned_user: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
     items: Optional[list[ItemBaseOutput]] = None
     non_tray_items: Optional[list[NonTrayItemBaseOutput]] = None
     trays: Optional[list[TrayItemBaseOutput]] = None
@@ -198,6 +204,7 @@ class WithdrawJobListOutput(WithdrawJobBaseOutput):
                 "id": 1,
                 "status": "Created",
                 "assigned_user_id": 1,
+                "created_by_id": 2,
                 "run_time": "00:00:00",
                 "run_timestamp": "2022-01-01 00:00:00",
                 "last_transition": "2022-01-01 00:00:00",
@@ -228,6 +235,7 @@ class WithdrawJobWriteOutput(WithdrawJobBaseOutput):
                 "id": 1,
                 "status": "Created",
                 "assigned_user_id": 1,
+                "created_by_id": 2,
                 "items": [
                     {
                         "id": 1,
@@ -360,6 +368,7 @@ class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
     run_timestamp: Optional[datetime] = None
     last_transition: Optional[datetime] = None
     assigned_user: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
     items: Optional[list[ItemNestedForWithdrawJob]] = None
     non_tray_items: Optional[list[NonTrayNestedForWithdrawJob]] = None
     trays: Optional[list[TrayNestedForWithdrawJob]] = None
@@ -383,6 +392,7 @@ class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
                 "id": 1,
                 "status": "Created",
                 "assigned_user_id": 1,
+                "created_by_id": 2,
                 "pick_list_id": 1,
                 "run_time": "00:00:00.000000",
                 "run_timestamp": "2023-10-08T20:46:56.764426",

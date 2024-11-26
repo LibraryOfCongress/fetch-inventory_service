@@ -13,6 +13,7 @@ class ShelvingJobInput(BaseModel):
     status: Optional[str]
     origin: Optional[str]
     user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     building_id: Optional[int] = None
     verification_jobs: Optional[List[int]] = []
 
@@ -40,6 +41,7 @@ class ShelvingJobInput(BaseModel):
                 "status": "Created",
                 "origin": "Verification",
                 "user_id": 1,
+                "created_by_id": 2,
                 "building_id": 1,
                 "verification_jobs": [
                     1,
@@ -84,6 +86,7 @@ class ShelvingJobBaseOutput(BaseModel):
     last_transition: Optional[datetime] = None
     run_time: Optional[timedelta] = None
     user: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -112,6 +115,13 @@ class ShelvingJobListOutput(ShelvingJobBaseOutput):
                 "user": {
                     "id": 1,
                     "first_name": "Frodo",
+                    "last_name": "Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "created_by": {
+                    "id": 2,
+                    "first_name": "Bilbo",
                     "last_name": "Baggins",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
@@ -190,6 +200,7 @@ class NonTrayNestedForShelvingJob(BaseModel):
 
 class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
     user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
     verification_jobs: Optional[List[VerificationJobNestedForShelvingJob]] = []
     trays: List[TrayNestedForShelvingJob]
     non_tray_items: List[NonTrayNestedForShelvingJob]
@@ -218,9 +229,17 @@ class ShelvingJobDetailOutput(ShelvingJobBaseOutput):
                     "name": "Fort Meade"
                 },
                 "user_id": 1,
+                "created_by_id": 2,
                 "user": {
                     "id": 1,
                     "first_name": "Frodo",
+                    "last_name": "Baggins",
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "created_by": {
+                    "id": 2,
+                    "first_name": "Bilbo",
                     "last_name": "Baggins",
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -12,6 +12,7 @@ from app.config.exceptions import (
     ValidationException,
 )
 from app.database.session import get_session, commit_record
+from app.filter_params import JobFilterParams
 from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.item_withdrawals import ItemWithdrawal
@@ -23,7 +24,7 @@ from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
-from app.models.withdraw_jobs import WithdrawJob
+from app.models.withdraw_jobs import WithdrawJob, WithdrawJobStatus
 from app.models.pick_lists import PickList
 from app.models.requests import Request
 from app.utilities import validate_item_not_shelved, validate_non_tray_item_not_shelved
@@ -61,14 +62,39 @@ def validate_withdraw_item(items, job_id, status, session):
 
 
 @router.get("/", response_model=Page[WithdrawJobListOutput])
-def get_withdraw_job_list(session: Session = Depends(get_session)) -> list:
+def get_withdraw_job_list(
+    queue: bool = Query(default=False),
+    session: Session = Depends(get_session),
+    params: JobFilterParams = Depends(),
+    status: WithdrawJobStatus | None = None
+) -> list:
     """
     Retrieve a paginated list of withdraw jobs.
 
     **Returns:**
     - list: A paginated list of withdraw jobs.
     """
-    return paginate(session, select(WithdrawJob))
+    query = select(WithdrawJob).distinct()
+
+    if queue:
+        # filter out completed.  maybe someday hide cancelled.
+        query = query.where(
+            WithdrawJob.status != "Completed"
+        )
+    if params.workflow_id:
+        query = query.where(WithdrawJob.id == params.workflow_id)
+    if params.user_id:
+        query = query.where(WithdrawJob.assigned_user_id == params.user_id)
+    if params.created_by_id:
+        query = query.where(WithdrawJob.created_by_id == params.created_by_id)
+    if params.from_dt:
+        query = query.where(WithdrawJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(WithdrawJob.create_dt <= params.to_dt)
+    if status:
+        query = query.where(WithdrawJob.status == status.value)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=WithdrawJobDetailOutput)
@@ -94,7 +120,10 @@ def get_withdraw_job_detail(id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/", response_model=WithdrawJobWriteOutput)
-def create_withdraw_job(session: Session = Depends(get_session)):
+def create_withdraw_job(
+    withdraw_job_input: WithdrawJobInput,
+    session: Session = Depends(get_session)
+)-> WithdrawJob:
     """
     Creates a new withdraw job in the database.
 
@@ -107,8 +136,13 @@ def create_withdraw_job(session: Session = Depends(get_session)):
     **Raises**:
     - HTTPException: If the withdraw job already exists in the database.
     """
+    new_withdraw_job = WithdrawJob(**withdraw_job_input.model_dump())
 
-    return commit_record(session, WithdrawJob())
+    session.add(new_withdraw_job)
+    session.commit()
+    session.refresh(new_withdraw_job)
+
+    return new_withdraw_job
 
 
 @router.patch("/{id}", response_model=WithdrawJobDetailOutput)

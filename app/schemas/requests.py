@@ -185,6 +185,15 @@ class RequestTypeNestedForRequest(BaseModel):
     type: str
 
 
+class NestedPickListForRequest(BaseModel):
+    id: int
+    created_by_id: Optional[int] = None
+    status: Optional[str] = None
+    building_id: Optional[int] = None
+    update_dt: Optional[datetime] = None
+    create_dt: Optional[datetime] = None
+
+
 class RequestDetailWriteOutput(RequestBaseOutput):
     item: Optional[ItemNestedForRequest] = None
     non_tray_item: Optional[NonTrayItemNestedForRequest] = None
@@ -192,7 +201,8 @@ class RequestDetailWriteOutput(RequestBaseOutput):
     delivery_location: Optional[DeliveryLocationNestedForRequest] = None
     request_type: Optional[RequestTypeNestedForRequest] = None
     building: Optional[BuildingDetailReadOutput] = None
-    pick_list: Optional[list] = None
+    pick_list_id: Optional[int] = None
+    pick_list: Optional[NestedPickListForRequest] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -328,13 +338,14 @@ class NestedItemRequestList(BaseModel):
 
 
 class RequestListOutput(RequestBaseOutput):
+    pick_list_id: Optional[int] = None
     item: Optional[NestedItemRequestList] = None
     non_tray_item: Optional[NonTrayItemNestedForRequest] = None
     priority: Optional[PriorityNestedForRequest] = None
     delivery_location: Optional[DeliveryLocationNestedForRequest] = None
     request_type: Optional[RequestTypeNestedForRequest] = None
     building: Optional[BuildingDetailReadOutput] = None
-    pick_list: Optional[list] = None
+    pick_list: Optional[NestedPickListForRequest] = None
     create_dt: Optional[datetime] = None
     update_dt: Optional[datetime] = None
 

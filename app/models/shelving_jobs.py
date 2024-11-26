@@ -55,6 +55,7 @@ class ShelvingJob(SQLModel, table=True):
     )
     building_id: int = Field(foreign_key="buildings.id", nullable=False, unique=False)
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
+    created_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     run_time: Optional[timedelta] = Field(sa_column=sa.Interval, nullable=True)
     last_transition: Optional[datetime] = Field(
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
@@ -70,5 +71,22 @@ class ShelvingJob(SQLModel, table=True):
     )
     trays: List["Tray"] = Relationship(back_populates="shelving_job")
     non_tray_items: List["NonTrayItem"] = Relationship(back_populates="shelving_job")
-    user: Optional[User] = Relationship(back_populates="shelving_jobs")
+
+
+    user: Optional[User] = Relationship(
+        back_populates="shelving_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "ShelvingJob.user_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+
+    created_by: Optional[User] = Relationship(
+        back_populates="created_shelving_jobs",
+        sa_relationship_kwargs={
+            "primaryjoin": "ShelvingJob.created_by_id==User.id",
+            "lazy": "selectin"
+        }
+    )
+
     building: "Building" = Relationship(back_populates="shelving_jobs")

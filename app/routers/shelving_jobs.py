@@ -8,12 +8,13 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import exists
 
 from app.database.session import get_session
+from app.filter_params import JobFilterParams
 from app.logger import inventory_logger
 from app.utilities import process_containers_for_shelving, manage_transition
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
-from app.models.shelving_jobs import ShelvingJob
+from app.models.shelving_jobs import ShelvingJob, ShelvingJobStatus
 from app.models.shelves import Shelf
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_position_numbers import ShelfPositionNumber
@@ -40,7 +41,10 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[ShelvingJobListOutput])
 def get_shelving_job_list(
-    all: bool = Query(default=False), session: Session = Depends(get_session)
+    queue: bool = Query(default=False),
+    session: Session = Depends(get_session),
+    params: JobFilterParams = Depends(),
+    status: ShelvingJobStatus | None = None
 ) -> list:
     """
     Retrieve a paginated list of shelving jobs.
@@ -49,16 +53,31 @@ def get_shelving_job_list(
     **Returns:**
     - list: A paginated list of shelving jobs.
     """
+    query = select(ShelvingJob).distinct()
+
     try:
-        if not all:
-            query = (
-                select(ShelvingJob)
-                .where(ShelvingJob.status != "Completed")
-                .where(ShelvingJob.status != "Cancelled")
-                .distinct()
+        if queue:
+            # used on job dashboard, not in search
+            query = query.where(
+                ShelvingJob.status != "Completed"
+            ).where(
+                ShelvingJob.status != "Cancelled"
             )
-            return paginate(session, query)
-        return paginate(session, select(ShelvingJob))
+        if params.workflow_id:
+            query = query.where(ShelvingJob.id == params.workflow_id)
+        if params.user_id:
+            query = query.where(ShelvingJob.user_id == params.user_id)
+        if params.created_by_id:
+            query = query.where(ShelvingJob.created_by_id == params.created_by_id)
+        if params.from_dt:
+            query = query.where(ShelvingJob.create_dt >= params.from_dt)
+        if params.to_dt:
+            query = query.where(ShelvingJob.create_dt <= params.to_dt)
+        if status:
+            query = query.where(ShelvingJob.status == status.value)
+
+        return paginate(session, query)
+
     except IntegrityError as e:
         raise InternalServerError(detail=f"{e}")
 

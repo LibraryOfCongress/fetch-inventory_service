@@ -7,7 +7,8 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.models.accession_jobs import AccessionJob
+from app.filter_params import JobFilterParams
+from app.models.accession_jobs import AccessionJob, AccessionJobStatus
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
@@ -44,18 +45,28 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[AccessionJobListOutput])
 def get_accession_job_list(
-    queue: bool = Query(default=False), session: Session = Depends(get_session)
+    queue: bool = Query(default=False),
+    session: Session = Depends(get_session),
+    params: JobFilterParams = Depends(),
+    status: AccessionJobStatus | None = None
 ) -> list:
     """
     Retrieve a paginated list of accession jobs.
+
+    **Params**
+    - queue: Filters out cancelled Acc Jobs and Acc Jobs where Verification has started.
 
     **Returns:**
     - list: A paginated list of accession jobs.
     """
     try:
-        query = select(AccessionJob).where(AccessionJob.status != "Cancelled")
+        query = select(AccessionJob).distinct()
 
         if queue:
+            # queue is the default view on the accession job screen
+            # It is not used in advanced search on jobs
+            # hide cancelled jobs
+            query = query.where(AccessionJob.status != "Cancelled")
             # Filter to exclude Accession Jobs with a related Verification Job not in
             # 'Created' status
             subquery = (
@@ -65,7 +76,7 @@ def get_accession_job_list(
             )
 
             # Construct the main query
-            query = select(AccessionJob).where(
+            query = query.where(
                 # Use NOT EXISTS to exclude AccessionJobs with related VerificationJobs not in 'created' status
                 or_(
                     AccessionJob.id.not_in(subquery),
@@ -73,6 +84,18 @@ def get_accession_job_list(
                     not_(subquery.exists()),  # Or no related VerificationJobs at all
                 )
             )
+        if params.workflow_id:
+            query = query.where(AccessionJob.workflow_id == params.workflow_id)
+        if params.user_id:
+            query = query.where(AccessionJob.user_id == params.user_id)
+        if params.created_by_id:
+            query = query.where(AccessionJob.created_by_id == params.created_by_id)
+        if params.from_dt:
+            query = query.where(AccessionJob.create_dt >= params.from_dt)
+        if params.to_dt:
+            query = query.where(AccessionJob.create_dt <= params.to_dt)
+        if status:
+            query = query.where(AccessionJob.status == status.value)
 
         return paginate(session, query)
     except IntegrityError as e:

@@ -8,12 +8,13 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
+from app.filter_params import JobFilterParams
 from app.models.buildings import Building
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
-from app.models.pick_lists import PickList
+from app.models.pick_lists import PickList, PickListStatus
 from app.models.requests import Request
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
@@ -40,7 +41,10 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[PickListListOutput])
 def get_pick_list_list(
-    all: bool = Query(default=False), session: Session = Depends(get_session)
+    queue: bool = Query(default=False),
+    session: Session = Depends(get_session),
+    params: JobFilterParams = Depends(),
+    status: PickListStatus | None = None,
 ) -> list:
     """
     Get a list of pick lists.
@@ -48,11 +52,28 @@ def get_pick_list_list(
     **Returns:**
     - Pick List List Output: The paginated list of pick lists.
     """
+    query = select(PickList).distinct()
+
     try:
-        if not all:
-            query = select(PickList).where(PickList.status != "Completed").distinct()
-            return paginate(session, query)
-        return paginate(session, select(PickList))
+        if queue:
+            query = query.where(
+                PickList.status != "Completed"
+            )
+        if params.workflow_id:
+            query = query.where(PickList.id == params.workflow_id)
+        if params.user_id:
+            query = query.where(PickList.user_id == params.user_id)
+        if params.created_by_id:
+            query = query.where(PickList.created_by_id == params.created_by_id)
+        if params.from_dt:
+            query = query.where(PickList.create_dt >= params.from_dt)
+        if params.to_dt:
+            query = query.where(PickList.create_dt <= params.to_dt)
+        if status:
+            query = query.where(PickList.status == status.value)
+
+        return paginate(session, query)
+
     except IntegrityError as e:
         raise InternalServerError(detail=f"{e}")
 
@@ -172,7 +193,9 @@ def create_pick_list(
         errored_request_ids.append(set(requests) - set(pick_list_input.request_ids))
 
     building_id = requests[0].building_id
-    new_pick_list = PickList(building=session.get(Building, building_id))
+    new_pick_list = PickList(**pick_list_input.model_dump())
+    new_pick_list.building = session.get(Building, building_id)
+    # new_pick_list = PickList(building=session.get(Building, building_id))
     session.add(new_pick_list)
     session.flush()
 
