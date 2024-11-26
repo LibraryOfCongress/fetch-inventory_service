@@ -325,6 +325,9 @@ def add_request_to_pick_list(
     update_dt = datetime.utcnow()
     errored_request_ids = []
 
+    if pick_list.status == "Completed":
+        raise BadRequest(detail="Pick List Already Completed")
+
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
 
@@ -456,6 +459,9 @@ def remove_request_from_pick_list(
 
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
+
+    if pick_list.status == "Completed":
+        raise BadRequest(detail="Pick List Already Completed")
 
     # Getting Request, checking if not found, and marking the request as not scanned
     # for pick list
