@@ -393,7 +393,13 @@ def reassign_container_location(
             .join(Barcode)
             .where(Barcode.value == reassignment_input.shelf_barcode_value)
         )
-        shelf_barcode_join = list(session.exec(shelf_barcode_join))[0]
+        shelf_barcode_join = session.exec(shelf_barcode_join).all()
+
+        if not shelf_barcode_join:
+            raise NotFound(
+                detail=f"No shelves were found with barcode {reassignment_input.shelf_barcode_value}"
+            )
+        shelf_barcode_join = shelf_barcode_join[0]
         shelf_id = shelf_barcode_join.Shelf.id
     else:
         raise ValidationException(
@@ -407,11 +413,25 @@ def reassign_container_location(
         .where(ShelfPosition.shelf_id == shelf_id)
         .where(ShelfPositionNumber.number == reassignment_input.shelf_position_number)
     )
+    shelf_position_position_number_join = session.exec(
+        shelf_position_position_number_join).all()
 
-    shelf_position_position_number_join = list(
-        session.exec(shelf_position_position_number_join)
-    )[0]
+    if not shelf_position_position_number_join:
+        raise ValidationException(
+            detail=f"Shelf Position Number {reassignment_input.shelf_position_number} "
+            f"does not exist on shelf {reassignment_input.shelf_id}"
+        )
 
+    shelf_position_position_number_join = shelf_position_position_number_join[0]
+
+    # Check for Availability
+    shelf = shelf_position_position_number_join.ShelfPosition.shelf
+    if shelf.available_space == 0:
+        raise ValidationException(
+            detail=f"Shelf ID {shelf.id} has no available space"
+        )
+
+    # check if tray or non-tray
     if reassignment_input.trayed:
         tray_exists = (
             session.query(Tray)
