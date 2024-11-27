@@ -245,74 +245,69 @@ def move_item(
     **Returns:**
     - Item Detail Write Output: The updated item details.
     """
-    try:
-        item_lookup_barcode_value = (
-            session.query(Barcode).where(Barcode.value == barcode_value).first()
-        )
-        if not item_lookup_barcode_value:
-            raise ValidationException(
-                detail=f"Failed to transfer: {barcode_value} Item with barcode not "
-                f"found"
-            )
-
-        tray_look_barcode_value = (
-            session.query(Barcode)
-            .where(Barcode.value == item_input.tray_barcode_value)
-            .first()
-        )
-        if not tray_look_barcode_value:
-            raise ValidationException(
-                detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
-                f" {item_input.tray_barcode_value} not found"
-            )
-
-        item = (
-            session.query(Item)
-            .filter(Item.barcode_id == item_lookup_barcode_value.id)
-            .first()
+    item_lookup_barcode_value = (
+        session.query(Barcode).where(Barcode.value == barcode_value).first()
+    )
+    if not item_lookup_barcode_value:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} Item with barcode not "
+            f"found"
         )
 
-        if not item.scanned_for_accession or not item.scanned_for_verification:
-            raise ValidationException(
-                detail=f"Failed to transfer: {barcode_value} has not been verified."
-            )
-
-        if item.status != "In":
-            raise ValidationException(
-                detail=f"Failed to transfer: {barcode_value} is not in the tray."
-            )
-
-        source_tray = session.query(Tray).filter(Tray.id == item.tray_id).first()
-
-        if not source_tray:
-            raise ValidationException(
-                detail=f"Failed to transfer: {barcode_value} - Tray ID {item.tray_id} not found"
-            )
-
-        if not item:
-            raise ValidationException(
-                detail=f"Failed to transfer: {barcode_value} - Item barcode value"
-                f" {item_lookup_barcode_value.value} not found"
-            )
-
-        destination_tray = (
-            session.query(Tray)
-            .where(Tray.barcode_id == tray_look_barcode_value.id)
-            .first()
+    tray_look_barcode_value = (
+        session.query(Barcode)
+        .where(Barcode.value == item_input.tray_barcode_value)
+        .first()
+    )
+    if not tray_look_barcode_value:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
+            f" {item_input.tray_barcode_value} not found"
         )
 
-        if not destination_tray:
-            raise ValidationException(
-                detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
-                f" {item_input.tray_barcode_value} not found"
-            )
+    item = (
+        session.query(Item)
+        .filter(Item.barcode_id == item_lookup_barcode_value.id)
+        .first()
+    )
 
-        background_tasks.add_task(
-            process_tray_item_move(session, item, source_tray, destination_tray)
+    if not item.scanned_for_accession or not item.scanned_for_verification:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} has not been verified."
         )
 
-        return item
+    if item.status != "In":
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} is not in the tray."
+        )
 
-    except Exception as e:
-        inventory_logger.info(f"Failed to move item: {e}")
-        raise InternalServerError(detail=f"{e}")
+    source_tray = session.query(Tray).filter(Tray.id == item.tray_id).first()
+
+    if not source_tray:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Tray ID {item.tray_id} not found"
+        )
+
+    if not item:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Item barcode value"
+            f" {item_lookup_barcode_value.value} not found"
+        )
+
+    destination_tray = (
+        session.query(Tray)
+        .where(Tray.barcode_id == tray_look_barcode_value.id)
+        .first()
+    )
+
+    if not destination_tray:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
+            f" {item_input.tray_barcode_value} not found"
+        )
+
+    background_tasks.add_task(
+        process_tray_item_move(session, item, source_tray, destination_tray)
+    )
+
+    return item

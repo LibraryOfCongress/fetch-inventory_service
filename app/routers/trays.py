@@ -302,25 +302,40 @@ def move_tray(
     - Tray Detail Write Output: The updated tray details.
     """
     # Retrieve the non_tray_item and shelves in a single query
-    query = (
-        session.query(Tray, Shelf)
-        .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id)
-        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
-        .join(Barcode, Tray.barcode_id == Barcode.id)
-        .filter(Barcode.value == barcode_value)
-    )
-    result = query.first()
-    if not result:
+    tray = session.query(Tray).join(Barcode, Tray.barcode_id == Barcode.id).filter(
+        Barcode.value == barcode_value).first()
+    if not tray:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Tray with barcode value not "
+            "found"
+        )
+
+    if tray.shelf_position_id is None:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Tray is not in a shelf."
+        )
+
+    # Retrieve the non_tray_item and shelves in a single query
+    source_shelf = (
+        session.query(Shelf).join(ShelfPosition, tray.shelf_position_id ==
+                                  ShelfPosition.id).filter(ShelfPosition.shelf_id ==
+                                                           Shelf.id)
+    ).first()
+
+    if not source_shelf:
         raise ValidationException(
             detail=f"Failed to transfer: {barcode_value} - Item with barcode not "
             f"found"
         )
 
-    tray, source_shelf = result
-
     if not tray.scanned_for_accession or not tray.scanned_for_verification:
         raise ValidationException(
             detail=f"Failed to transfer: {barcode_value} has not been verified."
+        )
+
+    if tray.shelf_position_id is None:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} is not in a shelf."
         )
 
     # Retrieve the destination shelf
