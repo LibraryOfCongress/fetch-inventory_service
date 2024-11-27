@@ -283,14 +283,6 @@ def process_tray_item_move(
     updated_source_tray = session.query(Tray).filter(Tray.id == source_tray.id).first()
 
     if updated_source_tray and len(updated_source_tray.items) == 0:
-        session.query(Tray).filter(Tray.id == source_tray.id).update(
-            {
-                "shelf_position_id": None,
-                "shelf_position_proposed_id": None,
-                "update_dt": update_dt,
-            }
-        )
-
         source_shelf = (
             session.query(Shelf)
             .join(ShelfPosition, Shelf.id == ShelfPosition.shelf_id)
@@ -302,5 +294,13 @@ def process_tray_item_move(
             session.query(Shelf).filter(Shelf.id == source_shelf.id).update(
                 {"available_space": source_shelf.available_space + 1}
             )
+
+        session.query(Tray).filter(Tray.id == source_tray.id).update(
+            {
+                "shelf_position_id": None,
+                "shelf_position_proposed_id": None,
+                "update_dt": update_dt,
+            }
+        )
 
         session.commit()
