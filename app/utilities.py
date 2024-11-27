@@ -238,10 +238,23 @@ def process_containers_for_shelving(
         if container_object.shelf_position_id:
             continue
 
+        # get containers with available space
+        available_space_containers = [
+            container
+            for container in available_shelf_positions
+            if container.Shelf.available_space > 0
+        ]
+
+        if not available_space_containers:
+            raise NotFound(
+                detail=f"No available space on shelves needed for container with barcode"
+                f" {container_object.barcode.value}"
+            )
+
         # get matching size_class options
         available_positions_for_size = [
             position
-            for position in available_shelf_positions
+            for position in available_space_containers
             if position.Shelf.shelf_type.size_class_id == container_object.size_class_id
         ]
 
