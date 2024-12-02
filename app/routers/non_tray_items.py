@@ -44,7 +44,7 @@ def get_non_tray_item_list(
     media_type_id: int = Query(default=None),
     from_dt: datetime = Query(default=None),
     to_dt: datetime = Query(default=None),
-    status: NonTrayItemStatus | None = None
+    status: NonTrayItemStatus | None = None,
 ) -> list:
     """
     Get a paginated list of non tray items from the database
@@ -287,21 +287,35 @@ def move_item(
     - Non Tray Item Detail Write Output: The updated non_tray_item details.
     """
     # Retrieve the non_tray_item and shelves in a single query
-    query = (
-        session.query(NonTrayItem, Shelf)
-        .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id)
-        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+    non_tray_item = (
+        session.query(NonTrayItem)
         .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
         .filter(Barcode.value == barcode_value)
+        .first()
     )
-    result = query.first()
-    if not result:
+    if not non_tray_item:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Item with barcode not "
+            detail=f"Failed to transfer: {barcode_value} - Non Tray Item with barcode "
+            "value not found"
+        )
+
+    source_shelf = (
+        session.query(Shelf)
+        .join(ShelfPosition, non_tray_item.shelf_position_id == ShelfPosition.id)
+        .filter(ShelfPosition.shelf_id == Shelf.id)
+    )
+    if not source_shelf:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Shelf with barcode value "
+            f"not "
             f"found"
         )
 
-    non_tray_item, source_shelf = result
+    if non_tray_item.shelf_position_id is None:
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Non Tray Item has not been "
+            f"assigned to a shelf position."
+        )
 
     if (
         not non_tray_item.scanned_for_accession
@@ -331,16 +345,15 @@ def move_item(
         or source_shelf.owner_id != destination_shelf.owner_id
     ):
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Shelf id"
-            f" {destination_shelf.id} has no "
-            f"available space"
+            detail=f"Failed to transfer: {barcode_value} - Shelf must be of the same "
+            f"size class and owner."
         )
 
     # Check the available space in the destination shelf
     if destination_shelf.available_space < 1:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Shelf must be of the same "
-            f"size class and owner."
+            detail=f"Failed to transfer: {barcode_value} - Shelf id"
+            f" {destination_shelf.id} has no available space"
         )
 
     # Check if the shelf position at destination shelf is unoccupied
