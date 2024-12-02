@@ -345,15 +345,13 @@ def move_item(
         or source_shelf.owner_id != destination_shelf.owner_id
     ):
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Shelf must be of the same "
-            f"size class and owner."
+            detail=f"""Failed to transfer: {barcode_value} - Shelf must be of the same size class and owner."""
         )
 
     # Check the available space in the destination shelf
     if destination_shelf.available_space < 1:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Shelf id"
-            f" {destination_shelf.id} has no available space"
+            detail=f"""Failed to transfer: {barcode_value} - Shelf id {destination_shelf.id} has no available space"""
         )
 
     # Check if the shelf position at destination shelf is unoccupied
