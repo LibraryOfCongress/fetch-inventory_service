@@ -45,14 +45,37 @@ class OwnerBaseOutput(BaseModel):
     size_classes: Optional[list] = None
 
 
+class NestedOwnerTierDetailOutput(BaseModel):
+    id: int
+    level: int
+    name: str
+
+
+class NestedParentOwnerDetailReadOutput(BaseModel):
+    id: int
+    name: str
+
+
 class OwnerListOutput(OwnerBaseOutput):
+    parent_owner: Optional[NestedParentOwnerDetailReadOutput] = None
+    owner_tier: Optional[NestedOwnerTierDetailOutput] = None
+
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
                 "name": "Special Collection Directorate",
                 "owner_tier_id": 2,
+                "owner_tier": {
+                    "id": 1,
+                    "level": 1,
+                    "name": "organization"
+                },
                 "parent_owner_id": 2,
+                "parent_owner": {
+                    "id": 2,
+                    "name": "Library of Congress"
+                },
                 "size_classes": [
                     {
                         "id": 1,
