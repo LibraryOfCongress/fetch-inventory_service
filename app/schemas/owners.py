@@ -92,6 +92,8 @@ class OwnerListOutput(OwnerBaseOutput):
 
 
 class OwnerDetailWriteOutput(OwnerBaseOutput):
+    owner_tier: Optional[OwnerTierDetailOutput] = None
+    parent_owner: Optional[NestedParentOwnerDetailReadOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -101,7 +103,16 @@ class OwnerDetailWriteOutput(OwnerBaseOutput):
                 "id": 1,
                 "name": "Special Collection Directorate",
                 "owner_tier_id": 2,
+                "owner_tier": {
+                    "id": 1,
+                    "level": 1,
+                    "name": "organization"
+                },
                 "parent_owner_id": 2,
+                "parent_owner": {
+                    "id": 2,
+                    "name": "Library of Congress"
+                },
                 "size_classes": [
                     {
                         "id": 1,
