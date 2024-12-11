@@ -21,16 +21,17 @@ class ShelfTypeInput(BaseModel):
 
 
 class ShelfTypeUpdateInput(BaseModel):
+    max_capacity: Optional[int] = None
     type: Optional[constr(min_length=1, max_length=50)] = None
     size_class_id: Optional[int] = None
-    update_dt: Optional[datetime] = None
+    # update_dt: Optional[datetime] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "type": "Long",
+                "type": "Full",
                 "size_class_id": 1,
-                "update_dt": "2023-11-27T12:34:56.789123Z"
+                "max_capacity": 30
             }
         }
 
@@ -42,6 +43,7 @@ class ShelfTypeReadOutput(BaseModel):
 
 
 class ShelfTypeListOutput(ShelfTypeReadOutput):
+    max_capacity: int
     size_class: Optional[SizeClassListOutput] = None
 
     class Config:
@@ -50,6 +52,7 @@ class ShelfTypeListOutput(ShelfTypeReadOutput):
                 "id": 1,
                 "type": "Long",
                 "size_class_id": 1,
+                "max_capacity": 30,
                 "size_class": {
                     "id": 1,
                     "name": "C-Low",
@@ -62,7 +65,7 @@ class ShelfTypeListOutput(ShelfTypeReadOutput):
 
 class ShelfTypeDetailOutput(ShelfTypeReadOutput):
     size_class: Optional[SizeClassDetailReadOutput] = None
-    shelves: Optional[list] = None
+    # shelves: Optional[list] = None #(Too large, not used)
     max_capacity: Optional[int] = None
     update_dt: Optional[datetime] = None
     create_dt: Optional[datetime] = None

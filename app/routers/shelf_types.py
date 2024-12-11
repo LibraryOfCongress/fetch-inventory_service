@@ -5,10 +5,12 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 
 from app.database.session import get_session
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
+from app.models.size_class import SizeClass
 from app.schemas.shelf_types import (
     ShelfTypeInput,
     ShelfTypeUpdateInput,
@@ -17,6 +19,7 @@ from app.schemas.shelf_types import (
 )
 from app.config.exceptions import (
     NotFound,
+    MethodNotAllowed,
     ValidationException,
     InternalServerError,
     BadRequest,
@@ -128,12 +131,29 @@ def update_shelf_type(
         if not id:
             raise BadRequest(detail="Shelf Type ID Required")
 
-        existing_shelf_type = session.get(ShelfType, id)
+        # Check if shelf_type has associated child shelves
+        existing_shelf_type = session.exec(select(ShelfType).where(ShelfType.id == id)).one_or_none()
 
         if not existing_shelf_type:
             raise NotFound(detail=f"Shelf Type ID {id} Not Found")
 
         mutated_data = shelf_type_input.model_dump(exclude_unset=True)
+
+        if mutated_data['max_capacity']:
+        # Check if the parent has associated children
+        # Below method avoids having to load for check
+            child_shelves_count = session.exec(
+                select(func.count(Shelf.id)).where(Shelf.shelf_type_id == id)
+            ).one()
+            if child_shelves_count > 0:
+                # deny decrement
+                if mutated_data["max_capacity"] < existing_shelf_type.max_capacity:
+                    shelf_type_size_class = session.exec(select(SizeClass).where(
+                        SizeClass.id == existing_shelf_type.size_class_id
+                    )).one_or_none()
+                    raise MethodNotAllowed(
+                        detail=f"""Cannot decrease capacity of Shelf Type id {id} ({shelf_type_size_class.short_name} {existing_shelf_type.type}), it is in use by {child_shelves_count} shelves"""
+                    )
 
         for key, value in mutated_data.items():
             setattr(existing_shelf_type, key, value)
@@ -147,6 +167,9 @@ def update_shelf_type(
         return existing_shelf_type
 
     except Exception as e:
+        if isinstance(e, MethodNotAllowed):
+            raise e
+
         raise InternalServerError(detail=f"{e}")
 
 
@@ -170,8 +193,19 @@ def delete_shelf_type(id: int, session: Session = Depends(get_session)):
     shelf_type = session.get(ShelfType, id)
 
     if shelf_type:
-        session.delete(shelf_type)
-        session.commit()
+        child_shelves_count = session.exec(
+            select(func.count(Shelf.id)).where(Shelf.shelf_type_id == id)
+        ).one()
+        if child_shelves_count > 0:
+            shelf_type_size_class = session.exec(select(SizeClass).where(
+                SizeClass.id == shelf_type.size_class_id
+            )).one_or_none()
+            raise MethodNotAllowed(
+                detail=f"""Cannot delete Shelf Type id {id} ({shelf_type_size_class.short_name} {shelf_type.type}), it is in use by {child_shelves_count} shelves"""
+            )
+        else:
+            session.delete(shelf_type)
+            session.commit()
 
         return HTTPException(
             status_code=204, detail=f"Shelf Type ID {id} Deleted " f"Successfully"
