@@ -230,7 +230,7 @@ class NestedBuildingForRefileJob(BaseModel):
 
 class NestedShelfForRefileJob(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_number: NestedShelfNumberForRefileJob
 
 

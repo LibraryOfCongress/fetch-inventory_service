@@ -77,7 +77,7 @@ class NestedShelfPositionNumberForRefileQueue(BaseModel):
 
 class NestedShelfForRefileQueue(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_number: NestedShelfNumberForRefileQueue
 
 

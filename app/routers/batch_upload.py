@@ -1,28 +1,38 @@
-import base64
+import re
 from datetime import datetime
-from typing import Optional
+from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, Form
 from fastapi_pagination.ext.sqlmodel import paginate
 from fastapi_pagination import Page
-from sqlalchemy import and_
+from pydantic import TypeAdapter, ValidationError
 from sqlmodel import Session, select
-from io import BytesIO, StringIO
+from io import StringIO
 import pandas as pd
 from starlette import status
 from starlette.responses import JSONResponse
 
-from app.database.session import get_session
+from app.database.session import get_session, commit_record
 from app.logger import inventory_logger
+from app.models.barcode_types import BarcodeType
 from app.models.barcodes import Barcode
 from app.models.batch_upload import BatchUpload
-from app.models.requests import Request
+from app.models.container_types import ContainerType
+from app.models.ladder_numbers import LadderNumber
+from app.models.ladders import Ladder
+from app.models.owners import Owner
+from app.models.shelf_numbers import ShelfNumber
+from app.models.shelf_position_numbers import ShelfPositionNumber
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelf_types import ShelfType
+from app.models.shelves import Shelf
+from app.models.size_class import SizeClass
 from app.models.withdraw_jobs import WithdrawJob
 from app.schemas.batch_upload import (
     BatchUploadListOutput,
     BatchUploadDetailOutput,
     BatchUploadUpdateInput,
-    BatchUploadInput,
+    LocationManagementSpreadSheetInput,
 )
 from app.utilities import (
     validate_request_data,
@@ -106,7 +116,7 @@ async def delete_batch_upload(id: int, session: Session = Depends(get_session)):
 
     return JSONResponse(
         status_code=status.HTTP_204_NO_CONTENT,
-        content=f"Batch " f"Upload ID {id} has been successfully deleted",
+        content=f"Batch Upload ID {id} has been successfully deleted",
     )
 
 
@@ -424,7 +434,7 @@ async def batch_upload_withdraw_job(
             )
             session.commit()
             raise NotFound(
-                detail=f"All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
+                detail="All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
             )
         else:
             session.query(BatchUpload).filter(
@@ -455,6 +465,369 @@ async def batch_upload_withdraw_job(
 
     if errored_barcodes.get("errors"):
         return JSONResponse(status_code=status.HTTP_200_OK, content=errored_barcodes)
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK, content="Batch Upload Successful"
+    )
+
+
+@router.post("/location-management")
+async def batch_upload_location_management(
+    file: UploadFile,
+    building_id: int = Form(),
+    module_id: int = Form(),
+    aisle_id: int = Form(),
+    side_id: int = Form(),
+    session: Session = Depends(get_session),
+):
+    """
+    Batch upload endpoint to process barcodes for different operations.
+
+    **Args:**
+    - batch_upload_input: The batch upload data containing the base64 encoded Excel file.
+    - process_type: The type of processing to be performed ("request", "shelving", "withdraw").
+
+    **Returns:**
+    - BatchUploadOutput: The result of the batch processing including any errors.
+    """
+    if not building_id:
+        raise BadRequest(detail="Building ID is required")
+
+    if not module_id:
+        raise BadRequest(detail="Module ID is required")
+
+    if not aisle_id:
+        raise BadRequest(detail="Aisle ID is required")
+
+    if not side_id:
+        raise BadRequest(detail="Side ID is required")
+
+    if not file:
+        raise BadRequest(detail="Upload File is required")
+
+    if not file:
+        raise HTTPException(status_code=400, detail="Upload file is required")
+
+    file_name = file.filename
+    file_size = file.size
+    file_content_type = file.content_type
+    contents = await file.read()
+
+    # Load the file into a DataFrame
+    if (
+        file_name.endswith(".xlsx")
+        or file_content_type
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ):
+        df = pd.read_excel(
+            contents,
+            dtype={
+                "Ladder Number": int,
+                "Ladder Sort Priority": int,
+                "Shelf Number": int,
+                "Shelf Sort Priority": int,
+                "Owner": str,
+                "Size Class": str,
+                "Container Type": str,
+                "Shelf Type": str,
+                "Width": float,
+                "Height": float,
+                "Depth": float,
+                "Shelf Barcode": str,
+            },
+        )
+    elif file_name.endswith(".csv"):
+        df = pd.read_csv(
+            StringIO(contents.decode("utf-8")),
+            dtype={
+                "Ladder Number": int,
+                "Ladder Sort Priority": "Int64",
+                "Shelf Number": "Int64",
+                "Shelf Sort Priority": "Int64",
+                "Owner": str,
+                "Size Class": str,
+                "Container Type": str,
+                "Shelf Type": str,
+                "Width": float,
+                "Height": float,
+                "Depth": float,
+                "Shelf Barcode": str,
+            },
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported file format")
+
+    new_batch_upload = BatchUpload(
+        file_name=file_name, file_size=file_size, file_type=file_content_type
+    )
+
+    session.add(new_batch_upload)
+    session.commit()
+    session.refresh(new_batch_upload)
+
+    df.rename(
+        columns={
+            "Ladder Number": "ladder_number",
+            "Ladder Sort Priority": "ladder_sort_priority",
+            "Shelf Number": "shelf_number",
+            "Shelf Sort Priority": "shelf_sort_priority",
+            "Owner": "owner",
+            "Size Class": "size_class",
+            "Container Type": "container_type",
+            "Shelf Type": "shelf_type",
+            "Width": "width",
+            "Height": "height",
+            "Depth": "depth",
+            "Shelf Barcode": "shelf_barcode",
+        },
+        inplace=True,
+    )
+
+    # Validate the data from dataframe using pydantic TypeAdapter
+    try:
+        location_hierarchy_adapter = TypeAdapter(
+            List[LocationManagementSpreadSheetInput]
+        )
+        location_hierarchy_adapter.validate_json(df.to_json(orient="records"))
+    except ValidationError as e:
+        new_batch_upload.status = "Failed"
+        session.add(new_batch_upload)
+        session.commit()
+        session.refresh(new_batch_upload)
+        errors = [
+            {"loc": err["loc"], "msg": err["msg"], "type": err["type"]}
+            for err in e.errors()
+        ]
+        raise HTTPException(status_code=422, detail=errors)
+
+    shelves_bulk = []
+    errors = []
+
+    for index, row in df.iterrows():
+        try:
+            if not row["ladder_number"]:
+                errors.append(
+                    {"line": int(index) + 1, "error": "Ladder Number is required"}
+                )
+                continue
+
+            ladder_number = (
+                session.query(LadderNumber)
+                .filter(LadderNumber.number == row["ladder_number"])
+                .first()
+            )
+
+            if not ladder_number:
+                ladder_number = LadderNumber(number=row["ladder_number"])
+                ladder_number = commit_record(session, ladder_number)
+
+            ladder = (
+                session.query(Ladder)
+                .filter(
+                    Ladder.ladder_number_id == ladder_number.id,
+                    Ladder.side_id == side_id,
+                )
+                .first()
+            )
+
+            if not ladder:
+                ladder = Ladder(
+                    ladder_number_id=ladder_number.id,
+                    ladder_sort_priority=row["ladder_sort_priority"],
+                    side_id=side_id,
+                )
+                ladder = commit_record(session, ladder)
+
+            if pd.notna(row["shelf_number"]):
+                owner = session.query(Owner).filter(Owner.name == row["owner"]).first()
+                if not owner:
+                    errors.append(
+                        {
+                            "line": int(index) + 1,
+                            "error": f"Owner {row['owner']} not found",
+                        }
+                    )
+                    continue
+                container_type = (
+                    session.query(ContainerType)
+                    .filter(ContainerType.type == row["container_type"])
+                    .first()
+                )
+                if not container_type:
+                    errors.append(
+                        {
+                            "line": int(index) + 1,
+                            "error": f"Container Type {row['container_type']} "
+                            "not found",
+                        }
+                    )
+                    continue
+                size_class = (
+                    session.query(SizeClass)
+                    .filter(SizeClass.name == row["size_class"])
+                    .first()
+                )
+                if not size_class:
+                    errors.append(
+                        {
+                            "line": int(index) + 1,
+                            "error": f"Size Class {row['size_class']} not found",
+                        }
+                    )
+                    continue
+                shelf_type = (
+                    session.query(ShelfType)
+                    .join(SizeClass)
+                    .filter(SizeClass.name == row["size_class"])
+                    .filter(ShelfType.type == row["shelf_type"])
+                    .first()
+                )
+                if not shelf_type:
+                    errors.append(
+                        {
+                            "line": int(index) + 1,
+                            "error": f"Shelf Type {row['shelf_type']} with Size Class "
+                            f"{row['size_class']} not found",
+                        }
+                    )
+                    continue
+
+                shelf_number = (
+                    session.query(ShelfNumber)
+                    .filter(ShelfNumber.number == row["shelf_number"])
+                    .first()
+                )
+
+                if shelf_number:
+                    # Check if the shelf already exists
+                    existing_shelf = (
+                        session.query(Shelf)
+                        .filter(
+                            Shelf.shelf_number_id == shelf_number.id,
+                            Shelf.ladder_id == ladder.id,
+                        )
+                        .first()
+                    )
+                    if existing_shelf:
+                        errors.append(
+                            {
+                                "line": int(index) + 1,
+                                "error": f"Shelf number {row['shelf_number']} at "
+                                         "ladder number "
+                                         f"{row['ladder_number']} already exists",
+                            }
+                        )
+                        continue
+                else:
+                    shelf_number = ShelfNumber(number=row["shelf_number"])
+                    shelf_number = commit_record(session, shelf_number)
+
+                shelf_barcode = None
+                if pd.notna(row["shelf_barcode"]):
+                    shelf_barcode_value = row["shelf_barcode"]
+
+                    shelf_barcode = (
+                        session.query(Barcode)
+                        .join(BarcodeType, Barcode.type_id == BarcodeType.id)
+                        .filter(Barcode.value == shelf_barcode_value)
+                        .filter(BarcodeType.name == "Shelf")
+                        .first()
+                    )
+
+                    if shelf_barcode:
+                        errors.append(
+                            {
+                                "line": int(index) + 1,
+                                "error": f"Shelf Barcode value {row['shelf_barcode']} "
+                                         "already exists",
+                            }
+                        )
+                        continue
+                    else:
+                        barcode_type = (
+                            session.query(BarcodeType)
+                            .filter(BarcodeType.name == "Shelf")
+                            .first()
+                        )
+
+                        if not re.fullmatch(
+                            barcode_type.allowed_pattern, shelf_barcode_value
+                        ):
+                            errors.append(
+                                {
+                                    "line": int(index) + 1,
+                                    "error": "Shelf Barcode value: "
+                                    f"{shelf_barcode_value} is invalid for "
+                                    "barcode rules",
+                                }
+                            )
+                            continue
+
+                        shelf_barcode = Barcode(
+                            value=shelf_barcode_value, type_id=barcode_type.id
+                        )
+                        shelf_barcode = commit_record(session, shelf_barcode)
+
+                new_shelf = Shelf(
+                    height=row["height"],
+                    width=row["width"],
+                    depth=row["depth"],
+                    sort_priority=row["shelf_sort_priority"],
+                    container_type_id=container_type.id,
+                    shelf_number_id=shelf_number.id,
+                    shelf_type_id=shelf_type.id,
+                    owner_id=owner.id,
+                    ladder_id=ladder.id,
+                )
+
+                if shelf_barcode:
+                    new_shelf.barcode_id = shelf_barcode.id
+
+                shelves_bulk.append(new_shelf)
+
+        except (ValidationError, ValueError) as e:
+            errors.append({"line": int(index) + 1, "error": str(e)})
+
+    if errors:
+        return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=errors)
+
+    if len(shelves_bulk) > 0:
+        session.add_all(shelves_bulk)
+        session.commit()
+
+        for shelf in shelves_bulk:
+            shelf_type = shelf.shelf_type
+            max_capacity = shelf_type.max_capacity
+
+            # Create Shelf Positions
+            shelf_position_bulk = []
+            for index in range(1, max_capacity + 1):
+                shelf_position_number = (
+                    session.query(ShelfPositionNumber)
+                    .filter(ShelfPositionNumber.number == index)
+                    .first()
+                )
+
+                if not shelf_position_number:
+                    shelf_position_number = ShelfPositionNumber(
+                        shelf_type_id=shelf_type.id, position_number=index
+                    )
+                    session.add(shelf_position_number)
+                    session.commit()
+                    session.refresh(shelf_position_number)
+
+                shelf_position_bulk.append(
+                    ShelfPosition(
+                        shelf_id=shelf.id,
+                        shelf_position_number_id=shelf_position_number.id,
+                    )
+                )
+
+            shelf.available_space = max_capacity
+            session.add_all(shelf_position_bulk)
+            session.add(shelf)
+
+            session.commit()
 
     return JSONResponse(
         status_code=status.HTTP_200_OK, content="Batch Upload Successful"

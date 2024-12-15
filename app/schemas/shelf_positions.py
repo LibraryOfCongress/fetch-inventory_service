@@ -53,6 +53,7 @@ class ShelfPositionBaseReadOutput(BaseModel):
 class NestedShelfPositionNumberForShelvingPositionList(BaseModel):
     number: int
 
+
 class ShelfPositionListOutput(ShelfPositionBaseReadOutput):
     shelf_position_number: NestedShelfPositionNumberForShelvingPositionList
 

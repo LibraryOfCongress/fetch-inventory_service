@@ -120,7 +120,6 @@ class ShelfPositionNestedForTrayOutput(BaseModel):
     internal_location: Optional[str] = None
 
 
-
 class TrayBaseOutput(TrayInput):
     id: int
     items: List[ItemNestedForTrayOutput]

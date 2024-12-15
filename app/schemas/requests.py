@@ -113,7 +113,7 @@ class BuildingNestedForRequest(BaseModel):
 
 class ShelfNestedForRequest(BaseModel):
     id: int
-    # barcode: BarcodeDetailReadOutput
+    # barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class ShelfPositionNestedForRequest(BaseModel):

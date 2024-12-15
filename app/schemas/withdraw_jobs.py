@@ -102,7 +102,7 @@ class NestedShelfPositionNumberForWithdrawJob(BaseModel):
 
 class NestedShelfForWithdrawJob(BaseModel):
     id: int
-    barcode: BarcodeDetailOutput
+    barcode: Optional[BarcodeDetailOutput] = None
     shelf_number: NestedShelfNumberForWithdrawJob
 
 

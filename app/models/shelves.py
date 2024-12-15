@@ -42,7 +42,7 @@ class Shelf(SQLModel, table=True):
         max_length=200, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
     )
     barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id", nullable=False, default=None, unique=True
+        foreign_key="barcodes.id", nullable=True, default=None, unique=True
     )
     available_space: int = Field(
         sa_column=sa.Column(sa.Integer, nullable=False, default=0)

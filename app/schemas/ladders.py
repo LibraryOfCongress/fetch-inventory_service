@@ -100,7 +100,7 @@ class ShelvesNestedForLadderOutput(BaseModel):
     id: int
     available_space: Optional[int] = None
     sort_priority: Optional[int] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_number: ShelfNumberNestedForLadderOutput
     owner: OwnerNestedForLadderOutput
     width: Optional[float] = None

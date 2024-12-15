@@ -152,7 +152,7 @@ class NestedBuildingForShelvingJob(BaseModel):
 
 class NestedShelfForShelvingJob(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class ShelfPositionNestedForShelvingJob(BaseModel):
