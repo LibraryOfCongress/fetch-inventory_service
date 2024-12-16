@@ -1,12 +1,14 @@
 import uuid
-import uuid
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from enum import Enum
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy.orm import backref
 
+from app.models.barcodes import Barcode
 from app.models.refile_items import RefileItem
 from app.models.refile_jobs import RefileJob
 from app.models.item_withdrawals import ItemWithdrawal
@@ -30,6 +32,12 @@ class Item(SQLModel, table=True):
     """
 
     __tablename__ = "items"
+    __table_args__ = (
+        sa.CheckConstraint(
+            "(barcode_id IS NOT NULL) OR (withdrawn_barcode_id IS NOT NULL)",
+            name="ck_items_barcode_xor_withdrawn_barcode",
+        ),
+    )
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
     status: Optional[str] = Field(
         sa_column=sa.Column(
@@ -42,7 +50,16 @@ class Item(SQLModel, table=True):
         default=ItemStatus.In,
     )
     barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id", nullable=False, default=None, unique=True
+        foreign_key="barcodes.id", nullable=True, default=None, unique=True
+    )
+    withdrawn_barcode_id: Optional[uuid.UUID] = Field(
+        default=None,
+        nullable=True,
+        sa_column=Column(
+            UUID(as_uuid=True),
+            ForeignKey("barcodes.id", name="withdrawn_item_barcode_id"),
+            unique=True
+        )
     )
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     size_class_id: int = Field(foreign_key="size_class.id", nullable=True)
@@ -98,9 +115,21 @@ class Item(SQLModel, table=True):
     )
 
     barcode: Optional["Barcode"] = Relationship(
-        sa_relationship_kwargs={"uselist": False}
+        sa_relationship_kwargs=dict(
+            cascade="all",
+            backref=backref("barcode_item", cascade="all, delete-orphan"),
+            foreign_keys="Item.barcode_id",
+            uselist=False
+        )
     )
-
+    withdrawn_barcode: Optional["Barcode"] = Relationship(
+        sa_relationship_kwargs=dict(
+            cascade="all",
+            backref=backref("withdrawn_item", cascade="all, delete-orphan"),
+            foreign_keys="Item.withdrawn_barcode_id",
+            uselist=False
+        )
+    )
     accession_job: Optional["AccessionJob"] = Relationship(back_populates="items")
     verification_job: Optional["VerificationJob"] = Relationship(back_populates="items")
     subcollection: Optional["Subcollection"] = Relationship(back_populates="items")

@@ -4,8 +4,13 @@ from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
 from datetime import datetime
+
+from sqlalchemy.orm import backref
+from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.withdraw_jobs import WithdrawJob
@@ -21,6 +26,12 @@ class Tray(SQLModel, table=True):
     """
 
     __tablename__ = "trays"
+    __table_args__ = (
+        sa.CheckConstraint(
+            "(barcode_id IS NOT NULL) OR (withdrawn_barcode_id IS NOT NULL)",
+            name="ck_tray_barcode_xor_withdrawn_barcode",
+        ),
+    )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
     accession_job_id: Optional[int] = Field(
@@ -36,7 +47,16 @@ class Tray(SQLModel, table=True):
         foreign_key="container_types.id", nullable=True
     )
     barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id", nullable=False, default=None, unique=True
+        foreign_key="barcodes.id", nullable=True, default=None, unique=True
+    )
+    withdrawn_barcode_id: Optional[uuid.UUID] = Field(
+        default=None,
+        nullable=True,
+        sa_column=Column(
+            UUID(as_uuid=True),
+            ForeignKey("barcodes.id", name="withdrawn_tray_barcode_id"),
+            unique=True
+        )
     )
     scanned_for_accession: Optional[bool] = Field(
         sa_column=sa.Boolean, default=False, nullable=False
@@ -85,7 +105,20 @@ class Tray(SQLModel, table=True):
     # derived item out count
 
     barcode: Optional["Barcode"] = Relationship(
-        sa_relationship_kwargs={"uselist": False}
+        sa_relationship_kwargs=dict(
+            cascade="all",
+            backref=backref("barcode_tray", cascade="all, delete-orphan"),
+            foreign_keys="Tray.barcode_id",
+            uselist=False
+        )
+    )
+    withdrawn_barcode: Optional["Barcode"] = Relationship(
+        sa_relationship_kwargs=dict(
+            cascade="all",
+            backref=backref("withdrawn_tray", cascade="all, delete-orphan"),
+            foreign_keys="Tray.withdrawn_barcode_id",
+            uselist=False
+        )
     )
     media_type: Optional["MediaType"] = Relationship(
         sa_relationship_kwargs={"uselist": False}

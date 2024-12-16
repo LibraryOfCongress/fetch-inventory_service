@@ -77,7 +77,6 @@ class NestedSizeClassDetailOutput(BaseModel):
     id: int
     name: str
     short_name: str
-    assigned: bool
     height: Optional[condecimal(decimal_places=2)] = None
     width: Optional[condecimal(decimal_places=2)] = None
     depth: Optional[condecimal(decimal_places=2)] = None
@@ -130,7 +129,6 @@ class ShelfListOutput(ShelfBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27,
@@ -232,7 +230,6 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27,
@@ -353,7 +350,6 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27,

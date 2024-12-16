@@ -397,7 +397,6 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,

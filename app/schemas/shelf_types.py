@@ -56,8 +56,7 @@ class ShelfTypeListOutput(ShelfTypeReadOutput):
                 "size_class": {
                     "id": 1,
                     "name": "C-Low",
-                    "short_name": "CL",
-                    "assigned": False
+                    "short_name": "CL"
                 }
             }
         }
@@ -80,7 +79,6 @@ class ShelfTypeDetailOutput(ShelfTypeReadOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,

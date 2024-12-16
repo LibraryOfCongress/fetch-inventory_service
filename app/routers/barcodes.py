@@ -76,8 +76,7 @@ def get_barcode_by_value(value: str, session: Session = Depends(get_session)):
     **Raises:**
     - HTTPException: If the barcode is not found.
     """
-    statement = select(Barcode).where(Barcode.value == value)
-    barcode = session.exec(statement).first()
+    barcode = session.query(Barcode).filter(Barcode.value == value).first()
     if not barcode:
         raise NotFound(detail=f"Barcode with value {value} not found")
     return barcode

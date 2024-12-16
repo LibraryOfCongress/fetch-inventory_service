@@ -4,7 +4,6 @@
     {
       "name": "Document Storage Box (legal)",
       "short_name": "DS-1",
-      "assigned": true,
       "height": 15.7,
       "width": 53,
       "depth": 27
@@ -12,7 +11,6 @@
     {
       "name": "Document Storage Box (1/2 legal)",
       "short_name": "DS-2",
-      "assigned": true,
       "height": 15.7,
       "width": 53,
       "depth": 27
@@ -20,7 +18,6 @@
     {
       "name": "Record Storage Box",
       "short_name": "RS",
-      "assigned": true,
       "height": 15.7,
       "width": 40,
       "depth": 27
@@ -28,7 +25,6 @@
     {
       "name": "AL Ft Meade boxes",
       "short_name": "AL",
-      "assigned": true,
       "height": 15.7,
       "width": 53,
       "depth": 27
@@ -36,7 +32,6 @@
     {
       "name": "AH Ft Meade boxes",
       "short_name": "AH",
-      "assigned": true,
       "height": 15.7,
       "width": 53,
       "depth": 27
@@ -44,7 +39,6 @@
     {
       "name": "BL Ft Meade boxes",
       "short_name": "BL",
-      "assigned": true,
       "height": 15.7,
       "width": 40,
       "depth": 27
@@ -52,7 +46,6 @@
     {
       "name": "BH Ft Meade boxes",
       "short_name": "BH",
-      "assigned": true,
       "height": 15.7,
       "width": 40,
       "depth": 27
@@ -60,7 +53,6 @@
     {
       "name": "CL Ft Meade boxes",
       "short_name": "CL",
-      "assigned": true,
       "height": 15.7,
       "width": 40,
       "depth": 27
@@ -68,7 +60,6 @@
     {
       "name": "CH Ft Meade boxes",
       "short_name": "CH",
-      "assigned": true,
       "height": 15.7,
       "width": 40,
       "depth": 27
@@ -76,7 +67,6 @@
     {
       "name": "DL Ft Meade boxes",
       "short_name": "DL",
-      "assigned": true,
       "height": 15.7,
       "width": 40,
       "depth": 27
@@ -84,7 +74,6 @@
     {
       "name": "DH Ft Meade boxes",
       "short_name": "DH",
-      "assigned": true,
       "height": 15.7,
       "width": 40,
       "depth": 27
@@ -92,7 +81,6 @@
     {
       "name": "EL Ft Meade boxes",
       "short_name": "EL",
-      "assigned": true,
       "height": 15.7,
       "width": 40,
       "depth": 27
@@ -100,7 +88,6 @@
     {
       "name": "EH Ft Meade boxes",
       "short_name": "EH",
-      "assigned": true,
       "height": 15.7,
       "width": 40,
       "depth": 27
@@ -108,7 +95,6 @@
     {
       "name": "Sheet Music Boxes",
       "short_name": "SM",
-      "assigned": true,
       "height": 15.7,
       "width": 53,
       "depth": 27

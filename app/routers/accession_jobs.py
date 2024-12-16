@@ -10,19 +10,10 @@ from app.database.session import get_session, commit_record
 from app.filter_params import JobFilterParams
 from app.models.accession_jobs import AccessionJob, AccessionJobStatus
 from app.models.barcodes import Barcode
-from app.models.items import Item
-from app.models.non_tray_items import NonTrayItem
-from app.models.shelf_types import ShelfType
-from app.models.size_class import SizeClass
-from app.models.trays import Tray
 from app.models.verification_jobs import VerificationJob
 from app.models.container_types import ContainerType
 from app.models.workflows import Workflow
-from app.tasks import (
-    complete_accession_job,
-    manage_accession_job_transition,
-    handle_size_class_assigned_status,
-)
+from app.tasks import complete_accession_job, manage_accession_job_transition
 from app.config.exceptions import (
     NotFound,
     ValidationException,
@@ -35,7 +26,6 @@ from app.schemas.accession_jobs import (
     AccessionJobListOutput,
     AccessionJobDetailOutput,
 )
-from app.schemas.verification_jobs import VerificationJobInput
 
 router = APIRouter(
     prefix="/accession-jobs",
@@ -48,7 +38,7 @@ def get_accession_job_list(
     queue: bool = Query(default=False),
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
-    status: AccessionJobStatus | None = None
+    status: AccessionJobStatus | None = None,
 ) -> list:
     """
     Retrieve a paginated list of accession jobs.
@@ -185,12 +175,6 @@ def create_accession_job(
             )
         new_accession_job.container_type_id = container_type.id
 
-        # Check if size class has already been assigned
-        if new_accession_job.size_class_id:
-            size_class = session.get(SizeClass, new_accession_job.size_class_id)
-            if size_class and not size_class.assigned:
-                size_class.assigned = True
-
         # generate a new workflow and attach
         workflow = Workflow()
         session.add(workflow)
@@ -255,23 +239,6 @@ def update_accession_job(
 
     existing_accession_job = commit_record(session, existing_accession_job)
 
-    # Check if size class has already been assigned
-    if accession_job.size_class_id and (
-        accession_job.size_class_id != existing_accession_job.size_class_id
-    ):
-        # Check if size class has already been assigned
-        updated_size_class = session.get(SizeClass, accession_job.size_class_id)
-        if updated_size_class and not updated_size_class.assigned:
-            session.query(SizeClass).filter(
-                SizeClass.id == accession_job.size_class_id
-            ).update({"assigned": True}, synchronize_session=False)
-        else:
-            background_tasks.add_task(
-                handle_size_class_assigned_status(
-                    session, updated_size_class, AccessionJob, existing_accession_job
-                )
-            )
-
     # conditional to avoid transaction concurrency issues
     if mutated_data.get("status") == "Completed":
         if existing_accession_job.items:
@@ -323,6 +290,7 @@ def update_accession_job(
         background_tasks.add_task(
             complete_accession_job, session, existing_accession_job, original_status
         )
+        session.refresh(existing_accession_job)
     else:
         background_tasks.add_task(
             manage_accession_job_transition,
@@ -350,12 +318,6 @@ def delete_accession_job(id: int, session: Session = Depends(get_session)):
     accession_job = session.get(AccessionJob, id)
 
     if accession_job:
-        # Check if size class has already been assigned
-        size_class = session.get(SizeClass, accession_job.size_class_id)
-        handle_size_class_assigned_status(
-            session, size_class, AccessionJob, accession_job
-        )
-
         session.delete(accession_job)
         session.commit()
 

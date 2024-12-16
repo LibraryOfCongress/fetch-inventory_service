@@ -1,6 +1,4 @@
-from typing import List
-
-from fastapi import APIRouter, HTTPException, Depends, Response, Query
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -154,9 +152,6 @@ def delete_size_class(id: int, session: Session = Depends(get_session)):
     size_class = session.get(SizeClass, id)
 
     if size_class:
-        if size_class.assigned:
-            raise BadRequest(detail="Cannot delete size class that is assigned")
-
         session.query(OwnersSizeClassesLink).filter(
             OwnersSizeClassesLink.size_class_id == id
         ).delete(synchronize_session=False)

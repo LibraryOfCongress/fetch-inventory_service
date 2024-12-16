@@ -81,7 +81,6 @@ class OwnerListOutput(OwnerBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27
@@ -118,7 +117,6 @@ class OwnerDetailWriteOutput(OwnerBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27
@@ -172,7 +170,6 @@ class OwnerDetailReadOutput(OwnerBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27
