@@ -35,18 +35,29 @@ class ModuleBaseOutput(BaseModel):
     id: int
 
 
+class BuildingForModuleList(BaseModel):
+    id: int
+    name: Optional[str] = None
+
+
 class ModuleListOutput(ModuleBaseOutput):
+    module_number: Optional[str] = None
+    building_id: int
+    building: Optional[BuildingForModuleList] = None
+
     class Config:
         json_schema_extra = {
             "example": {
-                "id": 1
+                "id": 1,
+                "module_number": "CB",
+                "building_id": 1
             }
         }
 
 
 class ModuleDetailWriteOutput(ModuleBaseOutput):
     building_id: int
-    module_number: str
+    module_number: Optional[str] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -75,7 +86,7 @@ class AisleNestedForModule(BaseModel):
 
 
 class ModuleDetailReadOutput(ModuleBaseOutput):
-    module_number: str
+    module_number: Optional[str] = None
     building: BuildingDetailWriteOutput
     aisles: List[AisleNestedForModule]
     create_dt: datetime
@@ -110,7 +121,7 @@ class ModuleDetailReadOutput(ModuleBaseOutput):
 
 
 class ModuleCustomDetailReadOutput(ModuleBaseOutput):
-    module_number: str
+    module_number: Optional[str] = None
 
     class Config:
         json_schema_extra = {

@@ -1,0 +1,11 @@
+{
+  "model": "app.models.buildings.Building",
+  "data": [
+    {
+      "name": "Fort Meade"
+    },
+    {
+      "name": "Cabin Branch"
+    }
+  ]
+}

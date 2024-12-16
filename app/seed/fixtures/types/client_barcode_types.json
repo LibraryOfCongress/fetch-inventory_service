@@ -1,0 +1,17 @@
+{
+  "model": "app.models.barcode_types.BarcodeType",
+  "data": [
+    {
+      "name": "Item",
+      "allowed_pattern": "^\\d{10}[0-9A]$"
+    },
+    {
+      "name": "Tray",
+      "allowed_pattern": "^[A-Z]{2}\\d{5,6}$"
+    },
+    {
+      "name": "Shelf",
+      "allowed_pattern": "^\\d{6}$"
+    }
+  ]
+}

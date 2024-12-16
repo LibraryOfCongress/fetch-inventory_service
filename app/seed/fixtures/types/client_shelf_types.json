@@ -1,0 +1,225 @@
+{
+  "model": "app.models.shelf_types.ShelfType",
+  "data": [
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "NT"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "NT"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AL"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AL"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AH"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AH"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "BL"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 14
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "BL"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 10
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "BH"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 14
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "BH"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 10
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "CL"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "CL"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 8
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "CH"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "CH"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 8
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DL"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DL"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 9
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DH"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DH"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 9
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EL"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EL"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 9
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EH"
+        }
+      },
+      "type": "Full",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EH"
+        }
+      },
+      "type": "Short",
+      "max_capacity": 9
+    }
+  ]
+}

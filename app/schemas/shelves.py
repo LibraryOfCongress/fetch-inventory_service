@@ -104,6 +104,7 @@ class ShelfBaseOutput(BaseModel):
 class ShelfListOutput(ShelfBaseOutput):
     sort_priority: Optional[int] = None
     ladder_id: int
+    shelf_number: ShelfNumberDetailOutput
     container_type_id: Optional[int] = None
     shelf_type_id: int
     shelf_type: NestedShelfTypeDetailOutput

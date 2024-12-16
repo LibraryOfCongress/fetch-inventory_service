@@ -1,0 +1,40 @@
+{
+  "model": "app.models.users.User",
+  "data": [
+    {
+      "first_name": "Gregory",
+      "last_name": "Wolfe",
+      "email": "gwolfe@loc.gov"
+    },
+    {
+      "first_name": "Paul",
+      "last_name": "Leddy",
+      "email": "pleddy@loc.gov"
+    },
+    {
+      "first_name": "Matt",
+      "last_name": "Martin",
+      "email": "mamartin@loc.gov"
+    },
+    {
+      "first_name": "Cathy",
+      "last_name": "Martyniak",
+      "email": "cmartyniak@loc.gov"
+    },
+    {
+      "first_name": "Admin",
+      "last_name": "Istrator",
+      "email": "admin@loctest.gov"
+    },
+    {
+      "first_name": "Tester",
+      "last_name": "One",
+      "email": "tester1@loctest.gov"
+    },
+    {
+      "first_name": "Tester",
+      "last_name": "Two",
+      "email": "tester2@loctest.gov"
+    }
+  ]
+}

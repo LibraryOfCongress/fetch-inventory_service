@@ -244,7 +244,8 @@ fake_data = [
 ]
 
 
-def seed_data():
+def seed_fake_data():
+    inventory_logger.disabled = False
     inventory_logger.info("Staring process to seed fake data...")
     session = get_seeder_session()
     seeder = HybridSeeder(session)

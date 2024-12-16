@@ -1,0 +1,14 @@
+{
+  "model": "app.models.request_types.RequestType",
+  "data": [
+    {
+      "type": "General Delivery"
+    },
+    {
+      "type": "ILL (InterLibrary Loan)"
+    },
+    {
+      "type": "Scan and Deliver"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ from fastapi_pagination import add_pagination
 from alembic.config import Config
 from alembic import command
 
-from app.seed.seed_fake_data import seed_data
+from app.seed.seed_fake_data import seed_fake_data
 from app.config.config import get_settings
 from app.config.exceptions import (
     BadRequest,
@@ -133,7 +133,7 @@ def alembic_context():
                 # have to do this if shell script 'false' is str or lower
                 SEED_FAKE_DATA = False
             if SEED_FAKE_DATA:
-                seed_data()
+                seed_fake_data()
     except Exception as e:
         print(f"{e}")
         raise

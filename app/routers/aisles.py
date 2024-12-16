@@ -6,10 +6,12 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
+from typing import Optional
 
 from app.database.session import get_session
 from app.models.aisles import Aisle
 from app.models.aisle_numbers import AisleNumber
+from app.models.modules import Module
 from app.schemas.aisles import (
     AisleInput,
     AisleUpdateInput,
@@ -33,14 +35,24 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[AisleListOutput])
-def get_aisle_list(session: Session = Depends(get_session)) -> list:
+def get_aisle_list(
+    session: Session = Depends(get_session),
+    module_number: Optional[str] = None
+) -> list:
     """
     Get a paginated list of aisles.
 
     **Returns**:
     - Aisle List Output: The paginated list of aisles.
     """
-    return paginate(session, select(Aisle))
+    query = select(Aisle).distinct()
+
+    if module_number:
+        query = query.join(
+            Module, Aisle.module_id == Module.id
+        ).where(Module.module_number == module_number)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=AisleDetailReadOutput)

@@ -1,0 +1,35 @@
+{
+  "model": "app.models.media_types.MediaType",
+  "data": [
+    {
+      "name": "Book"
+    },
+    {
+      "name": "Sheet Music"
+    },
+    {
+      "name": "Casette Disk"
+    },
+    {
+      "name": "Newspaper"
+    },
+    {
+      "name": "Schematic"
+    },
+    {
+      "name": "Microfilm"
+    },
+    {
+      "name": "VHS Casette"
+    },
+    {
+      "name": "DVD"
+    },
+    {
+      "name": "Blu-Ray Disc"
+    },
+    {
+      "name": "Cuneiform Tabelet"
+    }
+  ]
+}

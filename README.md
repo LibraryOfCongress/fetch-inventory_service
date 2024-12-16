@@ -286,3 +286,85 @@ There is minimal code changed to support this, namely setting the user based off
 ** It will be necessary to add a trigger to any new table which is added, but it is a simple migration which can be referenced from the third migration add_trigger_to_tables.
 
 There are no endpoints to retrieve audits yet, but they are populating in the database. System run operations, such as seeding, will have the postgres user in the audit log.
+
+# Migrating A Legacy Database
+
+## About
+
+Migrating a legacy database is supported with the use of some built in scripts. This is not to be confused with
+"migrations" which is a common term used in modern backend applications for schema management with the ORM.
+
+ETL (Extract, Transform, and Load(ing)) a database from a legacy system is not completely hands-off, as your
+legacy data structure will likely vary some from other applications which used the same software.  The below sections
+will help you prepare to leverage the legacy data migration scripts, and point out areas that you
+may need to tailor to fit your needs
+
+More coming soon...
+
+## Output
+
+The output of running the legacy migration scripts is a compressed `.sql` file, and a collection of `.csv` reports.
+The `.sql` file is to be used for running a `pg_restore` against an empty `inventory_service` database. It is a completely optimized sequence of instructions that will allow moving a database within minutes (as opposed to the days of processing it takes to create). The `.csv` reports render a collection of all errors, with different data operation sections broken out to differentiate ingest issues based on the database table being processed.
+
+More coming soon...
+
+## Setup
+
+The scripts expect files with the following names to be dropped inside of the `/app/seed/legacy_snapshot` directory. These files should not be committed to version control
+
+```txt
+Coming soon
+```
+
+You also are expected to field static data types in the following templates under `/app/seed/fixtures/entities` and `/app/seed/fixtures/types`.  These templates are an efficient way for us to include data in the database being built, that isn't necessarily captured from the snapshot files of the legacy system. The expected fixtures are as follows:
+
+```txt
+Coming soon
+```
+
+More coming soon...
+
+## Running
+
+This migration scripts are intended to be run in a local environment while all application containers are running on the Docker Desktop engine. You should be operating in a unix or linux environment yourself.  This is ideally MacOS, but can be a Linux distro, or WSL on a Windows machine.
+
+All below commands assume you've cloned components of the application in a workspace directory under your user. `~/workspace/fetch/inventory_service`, `~/workspace/fetch/fetch-local` and `~/workspace/fetch/database`.
+
+Build & run the FETCH app from the `fetch-local` context.
+```sh
+docker compose up --build
+```
+If this is your first time building the application, this should get you running with the application's schema migrations (database tables) defined in the `inventory_service` database, and you can skip the next command.  Otherwise, you'll need to run `refresh-db`.
+
+(Note - this currently still calls fake data seeding, but that feature will be removed in the near future and this comment will be removed)
+```sh
+./helper.sh refresh-db
+```
+
+Now that you have the database tables of the application set up, you can call the data migration script.
+```sh
+./helper.sh run-data-migration
+```
+The script will log out what is processing from the spreadsheets you placed in the `legacy_snapshot` directory.
+
+This processing will take hours, possibly upwards of 72 - 84, depending on your machine, your docker resource allocation, and the size of the database you are translating / ingesting. Once it completes, the logs will give a summary report. Detailed reporting will have been piped to files in the container. If there were no errors on a given section, the file for that section won't actually be generated.
+
+More coming soon...
+
+After processing is complete, run the following helper command to extract the output files from the inventory service docker container
+to your local operating system
+
+
+```sh
+./helper.sh extract-data-migration
+```
+
+This will create a directory on your machine at `~/Desktop/fetch_migration`. If there were errors during processing, error files will be inside an errors folder inside this directory. Otherwise you will just see a compressed `.gz` sql file.
+
+It's important to note the logical intention of an error in these reports, is first and foremost to capture if a given row of data was unprocessible. It is not intended to have an opinion on data outcome in processing.
+
+## Deployed Database Creation
+
+Now that you have the `.sql` file, you need to use it to create your deployed database.
+
+Coming soon...
