@@ -139,7 +139,7 @@ def update_shelf_type(
 
         mutated_data = shelf_type_input.model_dump(exclude_unset=True)
 
-        if mutated_data['max_capacity']:
+        if 'max_capacity' in mutated_data.keys():
         # Check if the parent has associated children
         # Below method avoids having to load for check
             child_shelves_count = session.exec(

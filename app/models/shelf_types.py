@@ -3,10 +3,16 @@ from datetime import datetime
 
 import sqlalchemy as sa
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy.schema import UniqueConstraint
 
 
 class ShelfType(SQLModel, table=True):
     __tablename__ = "shelf_types"
+    __table_args__ = (
+        UniqueConstraint(
+            "type", "max_capacity", "size_class_id", name="uq_type_max_cap_size_class_shelf_type"
+        ),
+    )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
     type: Optional[str] = Field(
