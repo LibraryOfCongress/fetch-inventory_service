@@ -633,7 +633,7 @@ async def batch_upload_location_management(
             if not ladder:
                 ladder = Ladder(
                     ladder_number_id=ladder_number.id,
-                    ladder_sort_priority=row["ladder_sort_priority"],
+                    sort_priority=row["ladder_sort_priority"],
                     side_id=side_id,
                 )
                 ladder = commit_record(session, ladder)
