@@ -106,16 +106,14 @@ class Tray(SQLModel, table=True):
 
     barcode: Optional["Barcode"] = Relationship(
         sa_relationship_kwargs=dict(
-            cascade="all",
-            backref=backref("barcode_tray", cascade="all, delete-orphan"),
+            backref=backref("barcode_tray"),
             foreign_keys="Tray.barcode_id",
             uselist=False
         )
     )
     withdrawn_barcode: Optional["Barcode"] = Relationship(
         sa_relationship_kwargs=dict(
-            cascade="all",
-            backref=backref("withdrawn_tray", cascade="all, delete-orphan"),
+            backref=backref("withdrawn_tray"),
             foreign_keys="Tray.withdrawn_barcode_id",
             uselist=False
         )

@@ -99,6 +99,7 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
 
     requests = pick_list.requests
     request_data = []
+    sorted_requests = set()
 
     for request in requests:
         if request.item_id:
@@ -109,9 +110,7 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
                 raise NotFound(detail=f"Tray ID {item.tray_id} Not Found")
 
             if not tray.shelf_position:
-                raise NotFound(detail=f"Shelf Position Not Found")
-
-            shelf_position = tray.shelf_position
+                continue
 
         elif request.non_tray_item_id:
             non_try_item = session.get(NonTrayItem, request.non_tray_item_id)
@@ -122,7 +121,7 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
                 )
 
             if not non_try_item.shelf_position:
-                raise NotFound(detail=f"Shelf Position Not Found")
+                continue
 
             shelf_position = non_try_item.shelf_position
 
@@ -150,7 +149,7 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
             }
         )
 
-        sorted_requests = sorted(
+        sorted_request_data = sorted(
             request_data,
             key=lambda x: (
                 x["aisle_priority"],
@@ -160,7 +159,13 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
         )
 
         # Extract the sorted request objects
-        pick_list.requests = [data["request"] for data in sorted_requests]
+        sorted_requests = [data["request"] for data in sorted_request_data]
+
+        # Append requests not present in sorted_requests due to withdrawn
+        remaining_requests = [
+            req for req in requests if req not in sorted_requests
+        ]
+        pick_list.requests = sorted_requests + remaining_requests
 
     return pick_list
 

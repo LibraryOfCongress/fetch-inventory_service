@@ -260,6 +260,7 @@ class ItemDetailNestedForVerificationJob(BaseModel):
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class TrayDetailNestedForVerificationJob(BaseModel):
@@ -285,6 +286,7 @@ class TrayDetailNestedForVerificationJob(BaseModel):
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class NonTrayItemDetailNestedForVerificationJob(BaseModel):
@@ -308,6 +310,7 @@ class NonTrayItemDetailNestedForVerificationJob(BaseModel):
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):

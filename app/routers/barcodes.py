@@ -281,7 +281,7 @@ def delete_barcode(id: uuid.UUID, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Barcode ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Barcode ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Barcode ID {id} Not Found")

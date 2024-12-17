@@ -142,6 +142,21 @@ class NestedOwnerForRequest(BaseModel):
     name: Optional[str] = None
 
 
+class NestedBarcodeTypeOutputForBarcode(BaseModel):
+    id: int
+    name: str
+
+
+class NestedWithdrawnBarcode(BaseModel):
+    id: uuid.UUID | None
+    value: str
+    withdrawn: bool
+    type_id: int
+    type: NestedBarcodeTypeOutputForBarcode
+    create_dt: datetime
+    update_dt: datetime
+
+
 class ItemNestedForRequest(BaseModel):
     id: int
     title: Optional[str] = None
@@ -154,6 +169,7 @@ class ItemNestedForRequest(BaseModel):
     status: Optional[str] = None
     media_type: Optional[MediaTypeNestedForRequest] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
     tray: Optional[TrayNestedForRequest] = None
 
 
@@ -166,6 +182,7 @@ class NonTrayItemNestedForRequest(BaseModel):
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
