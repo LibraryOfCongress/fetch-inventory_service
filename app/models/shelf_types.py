@@ -10,7 +10,7 @@ class ShelfType(SQLModel, table=True):
     __tablename__ = "shelf_types"
     __table_args__ = (
         UniqueConstraint(
-            "type", "max_capacity", "size_class_id", name="uq_type_max_cap_size_class_shelf_type"
+            "type", "size_class_id", name="uq_type_size_class_shelf_type"
         ),
     )
 
