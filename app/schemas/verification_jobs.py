@@ -259,7 +259,7 @@ class ItemDetailNestedForVerificationJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class TrayDetailNestedForVerificationJob(BaseModel):
@@ -284,7 +284,7 @@ class TrayDetailNestedForVerificationJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class NonTrayItemDetailNestedForVerificationJob(BaseModel):
@@ -307,7 +307,7 @@ class NonTrayItemDetailNestedForVerificationJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):

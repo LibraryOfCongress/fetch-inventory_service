@@ -127,7 +127,7 @@ class ShelfPositionNestedForRequest(BaseModel):
 
 class TrayNestedForRequest(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
@@ -153,7 +153,7 @@ class ItemNestedForRequest(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     status: Optional[str] = None
     media_type: Optional[MediaTypeNestedForRequest] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     tray: Optional[TrayNestedForRequest] = None
 
 
@@ -165,7 +165,7 @@ class NonTrayItemNestedForRequest(BaseModel):
     owner: Optional[NestedOwnerForRequest] = None
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
@@ -318,7 +318,7 @@ class NestedBarcodeRequestList(BaseModel):
 
 class NestedTrayRequestList(BaseModel):
     id: int
-    barcode: NestedBarcodeRequestList
+    barcode: Optional[NestedBarcodeRequestList] = None
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
@@ -333,7 +333,7 @@ class NestedItemRequestList(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     status: Optional[str] = None
     media_type: Optional[MediaTypeNestedForRequest] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     tray: Optional[NestedTrayRequestList] = None
 
 

@@ -181,7 +181,7 @@ class TrayNestedForShelvingJob(BaseModel):
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForShelvingJob] = None
     shelf_position_proposed_id: Optional[int] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 
@@ -193,7 +193,7 @@ class NonTrayNestedForShelvingJob(BaseModel):
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForShelvingJob] = None
     shelf_position_proposed_id: Optional[int] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 

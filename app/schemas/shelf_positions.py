@@ -95,12 +95,12 @@ class ShelfPositionDetailWriteOutput(BaseModel):
 
 class TrayNestedForShelfPositionOutput(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class NonTrayNestedForShelfPositionOutput(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):

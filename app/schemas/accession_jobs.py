@@ -159,7 +159,7 @@ class ItemDetailNestedForAccessionJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
@@ -182,7 +182,7 @@ class TrayDetailNestedForAccessionJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
@@ -203,7 +203,7 @@ class NonTrayItemDetailNestedForAccessionJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
