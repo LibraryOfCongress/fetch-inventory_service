@@ -86,6 +86,7 @@ def get_ladder_detail(
         "id": ladder.id,
         "side": ladder.side,
         "ladder_number": ladder.ladder_number,
+        "sort_priority": ladder.sort_priority,
         "shelves": filter_shelves,  # Override shelves with filtered result
         "create_dt": ladder.create_dt,
         "update_dt": ladder.update_dt,
