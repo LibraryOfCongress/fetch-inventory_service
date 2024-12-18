@@ -112,6 +112,8 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
             if not tray.shelf_position:
                 continue
 
+            shelf_position = tray.shelf_position
+
         elif request.non_tray_item_id:
             non_try_item = session.get(NonTrayItem, request.non_tray_item_id)
 
