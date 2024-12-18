@@ -1,6 +1,9 @@
+import csv
+from io import StringIO
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy import func, union_all, literal, and_
@@ -8,12 +11,18 @@ from sqlmodel import Session, select
 
 from app.database.session import get_session
 from app.logger import inventory_logger
+from app.filter_params import ShelvingJobDiscrepancyParams
 from app.models.items import Item
 from app.models.media_types import MediaType
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
 from app.models.size_class import SizeClass
-from app.schemas.reporting import AccessionItemsDetailOutput
+from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
+from app.schemas.reporting import AccessionItemsDetailOutput, ShelvingJobDiscrepancyOutput
+from app.config.exceptions import (
+    NotFound
+)
+
 
 router = APIRouter(
     prefix="/reporting",
@@ -114,3 +123,82 @@ def get_accessioned_items_aggregate(
     except Exception as e:
         inventory_logger.error(e)
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+
+
+# SHELVING JOB DISCREPANCIES
+@router.get("/shelving-job-discrepancies/", response_model=Page[ShelvingJobDiscrepancyOutput])
+def get_shelving_job_discrepancy_list(
+    session: Session = Depends(get_session),
+    params: ShelvingJobDiscrepancyParams = Depends()
+) -> list:
+    """
+    Returns a paginated list of ShelvingJobDiscrepancy objects.
+    """
+    query = select(ShelvingJobDiscrepancy).distinct()
+    if params.shelving_job_id:
+        query = query.where(ShelvingJobDiscrepancy.shelving_job_id == params.shelving_job_id)
+    if params.user_id:
+        query = query.where(ShelvingJobDiscrepancy.user_id == params.user_id)
+    if params.from_dt:
+        query = query.where(ShelvingJobDiscrepancy.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(ShelvingJobDiscrepancy.create_dt <= params.to_dt)
+
+    return paginate(session, query)
+
+
+@router.get("/shelving-job-discrepancies/{id}", response_model=ShelvingJobDiscrepancyOutput)
+def get_shelving_job_discrepancy_detail(id: int, session: Session = Depends(get_session)):
+    """
+    Returns a single Shelving Job Discrepancy object
+    """
+    shelving_job_discrepancy = session.get(ShelvingJobDiscrepancy, id)
+
+    if shelving_job_discrepancy:
+        return shelving_job_discrepancy
+
+    raise NotFound(detail=f"Shelving Job Discrepancy ID {id} Not Found")
+
+
+@router.get("/shelving-job-discrepancies/download/", response_class=StreamingResponse)
+def get_shelving_job_report_csv(
+    session: Session = Depends(get_session),
+    params: ShelvingJobDiscrepancyParams = Depends()
+):
+    """
+    Translates list response of ShelvingJobDiscrepancy objects to csv,
+    returns binary for download
+    """
+    query = select(ShelvingJobDiscrepancy).distinct()
+
+    if params.shelving_job_id:
+        query = query.where(ShelvingJobDiscrepancy.shelving_job_id == params.shelving_job_id)
+    if params.user_id:
+        query = query.where(ShelvingJobDiscrepancy.user_id == params.user_id)
+    if params.from_dt:
+        query = query.where(ShelvingJobDiscrepancy.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(ShelvingJobDiscrepancy.create_dt <= params.to_dt)
+
+    result = session.execute(query)
+    rows = result.all()  # List of tuples
+        # Create an in-memory CSV
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Write headers (optional: use column names dynamically)
+    writer.writerow(["discrepancy_id", "shelving_job_id", "tray_id", "non_tray_item_id", "user_id", "error", "create_dt", "update_dt"])
+
+    # Write rows
+    for row in rows:
+        writer.writerow([row.id, row.shelving_job_id, row.tray_id, row.non_tray_item_id, row.user_id, row.error, row.create_dt, row.update_dt])
+
+    # Reset the buffer position
+    output.seek(0)
+
+    # Create a StreamingResponse
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=my_model_data.csv"}
+    )

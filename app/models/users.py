@@ -142,3 +142,11 @@ class User(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
+
+    shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={
+            "primaryjoin": "ShelvingJobDiscrepancy.user_id==User.id",
+            "lazy": "selectin"
+        }
+    )

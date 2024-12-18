@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
-from app.database.session import get_session
+from app.database.session import get_session, commit_record
 from app.filter_params import JobFilterParams
 from app.utilities import process_containers_for_shelving, manage_transition
 from app.models.verification_jobs import VerificationJob
@@ -16,6 +16,7 @@ from app.models.shelves import Shelf
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.barcodes import Barcode
+from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
 from app.schemas.shelving_jobs import (
     ShelvingJobInput,
     ShelvingJobUpdateInput,
@@ -513,6 +514,36 @@ def reassign_container_location(
         container.size_class_id != shelf_type.size_class_id
         or container.owner_id != updated_shelf.owner_id
     ):
+        # Create a Discrepancy
+        discrepancy_error = "Unknown"
+        if container.container_type_id == 1:
+            discrepancy_tray_id = container.id
+            discrepancy_non_tray_id = None
+        else:
+            discrepancy_tray_id = None
+            discrepancy_non_tray_id = container.id
+        if container.size_class_id != shelf_type.size_class_id:
+            discrepancy_error = f"""Size Discrepancy - Container size_id: {container.size_class_id} - Shelf size_id: {shelf_type.size_class_id}"""
+        if container.owner_id != updated_shelf.owner_id:
+            discrepancy_error = f"""Owner Discrepancy - Container owner_id: {container.owner_id} - Shelf owner_id: {updated_shelf.owner_id}"""
+
+        # grab shelving job for user_id
+        shelving_job = (
+            session.query(ShelvingJob)
+            .where(ShelvingJob.id == id)
+            .first()
+        )
+
+        if reassignment_input.trayed:
+            new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
+                shelving_job_id=id,
+                tray_id=discrepancy_tray_id,
+                non_tray_item_id=discrepancy_non_tray_id,
+                user_id=shelving_job.user_id,
+                error=f"{discrepancy_error}"
+            )
+        new_shelving_job_discrepancy = commit_record(session, new_shelving_job_discrepancy)
+
         raise ValidationException(
             detail=f"Container Barcode {reassignment_input.container_barcode_value} "
             "does not match Shelf owner and size class."

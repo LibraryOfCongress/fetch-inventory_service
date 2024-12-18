@@ -137,3 +137,10 @@ class Tray(SQLModel, table=True):
     withdraw_jobs: List[WithdrawJob] = Relationship(
         back_populates="trays", link_model=TrayWithdrawal
     )
+    shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
+        back_populates="tray",
+        sa_relationship_kwargs={
+            "primaryjoin": "ShelvingJobDiscrepancy.tray_id==Tray.id",
+            "lazy": "selectin"
+        }
+    )

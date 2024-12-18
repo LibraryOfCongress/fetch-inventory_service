@@ -163,3 +163,10 @@ class NonTrayItem(SQLModel, table=True):
     withdraw_jobs: List[WithdrawJob] = Relationship(
         back_populates="non_tray_items", link_model=NonTrayItemWithdrawal
     )
+    shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
+        back_populates="non_tray_item",
+        sa_relationship_kwargs={
+            "primaryjoin": "ShelvingJobDiscrepancy.non_tray_item_id==NonTrayItem.id",
+            "lazy": "selectin"
+        }
+    )
