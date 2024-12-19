@@ -153,6 +153,7 @@ class TrayBaseOutput(TrayUpdateInput):
     id: int
     items: List[ItemNestedForTrayOutput]
     barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: SizeClassDetailReadOutput
     shelf_position: Optional[ShelfPositionNestedForTrayOutput] = None

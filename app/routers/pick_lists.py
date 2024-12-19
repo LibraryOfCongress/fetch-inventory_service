@@ -107,7 +107,7 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
             tray = session.get(Tray, item.tray_id)
 
             if not tray:
-                raise NotFound(detail=f"Tray ID {item.tray_id} Not Found")
+                continue
 
             if not tray.shelf_position:
                 continue

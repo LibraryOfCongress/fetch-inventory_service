@@ -312,6 +312,15 @@ def update_withdraw_job(
                 trays = session.query(Tray).filter(Tray.id.in_(tray_ids)).all()
                 for tray in trays:
                     if tray and len(tray.items) == 0:
+
+                        # Updating Tray barcode status to Withdrawn
+                        session.query(Barcode).filter(
+                            Barcode.id == tray.barcode_id
+                        ).update(
+                            {"withdrawn": True, "update_dt": updated_dt},
+                            synchronize_session=False,
+                        )
+
                         tray.shelf_position_id = None
                         tray.shelf_position_proposed_id = None
                         tray.withdrawn_barcode_id = tray.barcode_id
