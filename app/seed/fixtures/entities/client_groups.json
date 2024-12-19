@@ -3,6 +3,18 @@
   "data": [
     {
       "name": "Administrator"
+    },
+    {
+      "name": "offsiteMH"
+    },
+    {
+      "name": "onsiteMH"
+    },
+    {
+      "name": "Reporting"
+    },
+    {
+      "name": "Supervisor"
     }
   ]
 }

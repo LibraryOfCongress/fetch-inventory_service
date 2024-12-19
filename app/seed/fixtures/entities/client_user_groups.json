@@ -70,6 +70,622 @@
           "name": "Administrator"
         }
       }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "dblackwood@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "dbyrd@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "mcontee@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "rdzi@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "thos@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "chric@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "csherrod@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "mvines@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "lwel@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "mbwi@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "dwol@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "chle@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "knelson@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "offsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "nbur@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "onsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "LHEA@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "onsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "rifi@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "onsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "rojoh@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "onsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "hmcq@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "onsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "poli@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "onsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "dsan@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "onsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "juwhite@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "onsiteMH"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "ktho@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "amybarnes@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "chbro@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "kbrugger@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "osea@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "jdav@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "rfit@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "egahn@umd.edu"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "kdorrough@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "thep@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "zjohnson@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "emcp@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "mimi@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "rmooney@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "mmorg@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "spow@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "jlro@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "cspe@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "tcbr@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "reyo@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Reporting"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "sdbr@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Supervisor"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "kmoon@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Supervisor"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "mtol@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Supervisor"
+        }
+      }
     }
   ]
 }
