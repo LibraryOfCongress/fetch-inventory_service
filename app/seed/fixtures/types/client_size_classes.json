@@ -1,0 +1,82 @@
+{
+  "model": "app.models.size_class.SizeClass",
+  "data": [
+    {
+      "name": "Non-Tray temporary",
+      "short_name": "NT",
+      "height": 15.7,
+      "width": 53,
+      "depth": 27
+    },
+    {
+      "name": "AL Ft Meade boxes",
+      "short_name": "AL",
+      "height": 15.7,
+      "width": 53,
+      "depth": 27
+    },
+    {
+      "name": "AH Ft Meade boxes",
+      "short_name": "AH",
+      "height": 15.7,
+      "width": 53,
+      "depth": 27
+    },
+    {
+      "name": "BL Ft Meade boxes",
+      "short_name": "BL",
+      "height": 15.7,
+      "width": 40,
+      "depth": 27
+    },
+    {
+      "name": "BH Ft Meade boxes",
+      "short_name": "BH",
+      "height": 15.7,
+      "width": 40,
+      "depth": 27
+    },
+    {
+      "name": "CL Ft Meade boxes",
+      "short_name": "CL",
+      "height": 15.7,
+      "width": 40,
+      "depth": 27
+    },
+    {
+      "name": "CH Ft Meade boxes",
+      "short_name": "CH",
+      "height": 15.7,
+      "width": 40,
+      "depth": 27
+    },
+    {
+      "name": "DL Ft Meade boxes",
+      "short_name": "DL",
+      "height": 15.7,
+      "width": 40,
+      "depth": 27
+    },
+    {
+      "name": "DH Ft Meade boxes",
+      "short_name": "DH",
+      "height": 15.7,
+      "width": 40,
+      "depth": 27
+    },
+    {
+      "name": "EL Ft Meade boxes",
+      "short_name": "EL",
+      "height": 15.7,
+      "width": 40,
+      "depth": 27
+    },
+    {
+      "name": "EH Ft Meade boxes",
+      "short_name": "EH",
+      "height": 15.7,
+      "width": 40,
+      "depth": 27
+    }
+  ]
+}

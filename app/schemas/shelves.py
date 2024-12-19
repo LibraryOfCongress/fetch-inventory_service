@@ -77,7 +77,6 @@ class NestedSizeClassDetailOutput(BaseModel):
     id: int
     name: str
     short_name: str
-    assigned: bool
     height: Optional[condecimal(decimal_places=2)] = None
     width: Optional[condecimal(decimal_places=2)] = None
     depth: Optional[condecimal(decimal_places=2)] = None
@@ -104,12 +103,13 @@ class ShelfBaseOutput(BaseModel):
 class ShelfListOutput(ShelfBaseOutput):
     sort_priority: Optional[int] = None
     ladder_id: int
+    shelf_number: ShelfNumberDetailOutput
     container_type_id: Optional[int] = None
     shelf_type_id: int
     shelf_type: NestedShelfTypeDetailOutput
     owner_id: Optional[int] = None
     owner: Optional[OwnerDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
     class Config:
         json_schema_extra = {
@@ -129,7 +129,6 @@ class ShelfListOutput(ShelfBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27,
@@ -184,7 +183,7 @@ class ShelfListOutput(ShelfBaseOutput):
 
 class ShelfDetailWriteOutput(ShelfBaseOutput):
     sort_priority: Optional[int] = None
-    barcode_id: uuid.UUID
+    barcode_id: Optional[uuid.UUID] = None
     ladder_id: int
     container_type_id: Optional[int] = None
     shelf_type_id: int
@@ -198,7 +197,7 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
     shelf_type: NestedShelfTypeDetailOutput
     ladder: LadderDetailWriteOutput
     owner: Optional[OwnerDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -231,7 +230,6 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27,
@@ -317,8 +315,8 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
     height: float
     width: float
     depth: float
-    barcode_id: uuid.UUID
-    barcode: BarcodeDetailReadOutput
+    barcode_id: Optional[uuid.UUID] = None
+    barcode: Optional[BarcodeDetailReadOutput] = None
     create_dt: datetime
     update_dt: datetime
     shelf_positions: List[ShelfPositionNestedForShelf]
@@ -352,7 +350,6 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27,

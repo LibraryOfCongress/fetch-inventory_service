@@ -230,7 +230,7 @@ class NestedBuildingForRefileJob(BaseModel):
 
 class NestedShelfForRefileJob(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_number: NestedShelfNumberForRefileJob
 
 
@@ -244,7 +244,7 @@ class ShelfPositionNestedForRefileJob(BaseModel):
 
 class NestedTrayForRefileJob(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_position: ShelfPositionNestedForRefileJob
 
 
@@ -265,7 +265,8 @@ class TrayNestedForRefileJob(BaseModel):
     owner: Optional[NestedOwnerForRefileJob] = None
     size_class: Optional[NestedSizeClassForRefileJob] = None
     tray: Optional[NestedTrayForRefileJob] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 
@@ -278,7 +279,8 @@ class NonTrayNestedForRefileJob(BaseModel):
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForRefileJob] = None
     shelf_position_proposed_id: Optional[int] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None
     scanned_for_shelving: Optional[bool] = None
 

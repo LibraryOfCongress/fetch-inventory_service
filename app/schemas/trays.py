@@ -29,7 +29,8 @@ class TrayInput(BaseModel):
     media_type_id: Optional[int] = None
     conveyance_bin_id: Optional[int] = None
     size_class_id: Optional[int] = None
-    barcode_id: Optional[uuid.UUID] = None
+    barcode_id: uuid.UUID
+    withdrawn_barcode_id: Optional[uuid.UUID] = None
     accession_dt: Optional[datetime] = None
     shelved_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
@@ -51,6 +52,7 @@ class TrayInput(BaseModel):
                 "conveyance_bin_id": 1,
                 "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "withdrawn_barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "shelved_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
@@ -71,7 +73,25 @@ class TrayMoveInput(BaseModel):
         }
 
 
-class TrayUpdateInput(TrayInput):
+class TrayUpdateInput(BaseModel):
+    accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
+    scanned_for_verification: Optional[bool] = None
+    scanned_for_shelving: Optional[bool] = None
+    collection_accessioned: Optional[bool] = None
+    collection_verified: Optional[bool] = None
+    verification_job_id: Optional[int] = None
+    shelving_job_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    media_type_id: Optional[int] = None
+    conveyance_bin_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    barcode_id: Optional[uuid.UUID] = None
+    withdrawn_barcode_id: Optional[uuid.UUID] = None
+    accession_dt: Optional[datetime] = None
+    shelved_dt: Optional[datetime] = None
+    withdrawal_dt: Optional[datetime] = None
     shelf_position_id: Optional[int] = None
     shelf_position_proposed_id: Optional[int] = None
 
@@ -94,6 +114,7 @@ class TrayUpdateInput(TrayInput):
                 "conveyance_bin_id": 1,
                 "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "withdrawn_barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "shelved_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
@@ -101,11 +122,19 @@ class TrayUpdateInput(TrayInput):
         }
 
 
+class NestedWithdrawnBarcode(BaseModel):
+    id: uuid.UUID | None
+    value: str
+    withdrawn: bool
+    type_id: int
+
+
 class ItemNestedForTrayOutput(BaseModel):
     id: int
     scanned_for_accession: bool
     scanned_for_verification: bool
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
 
 
 class NestedShelfPositionNumber(BaseModel):
@@ -120,14 +149,15 @@ class ShelfPositionNestedForTrayOutput(BaseModel):
     internal_location: Optional[str] = None
 
 
-
-class TrayBaseOutput(TrayInput):
+class TrayBaseOutput(TrayUpdateInput):
     id: int
     items: List[ItemNestedForTrayOutput]
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: SizeClassDetailReadOutput
     shelf_position: Optional[ShelfPositionNestedForTrayOutput] = None
+
 
 class TrayListOutput(TrayBaseOutput):
     owner: Optional[OwnerDetailReadOutput]
@@ -161,7 +191,6 @@ class TrayListOutput(TrayBaseOutput):
                         "id": 1,
                         "name": "C-Low",
                         "short_name": "CL",
-                        "assigned": False,
                         "height": 15.7,
                         "width": 30.33,
                         "depth": 27,
@@ -171,6 +200,14 @@ class TrayListOutput(TrayBaseOutput):
                     "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                     "barcode": {
                         "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "value": "5901234123457",
+                        "type_id": 1,
+                        "create_dt": "2023-10-08T20:46:56.764426",
+                        "update_dt": "2023-10-08T20:46:56.764398"
+                    },
+                    "withdrawn_barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                    "withdrawn_barcode": {
+                        "id": "550e8400-e29b-41d4-a716-446655440001",
                         "value": "5901234123457",
                         "type_id": 1,
                         "create_dt": "2023-10-08T20:46:56.764426",
@@ -265,6 +302,14 @@ class TrayDetailWriteOutput(TrayBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
+                "withdrawn_barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "withdrawn_barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "shelved_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426",
@@ -288,7 +333,6 @@ class TrayDetailWriteOutput(TrayBaseOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,
@@ -362,12 +406,20 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
                 "media_type_id": 1,
                 "conveyance_bin_id": 1,
                 "size_class_id": 1,
-                "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "shelved_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "barcode": {
                     "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "withdrawn_barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "withdrawn_barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
                     "value": "5901234123457",
                     "type_id": 1,
                     "create_dt": "2023-10-08T20:46:56.764426",
@@ -403,7 +455,6 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,

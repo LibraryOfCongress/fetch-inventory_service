@@ -92,8 +92,12 @@ def get_non_tray_by_barcode_value(value: str, session: Session = Depends(get_ses
     if not value:
         raise ValidationException(detail="Non Tray Item barcode value is required")
 
-    statement = select(NonTrayItem).join(Barcode).where(Barcode.value == value)
-    non_tray = session.exec(statement).first()
+    non_tray = (
+        session.query(NonTrayItem)
+        .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
+        .filter(Barcode.value == value)
+        .first()
+    )
     if not non_tray:
         raise NotFound(detail=f"Non Tray Item barcode value {value} Not Found")
     return non_tray
@@ -119,7 +123,7 @@ def create_non_tray_item(
             session.query(Barcode).where(Barcode.id == item_input.barcode_id).first()
         )
         raise ValidationException(
-            detail=f"Item " f"with barcode value" f" {barcode.value} already exists"
+            detail=f"Item with barcode value {barcode.value} already exists"
         )
 
     # Create a new non_tray_item
@@ -265,7 +269,7 @@ def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Non Tray Item ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Non Tray Item ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
@@ -295,8 +299,8 @@ def move_item(
     )
     if not non_tray_item:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Non Tray Item with barcode "
-            "value not found"
+            detail=f"""Failed to transfer: {barcode_value} - Non Tray Item with
+            barcode value not found"""
         )
 
     source_shelf = (
@@ -306,15 +310,13 @@ def move_item(
     )
     if not source_shelf:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Shelf with barcode value "
-            f"not "
-            f"found"
+            detail=f"Failed to transfer: {barcode_value} - Shelf with barcode value not found"
         )
 
     if non_tray_item.shelf_position_id is None:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Non Tray Item has not been "
-            f"assigned to a shelf position."
+            detail=f"""Failed to transfer: {barcode_value} - Non Tray Item has not
+            been assigned to a shelf position"""
         )
 
     if (
@@ -322,7 +324,7 @@ def move_item(
         or not non_tray_item.scanned_for_verification
     ):
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} has not been verified."
+            detail=f"Failed to transfer: {barcode_value} has not been verified"
         )
 
     # Retrieve the destination shelf
@@ -334,8 +336,8 @@ def move_item(
     )
     if not destination_shelf:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Shelf with barcode value"
-            f" {non_tray_item_input.shelf_barcode_value} not found"
+            detail=f"""Failed to transfer: {barcode_value} - Shelf with barcode
+            value {non_tray_item_input.shelf_barcode_value} not found"""
         )
 
     # Check if the source and destination shelves are of the same size class
@@ -345,13 +347,13 @@ def move_item(
         or source_shelf.owner_id != destination_shelf.owner_id
     ):
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Shelf must be of the same size class and owner."""
+            detail=f"Failed to transfer: {barcode_value} - Shelf must be of the same size class and owner."
         )
 
     # Check the available space in the destination shelf
     if destination_shelf.available_space < 1:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Shelf id {destination_shelf.id} has no available space"""
+            detail=f"Failed to transfer: {barcode_value} - Shelf id {destination_shelf.id} has no available space"
         )
 
     # Check if the shelf position at destination shelf is unoccupied
@@ -381,8 +383,8 @@ def move_item(
 
             if tray_shelf_position or non_tray_shelf_position:
                 raise ValidationException(
-                    detail=f"Failed to transfer: {barcode_value} - Shelf Position"
-                    f" {non_tray_item_input.shelf_position_number} is already occupied"
+                    detail=f"""Failed to transfer: {barcode_value} - Shelf Position
+                     {non_tray_item_input.shelf_position_number} is already occupied"""
                 )
             break
 

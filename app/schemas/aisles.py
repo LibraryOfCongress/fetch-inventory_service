@@ -45,12 +45,41 @@ class AisleBaseReadOutput(BaseModel):
     aisle_number_id: int
 
 
+class SideOrientationNestedForAisle(BaseModel):
+    name: str
+
+
+class SideNestedForAisle(BaseModel):
+    id: int
+    side_orientation: SideOrientationNestedForAisle
+
+
 class AisleListOutput(AisleBaseReadOutput):
+    sides: List[SideNestedForAisle]
+    module: ModuleCustomDetailReadOutput | None
+    aisle_number: AisleNumberBaseOutput
+
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "aisle_number_id": 1
+                "aisle_number_id": 1,
+                "module": {
+                    "id": 1,
+                    "module_number": "1",
+                },
+                "aisle_number": {
+                    "id": 1,
+                    "number": 1
+                },
+                "sides": [
+                    {
+                        "id": 1,
+                        "side_orientation": {
+                            "name": "Left"
+                        }
+                    }
+                ]
             }
         }
 
@@ -74,15 +103,6 @@ class AisleDetailWriteOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
-
-
-class SideOrientationNestedForAisle(BaseModel):
-    name: str
-
-
-class SideNestedForAisle(BaseModel):
-    id: int
-    side_orientation: SideOrientationNestedForAisle
 
 
 class AisleDetailReadOutput(BaseModel):

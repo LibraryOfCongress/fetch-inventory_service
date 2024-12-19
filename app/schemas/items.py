@@ -33,7 +33,8 @@ class ItemInput(BaseModel):
     subcollection_id: Optional[int] = None
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
-    barcode_id: Optional[uuid.UUID] = None
+    barcode_id: uuid.UUID
+    withdrawn_barcode_id: Optional[uuid.UUID] = None
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
 
@@ -67,13 +68,35 @@ class ItemInput(BaseModel):
                 "media_type_id": 1,
                 "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "withdrawn_barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
 
 
-class ItemUpdateInput(ItemInput):
+class ItemUpdateInput(BaseModel):
+    status: Optional[str] = None
+    accession_job_id: Optional[int] = None
+    scanned_for_accession: Optional[bool] = None
+    scanned_for_verification: Optional[bool] = None
+    scanned_for_refile_queue: Optional[bool] = None
+    verification_job_id: Optional[int] = None
+    tray_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    title: Optional[str] = None
+    volume: Optional[str] = None
+    condition: Optional[str] = None
+    arbitrary_data: Optional[str] = None
+    subcollection_id: Optional[int] = None
+    media_type_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    barcode_id: Optional[uuid.UUID] = None
+    withdrawn_barcode_id: Optional[uuid.UUID] = None
+    accession_dt: Optional[datetime] = None
+    withdrawal_dt: Optional[datetime] = None
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -94,6 +117,7 @@ class ItemUpdateInput(ItemInput):
                 "media_type_id": 1,
                 "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
+                "withdrawn_barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
@@ -111,7 +135,7 @@ class ItemMoveInput(BaseModel):
         }
 
 
-class ItemBaseOutput(ItemInput):
+class ItemBaseOutput(ItemUpdateInput):
     id: int
 
 
@@ -120,7 +144,8 @@ class ItemListOutput(ItemBaseOutput):
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
     class Config:
         json_schema_extra = {
@@ -172,6 +197,13 @@ class ItemListOutput(ItemBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
+                "withdrawn_barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "title": "Lord of The Rings",
                 "volume": "I",
                 "condition": "Good",
@@ -189,7 +221,6 @@ class ItemListOutput(ItemBaseOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,
@@ -204,7 +235,8 @@ class ItemListOutput(ItemBaseOutput):
 
 
 class ItemDetailWriteOutput(ItemBaseOutput):
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -229,6 +261,13 @@ class ItemDetailWriteOutput(ItemBaseOutput):
                 "size_class_id": 1,
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
+                "withdrawn_barcode": {
                     "id": "550e8400-e29b-41d4-a716-446655440001",
                     "value": "5901234123457",
                     "type_id": 1,
@@ -280,6 +319,13 @@ class ItemDetailReadOutput(ItemDetailWriteOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
+                "withdrawn_barcode": {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
+                    "value": "5901234123457",
+                    "type_id": 1,
+                    "create_dt": "2023-10-08T20:46:56.764426",
+                    "update_dt": "2023-10-08T20:46:56.764398"
+                },
                 "media_type": {
                     "id": 1,
                     "name": "Book",
@@ -290,7 +336,6 @@ class ItemDetailReadOutput(ItemDetailWriteOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,

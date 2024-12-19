@@ -76,8 +76,7 @@ def get_barcode_by_value(value: str, session: Session = Depends(get_session)):
     **Raises:**
     - HTTPException: If the barcode is not found.
     """
-    statement = select(Barcode).where(Barcode.value == value)
-    barcode = session.exec(statement).first()
+    barcode = session.query(Barcode).filter(Barcode.value == value).first()
     if not barcode:
         raise NotFound(detail=f"Barcode with value {value} not found")
     return barcode
@@ -282,7 +281,7 @@ def delete_barcode(id: uuid.UUID, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Barcode ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Barcode ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Barcode ID {id} Not Found")

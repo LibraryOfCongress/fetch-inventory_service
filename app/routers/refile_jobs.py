@@ -62,20 +62,29 @@ def sort_order_priority(session, item_type, item):
 
 def sorted_requests(session, refile_job):
     request_data = []
+    withdrawn_items = []
+    withdrawn_non_tray_items = []
     items = refile_job.items
     non_tray_items = refile_job.non_tray_items
 
     if items:
         for item in items:
-            request_data.append(sort_order_priority(session, "item", item))
+            if item.tray:
+                if item.tray.shelf_position:
+                    request_data.append(sort_order_priority(session, "item", item))
+                else:
+                    withdrawn_items.append(item)
+            else:
+                withdrawn_items.append(item)
 
     if non_tray_items:
         for non_tray_item in non_tray_items:
-            if not non_tray_item.shelf_position:
-                raise NotFound(detail=f"Shelf Position Not Found")
-            request_data.append(
-                sort_order_priority(session, "non_tray_item", non_tray_item)
-            )
+            if non_tray_item.shelf_position:
+                request_data.append(
+                    sort_order_priority(session, "non_tray_item", non_tray_item)
+                )
+            else:
+                withdrawn_non_tray_items.append(non_tray_item)
 
     sort_requests = sorted(
         request_data,
@@ -92,6 +101,10 @@ def sorted_requests(session, refile_job):
             sorted_list.append(item["item"])
         elif item.get("non_tray_item"):
             sorted_list.append(item["non_tray_item"])
+
+    # Append withdrawn items without shelf positions to the end
+    sorted_list.extend(withdrawn_items)
+    sorted_list.extend(withdrawn_non_tray_items)
 
     refile_job = refile_job.model_dump()
     refile_job["refile_job_items"] = sorted_list

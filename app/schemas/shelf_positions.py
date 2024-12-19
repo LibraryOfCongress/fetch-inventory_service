@@ -53,6 +53,7 @@ class ShelfPositionBaseReadOutput(BaseModel):
 class NestedShelfPositionNumberForShelvingPositionList(BaseModel):
     number: int
 
+
 class ShelfPositionListOutput(ShelfPositionBaseReadOutput):
     shelf_position_number: NestedShelfPositionNumberForShelvingPositionList
 
@@ -94,12 +95,12 @@ class ShelfPositionDetailWriteOutput(BaseModel):
 
 class TrayNestedForShelfPositionOutput(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class NonTrayNestedForShelfPositionOutput(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):
@@ -132,8 +133,7 @@ class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):
                         "size_class": {
                             "id": 1,
                             "name": "C-Low",
-                            "short_name": "CL",
-                            "assigned": False
+                            "short_name": "CL"
                         },
                         "create_dt": "2023-10-08T20:46:56.764426",
                         "update_dt": "2023-10-08T20:46:56.764398",

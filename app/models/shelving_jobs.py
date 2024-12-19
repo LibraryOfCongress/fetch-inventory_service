@@ -90,3 +90,11 @@ class ShelvingJob(SQLModel, table=True):
     )
 
     building: "Building" = Relationship(back_populates="shelving_jobs")
+
+    shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
+        back_populates="shelving_job",
+        sa_relationship_kwargs={
+            "primaryjoin": "ShelvingJobDiscrepancy.shelving_job_id==ShelvingJob.id",
+            "lazy": "selectin"
+        }
+    )

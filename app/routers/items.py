@@ -43,7 +43,7 @@ def get_item_list(
     media_type_id: int = Query(default=None),
     from_dt: datetime = Query(default=None),
     to_dt: datetime = Query(default=None),
-    status: ItemStatus | None = None
+    status: ItemStatus | None = None,
 ) -> list:
     """
     Retrieve a paginated list of items from the database.
@@ -101,9 +101,12 @@ def get_item_by_barcode_value(value: str, session: Session = Depends(get_session
     """
     if not value:
         raise ValidationException(detail="Item barcode value is required")
-
-    statement = select(Item).join(Barcode).where(Barcode.value == value)
-    item = session.exec(statement).first()
+    item = (
+        session.query(Item)
+        .join(Barcode, Item.barcode_id == Barcode.id)
+        .filter(Barcode.value == value)
+        .first()
+    )
     if not item:
         raise NotFound(detail=f"Item with barcode value {value} not found")
     return item
@@ -133,7 +136,7 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
             session.query(Barcode).where(Barcode.id == item_input.barcode_id).first()
         )
         raise ValidationException(
-            detail=f"Item " f"with barcode value" f" {barcode.value} already exists"
+            detail=f"Item with barcode value {barcode.value} already exists"
         )
 
     # Create a new item
@@ -223,7 +226,7 @@ def delete_item(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Item ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Item ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Item ID {id} Not Found")
@@ -250,8 +253,7 @@ def move_item(
     )
     if not item_lookup_barcode_value:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} Item with barcode not "
-            f"found"
+            detail=f"Failed to transfer: {barcode_value} Item with barcode not found"
         )
 
     tray_look_barcode_value = (
@@ -261,8 +263,8 @@ def move_item(
     )
     if not tray_look_barcode_value:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
-            f" {item_input.tray_barcode_value} not found"
+            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value
+            {item_input.tray_barcode_value} not found"""
         )
 
     item = (
@@ -273,12 +275,12 @@ def move_item(
 
     if not item.scanned_for_accession or not item.scanned_for_verification:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} has not been verified."
+            detail=f"Failed to transfer: {barcode_value} has not been verified"
         )
 
     if item.status != "In":
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} is not in the tray."
+            detail=f"Failed to transfer: {barcode_value} is not in the tray"
         )
 
     source_tray = session.query(Tray).filter(Tray.id == item.tray_id).first()
@@ -290,20 +292,18 @@ def move_item(
 
     if not item:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Item barcode value"
-            f" {item_lookup_barcode_value.value} not found"
+            detail=f"""Failed to transfer: {barcode_value} - Item barcode value
+             {item_lookup_barcode_value.value} not found"""
         )
 
     destination_tray = (
-        session.query(Tray)
-        .where(Tray.barcode_id == tray_look_barcode_value.id)
-        .first()
+        session.query(Tray).where(Tray.barcode_id == tray_look_barcode_value.id).first()
     )
 
     if not destination_tray:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
-            f" {item_input.tray_barcode_value} not found"
+            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value
+             {item_input.tray_barcode_value} not found"""
         )
 
     background_tasks.add_task(

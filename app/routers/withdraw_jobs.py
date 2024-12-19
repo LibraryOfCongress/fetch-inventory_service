@@ -273,6 +273,8 @@ def update_withdraw_job(
             session.query(Item).filter(Item.id.in_(item_ids)).update(
                 {
                     "withdrawal_dt": updated_dt,
+                    "withdrawn_barcode_id": Item.barcode_id,
+                    "barcode_id": None,
                     "update_dt": updated_dt,
                     "status": "Withdrawn",
                     "tray_id": None,
@@ -310,8 +312,20 @@ def update_withdraw_job(
                 trays = session.query(Tray).filter(Tray.id.in_(tray_ids)).all()
                 for tray in trays:
                     if tray and len(tray.items) == 0:
+
+                        # Updating Tray barcode status to Withdrawn
+                        session.query(Barcode).filter(
+                            Barcode.id == tray.barcode_id
+                        ).update(
+                            {"withdrawn": True, "update_dt": updated_dt},
+                            synchronize_session=False,
+                        )
+
                         tray.shelf_position_id = None
                         tray.shelf_position_proposed_id = None
+                        tray.withdrawn_barcode_id = tray.barcode_id
+                        tray.barcode_id = None
+                        tray.withdrawal_dt = updated_dt
                         tray.update_dt = updated_dt
                         session.add(tray)
 
@@ -333,6 +347,8 @@ def update_withdraw_job(
             ).update(
                 {
                     "withdrawal_dt": updated_dt,
+                    "withdrawn_barcode_id": NonTrayItem.barcode_id,
+                    "barcode_id": None,
                     "update_dt": updated_dt,
                     "status": "Withdrawn",
                     "shelf_position_id": None,
@@ -396,19 +412,23 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
     if withdraw_job.items:
         for item in withdraw_job.items:
             session.query(Item).filter(Item.id == item.id).update(
-                {"update_dt": update_dt, "withdrawal_dt": None}
+                {"update_dt": update_dt, "withdrawal_dt": None, "barcode_id": item.withdrawn_barcode_id,
+                "withdrawn_barcode_id": None}
             )
     if withdraw_job.non_tray_items:
         for non_tray_item in withdraw_job.non_tray_items:
             session.query(NonTrayItem).filter(
                 NonTrayItem.id == non_tray_item.id
-            ).update({"update_dt": update_dt, "withdrawal_dt": None})
+            ).update({"update_dt": update_dt, "withdrawal_dt": None, "barcode_id":
+                non_tray_item.withdrawn_barcode_id, "withdrawn_barcode_id": None}
+                     )
 
     if withdraw_job.trays:
         for tray in withdraw_job.trays:
             for item in tray.items:
                 session.query(Item).filter(Item.id == item.id).update(
-                    {"update_dt": update_dt, "withdrawal_dt": None}
+                    {"update_dt": update_dt, "withdrawal_dt": None,  "barcode_id":
+                item.withdrawn_barcode_id, "withdrawn_barcode_id": None}
                 )
 
     session.delete(withdraw_job)
@@ -435,6 +455,9 @@ def add_items_to_withdraw_job(
     withdraw_job = session.get(WithdrawJob, job_id)
     if not withdraw_job:
         raise NotFound(detail=f"Withdraw job id {job_id} not found")
+
+    if withdraw_job.status == "Completed":
+        raise BadRequest(detail="Withdraw job has already been completed")
 
     errored_barcodes = []
     withdraw_items = []
@@ -646,6 +669,9 @@ def remove_items_from_withdraw_job(
 
     if not withdraw_job:
         raise NotFound(detail=f"Withdraw job id {job_id} not found")
+
+    if withdraw_job.status == "Completed":
+        raise BadRequest(detail="Withdraw job has already been completed")
 
     barcode = (
         session.query(Barcode).filter(Barcode.value == lookup_barcode_value).first()

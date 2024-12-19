@@ -120,8 +120,8 @@ def create_shelf_position(
             f" {shelf.id} exceeds "
             f"max capacity of {shelf_type.max_capacity}"
         )
-    else:
-        shelf.available_space += 1
+    # else:
+    #     shelf.available_space += 1
 
     new_shelf_position = ShelfPosition(**shelf_position_input.model_dump())
 

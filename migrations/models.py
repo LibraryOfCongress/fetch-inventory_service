@@ -49,3 +49,4 @@ from app.models.batch_upload import BatchUpload
 from app.models.workflows import Workflow
 from app.models.shelf_types import ShelfType
 from app.models.owners_size_classes import OwnersSizeClassesLink
+from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy

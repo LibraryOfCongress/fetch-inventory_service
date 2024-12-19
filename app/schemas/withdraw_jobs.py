@@ -102,7 +102,7 @@ class NestedShelfPositionNumberForWithdrawJob(BaseModel):
 
 class NestedShelfForWithdrawJob(BaseModel):
     id: int
-    barcode: BarcodeDetailOutput
+    barcode: Optional[BarcodeDetailOutput] = None
     shelf_number: NestedShelfNumberForWithdrawJob
 
 
@@ -114,7 +114,8 @@ class ShelfPositionNestedForWithdrawJob(BaseModel):
 
 class NestedTrayForWithdrawJob(BaseModel):
     id: int
-    barcode: BarcodeDetailOutput
+    barcode: Optional[BarcodeDetailOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
     shelf_position: ShelfPositionNestedForWithdrawJob
 
 
@@ -126,7 +127,8 @@ class NestedOwnerForWithdrawJob(BaseModel):
 class ItemNestedForWithdrawJob(BaseModel):
     id: int
     status: str
-    barcode: BarcodeDetailOutput
+    barcode: Optional[BarcodeDetailOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
     owner: Optional[NestedOwnerForWithdrawJob] = None
     tray: Optional[NestedTrayForWithdrawJob] = None
 
@@ -137,7 +139,8 @@ class ItemNestedForWithdrawJob(BaseModel):
 class ItemNestedWithoutTrayForWithdrawJob(BaseModel):
     id: int
     status: str
-    barcode: BarcodeDetailOutput
+    barcode: Optional[BarcodeDetailOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
     owner: Optional[NestedOwnerForWithdrawJob] = None
 
 
@@ -145,6 +148,7 @@ class NonTrayNestedForWithdrawJob(BaseModel):
     id: int
     status: str
     barcode: Optional[BarcodeDetailOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
     owner: Optional[NestedOwnerForWithdrawJob] = None
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForWithdrawJob] = None
@@ -155,7 +159,8 @@ class NonTrayNestedForWithdrawJob(BaseModel):
 
 class TrayNestedForWithdrawJob(BaseModel):
     id: int
-    barcode: BarcodeDetailOutput
+    barcode: Optional[BarcodeDetailOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
     owner: Optional[NestedOwnerForWithdrawJob] = None
     shelf_position: Optional[ShelfPositionNestedForWithdrawJob] = None
     items: Optional[List[ItemNestedWithoutTrayForWithdrawJob]] = None

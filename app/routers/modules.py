@@ -5,10 +5,12 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
+from typing import Optional
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.models.modules import Module
+from app.models.buildings import Building
 from app.schemas.modules import (
     ModuleInput,
     ModuleUpdateInput,
@@ -32,14 +34,26 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ModuleListOutput])
-def get_module_list(session: Session = Depends(get_session)) -> list:
+def get_module_list(
+    session: Session = Depends(get_session),
+    building_name: Optional[str] = None
+) -> list:
     """
     Retrieve a paginated list of modules.
 
     **Returns:**
     - Module List Output: The paginated list of modules.
     """
-    return paginate(session, select(Module))
+    query = select(Module).distinct()
+
+    if building_name:
+        query = query.join(
+            Building, Module.building_id == Building.id
+        ).where(
+            Building.name == building_name
+        )
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=ModuleDetailReadOutput)

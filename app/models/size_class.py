@@ -24,7 +24,6 @@ class SizeClass(SQLModel, table=True):
     short_name: str = Field(
         max_length=10, sa_column=sa.VARCHAR, nullable=False, unique=True
     )
-    assigned: bool = Field(default=False)
     height: condecimal(decimal_places=2) = Field(
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
     )

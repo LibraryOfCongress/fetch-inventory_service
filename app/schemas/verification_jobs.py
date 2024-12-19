@@ -259,7 +259,8 @@ class ItemDetailNestedForVerificationJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class TrayDetailNestedForVerificationJob(BaseModel):
@@ -284,7 +285,8 @@ class TrayDetailNestedForVerificationJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class NonTrayItemDetailNestedForVerificationJob(BaseModel):
@@ -307,7 +309,8 @@ class NonTrayItemDetailNestedForVerificationJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
@@ -397,7 +400,6 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,

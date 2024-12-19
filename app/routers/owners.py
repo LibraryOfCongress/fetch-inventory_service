@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional, Union
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
@@ -30,14 +32,29 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[OwnerListOutput])
-def get_owner_list(session: Session = Depends(get_session)) -> list:
+def get_owner_list(
+    owner_tier_id: Optional[int] = Query(None),
+    parent_owner_id: Optional[Union[int, str]] = Query(None),
+    session: Session = Depends(get_session),
+) -> list:
     """
     Get a list of owners.
 
     **Returns:**
     - Owner List Output: The paginated list of owners.
     """
-    return paginate(session, select(Owner))
+    query = select(Owner)
+
+    if owner_tier_id:
+        query = query.where(Owner.owner_tier_id == owner_tier_id)
+
+    # Handle parent_owner_id being explicitly "null"
+    if parent_owner_id == "null":
+        query = query.where(Owner.parent_owner_id.is_(None))
+    elif parent_owner_id is not None:
+        query = query.where(Owner.parent_owner_id == int(parent_owner_id))
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=OwnerDetailReadOutput)
@@ -88,18 +105,26 @@ def create_owner(
         # Check if the parent_owner_id is set
         if new_owner.parent_owner_id is not None:
             # Retrieve the parent owner
-            parent_owner = session.exec(select(Owner).where(Owner.id == new_owner.parent_owner_id)).first()
+            parent_owner = session.exec(
+                select(Owner).where(Owner.id == new_owner.parent_owner_id)
+            ).first()
             if parent_owner is None:
                 raise NotFound(detail=f"Owner ID {id} Not Found")
 
             # query new_owner.owner_tier to get proposed tier level
-            new_owner_tier_level = session.exec(select(OwnerTier).where(
-                OwnerTier.id == new_owner.owner_tier_id
-            )).first().level
+            new_owner_tier_level = (
+                session.exec(
+                    select(OwnerTier).where(OwnerTier.id == new_owner.owner_tier_id)
+                )
+                .first()
+                .level
+            )
 
             # Check if the owner_tier is greater than the parent's owner_tier
             if new_owner_tier_level <= parent_owner.owner_tier.level:
-                raise BadRequest(detail="Owner tier must be lower level (higher value) than parent owner's tier")
+                raise BadRequest(
+                    detail="Owner tier must be lower level (higher value) than parent owner's tier"
+                )
 
         # Add the new owner to the database
         session.add(new_owner)
@@ -143,13 +168,17 @@ def update_owner(
         # Check if the parent_owner_id is set
         if existing_owner.parent_owner_id is not None:
             # Retrieve the parent owner
-            parent_owner = session.exec(select(Owner).where(Owner.id == existing_owner.parent_owner_id)).first()
+            parent_owner = session.exec(
+                select(Owner).where(Owner.id == existing_owner.parent_owner_id)
+            ).first()
             if parent_owner is None:
                 raise NotFound(detail="Parent Owner Not Found")
 
             # Check if the owner_tier is greater than the parent's owner_tier
             if existing_owner.owner_tier.level <= parent_owner.owner_tier.level:
-                raise BadRequest(detail="Owner tier must be lower level (higher value) than parent owner's tier")
+                raise BadRequest(
+                    detail="Owner tier must be lower level (higher value) than parent owner's tier"
+                )
 
         setattr(existing_owner, "update_dt", datetime.utcnow())
         session.add(existing_owner)
@@ -183,8 +212,7 @@ def delete_owner(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Owner ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Owner ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Owner ID {id} Not Found")

@@ -7,7 +7,6 @@ from app.schemas.owners import OwnerDetailReadOutput
 class SizeClassInput(BaseModel):
     name: Optional[constr(max_length=50)] = None
     short_name: Optional[constr(max_length=10)] = None
-    assigned: Optional[bool] = None
     owner_ids: Optional[list[int]] = None
     height: Optional[condecimal(decimal_places=2)] = None
     width: Optional[condecimal(decimal_places=2)] = None
@@ -18,7 +17,6 @@ class SizeClassInput(BaseModel):
             "example": {
                 "name": "C-Low",
                 "short_name": "CL",
-                "assigned": False,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
@@ -34,7 +32,6 @@ class SizeClassUpdateInput(SizeClassInput):
             "example": {
                 "name": "C-Low",
                 "short_name": "CL",
-                "assigned": False,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
@@ -67,7 +64,6 @@ class SizeClassBaseOutput(BaseModel):
 class SizeClassListOutput(SizeClassBaseOutput):
     name: str
     short_name: str
-    assigned: bool
     height: Optional[condecimal(decimal_places=2)] = None
     width: Optional[condecimal(decimal_places=2)] = None
     depth: Optional[condecimal(decimal_places=2)] = None
@@ -79,7 +75,6 @@ class SizeClassListOutput(SizeClassBaseOutput):
                 "id": 1,
                 "name": "C-Low",
                 "short_name": "CL",
-                "assigned": False,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
@@ -100,7 +95,6 @@ class SizeClassListOutput(SizeClassBaseOutput):
 class SizeClassDetailWriteOutput(SizeClassBaseOutput):
     name: str
     short_name: str
-    assigned: Optional[bool] = None
     height: Optional[condecimal(decimal_places=2)] = None
     width: Optional[condecimal(decimal_places=2)] = None
     depth: Optional[condecimal(decimal_places=2)] = None
@@ -114,7 +108,6 @@ class SizeClassDetailWriteOutput(SizeClassBaseOutput):
                 "id": 1,
                 "name": "C-Low",
                 "short_name": "CL",
-                "assigned": False,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
@@ -142,7 +135,6 @@ class SizeClassDetailReadOutput(SizeClassDetailWriteOutput):
                 "id": 1,
                 "name": "C-Low",
                 "short_name": "CL",
-                "assigned": False,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,

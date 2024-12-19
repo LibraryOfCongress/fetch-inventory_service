@@ -100,7 +100,7 @@ class ShelvesNestedForLadderOutput(BaseModel):
     id: int
     available_space: Optional[int] = None
     sort_priority: Optional[int] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_number: ShelfNumberNestedForLadderOutput
     owner: OwnerNestedForLadderOutput
     width: Optional[float] = None
@@ -157,8 +157,7 @@ class LadderDetailReadOutput(LadderBaseOutput):
                             "size_class": {
                                 "id": 1,
                                 "name": "C-Low",
-                                "short_name": "CL",
-                                "assigned": False
+                                "short_name": "CL"
                             },
                             "create_dt": "2023-10-08T20:46:56.764426",
                             "update_dt": "2023-10-08T20:46:56.764398",

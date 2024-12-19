@@ -1,5 +1,8 @@
 from typing import Optional
 from pydantic import BaseModel
+from datetime import datetime
+
+from app.schemas.barcodes import BarcodeDetailReadOutput
 
 
 class AccessionItemsDetailOutput(BaseModel):
@@ -19,6 +22,62 @@ class AccessionItemsDetailOutput(BaseModel):
         }
 
 
+class ShelvingJobDiscrepancyBaseOutput(BaseModel):
+    id: int
+    shelving_job_id: int
+    tray_id: Optional[int] = None
+    non_tray_item_id: Optional[int] = None
+    user_id: Optional[int] = None
+    error: Optional[str] = None
+    create_dt: datetime
+    update_dt: datetime
 
 
+class NestedUserSJobDiscrepancy(BaseModel):
+    id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
 
+
+class NestedTraySJobDiscrepancy(BaseModel):
+    id: int
+    barcode: BarcodeDetailReadOutput
+
+
+class NestedNonTrayItemSJobDiscrepancy(BaseModel):
+    id: int
+    barcode: BarcodeDetailReadOutput
+
+
+class ShelvingJobDiscrepancyOutput(ShelvingJobDiscrepancyBaseOutput):
+    user: Optional[NestedUserSJobDiscrepancy] = None
+    tray: Optional[NestedTraySJobDiscrepancy] = None
+    non_tray_item: Optional[NestedNonTrayItemSJobDiscrepancy] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "shelving_job_id": 1,
+                "tray_id": 1,
+                "non_tray_item_id": None,
+                "user_id": 1,
+                "error": "Location Discrepancy - Position or Shelf does not match Job assignment.",
+                "user": {
+                    "first_name": "Bilbo",
+                    "last_name": "Baggins",
+                    "email": "bbaggins@bagend.hobbit"
+                },
+                "tray": {
+                    "id": 1,
+                    "barcode": {
+                        "id": "0031dbfb-28d3-496f-91d3-8e16d9bdbd16",
+                        "value": "12345"
+                    }
+                },
+                "non_tray_item": "",
+                "create_dt": "2023-10-08T20:46:56.764426",
+                "update_dt": "2023-10-08T20:46:56.764398"
+            }
+        }

@@ -33,6 +33,22 @@ refresh-db() {
     # Reset seed arg in case user runs compose elsewhere
 }
 
+run-data-migration() {
+# do not indent on shell str
+RUN_DATA_MIGRATION="
+from app import main
+from app.seed.seed_data import seed_data
+seed_data()
+";
+
+  docker exec -it fetch-inventory-api python -c "$RUN_DATA_MIGRATION";
+}
+
+extract-data-migration() {
+  (docker cp fetch-inventory-api:/code/app/seed/errors ~/Desktop/fetch_migration);
+  (docker exec -i inventory-database pg_dump -U postgres -d inventory_service | gzip > ~/Desktop/fetch_migration/fetch_dump.sql.gz);
+}
+
 makemigrations() {
   USE_MIGRATION_URL=true alembic revision --autogenerate -m $1
 }
@@ -64,8 +80,9 @@ inspect-records() {
 }
 
 idle() {
-  poetry shell;
-  python;
+#   poetry shell;
+#   python;
+    docker exec -it fetch-inventory-api python;
 }
 
 test() {

@@ -77,7 +77,7 @@ class NestedShelfPositionNumberForRefileQueue(BaseModel):
 
 class NestedShelfForRefileQueue(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_number: NestedShelfNumberForRefileQueue
 
 
@@ -91,7 +91,7 @@ class ShelfPositionNestedForRefileQueue(BaseModel):
 
 class NestedTrayForRefileQueue(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_position: ShelfPositionNestedForRefileQueue
 
 
@@ -112,7 +112,7 @@ class TrayNestedForRefileQueue(BaseModel):
     owner: Optional[NestedOwnerForRefileQueue] = None
     size_class: Optional[NestedSizeClassForRefileQueue] = None
     tray: Optional[NestedTrayForRefileQueue] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 
@@ -128,7 +128,7 @@ class NonTrayNestedForRefileQueue(BaseModel):
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForRefileQueue] = None
     shelf_position_proposed_id: Optional[int] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 

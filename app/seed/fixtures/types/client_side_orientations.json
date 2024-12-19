@@ -1,0 +1,11 @@
+{
+  "model": "app.models.side_orientations.SideOrientation",
+  "data": [
+    {
+      "name": "Left"
+    },
+    {
+      "name": "Right"
+    }
+  ]
+}

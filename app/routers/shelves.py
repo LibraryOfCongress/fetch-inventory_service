@@ -36,7 +36,6 @@ router = APIRouter(
     tags=["shelves"],
 )
 
-
 LOGGER = logging.getLogger("app.routers.shelves")
 
 
@@ -50,7 +49,8 @@ def get_shelf_list(
     ladder_id: int | None = None,
     shelf_id: int | None = None,
     owner_id: int | None = None,
-    size_class_id: int | None = None
+    size_class_id: int | None = None,
+    unassigned: bool | None = None
 ) -> list:
     """
     Get a list of shelves.
@@ -123,6 +123,9 @@ def get_shelf_list(
         ).where(
             Building.id == building_id
         )
+
+    if unassigned:
+        shelf_queryset = shelf_queryset.where(Shelf.barcode_id == None)
 
     return paginate(session, shelf_queryset)
 
