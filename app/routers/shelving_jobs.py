@@ -187,10 +187,10 @@ def create_shelving_job(
                         ladder_id,
                     )
 
-            # set verification shelving job last, in case container errors
-            verification_job.shelving_job_id = new_shelving_job.id
-            session.add(verification_job)
-            session.commit()
+                # set verification shelving job last, in case container errors
+                verification_job.shelving_job_id = new_shelving_job.id
+                session.add(verification_job)
+                session.commit()
 
         # else, shelving_job.origin == "Direct", return shelving_job
         session.refresh(new_shelving_job)
