@@ -489,25 +489,6 @@ def reassign_container_location(
             detail=f"Shelf ID {updated_shelf.id} has no available space."
         )
 
-    else:
-        if container.shelf_position_id != updated_shelf_position_id:
-            previous_shelf_position = (
-                session.query(ShelfPosition)
-                .where(ShelfPosition.id == container.shelf_position_id)
-                .first()
-            )
-
-            if previous_shelf_position and (
-                previous_shelf_position.shelf_id != updated_shelf.id
-            ):
-                session.query(Shelf).where(
-                    Shelf.id == previous_shelf_position.shelf_id
-                ).update({"available_space": Shelf.available_space + 1})
-
-        session.query(Shelf).where(Shelf.id == shelf_position.shelf_id).update(
-            {"available_space": Shelf.available_space - 1}
-        )
-
     shelf_type = updated_shelf.shelf_type
     # Check if the container owner and size class match to shelf
     if (

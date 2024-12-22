@@ -206,24 +206,6 @@ def manage_verification_job_transition(
         verification_job.last_transition = datetime.utcnow()
     commit_record(session, verification_job)
 
-
-def manage_shelf_available_space(session, existing_shelf_position, new_shelf_position):
-    """
-    Task manages transition logic for an item's shelf position.
-        - updates available_space
-    """
-
-    if existing_shelf_position.shelf_id != new_shelf_position.shelf_id:
-        session.query(Shelf).filter(
-            Shelf.id == existing_shelf_position.shelf_id
-        ).update({"available_space": existing_shelf_position.shelf.available_space + 1})
-        session.query(Shelf).filter(Shelf.id == new_shelf_position.shelf_id).update(
-            {"available_space": new_shelf_position.shelf.available_space - 1}
-        )
-
-    session.commit()
-
-
 def process_tray_item_move(
     session: Session, item: Item, source_tray: Tray, destination_tray: Tray
 ):
@@ -254,18 +236,6 @@ def process_tray_item_move(
     updated_source_tray = session.query(Tray).filter(Tray.id == source_tray.id).first()
 
     if updated_source_tray and len(updated_source_tray.items) == 0:
-        source_shelf = (
-            session.query(Shelf)
-            .join(ShelfPosition, Shelf.id == ShelfPosition.shelf_id)
-            .filter(ShelfPosition.id == source_tray.shelf_position_id)
-            .first()
-        )
-
-        if source_shelf:
-            session.query(Shelf).filter(Shelf.id == source_shelf.id).update(
-                {"available_space": source_shelf.available_space + 1}
-            )
-
         session.query(Tray).filter(Tray.id == source_tray.id).update(
             {
                 "shelf_position_id": None,
@@ -285,21 +255,6 @@ def process_tray_move(session: Session, tray: Tray, source_shelf: Shelf,
     update_dt = datetime.utcnow()
     tray.shelf_position_id = destination_shelf_position_id
     tray.update_dt = update_dt
-
-    # Update the available space for the source and destination shelves
-    session.query(Shelf).filter(Shelf.id == source_shelf.id).update(
-        {
-            "update_dt": update_dt,
-            "available_space": source_shelf.available_space + 1,
-        }
-    )
-    session.query(Shelf).filter(Shelf.id == destination_shelf.id).update(
-        {
-            "update_dt": update_dt,
-            "available_space": destination_shelf.available_space - 1,
-        }
-    )
-
     session.commit()
     session.refresh(tray)
 
@@ -312,24 +267,6 @@ def process_non_tray_item_move(session: Session, non_tray_item: NonTrayItem, sou
     update_dt = datetime.utcnow()
     non_tray_item.shelf_position_id = destination_shelf_position_id
     non_tray_item.update_dt = update_dt
-
-    # Update the available space for the source and destination shelves
-    session.query(Shelf).filter(Shelf.id == source_shelf.id).update(
-        {
-            "update_dt": update_dt,
-            "available_space": source_shelf.available_space + 1,
-        }
-    )
-    session.query(Shelf).filter(Shelf.id == destination_shelf.id).update(
-        {
-            "update_dt": update_dt,
-            "available_space": destination_shelf.available_space - 1,
-        }
-    )
-
     session.commit()
     session.refresh(non_tray_item)
-    session.refresh(source_shelf)
-    session.refresh(destination_shelf)
-
     return non_tray_item

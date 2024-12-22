@@ -25,7 +25,6 @@ from app.config.exceptions import (
     NotFound,
     ValidationException,
 )
-from app.tasks import manage_shelf_available_space
 
 
 router = APIRouter(
@@ -179,11 +178,6 @@ def update_tray(
                 detail=f"Shelf id {shelf.id} has no available space"
             )
 
-        if existing_tray.shelf_position_id is None:
-            session.query(Shelf).filter(Shelf.id == shelf.id).update(
-                {"available_space": shelf.available_space - 1}
-            )
-
         if existing_tray.shelf_position_id and (
             tray.shelf_position_id != existing_tray.shelf_position_id
         ):
@@ -209,13 +203,6 @@ def update_tray(
                 raise NotFound(
                     detail=f"Shelf Position ID {existing_tray.shelf_position_id} Not Found"
                 )
-
-            background_tasks.add_task(
-                manage_shelf_available_space,
-                session,
-                existing_shelf_position,
-                new_shelf_position,
-            )
 
     # Checking if size class has changed
     if tray.size_class_id and tray.size_class_id != existing_tray.size_class_id:
@@ -259,17 +246,6 @@ def delete_tray(id: int, session: Session = Depends(get_session)):
         for item in items_to_delete:
             session.delete(item)
             session.commit()
-
-        if tray.shelf_position_id:
-            shelf_position = session.query(ShelfPosition).get(tray.shelf_position_id)
-
-            if shelf_position:
-                shelf = session.query(Shelf).get(shelf_position.shelf_id)
-
-                if shelf:
-                    session.query(Shelf).filter(Shelf.id == shelf.id).update(
-                        {"available_space": shelf.available_space + 1}
-                    )
 
         session.delete(tray)
         session.commit()
@@ -406,18 +382,12 @@ def move_tray(
             break
 
     tray.shelf_position_id = destination_shelf_position_id
-    source_shelf.available_space += 1
-    destination_shelf.available_space -= 1
 
     # Update the update_dt field
     update_dt = datetime.utcnow()
     tray.update_dt = update_dt
-    source_shelf.update_dt = update_dt
-    destination_shelf.update_dt = update_dt
 
     session.add(tray)
-    session.add(source_shelf)
-    session.add(destination_shelf)
     session.commit()
 
     return tray

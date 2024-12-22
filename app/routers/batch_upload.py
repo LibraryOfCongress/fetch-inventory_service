@@ -823,7 +823,6 @@ async def batch_upload_location_management(
                     )
                 )
 
-            shelf.available_space = max_capacity
             session.add_all(shelf_position_bulk)
             session.add(shelf)
 
