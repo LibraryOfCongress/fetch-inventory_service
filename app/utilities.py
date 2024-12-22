@@ -8,6 +8,7 @@ import pandas as pd
 import pytz
 from sqlalchemy import and_, text, desc
 from sqlalchemy.orm import joinedload, aliased
+from sqlalchemy.sql import not_
 from sqlmodel import select, Session
 from fastapi import Header, Depends
 
@@ -37,6 +38,7 @@ from app.models.side_orientations import SideOrientation
 from app.models.sides import Side
 from app.models.ladders import Ladder
 from app.models.shelves import Shelf
+from app.models.shelf_types import ShelfType
 from app.models.shelf_positions import ShelfPosition
 from app.models.size_class import SizeClass
 from app.models.tray_withdrawal import TrayWithdrawal
@@ -176,58 +178,60 @@ def process_containers_for_shelving(
         - Commits transactions
     """
     # query is built without execution beforehand
-    shelf_position_query = select(ShelfPosition, Shelf).join(Shelf)
-    conditions = []
+    shelf_position_query = select(
+        ShelfPosition.id.label("shelf_position_id"),
+        ShelfPosition.shelf_id,
+        ShelfPositionNumber.number,
+        Shelf.owner_id,
+        Shelf.ladder_id,
+        Ladder.side_id,
+        Side.aisle_id,
+        Aisle.module_id,
+        Module.building_id,
+        ShelfType.size_class_id
+    ).join(
+        ShelfPositionNumber, ShelfPositionNumber.id == ShelfPosition.shelf_position_number_id
+    ).join(
+        Shelf, Shelf.id == ShelfPosition.shelf_id
+    ).join(
+        ShelfType, ShelfType.id == Shelf.shelf_type_id
+    ).join(
+        Ladder, Ladder.id == Shelf.ladder_id
+    ).join(
+        Side, Side.id == Ladder.side_id
+    ).join(
+        Aisle, Aisle.id == Side.aisle_id
+    ).join(
+        Module, Module.id == Aisle.module_id
+    ).where(
+        not_(
+            select(Tray)
+            .where(Tray.shelf_position_id == ShelfPosition.id)
+            .exists()
+        )
+    ).where(
+        not_(
+            select(NonTrayItem)
+            .where(NonTrayItem.shelf_position_id == ShelfPosition.id)
+            .exists()
+        )
+    )
 
-    # constrain to empty shelf positions
-    conditions.append(ShelfPosition.tray == None)
-    conditions.append(ShelfPosition.non_tray_item == None)
+    # conditions are where clauses
+    conditions = []
 
     # perform joins from most constrained to least, for efficiency
     if ladder_id:
         conditions.append(Shelf.ladder_id == ladder_id)
     elif side_id:
-        # join till this point
-        conditions.append(Shelf.ladder_id == Ladder.id)
-
         conditions.append(Ladder.side_id == side_id)
     elif aisle_id:
-        # join till this point
-        conditions.append(Shelf.ladder_id == Ladder.id)
-        conditions.append(Ladder.side_id == Side.id)
-
         conditions.append(Side.aisle_id == aisle_id)
     elif module_id:
-        # join till this point
-        conditions.append(Shelf.ladder_id == Ladder.id)
-        conditions.append(Ladder.side_id == Side.id)
-        conditions.append(Side.aisle_id == Aisle.id)
-
         conditions.append(Aisle.module_id == module_id)
     else:
-        # join till this point
-        conditions.append(Shelf.ladder_id == Ladder.id)
-        conditions.append(Ladder.side_id == Side.id)
-        conditions.append(Side.aisle_id == Aisle.id)
-
         # searching in aisles belonging to a building's modules
-        conditions.append(Aisle.module_id == Module.id)
         conditions.append(Module.building_id == building_id)
-
-    # Execute the query and fetch the results
-    # keep in mind this is a joined list of [(ShelfPosition, Shelf)]
-    # Add order by clause to sort shelf positions by shelf_position_number_id in descending order
-    shelf_position_query = shelf_position_query.where(and_(*conditions))
-
-    # Execute the query and fetch the results
-    # keep in mind this is a joined list of [(ShelfPosition, Shelf)]
-    available_shelf_positions = session.exec(shelf_position_query)
-
-    # convert ChunkedIterator for list comprehension
-    available_shelf_positions = list(available_shelf_positions)
-
-    if not available_shelf_positions:
-        raise NotFound(detail=f"No available shelf positions within constraints.")
 
     # process containers
     for container_object in containers:
@@ -238,69 +242,30 @@ def process_containers_for_shelving(
         if container_object.shelf_position_id:
             continue
 
-        # get containers with available space
-        available_space_containers = [
-            container
-            for container in available_shelf_positions
-            if container.Shelf.available_space > 0
-        ]
+        # Otherwise, further constrain by owner & size class
+        conditions.append(Shelf.owner_id == container_object.owner_id)
+        conditions.append(ShelfType.size_class_id == container_object.size_class_id)
+        # then pull results, retrieve only one from back of a shelf
+        available_shelf_position = session.exec(shelf_position_query.where(
+            and_(*conditions)
+        ).order_by(
+            desc(ShelfPositionNumber.number)
+        ).limit(1)).first()
 
-        if not available_space_containers:
+        if not available_shelf_position:
+            # this interrupts the rest... COME BACK TO THIS
             raise NotFound(
-                detail=f"No available space on shelves needed for container with barcode"
-                f" {container_object.barcode.value}"
+                detail=f"No empty shelf positions within job constraints for container {container_object.barcode.value}."
             )
 
-        # get matching size_class options
-        available_positions_for_size = [
-            position
-            for position in available_space_containers
-            if position.Shelf.shelf_type.size_class_id == container_object.size_class_id
-        ]
-
-        if not available_positions_for_size:
-            raise NotFound(
-                detail=f"No available positions on shelves at size class {container_object.size_class_id} needed for container with barcode {container_object.barcode.value}"
-            )
-
-        # get matching owner options
-        available_positions_for_owner = [
-            position
-            for position in available_positions_for_size
-            if position.Shelf.owner_id == container_object.owner_id
-        ]
-
-        if not available_positions_for_owner:
-            raise NotFound(
-                detail=f"No available positions on shelves for owner id {container_object.owner_id} at size class {container_object.size_class_id} needed for container with barcode {container_object.barcode.value}"
-            )
-        # Sort available_positions_for_owner by the last segment of internal_location in descending order
-        available_positions_for_owner.sort(
-            key=lambda position: int(
-                position.ShelfPosition.internal_location.split("-")[-1]
-            ),
-            reverse=True,
-        )
-        # both actual and proposed get set
-        container_object.shelf_position_id = available_positions_for_owner[
-            0
-        ].ShelfPosition.id
-        container_object.shelf_position_proposed_id = available_positions_for_owner[
-            0
-        ].ShelfPosition.id
-
-        # Remove reserved position from available before next iteration
-        available_shelf_positions = [
-            position
-            for position in available_shelf_positions
-            if position.ShelfPosition.id != container_object.shelf_position_id
-        ]
+        container_object.shelf_position_id = available_shelf_position.shelf_position_id
+        container_object.shelf_position_proposed_id = available_shelf_position.shelf_position_id
 
         session.add(container_object)
+        session.commit()
+        session.refresh(container_object)
 
-    # Commit transactions at the end, in case of errors
-    session.commit()
-
+    # GREG DO SESSION ROLLBACK IN EXCEPTIONS
     return
 
 

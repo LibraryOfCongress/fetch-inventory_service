@@ -124,7 +124,7 @@ def complete_verification_job(session, verification_job: VerificationJob):
             session.add(item)
 
     session.commit()
-    session.refresh()
+    # session.refresh()
 
 
 def manage_accession_job_transition(
