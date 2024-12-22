@@ -1,12 +1,12 @@
-import uuid
-
+import uuid, importlib
 import sqlalchemy as sa
 from sqlalchemy import Column, DateTime
+from sqlalchemy.sql import func
 
 from typing import Optional, List
 from datetime import datetime
 from pydantic import condecimal
-from sqlmodel import SQLModel, Field, Relationship, Session
+from sqlmodel import SQLModel, Field, Relationship, Session, select
 from sqlalchemy.schema import UniqueConstraint
 
 from app.models.owners import Owner
@@ -14,6 +14,7 @@ from app.models.ladders import Ladder
 from app.models.container_types import ContainerType
 from app.models.shelf_numbers import ShelfNumber
 from app.models.shelf_types import ShelfType
+from app.database.session import session_manager
 
 
 class Shelf(SQLModel, table=True):
@@ -44,9 +45,6 @@ class Shelf(SQLModel, table=True):
     barcode_id: uuid.UUID = Field(
         foreign_key="barcodes.id", nullable=True, default=None, unique=True
     )
-    available_space: int = Field(
-        sa_column=sa.Column(sa.Integer, nullable=False, default=0)
-    )
     height: condecimal(decimal_places=2) = Field(
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
     )
@@ -70,6 +68,23 @@ class Shelf(SQLModel, table=True):
     update_dt: datetime = Field(
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
+
+    @property
+    def available_space(self) -> int:
+        ShelfPosition = importlib.import_module("app.models.shelf_positions").ShelfPosition
+        Tray = importlib.import_module("app.models.trays").Tray
+        NonTrayItem = importlib.import_module("app.models.non_tray_items").NonTrayItem
+        with session_manager() as session:
+            total_positions = session.exec(
+                select(func.count(ShelfPosition.id)).where(ShelfPosition.shelf_id == self.id)
+            ).first() or 0
+            occupied_positions = session.exec(
+                select(func.count(ShelfPosition.id))
+                .join(Tray, Tray.shelf_position_id == ShelfPosition.id)
+                .join(NonTrayItem, NonTrayItem.shelf_position_id == ShelfPosition.id)
+                .where(ShelfPosition.shelf_id == self.id)
+            ).first() or 0
+            return total_positions - occupied_positions
 
     ladder: Ladder = Relationship(back_populates="shelves")
     owner: Owner = Relationship(back_populates="shelves")
