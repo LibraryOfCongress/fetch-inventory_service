@@ -265,7 +265,6 @@ def process_containers_for_shelving(
         session.commit()
         session.refresh(container_object)
 
-    # GREG DO SESSION ROLLBACK IN EXCEPTIONS
     return
 
 

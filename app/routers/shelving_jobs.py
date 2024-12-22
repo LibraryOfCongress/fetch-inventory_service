@@ -198,6 +198,8 @@ def create_shelving_job(
         return new_shelving_job
 
     except IntegrityError as e:
+        session.delete(new_shelving_job)
+        session.commit()
         raise ValidationException(detail=f"{e}")
     except ValidationException as e:
         session.delete(new_shelving_job)
