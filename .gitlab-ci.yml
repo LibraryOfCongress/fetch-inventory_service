@@ -1,5 +1,6 @@
 stages:
   - build
+  - build_deploy_prod
   - trigger
   - deploy
   - controls
@@ -166,6 +167,39 @@ build_image_staging:
     - if: '$CI_COMMIT_BRANCH == "staging"'
       when: manual
 
+build_image_prod:
+  stage: build_deploy_prod
+  image:
+    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
+    entrypoint: [""]
+  variables:
+    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/prod:latest
+  script:
+    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
+    - cp -v images/api.stage.Containerfile Dockerfile
+    - echo $PROD_APP_NAME > .env
+    - echo $PROD_APP_ENVIRONMENT >> .env
+    - echo $PROD_TIMEZONE >> .env
+    - echo $PROD_IDP_ENTITY_ID >> .env
+    - echo $PROD_IDP_LOGIN_URL >> .env
+    - echo $PROD_VUE_HOST >> .env
+    - echo $PROD_DATABASE_URL >> .env
+    - echo $PROD_MIGRATION_URL >> .env
+    - echo $PROD_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $PROD_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $PROD_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
+    - cat .env
+    - /kaniko/executor
+      --context $CI_PROJECT_DIR
+      --dockerfile $CI_PROJECT_DIR/Dockerfile
+      --destination $IMAGE_FULL_TAG
+  rules:
+    - if: '$PROD_BUILD =~ /^TRUE$/'
+      when: manual
+    - when: never
+
 deploy_dev:
   stage: deploy
   image:
@@ -269,9 +303,9 @@ deploy_stage:
       when: manual
 
 deploy_prod:
-  stage: deploy
+  stage: build_deploy_prod
   tags:
-    - prod
+    - fetch-group-runner-prod
   image:
     name: git.loc.gov:4567/fetch/build/terraform:alt
     entrypoint: [""]
@@ -282,7 +316,7 @@ deploy_prod:
     - export TF_VAR_vault_deployer_password=$VAULT_DEPLOYER_PASSWORD_PROD
     - export TF_VAR_vault_addr=$VAULT_ADDR_PROD
     - export TF_VAR_app_name="inventory-service"
-    - export TF_VAR_image='git.loc.gov:4567/fetch/inventory_service/stage:latest'
+    - export TF_VAR_image='git.loc.gov:4567/fetch/inventory_service/prod:latest'
     - export TF_VAR_timestamp=$CI_COMMIT_TIMESTAMP
     - terraform --version
     - cd terraform
@@ -293,7 +327,7 @@ deploy_prod:
     - terraform init -backend-config=backend.hcl
     - terraform apply -auto-approve
   rules:
-    - if: '$CI_COMMIT_TAG =~ /^release-.*$/'
+    - if: '$PROD_BUILD =~ /^TRUE$/'
       when: manual
     - when: never
 
