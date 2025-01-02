@@ -1,8 +1,6 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy import and_
-from sqlalchemy.orm import selectinload, joinedload
 from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
@@ -10,11 +8,9 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.logger import inventory_logger
+from app.filter_params import SortParams
 from app.models.ladders import Ladder
 from app.models.ladder_numbers import LadderNumber
-from app.models.shelf_types import ShelfType
-from app.models.shelves import Shelf
 from app.schemas.ladders import (
     LadderInput,
     LadderUpdateInput,
@@ -27,7 +23,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/ladders",
@@ -36,14 +32,28 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[LadderListOutput])
-def get_ladder_list(session: Session = Depends(get_session)) -> list:
+def get_ladder_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a paginated list of ladders.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Ladder List Output: A list of ladders.
     """
-    return paginate(session, select(Ladder))
+
+    # Create a query to retrieve all Ladder
+    query = select(Ladder).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Ladder, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=LadderDetailReadOutput)

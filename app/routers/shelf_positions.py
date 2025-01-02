@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
@@ -20,6 +21,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/shelves/positions",
@@ -29,12 +31,18 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[ShelfPositionListOutput])
 def get_shelf_position_list(
+    session: Session = Depends(get_session),
     shelf_id: int | None = None,
     empty: bool | None = False,
-    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a list of shelf positions.
+
+    **Parameters:**
+    - shelf_id (int): The ID of the shelf to filter by.
+    - empty (bool): Whether to filter by empty shelf positions.
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Shelf Position List Output: The paginated list of shelf positions.
@@ -56,6 +64,11 @@ def get_shelf_position_list(
         )
     else:
         statement = select(ShelfPosition)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        statement = get_sorted_query(ShelfPosition, statement, sort_params)
+
     return paginate(session, statement)
 
 

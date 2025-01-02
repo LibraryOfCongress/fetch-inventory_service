@@ -6,8 +6,11 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams
-from app.utilities import process_containers_for_shelving, manage_transition
+from app.filter_params import JobFilterParams, SortParams
+from app.utilities import (
+    process_containers_for_shelving, manage_transition,
+    get_sorted_query,
+)
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
@@ -43,14 +46,22 @@ def get_shelving_job_list(
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
     status: ShelvingJobStatus | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a paginated list of shelving jobs.
     Default view filters out Completed jobs.
 
+    **Parameters:**
+    - queue: Filters out cancelled jobs
+    - params: The filter parameters.
+    - status: The status of the shelving job.
+    - sort_params: The sort parameters.
+
     **Returns:**
     - list: A paginated list of shelving jobs.
     """
+    # Create a query to select all Shelving Job
     query = select(ShelvingJob).distinct()
 
     try:
@@ -71,6 +82,10 @@ def get_shelving_job_list(
             query = query.where(ShelvingJob.create_dt <= params.to_dt)
         if status:
             query = query.where(ShelvingJob.status == status.value)
+
+        # Validate and Apply sorting based on sort_params
+        if sort_params.sort_by:
+            query = get_sorted_query(ShelvingJob, query, sort_params)
 
         return paginate(session, query)
 

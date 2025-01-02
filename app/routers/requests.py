@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import Optional
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import or_
+from sqlalchemy import asc, desc
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.requests import Request
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
@@ -25,7 +26,7 @@ from app.config.exceptions import (
     NotFound,
     InternalServerError,
 )
-from app.utilities import get_module_shelf_position
+from app.utilities import get_module_shelf_position, get_sorted_query
 
 router = APIRouter(
     prefix="/requests",
@@ -35,24 +36,30 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[RequestListOutput])
 def get_request_list(
+    session: Session = Depends(get_session),
     building_id: int = None,
     queue: bool = False,
     unassociated_pick_list: bool = False,
     from_dt: Optional[datetime] = None,
     to_dt: Optional[datetime] = None,
     requestor_name: Optional[str] = None,
-    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of requests
 
-    **Args:**
+    **Parameters:**
     - building_id: The ID of the build to retrieve requests for.
     - unassociated_pick_list: Whether to retrieve requests with no associated pick list.
+    - from_dt: The start date to retrieve requests from.
+    - to_dt: The end date to retrieve requests to.
+    - requestor_name: The name of the requestor to retrieve requests for.
+    - sort_params: The sort parameters to apply to the requests.
 
     **Returns:**
     - Request List Output: The paginated list of requests.
     """
+    # Create a query to select all Request from the database
     query = select(Request).distinct()
 
     if queue:
@@ -68,6 +75,10 @@ def get_request_list(
         query = query.where(Request.building_id == building_id)
     if unassociated_pick_list:
         query = query.where(Request.pick_list_id == None)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Request, query, sort_params)
 
     return paginate(session, query)
 

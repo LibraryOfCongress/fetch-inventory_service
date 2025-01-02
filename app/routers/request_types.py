@@ -6,6 +6,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.request_types import RequestType
 from app.schemas.request_types import (
     RequestTypeInput,
@@ -15,12 +16,11 @@ from app.schemas.request_types import (
     RequestTypeDetailReadOutput,
 )
 from app.config.exceptions import (
-    BadRequest,
     NotFound,
     ValidationException,
     InternalServerError,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/requests",
@@ -29,11 +29,28 @@ router = APIRouter(
 
 
 @router.get("/types", response_model=Page[RequestTypeListOutput])
-def get_request_type_list(session: Session = Depends(get_session)) -> list:
+def get_request_type_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get a list of request types
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+
+    **Returns:**
+    - Request Type List Output: The paginated list of request types
     """
-    return paginate(session, select(RequestType))
+
+    # Create a query to select all Request Type
+    query = select(RequestType).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(RequestType, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/types/{id}", response_model=RequestTypeDetailReadOutput)

@@ -8,6 +8,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.owners import Owner
 from app.models.owner_tiers import OwnerTier
 from app.schemas.owners import (
@@ -23,7 +24,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/owners",
@@ -33,16 +34,23 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[OwnerListOutput])
 def get_owner_list(
+    session: Session = Depends(get_session),
     owner_tier_id: Optional[int] = Query(None),
     parent_owner_id: Optional[Union[int, str]] = Query(None),
-    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of owners.
 
+    **Parameters:**
+    - owner_tier_id (int): The ID of the owner tier to filter by.
+    - parent_owner_id (int): The ID of the parent owner to filter by.
+    - sort_params (SortParams): The sorting parameters.
+
     **Returns:**
     - Owner List Output: The paginated list of owners.
     """
+    # Create a query to select all Owner
     query = select(Owner)
 
     if owner_tier_id:
@@ -53,6 +61,10 @@ def get_owner_list(
         query = query.where(Owner.parent_owner_id.is_(None))
     elif parent_owner_id is not None:
         query = query.where(Owner.parent_owner_id == int(parent_owner_id))
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Owner, query, sort_params)
 
     return paginate(session, query)
 

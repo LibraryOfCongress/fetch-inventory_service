@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.non_tray_items import NonTrayItem
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
@@ -26,7 +27,7 @@ from app.config.exceptions import (
     ValidationException,
 )
 from app.tasks import manage_shelf_available_space
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/trays",
@@ -43,9 +44,21 @@ def get_tray_list(
     barcode_value: str = Query(default=None),
     from_dt: datetime = Query(default=None),
     to_dt: datetime = Query(default=None),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a paginated list of trays from the database
+
+    **Parameters:**
+    - owner_id (int): The ID of the owner to filter by.
+    - size_class_id (int): The ID of the size class to filter by.
+    - media_type_id (int): The ID of the media type to filter by.
+    - from_dt (datetime): The start date to filter by.
+    - to_dt (datetime): The end date to filter by.
+    - sort_params (SortParams): The sorting parameters.
+
+    **Returns:**
+    - Tray List Output: The paginated list of trays.
     """
     # Create a query to select all trays from the database
     query = select(Tray).distinct()
@@ -63,6 +76,10 @@ def get_tray_list(
         query = query.where(Tray.accession_dt >= from_dt)
     if to_dt:
         query = query.where(Tray.accession_dt <= to_dt)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Tray, query, sort_params)
 
     return paginate(session, query)
 

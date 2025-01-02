@@ -6,6 +6,7 @@ from datetime import datetime
 
 from app.config.exceptions import BadRequest, InternalServerError
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.logger import inventory_logger
 from app.models.size_class import SizeClass
 from app.models.owners_size_classes import OwnersSizeClassesLink
@@ -17,7 +18,7 @@ from app.schemas.size_class import (
     SizeClassDetailWriteOutput,
     SizeClassDetailReadOutput,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/size_class",
@@ -27,20 +28,34 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[SizeClassListOutput])
 def get_size_class_list(
-    short_name: str | None = None, session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    short_name: str | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a paginated list of size classes
+
+    **Parameters:**
+    - short_name (str): The short name of the size class to filter by.
+    - sort_params (SortParams): The sorting parameters.
+
+    **Returns:**
+    - Size Class List Output: The paginated list of size classes
     """
-    # Create a query to select all size_classs from the database
+    # Create a query to select all sides from the database
+    query = select(SizeClass).distinct()
+
     if short_name:
-        query = select(SizeClass).where(SizeClass.short_name == short_name)
+        query = query.where(SizeClass.short_name == short_name)
 
         if query is None:
             raise HTTPException(status_code=404, detail="Size class not found")
-        return paginate(session, query)
 
-    return paginate(session, select(SizeClass))
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(SizeClass, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=SizeClassDetailReadOutput)

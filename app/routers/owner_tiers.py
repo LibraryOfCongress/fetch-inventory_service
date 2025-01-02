@@ -6,6 +6,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.owner_tiers import OwnerTier
 from app.schemas.owner_tiers import (
     OwnerTierInput,
@@ -18,6 +19,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/owners",
@@ -26,14 +28,27 @@ router = APIRouter(
 
 
 @router.get("/tiers", response_model=Page[OwnerTierListOutput])
-def get_owner_tier_list(session: Session = Depends(get_session)) -> list:
+def get_owner_tier_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get the list of owner tiers.
 
-    Returns:
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+
+    **Returns:**
     - Owner Tier List Output: The paginated list of owner tiers.
     """
-    return paginate(session, select(OwnerTier))
+    # Create a query to select all Owner Tier
+    query = select(OwnerTier).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(OwnerTier, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/tiers/{id}", response_model=OwnerTierDetailOutput)

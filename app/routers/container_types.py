@@ -6,6 +6,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.container_types import ContainerType
 
 from app.schemas.container_types import (
@@ -19,6 +20,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/container-types",
@@ -27,14 +29,28 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ContainerTypeListOutput])
-def get_container_type_list(session: Session = Depends(get_session)) -> list:
+def get_container_type_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a list of container types.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Container Type List Output: A list of container types.
     """
-    return paginate(session, select(ContainerType))
+
+    # Create a query to retrieve all Container Type
+    query = select(ContainerType).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(ContainerType, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=ContainerTypeDetailReadOutput)

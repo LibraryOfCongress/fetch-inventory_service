@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.buildings import Building
 from app.schemas.buildings import (
     BuildingInput,
@@ -19,6 +20,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.utilities import get_sorted_query
 
 # For future circular imports
 # https://sqlmodel.tiangolo.com/tutorial/code-structure/#import-only-while-editing-with-type_checking
@@ -30,14 +32,27 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[BuildingListOutput])
-def get_building_list(session: Session = Depends(get_session)) -> list:
+def get_building_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get a paginated list of buildings.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Building List Output: The paginated list of buildings.
     """
-    return paginate(session, select(Building))
+    # Create a query to retrieve all Building
+    query = select(Building).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Building, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=BuildingDetailReadOutput)

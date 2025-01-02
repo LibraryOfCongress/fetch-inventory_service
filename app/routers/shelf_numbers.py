@@ -6,6 +6,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.shelf_numbers import ShelfNumber
 from app.schemas.shelf_numbers import (
     ShelfNumberInput,
@@ -17,7 +18,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/shelves",
@@ -26,14 +27,28 @@ router = APIRouter(
 
 
 @router.get("/numbers", response_model=Page[ShelfNumberListOutput])
-def get_shelf_number_list(session: Session = Depends(get_session)) -> list:
+def get_shelf_number_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get a paginated list of shelf numbers.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Shelf Number List Output: The paginated list of shelf numbers.
     """
-    return paginate(session, select(ShelfNumber))
+
+    # Create a query to select all Shelf Number
+    query = select(ShelfNumber).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(ShelfNumber, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/numbers/{id}", response_model=ShelfNumberDetailOutput)

@@ -3,15 +3,12 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
-from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.logger import inventory_logger
+from app.filter_params import SortParams
 from app.models.barcodes import Barcode
 from app.models.items import Item, ItemStatus
 from app.models.non_tray_items import NonTrayItem
-from app.models.shelf_positions import ShelfPosition
-from app.models.shelves import Shelf
 from app.models.trays import Tray
 from app.schemas.items import (
     ItemInput,
@@ -28,6 +25,7 @@ from app.config.exceptions import (
     BadRequest,
 )
 from app.tasks import process_tray_item_move
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/items",
@@ -44,9 +42,19 @@ def get_item_list(
     from_dt: datetime = Query(default=None),
     to_dt: datetime = Query(default=None),
     status: ItemStatus | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a paginated list of items from the database.
+
+    **Parameters:**
+    - owner_id (int): The ID of the owner to filter by.
+    - size_class_id (int): The ID of the size class to filter by.
+    - media_type_id (int): The ID of the media type to filter by.
+    - from_dt (datetime): The start date to filter by.
+    - to_dt (datetime): The end date to filter by.
+    - status (ItemStatus): The status to filter by.
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Item List Output: The paginated list of items.
@@ -66,6 +74,10 @@ def get_item_list(
         item_queryset = item_queryset.where(Item.accession_dt >= from_dt)
     if to_dt:
         item_queryset = item_queryset.where(Item.accession_dt <= to_dt)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        item_queryset = get_sorted_query(Item, item_queryset, sort_params)
 
     return paginate(session, item_queryset)
 

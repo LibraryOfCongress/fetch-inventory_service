@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.side_orientations import SideOrientation
 
 from app.schemas.side_orientations import (
@@ -20,6 +21,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/sides",
@@ -28,14 +30,27 @@ router = APIRouter(
 
 
 @router.get("/orientations", response_model=Page[SideOrientationListOutput])
-def get_side_orientation_list(session: Session = Depends(get_session)) -> list:
+def get_side_orientation_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a paginated list of side orientations.
 
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+
     **Returns**:
-    - list: A paginated list of side orientations.
+    - Side Orientation List Output: A paginated list of side orientations.
     """
-    return paginate(session, select(SideOrientation))
+    # Create a query to select all Side Orientation
+    query = select(SideOrientation).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(SideOrientation, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/orientations/{id}", response_model=SideOrientationDetailReadOutput)

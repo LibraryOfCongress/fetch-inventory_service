@@ -1,14 +1,13 @@
 from datetime import datetime
-from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
+from sqlalchemy import asc, desc
 
 from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams
-from app.logger import inventory_logger
+from app.filter_params import JobFilterParams, SortParams
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
@@ -25,7 +24,7 @@ from app.schemas.refile_jobs import (
 from app.schemas.items import ItemUpdateInput
 from app.schemas.non_tray_items import NonTrayItemUpdateInput
 from app.config.exceptions import BadRequest, NotFound
-from app.utilities import manage_transition, get_location
+from app.utilities import manage_transition, get_location, get_sorted_query
 
 router = APIRouter(
     prefix="/refile-jobs",
@@ -115,17 +114,26 @@ def sorted_requests(session, refile_job):
 
 @router.get("/", response_model=Page[RefileJobListOutput])
 def get_refile_job_list(
-    queue: bool = Query(default=False),
     session: Session = Depends(get_session),
+    queue: bool = Query(default=False),
     params: JobFilterParams = Depends(),
-    status: RefileJobStatus | None = None
+    status: RefileJobStatus | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of refile jobs
 
+    **Parameters:**
+    - session: The database session.
+    - queue: If true, only return refile jobs that are not completed.
+    - params: The filter parameters.
+    - status: The status of the refile job.
+    - sort_params: The sort parameters.
+
     **Returns:**
     - Refile Job List Output: The paginated list of refile jobs
     """
+    # Create a query to select all Refile Job
     query = select(RefileJob).distinct()
 
     if queue:
@@ -142,6 +150,10 @@ def get_refile_job_list(
         query = query.where(RefileJob.create_dt <= params.to_dt)
     if status:
         query = query.where(RefileJob.status == status.value)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(RefileJob, query, sort_params)
 
     return paginate(session, query)
 

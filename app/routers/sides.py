@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.sides import Side
 from app.schemas.sides import (
     SideInput,
@@ -19,7 +20,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/sides",
@@ -28,15 +29,27 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[SideListOutput])
-def get_side_list(session: Session = Depends(get_session)) -> list:
+def get_side_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get a paginated list of sides from the database.
 
+    **Parameters:**
+    - sort_params: The sorting parameters.
+
     **Returns**:
-    - list: A paginated list of sides.
+    - Side List Output: A paginated list of sides.
     """
     # Create a query to select all sides from the database
-    return paginate(session, select(Side))
+    query = select(Side).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Side, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=SideDetailReadOutput)

@@ -1,7 +1,9 @@
 # from fastapi import Query
+from fastapi import Query
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+
 
 class JobFilterParams(BaseModel):
     """
@@ -23,3 +25,11 @@ class ShelvingJobDiscrepancyParams(BaseModel):
     from_dt: Optional[datetime] = None
     to_dt: Optional[datetime] = None
     user_id: Optional[int] = None
+
+
+class SortParams(BaseModel):
+    """
+    Query params for sorting
+    """
+    sort_by: Optional[str] = Query(default=None, description="Field to sort by")
+    sort_order: Optional[str] = Query(default="asc", description="Sort order: 'asc' or 'desc'")

@@ -8,6 +8,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.barcodes import Barcode
 from app.models.barcode_types import BarcodeType
 from app.models.size_class import SizeClass
@@ -20,6 +21,7 @@ from app.schemas.barcodes import (
     BarcodeMutationInput,
 )
 from app.config.exceptions import NotFound, ValidationException
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/barcodes",
@@ -28,15 +30,27 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[BarcodeListOutput])
-def get_barcode_list(session: Session = Depends(get_session)) -> list:
+def get_barcode_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a list of barcodes from the database.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - list: A list of barcodes.
     """
     # Create a query to retrieve all barcodes
-    return paginate(session, select(Barcode))
+    query = select(Barcode).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Barcode, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=BarcodeDetailReadOutput)

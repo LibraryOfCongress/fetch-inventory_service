@@ -3,9 +3,10 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import asc, desc
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.non_tray_items import NonTrayItem, NonTrayItemStatus
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
@@ -24,11 +25,9 @@ from app.schemas.non_tray_items import (
 )
 from app.config.exceptions import (
     NotFound,
-    ValidationException,
-    InternalServerError,
-    BadRequest,
+    ValidationException
 )
-from app.tasks import manage_shelf_available_space
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/non_tray_items",
@@ -45,9 +44,22 @@ def get_non_tray_item_list(
     from_dt: datetime = Query(default=None),
     to_dt: datetime = Query(default=None),
     status: NonTrayItemStatus | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a paginated list of non tray items from the database
+
+    **Parameters:**
+    - owner_id (int): The ID of the owner to filter by.
+    - size_class_id (int): The ID of the size class to filter by.
+    - media_type_id (int): The ID of the media type to filter by.
+    - from_dt (datetime): The start date to filter by.
+    - to_dt (datetime): The end date to filter by.
+    - status (NonTrayItemStatus): The status to filter by.
+    - sort_params (SortParams): The sorting parameters.
+
+    **Returns:**
+    - Non Tray Item List Output: The paginated list of non tray items.
     """
     # Create a query to select all non tray items from the database
     query = select(NonTrayItem).distinct()
@@ -64,6 +76,10 @@ def get_non_tray_item_list(
         query = query.where(NonTrayItem.accession_dt >= from_dt)
     if to_dt:
         query = query.where(NonTrayItem.accession_dt <= to_dt)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(NonTrayItem, query, sort_params)
 
     return paginate(session, query)
 
@@ -221,13 +237,6 @@ def update_non_tray_item(
                 raise NotFound(
                     detail=f"Shelf Position ID {existing_non_tray_item.shelf_position_id} Not Found"
                 )
-
-            background_tasks.add_task(
-                manage_shelf_available_space,
-                session,
-                existing_shelf_position,
-                new_shelf_position,
-            )
 
     # Update the non_tray_item record with the mutated data
     mutated_data = non_tray_item.model_dump(exclude_unset=True)

@@ -2,6 +2,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
+from sqlalchemy import asc, desc
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from starlette.responses import JSONResponse
@@ -12,14 +13,13 @@ from app.config.exceptions import (
     ValidationException,
 )
 from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams
+from app.filter_params import JobFilterParams, SortParams
 from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
-from app.models.request_types import RequestType
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.models.tray_withdrawal import TrayWithdrawal
@@ -27,9 +27,11 @@ from app.models.trays import Tray
 from app.models.withdraw_jobs import WithdrawJob, WithdrawJobStatus
 from app.models.pick_lists import PickList
 from app.models.requests import Request
-from app.utilities import validate_item_not_shelved, validate_non_tray_item_not_shelved
+from app.utilities import (
+    validate_item_not_shelved, validate_non_tray_item_not_shelved,
+    get_sorted_query,
+)
 from starlette import status
-from app.routers.requests import create_request
 from app.schemas.withdraw_jobs import (
     WithdrawJobInput,
     WithdrawJobWriteOutput,
@@ -63,17 +65,25 @@ def validate_withdraw_item(items, job_id, status, session):
 
 @router.get("/", response_model=Page[WithdrawJobListOutput])
 def get_withdraw_job_list(
-    queue: bool = Query(default=False),
     session: Session = Depends(get_session),
+    queue: bool = Query(default=False),
     params: JobFilterParams = Depends(),
-    status: WithdrawJobStatus | None = None
+    status: WithdrawJobStatus | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a paginated list of withdraw jobs.
 
+    **Parameters:**
+    - queue: Filters out completed withdraw jobs.
+    - params: The filter parameters.
+    - status: The status of the withdraw job.
+    - sort_params: The sort parameters.
+
     **Returns:**
     - list: A paginated list of withdraw jobs.
     """
+    # Create a query to select all Withdraw Job from the database
     query = select(WithdrawJob).distinct()
 
     if queue:
@@ -93,6 +103,10 @@ def get_withdraw_job_list(
         query = query.where(WithdrawJob.create_dt <= params.to_dt)
     if status:
         query = query.where(WithdrawJob.status == status.value)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(WithdrawJob, query, sort_params)
 
     return paginate(session, query)
 

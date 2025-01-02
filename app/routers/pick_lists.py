@@ -1,4 +1,3 @@
-from app.logger import inventory_logger
 from fastapi import APIRouter, HTTPException, Depends, Query
 
 from sqlmodel import Session, select
@@ -7,8 +6,8 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
-from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams
+from app.database.session import get_session
+from app.filter_params import JobFilterParams, SortParams
 from app.models.buildings import Building
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
@@ -16,7 +15,6 @@ from app.models.item_withdrawals import ItemWithdrawal
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.pick_lists import PickList, PickListStatus
 from app.models.requests import Request
-from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
 from app.models.withdraw_jobs import WithdrawJob
 from app.schemas.pick_lists import (
@@ -31,7 +29,7 @@ from app.config.exceptions import (
     NotFound,
     InternalServerError,
 )
-from app.utilities import get_location, manage_transition
+from app.utilities import get_location, manage_transition, get_sorted_query
 
 router = APIRouter(
     prefix="/pick-lists",
@@ -41,17 +39,25 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[PickListListOutput])
 def get_pick_list_list(
-    queue: bool = Query(default=False),
     session: Session = Depends(get_session),
+    queue: bool = Query(default=False),
     params: JobFilterParams = Depends(),
     status: PickListStatus | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of pick lists.
 
+    **Parameters:**
+    - queue: If true, only return pick lists that are not completed.
+    - params: The filter parameters.
+    - status: The status of the pick list.
+    - sort_params: The sort parameters.
+
     **Returns:**
     - Pick List List Output: The paginated list of pick lists.
     """
+    # Create a query to select all Pick List from the database
     query = select(PickList).distinct()
 
     try:
@@ -71,6 +77,10 @@ def get_pick_list_list(
             query = query.where(PickList.create_dt <= params.to_dt)
         if status:
             query = query.where(PickList.status == status.value)
+
+        # Validate and Apply sorting based on sort_params
+        if sort_params.sort_by:
+            query = get_sorted_query(PickList, query, sort_params)
 
         return paginate(session, query)
 

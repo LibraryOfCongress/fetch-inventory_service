@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams
+from app.filter_params import JobFilterParams, SortParams
 from app.tasks import (
     complete_verification_job,
     manage_verification_job_transition,
@@ -23,6 +23,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/verification-jobs",
@@ -37,13 +38,22 @@ def get_verification_job_list(
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
     status: VerificationJobStatus | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a paginated list of verification jobs.
 
+    **Parameters:**
+    - unshelved: Filters out shelved verification jobs.
+    - queue: Filters out cancelled verification jobs.
+    - params: The filter parameters.
+    - status: The status of the verification job.
+    - sort_params: The sort parameters.
+
     **Returns:**
     - Verification Job List Output: The paginated list of verification jobs.
     """
+    # Create a query to select all Verification Job from the database
     query = select(VerificationJob).distinct()
 
     if unshelved:
@@ -66,6 +76,10 @@ def get_verification_job_list(
         query = query.where(VerificationJob.create_dt <= params.to_dt)
     if status:
         query = query.where(VerificationJob.status == status.value)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(VerificationJob, query, sort_params)
 
     return paginate(session, query)
 

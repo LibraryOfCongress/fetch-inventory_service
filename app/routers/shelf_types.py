@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
 from app.models.size_class import SizeClass
@@ -24,7 +25,7 @@ from app.config.exceptions import (
     InternalServerError,
     BadRequest,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/shelf-types",
@@ -34,21 +35,32 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[ShelfTypeListOutput])
 def get_shelf_type_list(
-    size_class_id: int = None, session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    size_class_id: int = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a paginated list of Shelf Types.
+
+    **Parameters:**
+    - size_class_id (int): The ID of the size class to filter by.
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns**:
     - Shelf Type List Output: The paginated list of shelf type.
     """
 
-    if size_class_id:
-        return paginate(
-            session, select(ShelfType).where(ShelfType.size_class_id == size_class_id)
-        )
+    # Create a query to select all Shelf Position Number
+    query = select(ShelfType).distinct()
 
-    return paginate(session, select(ShelfType))
+    if size_class_id:
+        query = query.where(ShelfType.size_class_id == size_class_id)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(ShelfType, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=ShelfTypeDetailOutput)

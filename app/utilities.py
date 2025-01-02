@@ -6,13 +6,14 @@ import logging
 
 import pandas as pd
 import pytz
-from sqlalchemy import and_, text, desc
+from sqlalchemy import and_, text, asc, desc
 from sqlalchemy.orm import joinedload, aliased
+from sqlalchemy.inspection import inspect
 from sqlmodel import select, Session
 from fastapi import Header, Depends
 
 from app.database.session import get_session
-from app.config.exceptions import NotFound
+from app.config.exceptions import NotFound, BadRequest
 from app.logger import inventory_logger
 from app.models.aisle_numbers import AisleNumber
 from app.models.barcodes import Barcode
@@ -1080,3 +1081,35 @@ async def set_session_to_request(
         await start_session_with_user_id(user_email, session=request.state.db_session)
 
     return request
+
+
+def get_sortable_fields(model):
+    """
+    Dynamically retrieves all column names from the SQLAlchemy model.
+    """
+    return {column.key for column in inspect(model).c}
+
+
+def get_sorted_query(model, query, sort_params):
+    """
+    Sorts the query based on the provided sort parameters.
+    """
+    if sort_params.sort_order not in ["asc", "desc"]:
+        raise BadRequest(
+            detail=f"Invalid value for ‘sort_order'. Allowed values are: ‘asc’, ‘desc’",
+        )
+
+    sortable_fields = get_sortable_fields(model)
+    if sort_params.sort_by in sortable_fields:
+        sort_field = getattr(model, sort_params.sort_by, None)
+        if sort_field:
+            if sort_params.sort_order == "asc":
+                query = query.order_by(asc(sort_field))
+            else:
+                query = query.order_by(desc(sort_field))
+    else:
+        raise BadRequest(
+            detail=f"Invalid sort parameter: {sort_params.sort_by}",
+        )
+
+    return query

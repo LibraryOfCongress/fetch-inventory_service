@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
-from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.ladder_numbers import LadderNumber
 from app.schemas.ladder_numbers import (
     LadderNumberInput,
@@ -18,7 +18,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/ladders",
@@ -27,14 +27,28 @@ router = APIRouter(
 
 
 @router.get("/numbers", response_model=Page[LadderNumberListOutput])
-def get_ladder_number_list(session: Session = Depends(get_session)) -> list:
+def get_ladder_number_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a paginated list of ladder numbers.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Ladder Number List Output: A list of ladder numbers with pagination metadata.
     """
-    return paginate(session, select(LadderNumber))
+
+    # Create a query to retrieve all Ladder Number
+    query = select(LadderNumber).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(LadderNumber, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/numbers/{id}", response_model=LadderNumberDetailOutput)

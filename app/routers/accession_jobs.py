@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import not_, and_, or_
+from sqlalchemy import not_, or_
 from sqlmodel import Session, select
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams
+from app.filter_params import JobFilterParams, SortParams
 from app.models.accession_jobs import AccessionJob, AccessionJobStatus
 from app.models.barcodes import Barcode
 from app.models.verification_jobs import VerificationJob
@@ -26,6 +26,7 @@ from app.schemas.accession_jobs import (
     AccessionJobListOutput,
     AccessionJobDetailOutput,
 )
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/accession-jobs",
@@ -35,9 +36,10 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[AccessionJobListOutput])
 def get_accession_job_list(
-    queue: bool = Query(default=False),
     session: Session = Depends(get_session),
+    queue: bool = Query(default=False),
     params: JobFilterParams = Depends(),
+    sort_params: SortParams = Depends(),
     status: AccessionJobStatus | None = None,
 ) -> list:
     """
@@ -86,6 +88,10 @@ def get_accession_job_list(
             query = query.where(AccessionJob.create_dt <= params.to_dt)
         if status:
             query = query.where(AccessionJob.status == status.value)
+
+        # Validate and Apply sorting based on sort_params
+        if sort_params.sort_by:
+            query = get_sorted_query(AccessionJob, query, sort_params)
 
         return paginate(session, query)
     except IntegrityError as e:

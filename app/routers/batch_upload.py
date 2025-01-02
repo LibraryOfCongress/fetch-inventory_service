@@ -13,7 +13,7 @@ from starlette import status
 from starlette.responses import JSONResponse
 
 from app.database.session import get_session, commit_record
-from app.logger import inventory_logger
+from app.filter_params import SortParams
 from app.models.barcode_types import BarcodeType
 from app.models.barcodes import Barcode
 from app.models.batch_upload import BatchUpload
@@ -37,7 +37,7 @@ from app.schemas.batch_upload import (
 from app.utilities import (
     validate_request_data,
     process_request_data,
-    process_withdraw_job_data,
+    process_withdraw_job_data, get_sorted_query,
 )
 from app.config.exceptions import (
     BadRequest,
@@ -52,10 +52,16 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[BatchUploadListOutput])
 async def get_batch_upload(
-    batch_upload_type: str | None = None, session: Session = (Depends(get_session))
+    session: Session = Depends(get_session),
+    batch_upload_type: str | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Batch upload endpoint to process barcodes for different operations.
+
+    **Parameters:**
+    - batch_upload_type (str): The type of batch upload.
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Batch Upload Output: The paginated list of batch uploads.
@@ -67,6 +73,10 @@ async def get_batch_upload(
             query = query.filter(BatchUpload.withdraw_job_id.is_(None))
         elif batch_upload_type == "withdraw":
             query = query.filter(BatchUpload.withdraw_job_id.isnot(None))
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(BatchUpload, query, sort_params)
 
     return paginate(session, query)
 

@@ -9,6 +9,7 @@ from typing import Optional
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.modules import Module
 from app.models.buildings import Building
 from app.schemas.modules import (
@@ -20,10 +21,9 @@ from app.schemas.modules import (
 )
 from app.config.exceptions import (
     NotFound,
-    ValidationException,
-    InternalServerError,
+    ValidationException
 )
-
+from app.utilities import get_sorted_query
 
 LOGGER = logging.getLogger("router.modules")
 
@@ -36,14 +36,20 @@ router = APIRouter(
 @router.get("/", response_model=Page[ModuleListOutput])
 def get_module_list(
     session: Session = Depends(get_session),
-    building_name: Optional[str] = None
+    building_name: Optional[str] = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a paginated list of modules.
 
+    **Parameters:**
+    - building_name (str): The name of the building to filter by.
+    - sort_params (SortParams): The sorting parameters.
+
     **Returns:**
     - Module List Output: The paginated list of modules.
     """
+    # Create a query to select all Module
     query = select(Module).distinct()
 
     if building_name:
@@ -52,6 +58,10 @@ def get_module_list(
         ).where(
             Building.name == building_name
         )
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Module, query, sort_params)
 
     return paginate(session, query)
 

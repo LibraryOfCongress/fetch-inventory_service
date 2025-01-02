@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
@@ -6,6 +6,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.conveyance_bins import ConveyanceBin
 
 from app.schemas.conveyance_bins import (
@@ -19,7 +20,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/conveyance-bins",
@@ -28,14 +29,28 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ConveyanceBinListOutput])
-def get_conveyance_bin_list(session: Session = Depends(get_session)) -> list:
+def get_conveyance_bin_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a paginated list of Conveyance Bins from the database.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Conveyance Bin List Output: A paginated list of Conveyance Bins.
     """
-    return paginate(session, select(ConveyanceBin))
+
+    # Create a query to retrieve all Conveyance Bin
+    query = select(ConveyanceBin).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(ConveyanceBin, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=ConveyanceBinDetailReadOutput)

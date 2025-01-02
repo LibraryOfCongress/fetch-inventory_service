@@ -3,12 +3,11 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
-from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
-from app.logger import inventory_logger
+from app.filter_params import SortParams
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
 from app.models.barcodes import Barcode
@@ -28,8 +27,8 @@ from app.schemas.shelves import (
 from app.config.exceptions import (
     NotFound,
     ValidationException,
-    InternalServerError,
 )
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/shelves",
@@ -50,10 +49,23 @@ def get_shelf_list(
     shelf_id: int | None = None,
     owner_id: int | None = None,
     size_class_id: int | None = None,
-    unassigned: bool | None = None
+    unassigned: bool | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of shelves.
+
+    **Parameters:**
+    - building_id (int): The ID of the building to filter by.
+    - module_id (int): The ID of the module to filter by.
+    - aisle_id (int): The ID of the aisle to filter by.
+    - side_id (int): The ID of the side to filter by.
+    - ladder_id (int): The ID of the ladder to filter by.
+    - shelf_id (int): The ID of the shelf to filter by.
+    - owner_id (int): The ID of the owner to filter by.
+    - size_class_id (int): The ID of the size class to filter by.
+    - unassigned (bool): Whether to include unassigned shelves.
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Shelf List Output: The paginated list of shelves.
@@ -126,6 +138,10 @@ def get_shelf_list(
 
     if unassigned:
         shelf_queryset = shelf_queryset.where(Shelf.barcode_id == None)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        shelf_queryset = get_sorted_query(Shelf, shelf_queryset, sort_params)
 
     return paginate(session, shelf_queryset)
 

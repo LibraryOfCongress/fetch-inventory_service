@@ -6,6 +6,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.priorities import Priority
 from app.schemas.priorities import (
     PriorityInput,
@@ -15,12 +16,11 @@ from app.schemas.priorities import (
     PriorityDetailReadOutput,
 )
 from app.config.exceptions import (
-    BadRequest,
     NotFound,
     ValidationException,
     InternalServerError,
 )
-
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/requests",
@@ -29,11 +29,27 @@ router = APIRouter(
 
 
 @router.get("/priorities", response_model=Page[PriorityListOutput])
-def get_priority_list(session: Session = Depends(get_session)) -> list:
+def get_priority_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get a list of priorities
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+
+    **Returns:**
+    - Priority List Output: The paginated list of priorities
     """
-    return paginate(session, select(Priority))
+    # Create a query to select all Priority
+    query = select(Priority).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Priority, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/priorities/{id}", response_model=PriorityDetailReadOutput)

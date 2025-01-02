@@ -3,9 +3,11 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import asc, desc
 from datetime import datetime
 
 from app.database.session import get_session, commit_record
+from app.filter_params import SortParams
 from app.models.permissions import Permission
 from app.schemas.permissions import (
     PermissionInput,
@@ -15,9 +17,9 @@ from app.schemas.permissions import (
 )
 from app.config.exceptions import (
     NotFound,
-    ValidationException,
-    InternalServerError,
+    ValidationException
 )
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/permissions",
@@ -26,14 +28,27 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[PermissionListOutput])
-def get_permission_list(session: Session = Depends(get_session)) -> list:
+def get_permission_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get a paginated list of permissions.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns**:
     - Permission List Output: The paginated list of permissions.
     """
-    return paginate(session, select(Permission))
+    # Create a query to select all Permission
+    query = select(Permission).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(Permission, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=PermissionDetailReadOutput)

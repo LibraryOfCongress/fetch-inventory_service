@@ -6,6 +6,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.media_types import MediaType
 
 from app.schemas.media_types import (
@@ -19,6 +20,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/media-types",
@@ -27,11 +29,27 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[MediaTypeListOutput])
-def get_media_type_list(session: Session = Depends(get_session)) -> list:
+def get_media_type_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a list of media types
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+
+    **Returns:**
+    - Media Type List Output: A list of media types.
     """
-    return paginate(session, select(MediaType))
+    # Create a query to retrieve all Media Type
+    query = select(MediaType).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        query = get_sorted_query(MediaType, query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=MediaTypeDetailReadOutput)
