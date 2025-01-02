@@ -119,6 +119,9 @@ def create_request(
     )
 
     if item:
+        if item.status == "PickList":
+            raise BadRequest(detail="Item is in pick list and cannot be requested")
+
         existing_request = session.exec(
             select(Request)
             .where(Request.item_id == item.id)
@@ -148,6 +151,10 @@ def create_request(
         )
 
     elif non_tray_item:
+        if non_tray_item.status == "PickList":
+            raise BadRequest(detail="Non Tray Item Item is in pick list and cannot be "
+                                    "requested")
+
         existing_non_tray_item = (
             session.query(Request)
             .filter(
@@ -176,8 +183,8 @@ def create_request(
 
     else:
         raise BadRequest(
-            detail=f"Item or Non Tray with barcode value "
-            f"{lookup_barcode_value} not found"
+            detail=f"""Item or Non Tray with barcode value
+            {lookup_barcode_value} not found"""
         )
 
     if not shelf_position:
@@ -229,7 +236,7 @@ def update_request(
                     .where(Barcode.value == lookup_barcode_value)
                 ).first()
                 if not non_tray_item:
-                    raise NotFound(detail=f"No items or non_trays found with barcode.")
+                    raise NotFound(detail="No items or non_trays found with barcode.")
                 request.non_tray_item_id = non_tray_item.id
 
         existing_request = session.get(Request, id)
@@ -283,7 +290,7 @@ def delete_request(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         raise HTTPException(
-            status_code=204, detail=f"Request ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Request ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Request ID {id} Not Found")

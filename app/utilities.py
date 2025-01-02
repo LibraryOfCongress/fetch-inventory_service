@@ -544,7 +544,7 @@ def _validate_items(session, items, request_data, errors):
                 request_data["Item Barcode"].astype(str) == barcode
             ].index[0]
             errors.append(
-                {"line": int(index) + 1, "error": f"Barcode {barcode} not " f"found"}
+                {"line": int(index) + 1, "error": f"Barcode {barcode} not found"}
             )
             errored_indices.add(index)
 
@@ -594,6 +594,34 @@ def _validate_items(session, items, request_data, errors):
 def _validate_item(
     session, item, row_index, barcode_value, errors, errored_indices, item_type
 ):
+    if item.status == "Out":
+        errors.append(
+            {
+                "line": int(row_index) + 1,
+                "error": f"{item_type} {barcode_value} status is not shelved",
+            }
+        )
+        errored_indices.add(row_index)
+        return
+    if item.status == "PickList":
+        errors.append(
+            {
+                "line": int(row_index) + 1,
+                "error": f"{item_type} {barcode_value} is already in pick list and cannot be requested",
+            }
+        )
+        errored_indices.add(row_index)
+        return
+    if item.status == "Withdrawn":
+        errors.append(
+            {
+                "line": int(row_index) + 1,
+                "error": f"{item_type} {barcode_value} has already been withdrawn",
+            }
+        )
+        errored_indices.add(row_index)
+        return
+
     if item_type == "Items":
         existing_request = (
             session.query(Request)
@@ -607,11 +635,11 @@ def _validate_item(
             .first()
         )
 
-    if existing_request:
+    if existing_request or item.status == "Requested":
         errors.append(
             {
                 "line": int(row_index) + 1,
-                "error": f"{item_type}" f" {barcode_value} is " f"already requested",
+                "error": f"{item_type} {barcode_value} is already requested",
             }
         )
         errored_indices.add(row_index)
@@ -629,7 +657,7 @@ def _validate_item(
             errors.append(
                 {
                     "line": int(row_index) + 1,
-                    "error": f"{item_type}" f" {barcode_value} is not shelved",
+                    "error": f"{item_type} {barcode_value} is not shelved",
                 }
             )
             errored_indices.add(row_index)
@@ -638,7 +666,7 @@ def _validate_item(
             errors.append(
                 {
                     "line": int(row_index) + 1,
-                    "error": f"{item_type}" f" {barcode_value} is not shelved",
+                    "error": f"{item_type} {barcode_value} is not shelved",
                 }
             )
             errored_indices.add(row_index)

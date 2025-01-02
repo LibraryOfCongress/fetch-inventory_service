@@ -199,6 +199,21 @@ def create_pick_list(
     if len(requests) != len(pick_list_input.request_ids):
         errored_request_ids.append(set(requests) - set(pick_list_input.request_ids))
 
+    # Updating the items and non-tray items status to Pick List
+    item_ids = [
+        request.item_id for request in requests
+    ]
+    session.query(Item).filter(Item.id.in_(item_ids)).update(
+        {"status": "PickList"}, synchronize_session=False
+    )
+
+    non_tray_item_ids = [
+        request.non_tray_item_id for request in requests
+    ]
+    session.query(NonTrayItem).filter(NonTrayItem.id.in_(non_tray_item_ids)).update(
+        {"status": "PickList"}, synchronize_session=False
+    )
+
     building_id = requests[0].building_id
     new_pick_list = PickList(**pick_list_input.model_dump())
     new_pick_list.building = session.get(Building, building_id)
@@ -384,6 +399,21 @@ def add_request_to_pick_list(
     if not pick_list.building_id:
         pick_list.building_id = existing_requests[0].building_id
 
+    # Updating the items and non-tray items status to Pick List
+    item_ids = [
+        request.item_id for request in existing_requests
+    ]
+    session.query(Item).filter(Item.id.in_(item_ids)).update(
+        {"status": "PickList"}, synchronize_session=False
+    )
+
+    non_tray_item_ids = [
+        request.non_tray_item_id for request in existing_requests
+    ]
+    session.query(NonTrayItem).filter(NonTrayItem.id.in_(non_tray_item_ids)).update(
+        {"status": "PickList"}, synchronize_session=False
+    )
+
     pick_list.update_dt = update_dt
 
     session.commit()
@@ -505,6 +535,17 @@ def remove_request_from_pick_list(
         synchronize_session="fetch",
     )
 
+    if request.item:
+        session.query(Item).filter(Item.id == request.item.id).update(
+            {"status": "Requested", "update_dt": update_dt}, synchronize_session="fetch"
+        )
+    else:
+        session.query(NonTrayItem).filter(
+            NonTrayItem.id == request.non_tray_item.id
+        ).update(
+            {"status": "Requested", "update_dt": update_dt}, synchronize_session="fetch"
+        )
+
     # Updating update_dt pick list
     setattr(pick_list, "update_dt", update_dt)
 
@@ -533,8 +574,29 @@ def delete_pick_list(id: int, session: Session = Depends(get_session)):
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {id} Not Found")
 
+    requests = pick_list.requests
+
+    inventory_logger.info(f"Requests: {requests}")
+
+    item_ids = [request.item_id for request in requests]
+    non_tray_item_ids = [request.non_tray_item_id for request in requests]
+
+    session.query(Item).filter(
+        Item.id.in_(item_ids)
+    ).update(
+        {"status": "Requested", "update_dt": datetime.utcnow()},
+        synchronize_session="fetch",
+    )
+
+    session.query(NonTrayItem).filter(
+        NonTrayItem.id.in_(non_tray_item_ids)
+    ).update(
+        {"status": "Requested", "update_dt": datetime.utcnow()},
+        synchronize_session="fetch",
+    )
+
     session.query(Request).filter(
-        Request.id.in_([r.id for r in pick_list.requests])
+        Request.id.in_([r.id for r in requests])
     ).update(
         {"pick_list_id": None, "update_dt": datetime.utcnow()},
         synchronize_session="fetch",

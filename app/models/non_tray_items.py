@@ -21,6 +21,7 @@ class NonTrayItemStatus(str, Enum):
     Requested = "Requested"
     Withdrawn = "Withdrawn"
     Out = "Out"
+    PickList = "PickList"
 
 
 class NonTrayItem(SQLModel, table=True):

@@ -17,9 +17,10 @@ from app.models.withdraw_jobs import WithdrawJob
 
 class ItemStatus(str, Enum):
     In = "In"
+    Out = "Out"
     Requested = "Requested"
     Withdrawn = "Withdrawn"
-    Out = "Out"
+    PickList = "PickList"
 
 
 class Item(SQLModel, table=True):
