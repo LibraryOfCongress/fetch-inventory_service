@@ -7,6 +7,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.logger import inventory_logger
 from app.filter_params import JobFilterParams, SortParams
 from app.models.buildings import Building
 from app.models.items import Item
