@@ -243,20 +243,6 @@ def update_shelf(
 
     mutated_data = shelf_input.model_dump(exclude_unset=True)
 
-    if shelf_input.available_space:
-        shelf_positions_count = len(existing_shelf.shelf_positions)
-        if shelf_positions_count == 0:
-            raise ValidationException(
-                detail=f"The are no shelf position assigned to shelf"
-            )
-        elif (
-            shelf_positions_count > 0
-            and shelf_input.available_space > shelf_positions_count
-        ):
-            raise ValidationException(
-                detail=f"The available space can exceed the number of shelf positions"
-            )
-
     for key, value in mutated_data.items():
         setattr(existing_shelf, key, value)
 

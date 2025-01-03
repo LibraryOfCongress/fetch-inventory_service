@@ -28,7 +28,6 @@ from app.config.exceptions import (
     InternalServerError,
     BadRequest,
 )
-from app.tasks import manage_shelf_available_space
 
 router = APIRouter(
     prefix="/non_tray_items",
@@ -198,16 +197,6 @@ def update_non_tray_item(
         if not shelf:
             raise NotFound(detail=f"Shelf ID {new_shelf_position.shelf_id} Not Found")
 
-        if shelf.available_space == 0:
-            raise ValidationException(
-                detail=f"Shelf id {shelf.id} has no available space"
-            )
-
-        if existing_non_tray_item.shelf_position_id is None:
-            session.query(Shelf).filter(Shelf.id == shelf.id).update(
-                {"available_space": shelf.available_space - 1}
-            )
-
         if existing_non_tray_item.shelf_position_id and (
             non_tray_item.shelf_position_id != existing_non_tray_item.shelf_position_id
         ):
@@ -221,13 +210,6 @@ def update_non_tray_item(
                 raise NotFound(
                     detail=f"Shelf Position ID {existing_non_tray_item.shelf_position_id} Not Found"
                 )
-
-            background_tasks.add_task(
-                manage_shelf_available_space,
-                session,
-                existing_shelf_position,
-                new_shelf_position,
-            )
 
     # Update the non_tray_item record with the mutated data
     mutated_data = non_tray_item.model_dump(exclude_unset=True)
@@ -252,19 +234,6 @@ def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
     non_tray_item = session.get(NonTrayItem, id)
 
     if non_tray_item:
-        if non_tray_item.shelf_position_id:
-            shelf_position = session.query(ShelfPosition).get(
-                non_tray_item.shelf_position_id
-            )
-
-            if shelf_position:
-                shelf = session.query(Shelf).get(shelf_position.shelf_id)
-
-                if shelf:
-                    session.query(Shelf).filter(Shelf.id == shelf.id).update(
-                        {"available_space": shelf.available_space + 1}
-                    )
-
         session.delete(non_tray_item)
         session.commit()
 
@@ -350,12 +319,6 @@ def move_item(
             detail=f"Failed to transfer: {barcode_value} - Shelf must be of the same size class and owner."
         )
 
-    # Check the available space in the destination shelf
-    if destination_shelf.available_space < 1:
-        raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Shelf id {destination_shelf.id} has no available space"
-        )
-
     # Check if the shelf position at destination shelf is unoccupied
     destination_shelf_positions = destination_shelf.shelf_positions
     destination_shelf_position_id = None
@@ -390,8 +353,6 @@ def move_item(
 
     # Update the non_tray_item and shelves
     non_tray_item.shelf_position_id = destination_shelf_position_id
-    destination_shelf.available_space -= 1
-    source_shelf.available_space += 1
 
     # Update the update_dt field
     update_dt = datetime.utcnow()
