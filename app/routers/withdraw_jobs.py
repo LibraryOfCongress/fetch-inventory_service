@@ -330,25 +330,33 @@ def update_withdraw_job(
                     commit_record(session, shelf)
             # Checking if the tray is empty and updating the shelf position
             if tray_ids:
-                trays = session.query(Tray).filter(Tray.id.in_(tray_ids)).all()
-                for tray in trays:
-                    if tray and len(tray.items) == 0:
 
-                        # Updating Tray barcode status to Withdrawn
-                        session.query(Barcode).filter(
-                            Barcode.id == tray.barcode_id
-                        ).update(
-                            {"withdrawn": True, "update_dt": updated_dt},
-                            synchronize_session=False,
-                        )
+                trays = session.query(Tray).filter(
+                    Tray.id.in_(tray_ids)
+                )
+                empty_trays = [tray for tray in trays if len(tray.items) == 0]
 
-                        tray.shelf_position_id = None
-                        tray.shelf_position_proposed_id = None
-                        tray.withdrawn_barcode_id = tray.barcode_id
-                        tray.barcode_id = None
-                        tray.withdrawal_dt = updated_dt
-                        tray.update_dt = updated_dt
-                        session.add(tray)
+                if empty_trays:
+                    tray_barcode_ids = [tray.barcode_id for tray in empty_trays]
+                    # Updating Tray barcode status to Withdrawn
+                    session.query(Barcode).filter(
+                        Barcode.id.in_(tray_barcode_ids)
+                    ).update(
+                        {"withdrawn": True, "update_dt": updated_dt},
+                        synchronize_session=False,
+                    )
+
+                    session.query(Tray).filter(Tray.id.in_(tray_ids)).update(
+                        {
+                            "shelf_position_id": None,
+                            "shelf_position_proposed_id": None,
+                            "withdrawn_barcode_id": Tray.barcode_id,
+                            "barcode_id": None,
+                            "withdrawal_dt": updated_dt,
+                            "update_dt": updated_dt,
+                        },
+                        synchronize_session=False,
+                    )
 
         if non_tray_item_ids:
             for non_tray_item_id in non_tray_item_ids:

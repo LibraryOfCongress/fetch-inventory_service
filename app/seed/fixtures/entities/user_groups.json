@@ -19,6 +19,20 @@
       "!user_id": {
         "model": "app.models.users.User",
         "filter": {
+          "email": "pleddy@loc.gov"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Administrator"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
           "email": "admin@loctest.gov"
         }
       },

@@ -351,6 +351,7 @@ class NestedItemRequestList(BaseModel):
     status: Optional[str] = None
     media_type: Optional[MediaTypeNestedForRequest] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
     tray: Optional[NestedTrayRequestList] = None
 
 
