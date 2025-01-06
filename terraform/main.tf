@@ -59,7 +59,7 @@ module "app" {
   namespace = local.namespace
   image = var.image
   env_map = local.env_map
-  replicas = 1
+  replicas = 2
   image_pull_secrets = "gitlab-api-2023"
   node_port = 30100
   container_port = 8001
