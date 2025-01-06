@@ -1,6 +1,6 @@
 import uuid, importlib
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, or_
 from sqlalchemy.sql import func
 
 from typing import Optional, List
@@ -72,18 +72,20 @@ class Shelf(SQLModel, table=True):
     @property
     def available_space(self) -> int:
         ShelfPosition = importlib.import_module("app.models.shelf_positions").ShelfPosition
-        Tray = importlib.import_module("app.models.trays").Tray
-        NonTrayItem = importlib.import_module("app.models.non_tray_items").NonTrayItem
         with session_manager() as session:
             total_positions = session.exec(
                 select(func.count(ShelfPosition.id)).where(ShelfPosition.shelf_id == self.id)
             ).first() or 0
             occupied_positions = session.exec(
                 select(func.count(ShelfPosition.id))
-                .join(Tray, Tray.shelf_position_id == ShelfPosition.id)
-                .join(NonTrayItem, NonTrayItem.shelf_position_id == ShelfPosition.id)
                 .where(ShelfPosition.shelf_id == self.id)
-            ).first() or 0
+                .where(
+                    or_(
+                        ShelfPosition.tray != None,
+                        ShelfPosition.non_tray_item != None
+                    )
+                )
+            ).first()
             return total_positions - occupied_positions
 
     ladder: Ladder = Relationship(back_populates="shelves")
