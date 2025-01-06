@@ -5,7 +5,7 @@ ENV SEED_FAKE_DATA=${SEED_FAKE_DATA_ARG:-false}
 
 WORKDIR /tmp
 
-RUN pip install poetry
+RUN pip install poetry==1.6.1
 
 COPY pyproject.toml poetry.lock* /tmp/
 

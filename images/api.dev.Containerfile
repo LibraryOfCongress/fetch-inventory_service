@@ -3,7 +3,7 @@ FROM python:3.11.4-slim AS requirements-stage
 
 WORKDIR /tmp
 
-RUN pip install poetry
+RUN pip install poetry==1.6.1
 
 COPY pyproject.toml poetry.lock* /tmp/
 
