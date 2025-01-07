@@ -543,7 +543,7 @@ def reassign_container_location(
             tray_id=discrepancy_tray_id,
             non_tray_item_id=discrepancy_non_tray_id,
             assigned_user_id=shelving_job.user_id,
-            owner_id=shelving_job.owner_id,
+            owner_id=updated_shelf.owner_id,
             size_class_id=shelf_type.size_class_id,
             assigned_location=shelf_position.location,
             pre_assigned_location=old_shelf_position.location,
