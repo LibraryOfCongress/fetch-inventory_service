@@ -46,3 +46,10 @@ class SizeClass(SQLModel, table=True):
         back_populates="size_classes", link_model=OwnersSizeClassesLink
     )
     shelf_types: List["ShelfType"] = Relationship(back_populates="size_class")
+    shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
+        back_populates="size_class",
+        sa_relationship_kwargs={
+            "primaryjoin": "ShelvingJobDiscrepancy.size_class_id==SizeClass.id",
+            "lazy": "selectin"
+        }
+    )

@@ -28,6 +28,10 @@ class ShelvingJobDiscrepancyBaseOutput(BaseModel):
     tray_id: Optional[int] = None
     non_tray_item_id: Optional[int] = None
     user_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    assigned_location: Optional[str] = None
+    pre_assigned_location: Optional[str] = None
     error: Optional[str] = None
     create_dt: datetime
     update_dt: datetime
@@ -37,6 +41,7 @@ class NestedUserSJobDiscrepancy(BaseModel):
     id: int
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    name: Optional[str] = None
     email: Optional[str] = None
 
 
@@ -50,10 +55,22 @@ class NestedNonTrayItemSJobDiscrepancy(BaseModel):
     barcode: BarcodeDetailReadOutput
 
 
+class NestedOwnerSJobDiscrepancy(BaseModel):
+    id: int
+    name: Optional[str] = None
+
+
+class NestedSizeClassSJobDiscrepancy(BaseModel):
+    id: int
+    short_name: Optional[str] = None
+
+
 class ShelvingJobDiscrepancyOutput(ShelvingJobDiscrepancyBaseOutput):
-    user: Optional[NestedUserSJobDiscrepancy] = None
+    assigned_user: Optional[NestedUserSJobDiscrepancy] = None
     tray: Optional[NestedTraySJobDiscrepancy] = None
     non_tray_item: Optional[NestedNonTrayItemSJobDiscrepancy] = None
+    owner: Optional[NestedOwnerSJobDiscrepancy] = None
+    size_class: Optional[NestedSizeClassSJobDiscrepancy] = None
 
     class Config:
         json_schema_extra = {
@@ -63,8 +80,10 @@ class ShelvingJobDiscrepancyOutput(ShelvingJobDiscrepancyBaseOutput):
                 "tray_id": 1,
                 "non_tray_item_id": None,
                 "user_id": 1,
+                "owner_id": 1,
+                "size_class_id": 1,
                 "error": "Location Discrepancy - Position or Shelf does not match Job assignment.",
-                "user": {
+                "assigned_user": {
                     "first_name": "Bilbo",
                     "last_name": "Baggins",
                     "email": "bbaggins@bagend.hobbit"

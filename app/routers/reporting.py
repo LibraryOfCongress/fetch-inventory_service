@@ -137,8 +137,12 @@ def get_shelving_job_discrepancy_list(
     query = select(ShelvingJobDiscrepancy).distinct()
     if params.shelving_job_id:
         query = query.where(ShelvingJobDiscrepancy.shelving_job_id == params.shelving_job_id)
-    if params.user_id:
-        query = query.where(ShelvingJobDiscrepancy.user_id == params.user_id)
+    if params.assigned_user_id:
+        query = query.where(ShelvingJobDiscrepancy.assigned_user_id == params.assigned_user_id)
+    if params.owner_id:
+        query = query.where(ShelvingJobDiscrepancy.owner_id == params.owner_id)
+    if params.size_class_id:
+        query = query.where(ShelvingJobDiscrepancy.size_class_id == params.size_class_id)
     if params.from_dt:
         query = query.where(ShelvingJobDiscrepancy.create_dt >= params.from_dt)
     if params.to_dt:
@@ -173,8 +177,12 @@ def get_shelving_job_report_csv(
 
     if params.shelving_job_id:
         query = query.where(ShelvingJobDiscrepancy.shelving_job_id == params.shelving_job_id)
-    if params.user_id:
-        query = query.where(ShelvingJobDiscrepancy.user_id == params.user_id)
+    if params.assigned_user_id:
+        query = query.where(ShelvingJobDiscrepancy.assigned_user_id == params.assigned_user_id)
+    if params.owner_id:
+        query = query.where(ShelvingJobDiscrepancy.owner_id == params.owner_id)
+    if params.size_class_id:
+        query = query.where(ShelvingJobDiscrepancy.size_class_id == params.size_class_id)
     if params.from_dt:
         query = query.where(ShelvingJobDiscrepancy.create_dt >= params.from_dt)
     if params.to_dt:
@@ -187,11 +195,33 @@ def get_shelving_job_report_csv(
     writer = csv.writer(output)
 
     # Write headers (optional: use column names dynamically)
-    writer.writerow(["discrepancy_id", "shelving_job_id", "tray_id", "non_tray_item_id", "user_id", "error", "create_dt", "update_dt"])
+    writer.writerow([
+        "discrepancy_id",
+        "shelving_job_id",
+        "tray_id",
+        "non_tray_item_id",
+        "assigned_user_id",
+        "owner_id",
+        "size_class_id",
+        "error",
+        "create_dt",
+        "update_dt"
+    ])
 
     # Write rows
     for row in rows:
-        writer.writerow([row.id, row.shelving_job_id, row.tray_id, row.non_tray_item_id, row.user_id, row.error, row.create_dt, row.update_dt])
+        writer.writerow([
+            row.id,
+            row.shelving_job_id,
+            row.tray_id,
+            row.non_tray_item_id,
+            row.assigned_user_id,
+            row.owner_id,
+            row.size_class_id,
+            row.error,
+            row.create_dt,
+            row.update_dt
+        ])
 
     # Reset the buffer position
     output.seek(0)

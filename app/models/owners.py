@@ -57,5 +57,12 @@ class Owner(SQLModel, table=True):
     size_classes: List["SizeClass"] = Relationship(
         back_populates="owners", link_model=OwnersSizeClassesLink
     )
+    shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
+        back_populates="owner",
+        sa_relationship_kwargs={
+            "primaryjoin": "ShelvingJobDiscrepancy.owner_id==Owner.id",
+            "lazy": "selectin"
+        }
+    )
     # trays (could support if needed)
     # non-tray-items (could support if needed)
