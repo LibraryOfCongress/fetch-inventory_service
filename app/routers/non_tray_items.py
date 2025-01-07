@@ -276,6 +276,7 @@ def move_item(
         session.query(Shelf)
         .join(ShelfPosition, non_tray_item.shelf_position_id == ShelfPosition.id)
         .filter(ShelfPosition.shelf_id == Shelf.id)
+        .first()
     )
     if not source_shelf:
         raise ValidationException(
