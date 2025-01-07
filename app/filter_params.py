@@ -22,6 +22,9 @@ class ShelvingJobDiscrepancyParams(BaseModel):
     Query params for Shelving Job Discrepancies
     """
     shelving_job_id: Optional[int] = None
+    assigned_user_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    size_class_id: Optional[int] = None
     from_dt: Optional[datetime] = None
     to_dt: Optional[datetime] = None
     user_id: Optional[int] = None
