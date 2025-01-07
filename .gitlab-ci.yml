@@ -6,7 +6,7 @@ stages:
   - controls
   - sonarqube
 
-build_image:
+build_image_dev:
   stage: build
   image:
     name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
@@ -37,6 +37,7 @@ build_image:
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
+      allow_failure: true
 
 build_demo:
   stage: build
