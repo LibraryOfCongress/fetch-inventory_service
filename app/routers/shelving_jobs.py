@@ -517,14 +517,14 @@ def reassign_container_location(
             .first()
         )
 
-        if reassignment_input.trayed:
-            new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
-                shelving_job_id=id,
-                tray_id=discrepancy_tray_id,
-                non_tray_item_id=discrepancy_non_tray_id,
-                user_id=shelving_job.user_id,
-                error=f"{discrepancy_error}"
-            )
+
+        new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
+            shelving_job_id=id,
+            tray_id=discrepancy_tray_id,
+            non_tray_item_id=discrepancy_non_tray_id,
+            user_id=shelving_job.user_id,
+            error=f"{discrepancy_error}"
+        )
         new_shelving_job_discrepancy = commit_record(session, new_shelving_job_discrepancy)
 
         raise ValidationException(
