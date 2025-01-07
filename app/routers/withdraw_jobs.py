@@ -323,11 +323,6 @@ def update_withdraw_job(
                     .first()
                 )
 
-                if shelf:
-                    shelf.available_space += 1
-
-                    # Committing the changes
-                    commit_record(session, shelf)
             # Checking if the tray is empty and updating the shelf position
             if tray_ids:
 
@@ -359,18 +354,6 @@ def update_withdraw_job(
                     )
 
         if non_tray_item_ids:
-            for non_tray_item_id in non_tray_item_ids:
-                shelf = session.query(Shelf).join(
-                    ShelfPosition, ShelfPosition.shelf_id == Shelf.id
-                ).join(NonTrayItem, NonTrayItem.id == non_tray_item_id).filter(
-                    ShelfPosition.id == NonTrayItem.shelf_position_id
-                ).first()
-
-                if shelf:
-                    shelf.available_space += 1
-                    # Committing the changes
-                    commit_record(session, shelf)
-
             session.query(NonTrayItem).filter(
                 NonTrayItem.id.in_(non_tray_item_ids)
             ).update(

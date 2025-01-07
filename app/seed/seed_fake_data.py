@@ -134,7 +134,6 @@ def generate_shelves_for_system():
                     shelf_type_id = random.choice(shelf_type__list_two)
                 shelf["!container_type_id"]["filter"]["type"] = cont_type
                 shelf["!shelf_type_id"]["filter"]["id"] = shelf_type_id
-                shelf["available_space"] = 8
                 # get max Ok,
                 shelf["!owner_id"]["filter"]["name"] = owner
                 old_shelf_num = shelf["!shelf_number_id"]["filter"]["number"]

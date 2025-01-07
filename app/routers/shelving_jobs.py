@@ -202,10 +202,10 @@ def create_shelving_job(
                         ladder_id,
                     )
 
-            # set verification shelving job last, in case container errors
-            verification_job.shelving_job_id = new_shelving_job.id
-            session.add(verification_job)
-            session.commit()
+                # set verification shelving job last, in case container errors
+                verification_job.shelving_job_id = new_shelving_job.id
+                session.add(verification_job)
+                session.commit()
 
         # else, shelving_job.origin == "Direct", return shelving_job
         session.refresh(new_shelving_job)
@@ -213,6 +213,8 @@ def create_shelving_job(
         return new_shelving_job
 
     except IntegrityError as e:
+        session.delete(new_shelving_job)
+        session.commit()
         raise ValidationException(detail=f"{e}")
     except ValidationException as e:
         session.delete(new_shelving_job)
@@ -504,25 +506,6 @@ def reassign_container_location(
             detail=f"Shelf ID {updated_shelf.id} has no available space."
         )
 
-    else:
-        if container.shelf_position_id != updated_shelf_position_id:
-            previous_shelf_position = (
-                session.query(ShelfPosition)
-                .where(ShelfPosition.id == container.shelf_position_id)
-                .first()
-            )
-
-            if previous_shelf_position and (
-                previous_shelf_position.shelf_id != updated_shelf.id
-            ):
-                session.query(Shelf).where(
-                    Shelf.id == previous_shelf_position.shelf_id
-                ).update({"available_space": Shelf.available_space + 1})
-
-        session.query(Shelf).where(Shelf.id == shelf_position.shelf_id).update(
-            {"available_space": Shelf.available_space - 1}
-        )
-
     shelf_type = updated_shelf.shelf_type
     # Check if the container owner and size class match to shelf
     if (
@@ -549,14 +532,14 @@ def reassign_container_location(
             .first()
         )
 
-        if reassignment_input.trayed:
-            new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
-                shelving_job_id=id,
-                tray_id=discrepancy_tray_id,
-                non_tray_item_id=discrepancy_non_tray_id,
-                user_id=shelving_job.user_id,
-                error=f"{discrepancy_error}"
-            )
+
+        new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
+            shelving_job_id=id,
+            tray_id=discrepancy_tray_id,
+            non_tray_item_id=discrepancy_non_tray_id,
+            user_id=shelving_job.user_id,
+            error=f"{discrepancy_error}"
+        )
         new_shelving_job_discrepancy = commit_record(session, new_shelving_job_discrepancy)
 
         raise ValidationException(

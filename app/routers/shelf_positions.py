@@ -133,8 +133,6 @@ def create_shelf_position(
             f" {shelf.id} exceeds "
             f"max capacity of {shelf_type.max_capacity}"
         )
-    # else:
-    #     shelf.available_space += 1
 
     new_shelf_position = ShelfPosition(**shelf_position_input.model_dump())
 
@@ -227,13 +225,6 @@ def delete_shelf_position(id: int, session: Session = Depends(get_session)):
             raise ValidationException(
                 detail="Can not delete shelf position associated tray and non-tray items"
             )
-
-    shelf = session.query(Shelf).get(shelf_position.shelf_id)
-
-    if shelf:
-        session.query(Shelf).filter(Shelf.id == shelf.id).update(
-            {"available_space": shelf.available_space - 1}
-        )
 
     session.delete(shelf_position)
     session.commit()

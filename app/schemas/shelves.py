@@ -49,7 +49,6 @@ class ShelfUpdateInput(BaseModel):
     shelf_type_id: Optional[conint(ge=0, le=2147483647)] = None
     shelf_number_id: Optional[conint(ge=0, le=32767)] = None
     owner_id: Optional[conint(ge=0, le=32767)] = None
-    available_space: Optional[conint(ge=0, le=32767)] = None
     height: Optional[condecimal(decimal_places=2)] = None
     width: Optional[condecimal(decimal_places=2)] = None
     depth: Optional[condecimal(decimal_places=2)] = None
@@ -64,7 +63,6 @@ class ShelfUpdateInput(BaseModel):
                 "shelf_type_id": 1,
                 "shelf_number_id": 1,
                 "owner_id": 1,
-                "available_space": 33,
                 "height": 15.7,
                 "width": 30.33,
                 "depth": 27,
@@ -102,6 +100,7 @@ class ShelfBaseOutput(BaseModel):
 
 class ShelfListOutput(ShelfBaseOutput):
     sort_priority: Optional[int] = None
+    available_space: int
     ladder_id: int
     shelf_number: ShelfNumberDetailOutput
     container_type_id: Optional[int] = None
