@@ -40,6 +40,10 @@ class User(SQLModel, table=True):
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
+    @property
+    def name(self) -> str:
+            return f"{self.first_name} {self.last_name}"
+
     accession_jobs: List["AccessionJob"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={
