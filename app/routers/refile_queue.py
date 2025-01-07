@@ -88,7 +88,7 @@ def add_to_refile_queue(
         if item.status == "In":
             raise ValidationException(detail="Item is already has status 'In'")
         if item.status == "PickList":
-            raise ValidationException(detail="Item is already associated with "
+            raise ValidationException(detail="Item is associated with "
                                              "uncompleted Pick List")
 
         existing_refile_items = (
@@ -126,7 +126,7 @@ def add_to_refile_queue(
         if non_tray_item.status == "In":
             raise ValidationException(detail="Item is already has status 'In'")
         if non_tray_item.status == "PickList":
-            raise ValidationException(detail="Item is already associated with "
+            raise ValidationException(detail="Item is associated with "
                                              "uncompleted Pick List")
 
         existing_refile_non_tray_items = (
