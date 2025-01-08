@@ -532,11 +532,13 @@ def reassign_container_location(
             .first()
         )
 
-        old_shelf_position = (
-            session.query(ShelfPosition)
-            .where(ShelfPosition.id == container.shelf_position_proposed_id)
-            .first()
-        )
+        pre_assigned_location = None
+        if container.shelf_position_proposed_id:
+            pre_assigned_location = (
+                session.query(ShelfPosition)
+                .where(ShelfPosition.id == container.shelf_position_proposed_id)
+                .first()
+            ).location
 
         new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
             shelving_job_id=id,
@@ -546,7 +548,7 @@ def reassign_container_location(
             owner_id=updated_shelf.owner_id,
             size_class_id=shelf_type.size_class_id,
             assigned_location=shelf_position.location,
-            pre_assigned_location=old_shelf_position.location,
+            pre_assigned_location=pre_assigned_location,
             error=f"{discrepancy_error}"
         )
         new_shelving_job_discrepancy = commit_record(session, new_shelving_job_discrepancy)

@@ -151,20 +151,7 @@ def get_shelving_job_discrepancy_list(
     return paginate(session, query)
 
 
-@router.get("/shelving-job-discrepancies/{id}", response_model=ShelvingJobDiscrepancyOutput)
-def get_shelving_job_discrepancy_detail(id: int, session: Session = Depends(get_session)):
-    """
-    Returns a single Shelving Job Discrepancy object
-    """
-    shelving_job_discrepancy = session.get(ShelvingJobDiscrepancy, id)
-
-    if shelving_job_discrepancy:
-        return shelving_job_discrepancy
-
-    raise NotFound(detail=f"Shelving Job Discrepancy ID {id} Not Found")
-
-
-@router.get("/shelving-job-discrepancies/download/", response_class=StreamingResponse)
+@router.get("/shelving-job-discrepancies/download", response_class=StreamingResponse)
 def get_shelving_job_report_csv(
     session: Session = Depends(get_session),
     params: ShelvingJobDiscrepancyParams = Depends()
@@ -189,7 +176,8 @@ def get_shelving_job_report_csv(
         query = query.where(ShelvingJobDiscrepancy.create_dt <= params.to_dt)
 
     result = session.execute(query)
-    rows = result.all()  # List of tuples
+    rows = result.scalars().all()
+
         # Create an in-memory CSV
     output = StringIO()
     writer = csv.writer(output)
@@ -232,3 +220,15 @@ def get_shelving_job_report_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=my_model_data.csv"}
     )
+
+@router.get("/shelving-job-discrepancies/{id}", response_model=ShelvingJobDiscrepancyOutput)
+def get_shelving_job_discrepancy_detail(id: int, session: Session = Depends(get_session)):
+    """
+    Returns a single Shelving Job Discrepancy object
+    """
+    shelving_job_discrepancy = session.get(ShelvingJobDiscrepancy, id)
+
+    if shelving_job_discrepancy:
+        return shelving_job_discrepancy
+
+    raise NotFound(detail=f"Shelving Job Discrepancy ID {id} Not Found")
