@@ -75,6 +75,7 @@ from app.routers import (
     batch_upload,
     shelf_types,
     reporting,
+    audit_trails,
 )
 
 
@@ -245,5 +246,6 @@ app.include_router(auth.router)
 app.include_router(status.router)
 app.include_router(batch_upload.router)
 app.include_router(reporting.router)
+app.include_router(audit_trails.router)
 
 add_pagination(app)
