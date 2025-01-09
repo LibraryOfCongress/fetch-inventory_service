@@ -100,3 +100,35 @@ class ShelvingJobDiscrepancyOutput(ShelvingJobDiscrepancyBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+
+
+class NestedBarcodeOpenLocations(BaseModel):
+    value: Optional[str] = None
+
+
+class NestedSizeClassOpenLocations(BaseModel):
+    short_name: str
+
+
+class NestedShelfTypeOpenLocations(BaseModel):
+    id: int
+    size_class: Optional[NestedSizeClassOpenLocations] = None
+    max_capacity: int
+
+
+class NestedOwnerOpenLocations(BaseModel):
+    id: int
+    name: Optional[str] = None
+
+
+class OpenLocationsOutput(BaseModel):
+    barcode: Optional[NestedBarcodeOpenLocations] = None
+    location: Optional[str] = None
+    internal_location: Optional[str] = None
+    available_space: int
+    owner: Optional[NestedOwnerOpenLocations] = None
+    height: Optional[float] = None
+    width: Optional[float] = None
+    depth: Optional[float] = None
+    shelf_type: Optional[NestedShelfTypeOpenLocations] = None
+

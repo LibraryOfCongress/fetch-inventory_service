@@ -6,19 +6,27 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import func, union_all, literal, and_
+from sqlalchemy import func, union_all, literal, and_, or_
 from sqlmodel import Session, select
 
 from app.database.session import get_session
 from app.logger import inventory_logger
-from app.filter_params import ShelvingJobDiscrepancyParams
+from app.filter_params import ShelvingJobDiscrepancyParams, OpenLocationParams
 from app.models.items import Item
 from app.models.media_types import MediaType
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
 from app.models.size_class import SizeClass
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
+from app.models.shelf_types import ShelfType
 from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
-from app.schemas.reporting import AccessionItemsDetailOutput, ShelvingJobDiscrepancyOutput
+from app.models.buildings import Building
+from app.models.aisles import Aisle
+from app.models.sides import Side
+from app.models.modules import Module
+from app.models.ladders import Ladder
+from app.schemas.reporting import AccessionItemsDetailOutput, ShelvingJobDiscrepancyOutput, OpenLocationsOutput
 from app.config.exceptions import (
     NotFound
 )
@@ -132,7 +140,7 @@ def get_shelving_job_discrepancy_list(
     params: ShelvingJobDiscrepancyParams = Depends()
 ) -> list:
     """
-    Returns a paginated list of ShelvingJobDiscrepancy objects.
+    Returns a list of ShelvingJobDiscrepancy objects.
     """
     query = select(ShelvingJobDiscrepancy).distinct()
     if params.shelving_job_id:
@@ -186,26 +194,46 @@ def get_shelving_job_report_csv(
     writer.writerow([
         "discrepancy_id",
         "shelving_job_id",
-        "tray_id",
-        "non_tray_item_id",
-        "assigned_user_id",
-        "owner_id",
-        "size_class_id",
+        "tray",
+        "non_tray_item",
+        "assigned_user",
+        "owner",
+        "size_class",
+        "assigned_location",
+        "pre_assigned_location",
         "error",
         "create_dt",
         "update_dt"
     ])
 
+    tray_barcode_value = None
+    non_tray_item_barcode_value = None
+    assigned_user_name = None
+    owner_name = None
+    size_class_shortname = None
+
     # Write rows
     for row in rows:
+        if row.non_tray_item:
+            non_tray_item_barcode_value = row.non_tray_item.barcode.value
+        if row.tray:
+            tray_barcode_value = row.tray.barcode.value
+        if row.assigned_user:
+            assigned_user_name = row.assigned_user.name
+        if row.owner:
+            owner_name = row.owner.name
+        if row.size_class:
+            size_class_shortname = row.size_class.short_name
         writer.writerow([
             row.id,
             row.shelving_job_id,
-            row.tray_id,
-            row.non_tray_item_id,
-            row.assigned_user_id,
-            row.owner_id,
-            row.size_class_id,
+            tray_barcode_value,
+            non_tray_item_barcode_value,
+            assigned_user_name,
+            owner_name,
+            size_class_shortname,
+            row.assigned_location,
+            row.pre_assigned_location,
             row.error,
             row.create_dt,
             row.update_dt
@@ -218,7 +246,7 @@ def get_shelving_job_report_csv(
     return StreamingResponse(
         output,
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=my_model_data.csv"}
+        headers={"Content-Disposition": "attachment; filename=shelving_discrepancies.csv"}
     )
 
 @router.get("/shelving-job-discrepancies/{id}", response_model=ShelvingJobDiscrepancyOutput)
@@ -232,3 +260,302 @@ def get_shelving_job_discrepancy_detail(id: int, session: Session = Depends(get_
         return shelving_job_discrepancy
 
     raise NotFound(detail=f"Shelving Job Discrepancy ID {id} Not Found")
+
+
+# OPEN LOCATIONS REPORT
+@router.get("/open-locations/", response_model=Page[OpenLocationsOutput])
+def get_open_locations_list(
+    session: Session = Depends(get_session),
+    params: OpenLocationParams = Depends()
+) -> list:
+    """
+    Returns a paginated list of shelf objects with
+    unoccupied nested shelf positions based on search criteria
+    """
+    total_positions_subquery = (
+        select(
+            ShelfPosition.shelf_id,
+            func.count(ShelfPosition.id).label("total_positions")
+        )
+        .group_by(ShelfPosition.shelf_id)
+        .subquery()
+    )
+
+    occupied_positions_subquery = (
+        select(
+            ShelfPosition.shelf_id,
+            func.count(ShelfPosition.id).label("occupied_positions")
+        )
+        .where(
+            or_(
+                ShelfPosition.tray != None,
+                ShelfPosition.non_tray_item != None
+            )
+        )
+        .group_by(ShelfPosition.shelf_id)
+        .subquery()
+    )
+
+    shelf_query = (
+        select(
+            Shelf
+        ).distinct().join(
+            ShelfType, Shelf.shelf_type_id == ShelfType.id
+        ).join(
+            SizeClass, ShelfType.size_class_id == SizeClass.id
+        ).join(
+            Shelf.barcode
+        ).join(
+            Shelf.owner
+        ).outerjoin(
+            total_positions_subquery, Shelf.id == total_positions_subquery.c.shelf_id
+        ).outerjoin(
+            occupied_positions_subquery, Shelf.id == occupied_positions_subquery.c.shelf_id
+        )
+    )
+
+    if params.show_partial == False:
+        # Show shelves with no occupied positions
+        shelf_query = shelf_query.where(
+            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) == 0
+        )
+    else:
+        # Show shelves with at least some space available
+        shelf_query = shelf_query.where(
+            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) < ShelfType.max_capacity
+        )
+
+    if params.owner_id:
+        shelf_query = shelf_query.where(Shelf.owner_id == params.owner_id)
+    if params.size_class_id:
+        shelf_query = shelf_query.where(ShelfType.size_class_id == params.size_class_id)
+    if params.height:
+        shelf_query = shelf_query.where(Shelf.height == params.height)
+    if params.width:
+        shelf_query = shelf_query.where(Shelf.width == params.width)
+    if params.depth:
+        shelf_query = shelf_query.where(Shelf.depth == params.depth)
+
+    # Now location constraints
+    if params.ladder_id:
+        # shelf_query = shelf_query.where(Shelf.ladder_id == params.ladder_id)
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).where(
+            Ladder.id == params.ladder_id
+        )
+    elif params.side_id:
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).where(
+            Side.id == params.side_id
+        )
+    elif params.aisle_id:
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).join(
+            Aisle, Side.aisle_id == Aisle.id
+        ).where(
+            Aisle.id == params.aisle_id
+        )
+    elif params.module_id:
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).join(
+            Aisle, Side.aisle_id == Aisle.id
+        ).join(
+            Module, Aisle.module_id == Module.id
+        ).where(
+            Module.id == params.module_id
+        )
+    elif params.building_id:
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).join(
+            Aisle, Side.aisle_id == Aisle.id
+        ).join(
+            Module, Aisle.module_id == Module.id
+        ).join(
+            Building, Module.building_id == Building.id
+        ).where(
+            Building.id == params.building_id
+        )
+
+    return paginate(session, shelf_query)
+
+
+@router.get("/open-locations/download", response_class=StreamingResponse)
+def get_open_locations_csv(
+    session: Session = Depends(get_session),
+    params: OpenLocationParams = Depends()
+) -> list:
+    """
+    Returns a csv report of shelf objects with
+    unoccupied nested shelf positions based on search criteria
+    """
+    total_positions_subquery = (
+        select(
+            ShelfPosition.shelf_id,
+            func.count(ShelfPosition.id).label("total_positions")
+        )
+        .group_by(ShelfPosition.shelf_id)
+        .subquery()
+    )
+
+    occupied_positions_subquery = (
+        select(
+            ShelfPosition.shelf_id,
+            func.count(ShelfPosition.id).label("occupied_positions")
+        )
+        .where(
+            or_(
+                ShelfPosition.tray != None,
+                ShelfPosition.non_tray_item != None
+            )
+        )
+        .group_by(ShelfPosition.shelf_id)
+        .subquery()
+    )
+
+    shelf_query = (
+        select(
+            Shelf
+        ).distinct().join(
+            ShelfType, Shelf.shelf_type_id == ShelfType.id
+        ).join(
+            SizeClass, ShelfType.size_class_id == SizeClass.id
+        ).join(
+            Shelf.barcode
+        ).join(
+            Shelf.owner
+        ).outerjoin(
+            total_positions_subquery, Shelf.id == total_positions_subquery.c.shelf_id
+        ).outerjoin(
+            occupied_positions_subquery, Shelf.id == occupied_positions_subquery.c.shelf_id
+        )
+    )
+
+    if params.show_partial == False:
+        # Show shelves with no occupied positions
+        shelf_query = shelf_query.where(
+            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) == 0
+        )
+    else:
+        # Show shelves with at least some space available
+        shelf_query = shelf_query.where(
+            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) < ShelfType.max_capacity
+        )
+
+    if params.owner_id:
+        shelf_query = shelf_query.where(Shelf.owner_id == params.owner_id)
+    if params.size_class_id:
+        shelf_query = shelf_query.where(ShelfType.size_class_id == params.size_class_id)
+    if params.height:
+        shelf_query = shelf_query.where(Shelf.height == params.height)
+    if params.width:
+        shelf_query = shelf_query.where(Shelf.width == params.width)
+    if params.depth:
+        shelf_query = shelf_query.where(Shelf.depth == params.depth)
+
+    # Now location constraints
+    if params.ladder_id:
+        # shelf_query = shelf_query.where(Shelf.ladder_id == params.ladder_id)
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).where(
+            Ladder.id == params.ladder_id
+        )
+    elif params.side_id:
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).where(
+            Side.id == params.side_id
+        )
+    elif params.aisle_id:
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).join(
+            Aisle, Side.aisle_id == Aisle.id
+        ).where(
+            Aisle.id == params.aisle_id
+        )
+    elif params.module_id:
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).join(
+            Aisle, Side.aisle_id == Aisle.id
+        ).join(
+            Module, Aisle.module_id == Module.id
+        ).where(
+            Module.id == params.module_id
+        )
+    elif params.building_id:
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).join(
+            Side, Ladder.side_id == Side.id
+        ).join(
+            Aisle, Side.aisle_id == Aisle.id
+        ).join(
+            Module, Aisle.module_id == Module.id
+        ).join(
+            Building, Module.building_id == Building.id
+        ).where(
+            Building.id == params.building_id
+        )
+
+    result = session.execute(shelf_query)
+    rows = result.scalars().all()
+
+        # Create an in-memory CSV
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Write headers (optional: use column names dynamically)
+    writer.writerow([
+        "shelf_barcode",
+        "available_space",
+        "location",
+        "owner",
+        "height",
+        "width",
+        "depth",
+        "size_class"
+    ])
+
+    # Write rows
+    for row in rows:
+        writer.writerow([
+            row.barcode.value,
+            row.available_space,
+            row.location,
+            row.owner.name,
+            row.height,
+            row.width,
+            row.depth,
+            row.shelf_type.size_class.short_name
+        ])
+
+    # Reset the buffer position
+    output.seek(0)
+
+    # Create a StreamingResponse
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=open_locations.csv"}
+    )
