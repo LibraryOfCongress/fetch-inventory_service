@@ -30,23 +30,37 @@ class ShelvingJobDiscrepancyParams(BaseModel):
     user_id: Optional[int] = None
 
 
-class OpenLocationParams(BaseModel):
+class OpenLocationParams:
     """
     Query params for Open Locations Report.
     The underlying list query is against shelves
     with a shelf position join
     """
-    building_id: Optional[int] = None
-    module_id: Optional[int] = None
-    aisle_id: Optional[int] = None
-    side_id: Optional[int] = None
-    ladder_id: Optional[int] = None
-    owner_id: Optional[int] = None
-    height: Optional[float] = None
-    width: Optional[float] = None
-    depth: Optional[float] = None
-    size_class_id: Optional[int] = None
-    show_partial: Optional[bool] = True
+    def __init__(
+        self,
+        building_id: Optional[int] = None,
+        module_id: Optional[int] = None,
+        aisle_id: Optional[int] = None,
+        side_id: Optional[int] = None,
+        ladder_id: Optional[int] = None,
+        height: Optional[float] = None,
+        width: Optional[float] = None,
+        depth: Optional[float] = None,
+        show_partial: Optional[bool] = True,
+        owner_id: list[int] = Query(default=None),
+        size_class_id: list[int] = Query(default=None)
+    ):
+        self.building_id = building_id
+        self.module_id = module_id
+        self.aisle_id = aisle_id
+        self.side_id = side_id
+        self.ladder_id = ladder_id
+        self.height = height
+        self.width = width
+        self.depth = depth
+        self.show_partial = show_partial
+        self.owner_id = owner_id
+        self.size_class_id = size_class_id
 
 
 class SortParams(BaseModel):

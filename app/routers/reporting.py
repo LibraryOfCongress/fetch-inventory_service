@@ -326,9 +326,9 @@ def get_open_locations_list(
         )
 
     if params.owner_id:
-        shelf_query = shelf_query.where(Shelf.owner_id == params.owner_id)
+        shelf_query = shelf_query.where(Shelf.owner_id.in_(params.owner_id))
     if params.size_class_id:
-        shelf_query = shelf_query.where(ShelfType.size_class_id == params.size_class_id)
+        shelf_query = shelf_query.where(ShelfType.size_class_id.in_(params.size_class_id))
     if params.height:
         shelf_query = shelf_query.where(Shelf.height == params.height)
     if params.width:
@@ -455,9 +455,9 @@ def get_open_locations_csv(
         )
 
     if params.owner_id:
-        shelf_query = shelf_query.where(Shelf.owner_id == params.owner_id)
+        shelf_query = shelf_query.where(Shelf.owner_id.in_(params.owner_id))
     if params.size_class_id:
-        shelf_query = shelf_query.where(ShelfType.size_class_id == params.size_class_id)
+        shelf_query = shelf_query.where(ShelfType.size_class_id.in_(params.size_class_id))
     if params.height:
         shelf_query = shelf_query.where(Shelf.height == params.height)
     if params.width:
