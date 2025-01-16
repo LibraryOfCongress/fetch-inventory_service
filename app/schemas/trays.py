@@ -141,12 +141,18 @@ class NestedShelfPositionNumber(BaseModel):
     number: int
 
 
+class NestedShelfForTray(BaseModel):
+    id: int
+    barcode: Optional[BarcodeDetailReadOutput] = None
+
+
 class ShelfPositionNestedForTrayOutput(BaseModel):
     id: int
     shelf_id: int
     shelf_position_number: NestedShelfPositionNumber
     location: Optional[str] = None
     internal_location: Optional[str] = None
+    shelf: Optional[NestedShelfForTray] = None
 
 
 class TrayBaseOutput(TrayUpdateInput):

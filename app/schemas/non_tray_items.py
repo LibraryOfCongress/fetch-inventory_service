@@ -132,12 +132,18 @@ class NestedShelfPositionNumberNonTray(BaseModel):
     number: int
 
 
+class NestedShelfForNonTray(BaseModel):
+    id: int
+    barcode: Optional[BarcodeDetailReadOutput] = None
+
+
 class ShelfPositionNestedForNonTrayOutput(BaseModel):
     id: int
     shelf_id: int
     shelf_position_number: NestedShelfPositionNumberNonTray
     location: Optional[str] = None
     internal_location: Optional[str] = None
+    shelf: Optional[NestedShelfForNonTray] = None
 
 
 class NonTrayItemBaseOutput(NonTrayItemUpdateInput):
@@ -292,12 +298,16 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
     verification_job: Optional[VerificationJobBaseOutput] = None
     subcollection: Optional[SubcollectionDetailWriteOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
+    last_requested_dt: Optional[datetime] = None
+    last_refiled_dt: Optional[datetime] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
                 "status": "In",
+                "last_requested_dt": "2023-10-08T20:46:56.764426",
+                "last_refiled_dt": "2023-10-08T20:46:56.764426",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,

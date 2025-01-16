@@ -291,12 +291,16 @@ class ItemDetailReadOutput(ItemDetailWriteOutput):
     subcollection: Optional[SubcollectionDetailWriteOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
     tray: Optional[TrayDetailReadOutput] = None
+    last_requested_dt: Optional[datetime] = None
+    last_refiled_dt: Optional[datetime] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
                 "status": "In",
+                "last_requested_dt": "2023-10-08T20:46:56.764426",
+                "last_refiled_dt": "2023-10-08T20:46:56.764426",
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
                 "scanned_for_verification": False,

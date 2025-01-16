@@ -43,6 +43,8 @@ def get_request_list(
     from_dt: Optional[datetime] = None,
     to_dt: Optional[datetime] = None,
     requestor_name: Optional[str] = None,
+    item_barcode: Optional[str] = None,
+    non_tray_item_barcode: Optional[str] = None,
     sort_params: SortParams = Depends()
 ) -> list:
     """
@@ -75,6 +77,24 @@ def get_request_list(
         query = query.where(Request.building_id == building_id)
     if unassociated_pick_list:
         query = query.where(Request.pick_list_id == None)
+    if item_barcode:
+        item_subquery = (
+            select(Item.id).join(
+                Barcode, Barcode.id == Item.barcode_id
+            ).where(
+                Barcode.value == item_barcode
+            ).distinct()
+        )
+        query = query.where(Request.item_id.in_(item_subquery))
+    if non_tray_item_barcode:
+        non_tray_item_subquery = (
+            select(NonTrayItem.id).join(
+                Barcode, Barcode.id == NonTrayItem.barcode_id
+            ).where(
+                Barcode.value == non_tray_item_barcode
+            ).distinct()
+        )
+        query = query.where(Request.non_tray_item_id.in_(non_tray_item_subquery))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
