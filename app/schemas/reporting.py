@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
+from app.schemas.size_class import SizeClassDetailReadOutput
 
 
 class AccessionItemsDetailOutput(BaseModel):
@@ -132,3 +133,42 @@ class OpenLocationsOutput(BaseModel):
     depth: Optional[float] = None
     shelf_type: Optional[NestedShelfTypeOpenLocations] = None
 
+
+class AisleDetailReportItemCountOutput(BaseModel):
+    aisle_id: int
+    aisle_number: int
+    shelf_count: Optional[int] = 0
+    item_count: Optional[int] = 0
+    non_tray_item_count: Optional[int] = 0
+    tray_count: Optional[int] = 0
+    total_item_count: Optional[int] = 0
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "aisle_id": 1,
+                "aisle_number": 1,
+                "shelf_count": 1,
+                "item_count": 1,
+                "non_tray_item_count": 1,
+                "tray_count": 1,
+                "total_item_count": 1
+            }
+        }
+
+
+class NonTrayItemCountReadOutput(BaseModel):
+    size_class_id: int
+    size_class_name: Optional[str] = "All"
+    size_class_short_name: Optional[str] = "All"
+    non_tray_item_count: Optional[int] = 0
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "size_class_id": 1,
+                "size_class_name": "C-Low",
+                "size_class_short_name": "CL",
+                "non_tray_item_count": 1
+            }
+        }

@@ -69,3 +69,39 @@ class SortParams(BaseModel):
     """
     sort_by: Optional[str] = Query(default=None, description="Field to sort by")
     sort_order: Optional[str] = Query(default="asc", description="Sort order: 'asc' or 'desc'")
+
+
+class AisleItemsCountParams(BaseModel):
+    """
+    Query params for Aisle Items Count Report.
+    """
+    building_id: int = Query(..., description="ID of the building to filter aisles.")
+    aisle_num_from: Optional[int] = Query(None, description="Starting aisle number.")
+    aisle_num_to: Optional[int] = Query(None, description="Ending aisle number.")
+
+
+class NonTrayItemsCountParams:
+    """
+    Query params for Non Tray Items Count Report.
+    """
+    def __init__(
+        self,
+        building_id: int = Query(..., description="ID of the building to filter "
+                                                  "aisles."),
+        owner_id: list[int] = Query(default=None),
+        size_class_id: list[int] = Query(default=None),
+        aisle_num_from: Optional[int] = Query(None, description="Starting aisle "
+                                                                "number."),
+        aisle_num_to: Optional[int] = Query(None, description="Ending aisle number."),
+        from_dt: datetime = Query(default=None, description="Start Accession date to "
+                                                            "filter by."),
+        to_dt: datetime = Query(default=None, description="End Accession date to "
+                                                          "filter by.")
+    ):
+        self.building_id = building_id
+        self.owner_id = owner_id
+        self.size_class_id = size_class_id
+        self.aisle_num_from = aisle_num_from
+        self.aisle_num_to = aisle_num_to
+        self.from_dt = from_dt
+        self.to_dt = to_dt

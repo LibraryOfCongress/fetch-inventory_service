@@ -3,7 +3,6 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
-from sqlalchemy import asc, desc
 
 from app.database.session import get_session
 from app.filter_params import SortParams

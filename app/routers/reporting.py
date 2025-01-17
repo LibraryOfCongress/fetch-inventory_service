@@ -1,17 +1,24 @@
 import csv
 from io import StringIO
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import func, union_all, literal, and_, or_
+from sqlalchemy import func, union_all, literal, and_, or_, asc
 from sqlmodel import Session, select
 
 from app.database.session import get_session
 from app.logger import inventory_logger
-from app.filter_params import ShelvingJobDiscrepancyParams, OpenLocationParams
+from app.filter_params import (
+    ShelvingJobDiscrepancyParams,
+    OpenLocationParams,
+    AisleItemsCountParams,
+    NonTrayItemsCountParams,
+)
+from app.models.aisle_numbers import AisleNumber
 from app.models.items import Item
 from app.models.media_types import MediaType
 from app.models.non_tray_items import NonTrayItem
@@ -26,11 +33,17 @@ from app.models.aisles import Aisle
 from app.models.sides import Side
 from app.models.modules import Module
 from app.models.ladders import Ladder
-from app.schemas.reporting import AccessionItemsDetailOutput, ShelvingJobDiscrepancyOutput, OpenLocationsOutput
+from app.models.trays import Tray
+from app.schemas.reporting import (
+    AccessionItemsDetailOutput,
+    ShelvingJobDiscrepancyOutput,
+    OpenLocationsOutput,
+    AisleDetailReportItemCountOutput,
+    NonTrayItemCountReadOutput
+)
 from app.config.exceptions import (
     NotFound
 )
-
 
 router = APIRouter(
     prefix="/reporting",
@@ -249,6 +262,7 @@ def get_shelving_job_report_csv(
         headers={"Content-Disposition": "attachment; filename=shelving_discrepancies.csv"}
     )
 
+
 @router.get("/shelving-job-discrepancies/{id}", response_model=ShelvingJobDiscrepancyOutput)
 def get_shelving_job_discrepancy_detail(id: int, session: Session = Depends(get_session)):
     """
@@ -396,7 +410,7 @@ def get_open_locations_list(
 def get_open_locations_csv(
     session: Session = Depends(get_session),
     params: OpenLocationParams = Depends()
-) -> list:
+):
     """
     Returns a csv report of shelf objects with
     unoccupied nested shelf positions based on search criteria
@@ -558,4 +572,295 @@ def get_open_locations_csv(
         output,
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=open_locations.csv"}
+    )
+
+
+def get_aisle_item_counts_query(building_id: int, aisle_num_from: Optional[int], aisle_num_to: Optional[int]):
+    """
+    Construct the query to fetch aisles with their associated counts.
+    """
+    query = (
+        select(
+            Aisle.id.label("aisle_id"),
+            AisleNumber.number.label("aisle_number"),
+            func.count(Shelf.id).label("shelf_count"),
+            func.count(Tray.id).label("tray_count"),
+            func.count(Item.id).label("item_count"),
+            func.count(NonTrayItem.id).label("non_tray_item_count"),
+        )
+        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
+        .join(Module, Aisle.module_id == Module.id)
+        .join(Side, Side.aisle_id == Aisle.id, isouter=True)
+        .join(Ladder, Ladder.side_id == Side.id, isouter=True)
+        .join(Shelf, Shelf.ladder_id == Ladder.id, isouter=True)
+        .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id, isouter=True)
+        .join(Tray, Tray.shelf_position_id == ShelfPosition.id, isouter=True)
+        .join(Item, Item.tray_id == Tray.id, isouter=True)
+        .join(NonTrayItem, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)
+        .filter(Module.building_id == building_id)
+        .order_by(asc(AisleNumber.number))
+        .group_by(Aisle.id, AisleNumber.number)
+    )
+
+    if aisle_num_from is not None:
+        query = query.filter(AisleNumber.number >= aisle_num_from)
+    if aisle_num_to is not None:
+        query = query.filter(AisleNumber.number <= aisle_num_to)
+
+    return query
+
+
+@router.get(
+    "/aisles/items_count",
+    response_model=Page[AisleDetailReportItemCountOutput],
+    response_description="List of item counts per aisle",
+)
+def get_aisle_items_count(
+    session: Session = Depends(get_session),
+    params: AisleItemsCountParams = Depends()
+) -> list:
+    """
+    Get the total number of items in an aisle.
+
+    **Args**:
+    - params: Aisle Items Count Params: The parameters for the request.
+        - building_id: The ID of the building.
+        - aisle_num_from: The starting aisle number.
+        - aisle_num_to: The ending aisle number.
+
+    **Returns**:
+    - Aisle Detail Report Item Count Output: The total number of items in the aisle.
+    """
+    # Validate building existence
+    building = session.query(Building).filter(Building.id == params.building_id).first()
+    if not building:
+        raise HTTPException(status_code=404, detail="Building not found")
+
+    aisles_query = get_aisle_item_counts_query(params.building_id, params.aisle_num_from, params.aisle_num_to)
+
+    # Paginate and transform results into the schema
+    paginated_result = paginate(session, aisles_query)
+
+    # Map results into the output schema
+    paginated_result.items = [
+        AisleDetailReportItemCountOutput(
+            aisle_id=row.aisle_id,
+            aisle_number=row.aisle_number,
+            shelf_count=row.shelf_count,
+            tray_count=row.tray_count,
+            item_count=row.item_count,
+            non_tray_item_count=row.non_tray_item_count,
+            total_item_count=row.item_count + row.non_tray_item_count,
+        )
+        for row in paginated_result.items
+    ]
+
+    return paginated_result
+
+
+@router.get("/aisles/items_count/download", response_class=StreamingResponse)
+def get_aisles_items_count_csv(
+    session: Session = Depends(get_session),
+    params: AisleItemsCountParams = Depends(),
+):
+    """
+    Download the total number of items in an aisle.
+
+    **Args**:
+    - params: Aisle Items Count Params: The parameters for the request.
+        - building_id: The ID of the building.
+        - aisle_num_from: The starting aisle number.
+        - aisle_num_to: The ending aisle number.
+
+    **Returns**:
+    - The total number of items in the aisle.
+    """
+    # Validate building existence
+    building = session.query(Building).filter(Building.id == params.building_id).first()
+    if not building:
+        raise HTTPException(status_code=404, detail="Building not found")
+
+    aisles_query = get_aisle_item_counts_query(params.building_id, params.aisle_num_from, params.aisle_num_to)
+
+    # Define the generator to stream data
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+        # Write header row
+        writer.writerow(
+            ["aisle_number", "shelf_count", "tray_count", "item_count",
+             "non_tray_item_count", "total_item_count"]
+        )
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        # Fetch results and write each row
+        for row in session.execute(aisles_query):
+            aisle_number = row.aisle_number
+            shelf_count = row.shelf_count
+            tray_count = row.tray_count
+            item_count = row.item_count
+            non_tray_item_count = row.non_tray_item_count
+            total_item_count = item_count + non_tray_item_count
+
+            writer.writerow(
+                [aisle_number, shelf_count, tray_count, item_count, non_tray_item_count,
+                 total_item_count]
+                )
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    # Return the streaming response
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=aisles_item_count.csv"}
+    )
+
+
+def get_non_tray_item_counts_query(params):
+    """
+    Construct the query to fetch non tray items with their associated counts as well
+    as size class id, size class name, and size class short name.
+    """
+    # Base query to calculate the count
+    query = (
+        select(
+            func.count(NonTrayItem.id).label("non_tray_item_count"),
+            SizeClass.id.label("size_class_id"),
+            SizeClass.name.label("size_class_name"),
+            SizeClass.short_name.label("size_class_short_name"),
+        )
+        .join(ShelfPosition, ShelfPosition.id == NonTrayItem.shelf_position_id)
+        .join(Shelf, Shelf.id == ShelfPosition.shelf_id)
+        .join(Ladder, Ladder.id == Shelf.ladder_id)
+        .join(Side, Side.id == Ladder.side_id)
+        .join(Aisle, Aisle.id == Side.aisle_id)
+        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
+        .join(SizeClass, NonTrayItem.size_class_id == SizeClass.id)
+        .join(Module, Module.id == Aisle.module_id)
+        .where(Module.building_id == params.building_id)
+        .order_by(asc(AisleNumber.number))
+        .group_by(SizeClass.id, AisleNumber.number)
+    )
+
+    # Apply filters
+    if params.owner_id:
+        query = query.where(NonTrayItem.owner_id.in_(params.owner_id))
+    if params.size_class_id:
+        query = query.where(NonTrayItem.size_class_id.in_(params.size_class_id))
+    if params.aisle_num_from is not None:
+        query = query.where(AisleNumber.number >= params.aisle_num_from)
+    if params.aisle_num_to is not None:
+        query = query.where(AisleNumber.number <= params.aisle_num_to)
+    if params.from_dt:
+        query = query.where(NonTrayItem.accession_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(NonTrayItem.accession_dt <= params.to_dt)
+
+    # Execute the query and fetch the result
+    return query
+
+
+@router.get("/non_tray_items/count", response_model=Page[NonTrayItemCountReadOutput])
+def get_non_tray_item_count(
+    session: Session = Depends(get_session),
+    params: NonTrayItemsCountParams = Depends()
+) -> list:
+    """
+    Get the total number of non tray items in an aisle.
+
+    **Args**:
+    - params: Non Tray Items Count Params: The parameters for the request.
+        - building_id: ID of the building to filter aisles.
+        - owner_id: ID of the owner to filter by.
+        - size_class_id: ID of the size class to filter by.
+        - aisle_num_from: Starting aisle number.
+        - aisle_num_to: Ending aisle number.
+        - from_dt: Start Accession date to filter by.
+        - to_dt: End Accession date to filter by.
+
+    **Returns**:
+    - Non Tray Item Count Read Output: The total number of non tray items.
+    """
+    # Ensure the building exists
+    building = session.get(Building, params.building_id)
+    if not building:
+        raise NotFound(detail="Building not found")
+
+    # Ensure the size class exists (if size_class_id is provided)
+    if params.size_class_id:
+        size_classes = session.query(SizeClass).filter(SizeClass.id.in_(params.size_class_id)).all()
+        if not size_classes:
+            raise NotFound(detail="Size class not found")
+
+    return paginate(session, get_non_tray_item_counts_query(params))
+
+
+@router.get("/non_tray_items/count/download", response_class=StreamingResponse)
+def get_non_tray_item_count_csv(
+    session: Session = Depends(get_session),
+    params: NonTrayItemsCountParams = Depends(),
+):
+    """
+    Download  the count of non-tray items in the building.
+
+    **Parameters**:
+    - params: Non Tray Items Count Params: The parameters for the request.
+        - building_id: ID of the building to filter aisles.
+        - owner_id: ID of the owner to filter by.
+        - size_class_id: ID of the size class to filter by.
+        - aisle_num_from: Starting aisle number.
+        - aisle_num_to: Ending aisle number.
+        - from_dt: Start Accession date to filter by.
+        - to_dt: End Accession date to filter by.
+
+    **Returns**:
+  - Non Tray Item Count Read Output: The total number of non tray items.
+    """
+    # Ensure the building exists
+    building = session.get(Building, params.building_id)
+    if not building:
+        raise NotFound(detail="Building not found")
+
+    # Ensure the size class exists (if size_class_id is provided)
+    if params.size_class_id:
+        size_classes = session.query(SizeClass).filter(
+            SizeClass.id.in_(params.size_class_id)
+            ).all()
+        if not size_classes:
+            raise NotFound(detail="Size class not found")
+
+    query = get_non_tray_item_counts_query(params)
+
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+        # Write header row
+        writer.writerow(
+            ["size_class_id", "size_class_name", "size_class_short_name", "non_tray_item_count"]
+        )
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        for row in session.execute(query):
+            size_class_id = row.size_class_id
+            size_class_name = row.size_class_name
+            size_class_short_nam = row.size_class_short_name
+            non_tray_item_count = row.non_tray_item_count
+
+            writer.writerow(
+                [size_class_id, size_class_name, size_class_short_nam, non_tray_item_count]
+            )
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=non_tray_item_count.csv"}
     )
