@@ -15,6 +15,7 @@ from app.logger import inventory_logger
 from app.filter_params import (
     ShelvingJobDiscrepancyParams,
     OpenLocationParams,
+    AccessionedItemsParams,
     AisleItemsCountParams,
     NonTrayItemsCountParams,
 )
@@ -51,99 +52,184 @@ router = APIRouter(
 )
 
 
-@router.get("/accession-items", response_model=Page[AccessionItemsDetailOutput])
-def get_accessioned_items_aggregate(
-    session: Session = Depends(get_session),
-    owner_id: list[int] = Query(default=None),
-    size_class_id: list[int] = Query(default=None),
-    media_type_id: list[int] = Query(default=None),
-    from_dt: datetime = Query(default=None),
-    to_dt: datetime = Query(default=None),
-):
+def get_accessioned_items_count_query(params):
     item_query_conditions = []
     non_tray_item_query_conditions = []
     selection = []
     group_by = []
 
+    if params.owner_id:
+        item_query_conditions.append(Item.owner_id.in_(params.owner_id))
+        non_tray_item_query_conditions.append(
+            NonTrayItem.owner_id.in_(
+                params.owner_id
+            )
+        )
+    if params.size_class_id:
+        item_query_conditions.append(Item.size_class_id.in_(params.size_class_id))
+        non_tray_item_query_conditions.append(
+            NonTrayItem.size_class_id.in_(params.size_class_id)
+        )
+    if params.media_type_id:
+        item_query_conditions.append(Item.media_type_id.in_(params.media_type_id))
+        non_tray_item_query_conditions.append(
+            NonTrayItem.media_type_id.in_(params.media_type_id)
+        )
+    if params.from_dt:
+        item_query_conditions.append(Item.accession_dt >= params.from_dt)
+        non_tray_item_query_conditions.append(
+            NonTrayItem.accession_dt >= params.from_dt
+            )
+    if params.to_dt:
+        item_query_conditions.append(Item.accession_dt <= params.to_dt)
+        non_tray_item_query_conditions.append(
+            NonTrayItem.accession_dt <=
+            params.to_dt
+            )
+
+    item_query = (
+        select(
+            Item.id.label("item_id"),
+            Owner.name.label("owner_name"),
+            SizeClass.name.label("size_class_name"),
+            MediaType.name.label("media_type_name"),
+        )
+        .select_from(Item)
+        .join(Owner, Owner.id == Item.owner_id)
+        .join(SizeClass, SizeClass.id == Item.size_class_id)
+        .join(MediaType, MediaType.id == Item.media_type_id)
+        .filter(and_(*item_query_conditions))
+    )
+    non_tray_item_query = (
+        select(
+            NonTrayItem.id.label("item_id"),
+            Owner.name.label("owner_name"),
+            SizeClass.name.label("size_class_name"),
+            MediaType.name.label("media_type_name"),
+        )
+        .select_from(NonTrayItem)
+        .join(Owner, Owner.id == NonTrayItem.owner_id)
+        .join(SizeClass, SizeClass.id == NonTrayItem.size_class_id)
+        .join(MediaType, MediaType.id == NonTrayItem.media_type_id)
+        .filter(and_(*non_tray_item_query_conditions))
+    )
+
+    combined_query = union_all(item_query, non_tray_item_query).subquery()
+
+    if params.owner_id:
+        selection.append(combined_query.c.owner_name)
+        group_by.append(combined_query.c.owner_name)
+    if params.size_class_id:
+        selection.append(combined_query.c.size_class_name)
+        group_by.append(combined_query.c.size_class_name)
+    if params.media_type_id:
+        selection.append(combined_query.c.media_type_name)
+        group_by.append(combined_query.c.media_type_name)
+
+    if not selection:
+        final_query = select(
+            literal("All").label("owner_name"),
+            literal("All").label("size_class_name"),
+            literal("All").label("media_type_name"),
+            func.count().label("count"),
+        ).select_from(combined_query)
+    elif not params.owner_id:
+        final_query = select(
+            *selection,
+            literal("All").label("owner_name"),
+            func.count().label("count"),
+        ).group_by(*group_by)
+    elif not params.size_class_id:
+        final_query = select(
+            *selection,
+            literal("All").label("size_class_name"),
+            func.count().label("count"),
+        ).group_by(*group_by)
+    elif not params.media_type_id:
+        final_query = select(
+            *selection,
+            literal("All").label("media_type_name"),
+            func.count().label("count"),
+        ).group_by(*group_by)
+    else:
+        final_query = select(
+            *selection,
+            func.count().label("count"),
+        ).group_by(*group_by)
+
+    return final_query
+
+
+@router.get("/accession-items", response_model=Page[AccessionItemsDetailOutput])
+def get_accessioned_items_count(
+    session: Session = Depends(get_session),
+    params: AccessionedItemsParams = Depends(),
+):
+
     try:
-        if owner_id:
-            item_query_conditions.append(Item.owner_id.in_(owner_id))
-            non_tray_item_query_conditions.append(NonTrayItem.owner_id.in_(owner_id))
-        if size_class_id:
-            item_query_conditions.append(Item.size_class_id.in_(size_class_id))
-            non_tray_item_query_conditions.append(
-                NonTrayItem.size_class_id.in_(size_class_id)
-            )
-        if media_type_id:
-            item_query_conditions.append(Item.media_type_id.in_(media_type_id))
-            non_tray_item_query_conditions.append(
-                NonTrayItem.media_type_id.in_(media_type_id)
-            )
-        if from_dt:
-            item_query_conditions.append(Item.accession_dt >= from_dt)
-            non_tray_item_query_conditions.append(NonTrayItem.accession_dt >= from_dt)
-        if to_dt:
-            item_query_conditions.append(Item.accession_dt <= to_dt)
-            non_tray_item_query_conditions.append(NonTrayItem.accession_dt <= to_dt)
-
-        item_query = (
-            select(
-                Item.id.label("item_id"),
-                Owner.name.label("owner_name"),
-                SizeClass.name.label("size_class_name"),
-                MediaType.name.label("media_type_name"),
-            )
-            .select_from(Item)
-            .join(Owner, Owner.id == Item.owner_id)
-            .join(SizeClass, SizeClass.id == Item.size_class_id)
-            .join(MediaType, MediaType.id == Item.media_type_id)
-            .filter(and_(*item_query_conditions))
-        )
-        non_tray_item_query = (
-            select(
-                NonTrayItem.id.label("item_id"),
-                Owner.name.label("owner_name"),
-                SizeClass.name.label("size_class_name"),
-                MediaType.name.label("media_type_name"),
-            )
-            .select_from(NonTrayItem)
-            .join(Owner, Owner.id == NonTrayItem.owner_id)
-            .join(SizeClass, SizeClass.id == NonTrayItem.size_class_id)
-            .join(MediaType, MediaType.id == NonTrayItem.media_type_id)
-            .filter(and_(*non_tray_item_query_conditions))
-        )
-
-        combined_query = union_all(item_query, non_tray_item_query).subquery()
-
-        if owner_id:
-            selection.append(combined_query.c.owner_name)
-            group_by.append(combined_query.c.owner_name)
-        if size_class_id:
-            selection.append(combined_query.c.size_class_name)
-            group_by.append(combined_query.c.size_class_name)
-        if media_type_id:
-            selection.append(combined_query.c.media_type_name)
-            group_by.append(combined_query.c.media_type_name)
-
-        if not selection:
-            final_query = select(
-                literal("All").label("owner_name"),
-                literal("All").label("size_class_name"),
-                literal("All").label("media_type_name"),
-                func.count().label("count"),
-            ).select_from(combined_query)
-
-        else:
-            final_query = select(
-                *selection,
-                func.count().label("count"),
-            ).group_by(*group_by)
-
-        return paginate(session, final_query)
+        return paginate(session, get_accessioned_items_count_query(params))
 
     except Exception as e:
         inventory_logger.error(e)
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+
+
+@router.get("/accession-items/download", response_class=StreamingResponse)
+def get_accessioned_items_csv(
+    session: Session = Depends(get_session),
+    params: AccessionedItemsParams = Depends(),
+):
+    """
+    Translates list response of AccessionedItems objects to csv,
+    returns binary for download
+
+    **Args**:
+    - params: Accessioned Items Params: The parameters for the request.
+        - owner_id: The list ID of the building.
+        - size_class_id: The list ID of the size class.
+        - media_type_id: The list ID of the media type
+        - from_dt: The starting date.
+        - to_dt: The ending date.
+
+    **Returns**:
+    - Streaming Response: The response with the csv file
+    """
+    # Get the query
+    accession_query = get_accessioned_items_count_query(params)
+
+    # Define the generator to stream data
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+
+        # Write header row
+        writer.writerow(["Owner Name", "Size Class Name", "Media Type Name", "Count"])
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        # Write rows from query results
+        for row in session.execute(accession_query):
+            inventory_logger.info(f"Row Type: {type(row[0])}")
+            inventory_logger.info(f"Row: {row}")
+            inventory_logger.info(f"Row column 1: {row[0]}")
+            inventory_logger.info(f"Row column 2: {row[1]}")
+            inventory_logger.info(f"Row column 3: {row[2]}")
+            inventory_logger.info(f"Row column 4: {row[3]}")
+
+            writer.writerow(row)
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    # Return the StreamingResponse
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=accession_item_count.csv"
+        },
+    )
 
 
 # SHELVING JOB DISCREPANCIES

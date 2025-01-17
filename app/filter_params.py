@@ -71,6 +71,24 @@ class SortParams(BaseModel):
     sort_order: Optional[str] = Query(default="asc", description="Sort order: 'asc' or 'desc'")
 
 
+class AccessionedItemsParams:
+    """
+    Query params for Accessioned Items Report.
+    """
+    def __init__(self,
+                 owner_id: list[int] = Query(default=None),
+                 size_class_id: list[int] = Query(default=None),
+                 media_type_id: list[int] = Query(default=None),
+                 from_dt: Optional[datetime] = Query(default=None),
+                 to_dt: Optional[datetime] = Query(default=None),
+                 ):
+        self.owner_id = owner_id
+        self.size_class_id = size_class_id
+        self.media_type_id = media_type_id
+        self.from_dt = from_dt
+        self.to_dt = to_dt
+
+
 class AisleItemsCountParams(BaseModel):
     """
     Query params for Aisle Items Count Report.
