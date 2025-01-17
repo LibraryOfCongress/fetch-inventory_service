@@ -46,7 +46,7 @@ class OpenLocationParams:
         height: Optional[float] = None,
         width: Optional[float] = None,
         depth: Optional[float] = None,
-        show_partial: Optional[bool] = True,
+        show_partial: Optional[bool] = False,
         owner_id: list[int] = Query(default=None),
         size_class_id: list[int] = Query(default=None)
     ):

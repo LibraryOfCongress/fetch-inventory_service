@@ -160,7 +160,7 @@ def get_accessioned_items_count_query(params):
     return final_query
 
 
-@router.get("/accession-items", response_model=Page[AccessionItemsDetailOutput])
+@router.get("/accession-items/", response_model=Page[AccessionItemsDetailOutput])
 def get_accessioned_items_count(
     session: Session = Depends(get_session),
     params: AccessionedItemsParams = Depends(),
@@ -414,7 +414,7 @@ def get_open_locations_list(
         )
     )
 
-    if params.show_partial == False:
+    if not params.show_partial:
         # Show shelves with no occupied positions
         shelf_query = shelf_query.where(
             func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) == 0
@@ -543,7 +543,7 @@ def get_open_locations_csv(
         )
     )
 
-    if params.show_partial == False:
+    if not params.show_partial:
         # Show shelves with no occupied positions
         shelf_query = shelf_query.where(
             func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) == 0
@@ -697,7 +697,7 @@ def get_aisle_item_counts_query(building_id: int, aisle_num_from: Optional[int],
 
 
 @router.get(
-    "/aisles/items_count",
+    "/aisles/items_count/",
     response_model=Page[AisleDetailReportItemCountOutput],
     response_description="List of item counts per aisle",
 )
@@ -850,7 +850,7 @@ def get_non_tray_item_counts_query(params):
     return query
 
 
-@router.get("/non_tray_items/count", response_model=Page[NonTrayItemCountReadOutput])
+@router.get("/non_tray_items/count/", response_model=Page[NonTrayItemCountReadOutput])
 def get_non_tray_item_count(
     session: Session = Depends(get_session),
     params: NonTrayItemsCountParams = Depends()
