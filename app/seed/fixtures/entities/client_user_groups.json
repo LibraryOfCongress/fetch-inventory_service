@@ -11,7 +11,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "Administrator"
+          "name": "Admin"
         }
       }
     },
@@ -25,7 +25,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "Administrator"
+          "name": "Admin"
         }
       }
     },
@@ -39,7 +39,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "Administrator"
+          "name": "Admin"
         }
       }
     },
@@ -53,7 +53,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "Administrator"
+          "name": "Admin"
         }
       }
     },
@@ -67,7 +67,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "Administrator"
+          "name": "Admin"
         }
       }
     },
@@ -81,7 +81,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -95,7 +95,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -109,7 +109,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -123,7 +123,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -137,7 +137,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -151,7 +151,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -165,7 +165,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -179,7 +179,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -193,7 +193,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -207,7 +207,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -221,7 +221,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -235,7 +235,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -249,7 +249,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "offsiteMH"
+          "name": "OffsiteMH"
         }
       }
     },
@@ -263,7 +263,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "onsiteMH"
+          "name": "OnsiteMH"
         }
       }
     },
@@ -277,7 +277,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "onsiteMH"
+          "name": "OnsiteMH"
         }
       }
     },
@@ -291,7 +291,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "onsiteMH"
+          "name": "OnsiteMH"
         }
       }
     },
@@ -305,7 +305,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "onsiteMH"
+          "name": "OnsiteMH"
         }
       }
     },
@@ -319,7 +319,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "onsiteMH"
+          "name": "OnsiteMH"
         }
       }
     },
@@ -333,7 +333,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "onsiteMH"
+          "name": "OnsiteMH"
         }
       }
     },
@@ -347,7 +347,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "onsiteMH"
+          "name": "OnsiteMH"
         }
       }
     },
@@ -361,7 +361,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "onsiteMH"
+          "name": "OnsiteMH"
         }
       }
     },
@@ -655,7 +655,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "Supervisor"
+          "name": "Supervisors"
         }
       }
     },
@@ -669,7 +669,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "Supervisor"
+          "name": "Supervisors"
         }
       }
     },
@@ -683,7 +683,7 @@
       "!group_id": {
         "model": "app.models.groups.Group",
         "filter": {
-          "name": "Supervisor"
+          "name": "Supervisors"
         }
       }
     }

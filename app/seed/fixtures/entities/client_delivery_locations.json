@@ -2,12 +2,16 @@
   "model": "app.models.delivery_locations.DeliveryLocation",
   "data": [
     {
-      "name": "Senator Ron McRonderson",
-      "address": "1 Imaginary St, Washington D.C. 20001"
+      "name": "LMG28 - Gold Charge Station",
+      "address": "Madison Building"
     },
     {
-      "name": "Pie Town",
-      "address": "2312 Fake Ave, Pie Town N.M., 87827"
+      "name": "LJG44 - IMDF Delivery",
+      "address": "Jefferson Building"
+    },
+    {
+      "name": "LJG49 - CMD Front Office",
+      "address": "Jefferson Building"
     }
   ]
 }

@@ -105,6 +105,9 @@ class NonTrayItem(SQLModel, table=True):
     withdrawal_dt: Optional[datetime] = Field(
         sa_column=sa.DateTime, default=None, nullable=True
     )
+    shelved_dt: Optional[datetime] = Field(
+        sa_column=sa.DateTime, default=None, nullable=True
+    )
     condition: str = Field(
         max_length=30, sa_column=sa.VARCHAR, nullable=True, unique=False
     )

@@ -22,7 +22,7 @@ class SizeClass(SQLModel, table=True):
     id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True))
     name: str = Field(max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=True)
     short_name: str = Field(
-        max_length=10, sa_column=sa.VARCHAR, nullable=False, unique=True
+        max_length=11, sa_column=sa.VARCHAR, nullable=False, unique=True
     )
     height: condecimal(decimal_places=2) = Field(
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)

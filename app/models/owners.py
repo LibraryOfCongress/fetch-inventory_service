@@ -30,7 +30,11 @@ class Owner(SQLModel, table=True):
         default=None, foreign_key="owners.id", nullable=True
     )
     name: str = Field(
-        max_length=150, sa_column=sa.VARCHAR, nullable=False, default=None
+        max_length=150,
+        sa_column=sa.VARCHAR,
+        nullable=False,
+        index=True,
+        default=None
     )
     owner_tier_id: int = Field(
         foreign_key="owner_tiers.id",

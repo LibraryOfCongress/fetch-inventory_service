@@ -34,6 +34,7 @@ class NonTrayItemInput(BaseModel):
     withdrawn_barcode_id: Optional[uuid.UUID] = None
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
+    shelved_dt: Optional[datetime] = None
 
     @field_validator("status", mode="before", check_fields=True)
     @classmethod
@@ -63,6 +64,7 @@ class NonTrayItemInput(BaseModel):
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "withdrawn_barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
+                "shelved_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
@@ -101,6 +103,7 @@ class NonTrayItemUpdateInput(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     shelf_position_id: Optional[int] = None
     shelf_position_proposed_id: Optional[int] = None
+    shelved_dt: Optional[datetime] = None
 
     class Config:
         json_schema_extra = {
@@ -123,6 +126,7 @@ class NonTrayItemUpdateInput(BaseModel):
                 "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "withdrawn_barcode_id": "550e8400-e29b-41d4-a716-446655440001",
                 "accession_dt": "2023-10-08T20:46:56.764426",
+                "shelved_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
@@ -149,6 +153,7 @@ class ShelfPositionNestedForNonTrayOutput(BaseModel):
 class NonTrayItemBaseOutput(NonTrayItemUpdateInput):
     id: int
     shelf_position: Optional[ShelfPositionNestedForNonTrayOutput] = None
+    shelved_dt: Optional[datetime] = None
 
 
 class NonTrayItemListOutput(NonTrayItemBaseOutput):
@@ -203,7 +208,8 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
                 "accession_dt": "2023-10-08T20:46:56.764426",
-                "withdrawal_dt": "2023-10-08T20:46:56.764426"
+                "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                "shelved_dt": "2023-10-08T20:46:56.764426"
             }
         }
 
@@ -287,6 +293,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                 },
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                "shelved_dt": "2023-10-08T20:46:56.764426",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -402,6 +409,7 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                 },
                 "accession_dt": "2023-10-08T20:46:56.764426",
                 "withdrawal_dt": "2023-10-08T20:46:56.764426",
+                "shelved_dt": "2023-10-08T20:46:56.764426",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }

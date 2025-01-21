@@ -33,7 +33,7 @@ refresh-db() {
     # Reset seed arg in case user runs compose elsewhere
 }
 
-run-data-migration() {
+run-storage-migration() {
 # do not indent on shell str
 RUN_DATA_MIGRATION="
 from app import main
@@ -44,9 +44,20 @@ seed_data()
   docker exec -it fetch-inventory-api python -c "$RUN_DATA_MIGRATION";
 }
 
+run-tray-migration() {
+# do not indent on shell str
+RUN_TRAY_MIGRATION="
+from app import main
+from app.seed.seed_data import seed_containers
+seed_containers()
+";
+
+    docker exec -it fetch-inventory-api python -c "$RUN_TRAY_MIGRATION";
+}
+
 extract-data-migration() {
   (docker cp fetch-inventory-api:/code/app/seed/errors ~/Desktop/fetch_migration);
-  (docker exec -i inventory-database pg_dump -U postgres -d inventory_service | gzip > ~/Desktop/fetch_migration/fetch_dump.sql.gz);
+  (docker exec -i inventory-database pg_dump -U postgres -d inventory_service | gzip > ~/Desktop/fetch_migration/fetch_dump_`date +%m-%d-%Y`.sql.gz);
 }
 
 makemigrations() {
@@ -67,6 +78,15 @@ api() {
 
 psql() {
   docker exec -it -u postgres inventory-database psql -a inventory_service
+}
+
+unzip-dump() {
+    gzip -d ~/Desktop/fetch_migration/$1
+}
+
+pg-restore() {
+    docker cp ~/Desktop/fetch_migration/$1 inventory-database:/tmp/$1;
+    docker exec -it -u postgres inventory-database psql -d inventory_service -f /tmp/$1
 }
 
 inspect-table() {

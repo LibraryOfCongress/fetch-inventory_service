@@ -8,8 +8,8 @@
           "short_name": "NT"
         }
       },
-      "type": "Full",
-      "max_capacity": 16
+      "type": "53",
+      "max_capacity": 75
     },
     {
       "!size_class_id": {
@@ -18,7 +18,327 @@
           "short_name": "NT"
         }
       },
-      "type": "Short",
+      "type": "40",
+      "max_capacity": 75
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "NT"
+        }
+      },
+      "type": "48",
+      "max_capacity": 75
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "NT"
+        }
+      },
+      "type": "30",
+      "max_capacity": 75
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "NT"
+        }
+      },
+      "type": "20",
+      "max_capacity": 75
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "NT"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 75
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "NT"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 75
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "NT"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 75
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DS1"
+        }
+      },
+      "type": "53",
+      "max_capacity": 23
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DS1"
+        }
+      },
+      "type": "40",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DS2"
+        }
+      },
+      "type": "53",
+      "max_capacity": 42
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DS2"
+        }
+      },
+      "type": "40",
+      "max_capacity": 30
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "MF"
+        }
+      },
+      "type": "53",
+      "max_capacity": 36
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "MF"
+        }
+      },
+      "type": "40",
+      "max_capacity": 24
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SM"
+        }
+      },
+      "type": "53",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SM"
+        }
+      },
+      "type": "40",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "RS"
+        }
+      },
+      "type": "53",
+      "max_capacity": 8
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "RS"
+        }
+      },
+      "type": "40",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AFC-A"
+        }
+      },
+      "type": "53",
+      "max_capacity": 30
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AFC-B"
+        }
+      },
+      "type": "53",
+      "max_capacity": 3
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AFC-C"
+        }
+      },
+      "type": "53",
+      "max_capacity": 3
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AFC-C"
+        }
+      },
+      "type": "40",
+      "max_capacity": 1
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AFC-D"
+        }
+      },
+      "type": "53",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AFC-E"
+        }
+      },
+      "type": "53",
+      "max_capacity": 3
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "GL-S/M/L"
+        }
+      },
+      "type": "53",
+      "max_capacity": 8
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "ROL-4"
+        }
+      },
+      "type": "53",
+      "max_capacity": 5
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "PP-A"
+        }
+      },
+      "type": "53",
+      "max_capacity": 10
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "PP-AA"
+        }
+      },
+      "type": "53",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "PP-B"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "PP-C"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "RB-A"
+        }
+      },
+      "type": "53",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "RB-B"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "RB-C"
+        }
+      },
+      "type": "53",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EH-S"
+        }
+      },
+      "type": "53",
       "max_capacity": 12
     },
     {
@@ -28,7 +348,7 @@
           "short_name": "AL"
         }
       },
-      "type": "Full",
+      "type": "53",
       "max_capacity": 16
     },
     {
@@ -38,7 +358,7 @@
           "short_name": "AL"
         }
       },
-      "type": "Short",
+      "type": "40",
       "max_capacity": 12
     },
     {
@@ -48,7 +368,7 @@
           "short_name": "AH"
         }
       },
-      "type": "Full",
+      "type": "53",
       "max_capacity": 16
     },
     {
@@ -58,7 +378,7 @@
           "short_name": "AH"
         }
       },
-      "type": "Short",
+      "type": "40",
       "max_capacity": 12
     },
     {
@@ -68,7 +388,7 @@
           "short_name": "BL"
         }
       },
-      "type": "Full",
+      "type": "53",
       "max_capacity": 14
     },
     {
@@ -78,7 +398,7 @@
           "short_name": "BL"
         }
       },
-      "type": "Short",
+      "type": "40",
       "max_capacity": 10
     },
     {
@@ -88,7 +408,7 @@
           "short_name": "BH"
         }
       },
-      "type": "Full",
+      "type": "53",
       "max_capacity": 14
     },
     {
@@ -98,17 +418,17 @@
           "short_name": "BH"
         }
       },
-      "type": "Short",
+      "type": "40",
       "max_capacity": 10
     },
     {
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
-          "short_name": "CL"
+          "short_name": "BH"
         }
       },
-      "type": "Full",
+      "type": "48",
       "max_capacity": 12
     },
     {
@@ -118,7 +438,227 @@
           "short_name": "CL"
         }
       },
-      "type": "Short",
+      "type": "53",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "CL"
+        }
+      },
+      "type": "40",
+      "max_capacity": 8
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "CL"
+        }
+      },
+      "type": "48",
+      "max_capacity": 10
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "RM-A"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "RM-B"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SM-A"
+        }
+      },
+      "type": "53",
+      "max_capacity": 10
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SM-A"
+        }
+      },
+      "type": "40",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SM-B"
+        }
+      },
+      "type": "53",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SM-B"
+        }
+      },
+      "type": "40",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SM-C"
+        }
+      },
+      "type": "53",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SM-D"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SM-B/D"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-A"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-A1"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-A1"
+        }
+      },
+      "type": "40",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-A2"
+        }
+      },
+      "type": "53",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-A3"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-B"
+        }
+      },
+      "type": "53",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-B1"
+        }
+      },
+      "type": "53",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-B1"
+        }
+      },
+      "type": "40",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-C"
+        }
+      },
+      "type": "53",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "CH"
+        }
+      },
+      "type": "53",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "CH"
+        }
+      },
+      "type": "40",
       "max_capacity": 8
     },
     {
@@ -128,98 +668,1558 @@
           "short_name": "CH"
         }
       },
-      "type": "Full",
+      "type": "48",
+      "max_capacity": 10
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DL"
+        }
+      },
+      "type": "53",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DL"
+        }
+      },
+      "type": "40",
+      "max_capacity": 9
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DL"
+        }
+      },
+      "type": "48",
       "max_capacity": 12
     },
     {
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
-          "short_name": "CH"
+          "short_name": "DH"
         }
       },
-      "type": "Short",
+      "type": "53",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DH"
+        }
+      },
+      "type": "40",
+      "max_capacity": 9
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EL"
+        }
+      },
+      "type": "53",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EL"
+        }
+      },
+      "type": "40",
+      "max_capacity": 9
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EH"
+        }
+      },
+      "type": "53",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EH"
+        }
+      },
+      "type": "40",
+      "max_capacity": 9
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "RM-1"
+        }
+      },
+      "type": "53",
+      "max_capacity": 5
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "CF"
+        }
+      },
+      "type": "53",
+      "max_capacity": 38
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SB-L"
+        }
+      },
+      "type": "53",
+      "max_capacity": 13
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "MUS-A"
+        }
+      },
+      "type": "53",
+      "max_capacity": 1
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "MUS-B/C/D/E"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "MUS-F/G/H"
+        }
+      },
+      "type": "53",
+      "max_capacity": 3
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-C1"
+        }
+      },
+      "type": "53",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-C2"
+        }
+      },
+      "type": "53",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "SER-D"
+        }
+      },
+      "type": "53",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "VHP-A"
+        }
+      },
+      "type": "53",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "HP-A/B"
+        }
+      },
+      "type": "53",
+      "max_capacity": 3
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "DHS"
+        }
+      },
+      "type": "53",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "EL-S"
+        }
+      },
+      "type": "53",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "XA"
+        }
+      },
+      "type": "53",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "XB"
+        }
+      },
+      "type": "53",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "XF"
+        }
+      },
+      "type": "53",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "XF"
+        }
+      },
+      "type": "40",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "XF"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "XM"
+        }
+      },
+      "type": "53",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "XM"
+        }
+      },
+      "type": "40",
       "max_capacity": 8
     },
     {
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
-          "short_name": "DL"
+          "short_name": "XP"
         }
       },
-      "type": "Full",
-      "max_capacity": 15
+      "type": "53",
+      "max_capacity": 2
     },
     {
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
-          "short_name": "DL"
+          "short_name": "XS"
         }
       },
-      "type": "Short",
+      "type": "53",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "XS"
+        }
+      },
+      "type": "40",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat1"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 1
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat1"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 1
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat1"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 1
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat2"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat2"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat2"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 2
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat3"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 3
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat3"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 3
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat3"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 3
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat4"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat4"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat4"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 4
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat5"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 5
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat5"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 5
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat5"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 5
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat6"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat6"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat6"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat7"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 7
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat7"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 7
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat7"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 7
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat8"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 8
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat8"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 8
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat8"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 8
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat9"
+        }
+      },
+      "type": "Map",
       "max_capacity": 9
     },
     {
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
-          "short_name": "DH"
+          "short_name": "Flat9"
         }
       },
-      "type": "Full",
-      "max_capacity": 15
-    },
-    {
-      "!size_class_id": {
-        "model": "app.models.size_class.SizeClass",
-        "filter": {
-          "short_name": "DH"
-        }
-      },
-      "type": "Short",
+      "type": "MapSM",
       "max_capacity": 9
     },
     {
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
-          "short_name": "EL"
+          "short_name": "Flat9"
         }
       },
-      "type": "Full",
+      "type": "MapXL",
+      "max_capacity": 9
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat10"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 10
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat10"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 10
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat10"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 10
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat11"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 11
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat11"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 11
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat11"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 11
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat12"
+        }
+      },
+      "type": "Map",
       "max_capacity": 12
     },
     {
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
-          "short_name": "EL"
+          "short_name": "Flat12"
         }
       },
-      "type": "Short",
-      "max_capacity": 9
-    },
-    {
-      "!size_class_id": {
-        "model": "app.models.size_class.SizeClass",
-        "filter": {
-          "short_name": "EH"
-        }
-      },
-      "type": "Full",
+      "type": "MapSM",
       "max_capacity": 12
     },
     {
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
-          "short_name": "EH"
+          "short_name": "Flat12"
         }
       },
-      "type": "Short",
-      "max_capacity": 9
+      "type": "MapXL",
+      "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat13"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 13
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat13"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 13
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat13"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 13
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat14"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 14
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat14"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 14
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat14"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 14
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat15"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat15"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat15"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 15
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat16"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat16"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat16"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 16
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat17"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 17
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat17"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 17
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat17"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 17
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat18"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 18
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat18"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 18
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat18"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 18
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat19"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 19
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat19"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 19
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat19"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 19
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat20"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 20
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat20"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 20
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat20"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 20
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat21"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 21
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat21"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 21
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat21"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 21
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat22"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 22
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat22"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 22
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat22"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 22
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat23"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 23
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat23"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 23
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat23"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 23
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat24"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 24
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat24"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 24
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat24"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 24
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat25"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 25
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat25"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 25
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat25"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 25
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat26"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 26
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat26"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 26
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat26"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 26
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat27"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 27
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat27"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 27
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat27"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 27
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat28"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 28
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat28"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 28
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat28"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 28
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat29"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 29
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat29"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 29
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat29"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 29
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat30"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 30
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat30"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 30
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat30"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 30
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat31"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 31
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat31"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 31
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat31"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 31
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat32"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 32
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat32"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 32
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat32"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 32
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat33"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 33
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat33"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 33
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat33"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 33
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat34"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 34
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat34"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 34
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat34"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 34
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat35"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 35
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat35"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 35
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat35"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 35
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat36"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 36
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat36"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 36
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat36"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 36
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat37"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 37
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat37"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 37
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat37"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 37
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat38"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 38
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat38"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 38
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat38"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 38
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat39"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 39
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat39"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 39
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat39"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 39
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat40"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 40
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat40"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 40
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat40"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 40
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat41"
+        }
+      },
+      "type": "Map",
+      "max_capacity": 41
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat41"
+        }
+      },
+      "type": "MapSM",
+      "max_capacity": 41
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "Flat41"
+        }
+      },
+      "type": "MapXL",
+      "max_capacity": 41
     }
   ]
 }

@@ -8,7 +8,16 @@ from app.config.config import get_settings
 engine = create_engine(
     get_settings().DATABASE_URL, echo=get_settings().ENABLE_ORM_SQL_LOGGING
 )
-sa_hybrid_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+data_migration_engine = create_engine(
+    get_settings().DATABASE_URL,
+    echo=get_settings().ENABLE_ORM_SQL_LOGGING,
+    pool_size=20,       # Increase the pool size
+    max_overflow=20,    # Allow more overflow connections if needed
+    pool_timeout=30,    # Timeout before raising an exception if no connections are available
+)
+
+sa_hybrid_session_local = sessionmaker(autocommit=False, autoflush=False, bind=data_migration_engine)
 
 def get_session(request: Request = None):
     """

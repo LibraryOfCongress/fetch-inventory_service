@@ -23,6 +23,7 @@ class BarcodeType(SQLModel, table=True):
         sa_column=sa.VARCHAR,
         nullable=False,
         unique=False,
+        index=True,
         default="^.{25}$",
     )
     update_dt: datetime = Field(

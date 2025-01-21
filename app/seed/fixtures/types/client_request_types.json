@@ -2,13 +2,16 @@
   "model": "app.models.request_types.RequestType",
   "data": [
     {
-      "type": "General Delivery"
+      "type": "Regular"
     },
     {
-      "type": "ILL (InterLibrary Loan)"
+      "type": "Congressional Rush"
     },
     {
-      "type": "Scan and Deliver"
+      "type": "Inventory Project"
+    },
+    {
+      "type": "Special Project"
     }
   ]
 }

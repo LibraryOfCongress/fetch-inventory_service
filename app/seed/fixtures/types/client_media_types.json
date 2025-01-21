@@ -2,34 +2,16 @@
   "model": "app.models.media_types.MediaType",
   "data": [
     {
-      "name": "Book"
+      "name": "Book/Volume"
     },
     {
-      "name": "Sheet Music"
-    },
-    {
-      "name": "Casette Disk"
-    },
-    {
-      "name": "Newspaper"
-    },
-    {
-      "name": "Schematic"
+      "name": "Flat File"
     },
     {
       "name": "Microfilm"
     },
     {
-      "name": "VHS Casette"
-    },
-    {
-      "name": "DVD"
-    },
-    {
-      "name": "Blu-Ray Disc"
-    },
-    {
-      "name": "Cuneiform Tabelet"
+      "name": "Archival Box"
     }
   ]
 }

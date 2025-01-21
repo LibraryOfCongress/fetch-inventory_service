@@ -2,19 +2,19 @@
   "model": "app.models.groups.Group",
   "data": [
     {
-      "name": "Administrator"
+      "name": "Admin"
     },
     {
-      "name": "offsiteMH"
+      "name": "OffsiteMH"
     },
     {
-      "name": "onsiteMH"
+      "name": "OnsiteMH"
     },
     {
       "name": "Reporting"
     },
     {
-      "name": "Supervisor"
+      "name": "Supervisors"
     }
   ]
 }

@@ -16,7 +16,12 @@ class ShelfType(SQLModel, table=True):
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
     type: Optional[str] = Field(
-        max_length=50, sa_column=sa.VARCHAR, nullable=True, unique=False, default=None
+        max_length=50,
+        sa_column=sa.VARCHAR,
+        nullable=True,
+        unique=False,
+        index=True,
+        default=None
     )
     size_class_id: Optional[int] = Field(foreign_key="size_class.id", nullable=False)
     max_capacity: int = Field(
