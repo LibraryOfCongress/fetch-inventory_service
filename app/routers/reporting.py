@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import func, union_all, literal, and_, or_, asc
+from sqlalchemy import func, union_all, literal, and_, or_, asc, distinct
 from sqlmodel import Session, select
 
 from app.database.session import get_session
@@ -669,10 +669,10 @@ def get_aisle_item_counts_query(building_id: int, aisle_num_from: Optional[int],
         select(
             Aisle.id.label("aisle_id"),
             AisleNumber.number.label("aisle_number"),
-            func.count(Shelf.id).label("shelf_count"),
-            func.count(Tray.id).label("tray_count"),
-            func.count(Item.id).label("item_count"),
-            func.count(NonTrayItem.id).label("non_tray_item_count"),
+            func.count(distinct(Shelf.id)).label("shelf_count"),
+            func.count(distinct(Tray.id)).label("tray_count"),
+            func.count(distinct(Item.id)).label("item_count"),
+            func.count(distinct(NonTrayItem.id)).label("non_tray_item_count"),
         )
         .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
         .join(Module, Aisle.module_id == Module.id)
