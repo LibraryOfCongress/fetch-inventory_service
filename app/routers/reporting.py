@@ -119,43 +119,26 @@ def get_accessioned_items_count_query(params):
     if params.owner_id:
         selection.append(combined_query.c.owner_name)
         group_by.append(combined_query.c.owner_name)
+    else:
+        selection.append(literal("All").label("owner_name"))
     if params.size_class_id:
         selection.append(combined_query.c.size_class_name)
         group_by.append(combined_query.c.size_class_name)
+    else:
+        selection.append(literal("All").label("size_class_name"))
     if params.media_type_id:
         selection.append(combined_query.c.media_type_name)
         group_by.append(combined_query.c.media_type_name)
-
-    if not selection:
-        final_query = select(
-            literal("All").label("owner_name"),
-            literal("All").label("size_class_name"),
-            literal("All").label("media_type_name"),
-            func.count().label("count"),
-        ).select_from(combined_query)
-    elif not params.owner_id:
-        final_query = select(
-            *selection,
-            literal("All").label("owner_name"),
-            func.count().label("count"),
-        ).group_by(*group_by)
-    elif not params.size_class_id:
-        final_query = select(
-            *selection,
-            literal("All").label("size_class_name"),
-            func.count().label("count"),
-        ).group_by(*group_by)
-    elif not params.media_type_id:
-        final_query = select(
-            *selection,
-            literal("All").label("media_type_name"),
-            func.count().label("count"),
-        ).group_by(*group_by)
     else:
-        final_query = select(
-            *selection,
-            func.count().label("count"),
-        ).group_by(*group_by)
+        selection.append(literal("All").label("media_type_name"))
+
+    final_query = select(
+        *selection,
+        func.count().label("count"),
+    ).select_from(combined_query)
+
+    if group_by:
+        final_query = final_query.group_by(*group_by)
 
     return final_query
 
@@ -203,20 +186,13 @@ def get_accessioned_items_csv(
         writer = csv.writer(output)
 
         # Write header row
-        writer.writerow(["Owner Name", "Size Class Name", "Media Type Name", "Count"])
+        writer.writerow(["owner_name", "size_class_name", "media_type_name", "count"])
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
 
         # Write rows from query results
         for row in session.execute(accession_query):
-            inventory_logger.info(f"Row Type: {type(row[0])}")
-            inventory_logger.info(f"Row: {row}")
-            inventory_logger.info(f"Row column 1: {row[0]}")
-            inventory_logger.info(f"Row column 2: {row[1]}")
-            inventory_logger.info(f"Row column 3: {row[2]}")
-            inventory_logger.info(f"Row column 4: {row[3]}")
-
             writer.writerow(row)
             yield output.getvalue()
             output.seek(0)
@@ -828,8 +804,8 @@ def get_non_tray_item_counts_query(params):
         .join(SizeClass, NonTrayItem.size_class_id == SizeClass.id)
         .join(Module, Module.id == Aisle.module_id)
         .where(Module.building_id == params.building_id)
-        .order_by(asc(AisleNumber.number))
-        .group_by(SizeClass.id, AisleNumber.number)
+        .order_by(asc(SizeClass.id))
+        .group_by(SizeClass.id)
     )
 
     # Apply filters
