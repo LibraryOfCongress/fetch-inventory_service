@@ -1084,7 +1084,7 @@ def get_tray_item_count_csv(
         writer = csv.writer(output)
         # Write header row
         writer.writerow(
-            ["size_class_id", "size_class_name", "size_class_short_name", "tray_count"
+            ["size_class_id", "size_class_name", "size_class_short_name", "tray_count",
              "tray_item_count"]
         )
         yield output.getvalue()
