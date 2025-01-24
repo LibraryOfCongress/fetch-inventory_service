@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import func, union_all, literal, and_, or_, asc, distinct
+from sqlalchemy import func, union_all, literal, and_, or_, asc, distinct, desc
 from sqlmodel import Session, select
 
 from app.database.session import get_session
@@ -18,13 +18,17 @@ from app.filter_params import (
     AccessionedItemsParams,
     AisleItemsCountParams,
     NonTrayItemsCountParams,
-    TrayItemCountParams,
+    TrayItemCountParams, UserJobItemsCountParams, SortParams,
 )
+from app.models.accession_jobs import AccessionJob
 from app.models.aisle_numbers import AisleNumber
 from app.models.items import Item
 from app.models.media_types import MediaType
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
+from app.models.pick_lists import PickList
+from app.models.refile_jobs import RefileJob
+from app.models.shelving_jobs import ShelvingJob
 from app.models.size_class import SizeClass
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
@@ -36,16 +40,19 @@ from app.models.sides import Side
 from app.models.modules import Module
 from app.models.ladders import Ladder
 from app.models.trays import Tray
+from app.models.users import User
+from app.models.verification_jobs import VerificationJob
+from app.models.withdraw_jobs import WithdrawJob
 from app.schemas.reporting import (
     AccessionItemsDetailOutput,
     ShelvingJobDiscrepancyOutput,
     OpenLocationsOutput,
     AisleDetailReportItemCountOutput,
     NonTrayItemCountReadOutput,
-    TrayItemCountReadOutput
+    TrayItemCountReadOutput, UserJobItemCountReadOutput,
 )
 from app.config.exceptions import (
-    NotFound
+    NotFound, BadRequest,
 )
 
 router = APIRouter(
@@ -1087,12 +1094,12 @@ def get_tray_item_count_csv(
         for row in session.execute(query):
             size_class_id = row.size_class_id
             size_class_name = row.size_class_name
-            size_class_short_nam = row.size_class_short_name
+            size_class_short_name = row.size_class_short_name
             tray_count = row.tray_count
             tray_item_count = row.tray_item_count
 
             writer.writerow(
-                [size_class_id, size_class_name, size_class_short_nam, tray_count, tray_item_count]
+                [size_class_id, size_class_name, size_class_short_name, tray_count, tray_item_count]
             )
             yield output.getvalue()
             output.seek(0)
@@ -1103,3 +1110,222 @@ def get_tray_item_count_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=tray_item_count.csv"}
     )
+
+
+def get_user_job_summary_query(params, sort_params):
+    job_queries = []
+
+    job_types = [
+        {
+            "model": AccessionJob, "user_field": "user_id",
+            "item_field": "accession_job_id"
+        },
+        {
+            "model": VerificationJob, "user_field": "user_id",
+            "item_field": "verification_job_id"
+        },
+        {"model": PickList, "user_field": "user_id", "item_field": "pick_list_id"},
+        {
+            "model": RefileJob, "user_field": "assigned_user_id",
+            "item_field": "refile_job_id"
+        },
+        {
+            "model": WithdrawJob, "user_field": "assigned_user_id",
+            "item_field": "withdraw_job_id"
+        },
+    ]
+
+    for job_type in job_types:
+        model = job_type["model"]
+        user_field = job_type["user_field"]
+        item_field = job_type["item_field"]
+
+        # Base query for the job model
+        query = (
+            select(
+                literal(model.__tablename__).label("job_type"),
+                model.id.label("job_id"),
+                User.id.label("user_id"),
+                User.first_name.label("first_name"),
+                User.last_name.label("last_name"),
+                func.count(Item.id).label("item_count"),
+                func.count(NonTrayItem.id).label("non_tray_item_count"),
+            )
+            .select_from(model)
+            .join(User, User.id == getattr(model, user_field))
+            .where(model.status == "Completed")
+        )
+
+        # Dynamically join `Item` if the field exists
+        if hasattr(Item, item_field):
+            query = query.outerjoin(Item, getattr(Item, item_field) == model.id)
+
+        # Dynamically join `NonTrayItem` if the field exists
+        if hasattr(NonTrayItem, item_field):
+            query = query.outerjoin(
+                NonTrayItem, getattr(NonTrayItem, item_field) == model.id
+                )
+
+        # Apply filters for user and date range
+        if params.user_id:
+            query = query.where(getattr(model, user_field).in_(params.user_id))
+        if params.from_dt:
+            query = query.where(model.create_dt >= params.from_dt)
+        if params.to_dt:
+            query = query.where(model.create_dt <= params.to_dt)
+
+        # Group by necessary fields
+        query = query.group_by(model.id, User.id, User.first_name, User.last_name)
+        job_queries.append(query)
+
+    # Add a separate query for ShelvingJob
+    shelving_query = (
+        select(
+            literal(ShelvingJob.__tablename__).label("job_type"),
+            ShelvingJob.id.label("job_id"),
+            User.id.label("user_id"),
+            User.first_name.label("first_name"),
+            User.last_name.label("last_name"),
+            func.count(Item.id).label("item_count"),
+            func.count(NonTrayItem.id).label("non_tray_item_count"),
+        )
+        .select_from(ShelvingJob)
+        .join(User, User.id == ShelvingJob.user_id)
+        .outerjoin(Tray, Tray.shelving_job_id == ShelvingJob.id)
+        .outerjoin(Item, Item.tray_id == Tray.id)
+        .outerjoin(NonTrayItem, NonTrayItem.shelving_job_id == ShelvingJob.id)
+        .where(ShelvingJob.status == "Completed")
+    )
+
+
+    if params.user_id:
+        shelving_query = shelving_query.where(ShelvingJob.user_id.in_(params.user_id))
+    if params.from_dt:
+        shelving_query = shelving_query.where(ShelvingJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        shelving_query = shelving_query.where(ShelvingJob.create_dt <= params.to_dt)
+
+    shelving_query = shelving_query.group_by(
+        ShelvingJob.id, User.id, User.first_name, User.last_name
+        )
+    job_queries.append(shelving_query)
+
+    # Combine all job queries using `union_all`
+    combined_query = union_all(*job_queries).subquery()
+
+    # Aggregate final results grouped by job_type
+    selection = [
+        combined_query.c.job_type,
+        (func.sum(combined_query.c.item_count) + func.sum(combined_query.c.non_tray_item_count)).label("total_items_processed"),
+    ]
+    group_by = [combined_query.c.job_type]
+    order_by = []
+
+    if sort_params.sort_by:
+        if sort_params.sort_order not in ["asc", "desc"]:
+            raise BadRequest(
+                detail=f"Invalid value for ‘sort_order'. Allowed values are: ‘asc’, ‘desc’",
+            )
+
+        if sort_params.sort_by == "user_name":
+            selection.append(
+                func.concat(
+                    combined_query.c.first_name, " ", combined_query.c.last_name
+                ).label("user_name"), )
+            group_by.append(combined_query.c.first_name)
+            group_by.append(combined_query.c.last_name)
+            if sort_params.sort_order == "asc":
+                order_by.append(asc(combined_query.c.first_name))
+                order_by.append(asc(combined_query.c.last_name))
+            else:
+                order_by.append(desc(combined_query.c.first_name))
+                order_by.append(desc(combined_query.c.last_name))
+        if sort_params.sort_by == "job_type":
+            if sort_params.sort_order == "asc":
+                order_by.append(asc(combined_query.c.job_type))
+            else:
+                order_by.append(desc(combined_query.c.job_type))
+        if sort_params.sort_by == "total_items_processed":
+            if sort_params.sort_order == "asc":
+                order_by.append(asc(func.sum(combined_query.c.item_count) + func.sum(combined_query.c.non_tray_item_count)))
+            else:
+                order_by.append(desc(func.sum(combined_query.c.item_count) + func.sum(combined_query.c.non_tray_item_count)))
+
+    elif params.user_id:
+        selection.append(func.concat(combined_query.c.first_name, " ", combined_query.c.last_name).label("user_name"),)
+        group_by.append(combined_query.c.first_name)
+        group_by.append(combined_query.c.last_name)
+        order_by.append(combined_query.c.first_name)
+        order_by.append(combined_query.c.last_name)
+    else:
+        selection.append(selection.append(literal("All").label("user_name")))
+        order_by.append(combined_query.c.job_type)
+
+    final_query = (
+        select(
+            *selection
+        )
+        .group_by(*group_by)
+        .order_by(*order_by)
+    )
+
+    return final_query
+
+
+@router.get("/user-jobs/count/", response_model=Page[UserJobItemCountReadOutput])
+def get_user_job_summary(
+    session: Session = Depends(get_session),
+    params: UserJobItemsCountParams = Depends(),
+    sort_params: SortParams = Depends()
+) -> list:
+
+    if params.user_id:
+        user = session.query(User).filter(
+            User.id.in_(
+                params.user_id
+            )
+        ).all()
+        if not user:
+            raise NotFound(detail="User not found")
+
+
+
+    return paginate(session, get_user_job_summary_query(params, sort_params))
+
+
+@router.get("/user-jobs/count/download", response_class=StreamingResponse)
+def get_tray_item_count_csv(
+    session: Session = Depends(get_session),
+    params: UserJobItemsCountParams = Depends(),
+):
+    query = get_user_job_summary_query(params)
+
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+        # Write header row
+        writer.writerow(
+            ["user_name", "job_type", "total_items_processed"]
+        )
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        for row in session.execute(query):
+            user_name = row.user_name
+            job_type = row.job_type
+            total_items_processed = row.total_items_processed
+
+            writer.writerow(
+                [user_name, job_type, total_items_processed]
+            )
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=user_job_count.csv"}
+    )
+

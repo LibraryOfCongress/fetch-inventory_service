@@ -165,3 +165,21 @@ class TrayItemCountParams:
         self.aisle_num_to = aisle_num_to
         self.from_dt = from_dt
         self.to_dt = to_dt
+
+
+class UserJobItemsCountParams:
+    """
+    Query params for User Job Items Count Report.
+    """
+    def __init__(
+        self,
+        user_id: list[int] = Query(default=None, description="ID of the user to filter jobs."),
+        from_dt: datetime = Query(default=None, description="Start created date to "
+                                                       "filter by."),
+        to_dt: datetime = Query(default=None, description="End created date to "
+                                                     "filter by."),
+    ):
+        self.user_id = user_id
+        self.from_dt = from_dt
+        self.to_dt = to_dt
+

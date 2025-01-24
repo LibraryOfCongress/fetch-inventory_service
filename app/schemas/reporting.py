@@ -191,3 +191,19 @@ class TrayItemCountReadOutput(BaseModel):
                 "tray_item_count": 1
             }
         }
+
+
+class UserJobItemCountReadOutput(BaseModel):
+    user_name: Optional[str] = "All"
+    job_type: str
+    total_items_processed: Optional[int] = 0
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "user_name": "Bilbo Baggins",
+                "job_type": "Shelving",
+                "total_items_processed": 1
+            }
+        }
+
