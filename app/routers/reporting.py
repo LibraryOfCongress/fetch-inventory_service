@@ -18,6 +18,7 @@ from app.filter_params import (
     AccessionedItemsParams,
     AisleItemsCountParams,
     NonTrayItemsCountParams,
+    TrayItemCountParams,
 )
 from app.models.aisle_numbers import AisleNumber
 from app.models.items import Item
@@ -40,7 +41,8 @@ from app.schemas.reporting import (
     ShelvingJobDiscrepancyOutput,
     OpenLocationsOutput,
     AisleDetailReportItemCountOutput,
-    NonTrayItemCountReadOutput
+    NonTrayItemCountReadOutput,
+    TrayItemCountReadOutput
 )
 from app.config.exceptions import (
     NotFound
@@ -809,6 +811,8 @@ def get_non_tray_item_counts_query(params):
     )
 
     # Apply filters
+    if params.module_id:
+        query = query.where(Module.id == params.module_id)
     if params.owner_id:
         query = query.where(NonTrayItem.owner_id.in_(params.owner_id))
     if params.size_class_id:
@@ -818,9 +822,9 @@ def get_non_tray_item_counts_query(params):
     if params.aisle_num_to is not None:
         query = query.where(AisleNumber.number <= params.aisle_num_to)
     if params.from_dt:
-        query = query.where(NonTrayItem.accession_dt >= params.from_dt)
+        query = query.where(NonTrayItem.shelved_dt >= params.from_dt)
     if params.to_dt:
-        query = query.where(NonTrayItem.accession_dt <= params.to_dt)
+        query = query.where(NonTrayItem.shelved_dt <= params.to_dt)
 
     # Execute the query and fetch the result
     return query
@@ -851,6 +855,12 @@ def get_non_tray_item_count(
     building = session.get(Building, params.building_id)
     if not building:
         raise NotFound(detail="Building not found")
+
+    # Ensure the modules exists (if module_id is provided)
+    if params.module_id:
+        modules = session.get(Module, params.module_id)
+        if not modules:
+            raise NotFound(detail="Module not found")
 
     # Ensure the size class exists (if size_class_id is provided)
     if params.size_class_id:
@@ -887,11 +897,17 @@ def get_non_tray_item_count_csv(
     if not building:
         raise NotFound(detail="Building not found")
 
+    # Ensure the modules exists (if module_id is provided)
+    if params.module_id:
+        modules = session.get(Module, params.module_id)
+        if not modules:
+            raise NotFound(detail="Module not found")
+
     # Ensure the size class exists (if size_class_id is provided)
     if params.size_class_id:
         size_classes = session.query(SizeClass).filter(
             SizeClass.id.in_(params.size_class_id)
-            ).all()
+        ).all()
         if not size_classes:
             raise NotFound(detail="Size class not found")
 
@@ -925,4 +941,165 @@ def get_non_tray_item_count_csv(
         generate_csv(),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=non_tray_item_count.csv"}
+    )
+
+
+def get_tray_item_counts_query(params):
+    """
+    Construct the query to fetch non tray items with their associated counts as well
+    as size class id, size class name, and size class short name.
+    """
+    # Base query to calculate the count
+    query = (
+        select(
+            func.count(distinct(Tray.id)).label("tray_count"),
+            func.count(distinct(Item.id)).label("tray_item_count"),
+            SizeClass.id.label("size_class_id"),
+            SizeClass.name.label("size_class_name"),
+            SizeClass.short_name.label("size_class_short_name"),
+        )
+        .join(Tray, Tray.id == Item.tray_id)
+        .join(ShelfPosition, ShelfPosition.id == Tray.shelf_position_id)
+        .join(Shelf, Shelf.id == ShelfPosition.shelf_id)
+        .join(Ladder, Ladder.id == Shelf.ladder_id)
+        .join(Side, Side.id == Ladder.side_id)
+        .join(Aisle, Aisle.id == Side.aisle_id)
+        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
+        .join(SizeClass, Tray.size_class_id == SizeClass.id)
+        .join(Module, Module.id == Aisle.module_id)
+        .where(Module.building_id == params.building_id)
+        .order_by(asc(SizeClass.id))
+        .group_by(SizeClass.id)
+    )
+
+    # Apply filters
+    if params.owner_id:
+        query = query.where(Tray.owner_id.in_(params.owner_id))
+    if params.module_id:
+        query = query.where(Module.id == params.module_id)
+    if params.aisle_num_from is not None:
+        query = query.where(AisleNumber.number >= params.aisle_num_from)
+    if params.aisle_num_to is not None:
+        query = query.where(AisleNumber.number <= params.aisle_num_to)
+    if params.from_dt:
+        query = query.where(Tray.shelved_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(Tray.shelved_dt <= params.to_dt)
+
+    inventory_logger.filter(f"get_tray_item_counts_query: {query}")
+    # Execute the query and fetch the result
+    return query
+
+
+@router.get("/tray_items/count/", response_model=Page[TrayItemCountReadOutput])
+def get_tray_item_count(
+    session: Session = Depends(get_session),
+    params: TrayItemCountParams = Depends()
+) -> list:
+    """
+    Get the total number of tray items in an aisle.
+
+    **Args**:
+    - params: Tray Items Count Params: The parameters for the request.
+        - building_id: ID of the building to filter aisles.
+        - owner_id: ID of the owner to filter by.
+        - aisle_num_from: Starting aisle number.
+        - aisle_num_to: Ending aisle number.
+        - from_dt: Start Accession date to filter by.
+        - to_dt: End Accession date to filter by.
+
+    **Returns**:
+    - Tray Item Count Read Output: The total number of tray items.
+    """
+    # Ensure the building exists
+    building = session.get(Building, params.building_id)
+    if not building:
+        raise NotFound(detail="Building not found")
+
+    # Ensure the modules exists (if module_id is provided)
+    if params.module_id:
+        modules = session.get(Module, params.module_id)
+        if not modules:
+            raise NotFound(detail="Module not found")
+
+    # Ensure the owners exists (if owner_id is provided)
+    if params.owner_id:
+        owners = session.query(Owner).filter(Owner.id.in_(
+            params.owner_id)).all()
+        if not owners:
+            raise NotFound(detail="Owners not found")
+
+    return paginate(session, get_tray_item_counts_query(params))
+
+
+@router.get("/tray_items/count/download", response_class=StreamingResponse)
+def get_tray_item_count_csv(
+    session: Session = Depends(get_session),
+    params: TrayItemCountParams = Depends(),
+):
+    """
+    Download the count of tray items in the building.
+
+    **Parameters**:
+    - params: Tray Items Count Params: The parameters for the request.
+        - building_id: ID of the building to filter aisles.
+        - owner_id: ID of the owner to filter by.
+        - aisle_num_from: Starting aisle number.
+        - aisle_num_to: Ending aisle number.
+        - from_dt: Start Accession date to filter by.
+        - to_dt: End Accession date to filter by.
+
+    **Returns**:
+  - Tray Item Count Read Output: The total number of tray items.
+    """
+    # Ensure the building exists
+    building = session.get(Building, params.building_id)
+    if not building:
+        raise NotFound(detail="Building not found")
+
+    # Ensure the modules exists (if module_id is provided)
+    if params.module_id:
+        modules = session.get(Module, params.module_id)
+        if not modules:
+            raise NotFound(detail="Module not found")
+
+    # Ensure the owners exists (if owner_id is provided)
+    if params.owner_id:
+        owners = session.query(Owner).filter(Owner.id.in_(
+            params.owner_id)).all()
+        if not owners:
+            raise NotFound(detail="Owners not found")
+
+    query = get_tray_item_counts_query(params)
+
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+        # Write header row
+        writer.writerow(
+            ["size_class_id", "size_class_name", "size_class_short_name", "tray_count"
+             "tray_item_count"]
+        )
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        for row in session.execute(query):
+            size_class_id = row.size_class_id
+            size_class_name = row.size_class_name
+            size_class_short_nam = row.size_class_short_name
+            tray_count = row.tray_count
+            tray_item_count = row.tray_item_count
+
+            writer.writerow(
+                [size_class_id, size_class_name, size_class_short_nam, tray_count, tray_item_count]
+            )
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=tray_item_count.csv"}
     )

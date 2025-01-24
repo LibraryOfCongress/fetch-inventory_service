@@ -382,6 +382,7 @@ class ReAssignmentInput(BaseModel):
     shelf_position_number: int
     shelf_id: Optional[int] = None
     shelf_barcode_value: Optional[str] = None
+    shelved_dt: Optional[datetime] = None
     scanned_for_shelving: Optional[bool] = None
 
     class Config:
@@ -392,6 +393,7 @@ class ReAssignmentInput(BaseModel):
             "shelf_position_number": 5,
             "shelf_id": 1,
             "shelf_barcode_value": "xy332bnl",
+            "shelved_dt": "2023-10-08T20:46:56.764426",
             "scanned_for_shelving": True
         }
 

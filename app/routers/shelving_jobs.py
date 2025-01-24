@@ -562,6 +562,9 @@ def reassign_container_location(
     container.shelving_job_id = id
     container.shelf_position_id = shelf_position_position_number_join.ShelfPosition.id
 
+    if reassignment_input.shelved_dt is not None:
+        container.shelved_dt = reassignment_input.shelved_dt
+
     # bool value, explicitly check if user sent value
     if reassignment_input.scanned_for_shelving is not None:
         container.scanned_for_shelving = reassignment_input.scanned_for_shelving

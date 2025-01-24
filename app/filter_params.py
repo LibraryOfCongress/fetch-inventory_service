@@ -79,8 +79,11 @@ class AccessionedItemsParams:
                  owner_id: list[int] = Query(default=None),
                  size_class_id: list[int] = Query(default=None),
                  media_type_id: list[int] = Query(default=None),
-                 from_dt: Optional[datetime] = Query(default=None),
-                 to_dt: Optional[datetime] = Query(default=None),
+                 from_dt: Optional[datetime] = Query(default=None, description="Start accessioned date to "
+                                                            "filter by."),
+                 to_dt: Optional[datetime] = Query(default=None, description="End "
+                                                                            "accessioned date to "
+                                                            "filter by."),
                  ):
         self.owner_id = owner_id
         self.size_class_id = size_class_id
@@ -104,21 +107,60 @@ class NonTrayItemsCountParams:
     """
     def __init__(
         self,
-        building_id: int = Query(..., description="ID of the building to filter "
-                                                  "aisles."),
+        building_id: int = Query(..., description="ID of the building to filter."),
+        module_id: int = Query(default=None, description="ID of the module to "
+                                                         "filter."),
         owner_id: list[int] = Query(default=None),
         size_class_id: list[int] = Query(default=None),
         aisle_num_from: Optional[int] = Query(None, description="Starting aisle "
                                                                 "number."),
         aisle_num_to: Optional[int] = Query(None, description="Ending aisle number."),
-        from_dt: datetime = Query(default=None, description="Start Accession date to "
+        from_dt: datetime = Query(default=None, description="Start shelved date to "
                                                             "filter by."),
-        to_dt: datetime = Query(default=None, description="End Accession date to "
+        to_dt: datetime = Query(default=None, description="End shelved date to "
                                                           "filter by.")
     ):
         self.building_id = building_id
+        self.module_id = module_id
         self.owner_id = owner_id
         self.size_class_id = size_class_id
+        self.aisle_num_from = aisle_num_from
+        self.aisle_num_to = aisle_num_to
+        self.from_dt = from_dt
+        self.to_dt = to_dt
+
+
+class TrayItemCountParams:
+    """
+        Query params for Non Tray Items Count Report.
+        """
+
+    def __init__(
+        self,
+        building_id: int = Query(
+            ..., description="ID of the building to filter "
+                             "aisles."
+            ),
+        module_id: int = Query(default=None, description="ID of the module to "
+                                                         "filter."),
+        owner_id: list[int] = Query(default=None),
+        aisle_num_from: Optional[int] = Query(
+            None, description="Starting aisle "
+                              "number."
+            ),
+        aisle_num_to: Optional[int] = Query(None, description="Ending aisle number."),
+        from_dt: datetime = Query(
+            default=None, description="Start shelved date to "
+                                      "filter by."
+            ),
+        to_dt: datetime = Query(
+            default=None, description="End shelved date to "
+                                      "filter by."
+            )
+    ):
+        self.building_id = building_id
+        self.module_id = module_id
+        self.owner_id = owner_id
         self.aisle_num_from = aisle_num_from
         self.aisle_num_to = aisle_num_to
         self.from_dt = from_dt

@@ -172,3 +172,22 @@ class NonTrayItemCountReadOutput(BaseModel):
                 "non_tray_item_count": 1
             }
         }
+
+
+class TrayItemCountReadOutput(BaseModel):
+    size_class_id: int
+    size_class_name: Optional[str] = "All"
+    size_class_short_name: Optional[str] = "All"
+    tray_count: Optional[int] = 0
+    tray_item_count: Optional[int] = 0
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "size_class_id": 1,
+                "size_class_name": "C-Low",
+                "size_class_short_name": "CL",
+                "tray_count": 1,
+                "tray_item_count": 1
+            }
+        }
