@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import func, union_all, literal, and_, or_, asc, distinct, desc
+from sqlalchemy import func, union_all, literal, and_, or_, asc, distinct, desc, case
 from sqlmodel import Session, select
 
 from app.database.session import get_session
@@ -18,16 +18,23 @@ from app.filter_params import (
     AccessionedItemsParams,
     AisleItemsCountParams,
     NonTrayItemsCountParams,
-    TrayItemCountParams, UserJobItemsCountParams, SortParams,
+    TrayItemCountParams,
+    UserJobItemsCountParams,
+    SortParams,
 )
 from app.models.accession_jobs import AccessionJob
 from app.models.aisle_numbers import AisleNumber
+from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
 from app.models.media_types import MediaType
+from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
 from app.models.pick_lists import PickList
+from app.models.refile_items import RefileItem
 from app.models.refile_jobs import RefileJob
+from app.models.refile_non_tray_items import RefileNonTrayItem
+from app.models.requests import Request
 from app.models.shelving_jobs import ShelvingJob
 from app.models.size_class import SizeClass
 from app.models.shelf_positions import ShelfPosition
@@ -49,10 +56,12 @@ from app.schemas.reporting import (
     OpenLocationsOutput,
     AisleDetailReportItemCountOutput,
     NonTrayItemCountReadOutput,
-    TrayItemCountReadOutput, UserJobItemCountReadOutput,
+    TrayItemCountReadOutput,
+    UserJobItemCountReadOutput,
 )
 from app.config.exceptions import (
-    NotFound, BadRequest,
+    NotFound,
+    BadRequest,
 )
 
 router = APIRouter(
@@ -69,11 +78,7 @@ def get_accessioned_items_count_query(params):
 
     if params.owner_id:
         item_query_conditions.append(Item.owner_id.in_(params.owner_id))
-        non_tray_item_query_conditions.append(
-            NonTrayItem.owner_id.in_(
-                params.owner_id
-            )
-        )
+        non_tray_item_query_conditions.append(NonTrayItem.owner_id.in_(params.owner_id))
     if params.size_class_id:
         item_query_conditions.append(Item.size_class_id.in_(params.size_class_id))
         non_tray_item_query_conditions.append(
@@ -88,13 +93,10 @@ def get_accessioned_items_count_query(params):
         item_query_conditions.append(Item.accession_dt >= params.from_dt)
         non_tray_item_query_conditions.append(
             NonTrayItem.accession_dt >= params.from_dt
-            )
+        )
     if params.to_dt:
         item_query_conditions.append(Item.accession_dt <= params.to_dt)
-        non_tray_item_query_conditions.append(
-            NonTrayItem.accession_dt <=
-            params.to_dt
-            )
+        non_tray_item_query_conditions.append(NonTrayItem.accession_dt <= params.to_dt)
 
     item_query = (
         select(
@@ -218,23 +220,31 @@ def get_accessioned_items_csv(
 
 
 # SHELVING JOB DISCREPANCIES
-@router.get("/shelving-job-discrepancies/", response_model=Page[ShelvingJobDiscrepancyOutput])
+@router.get(
+    "/shelving-job-discrepancies/", response_model=Page[ShelvingJobDiscrepancyOutput]
+)
 def get_shelving_job_discrepancy_list(
     session: Session = Depends(get_session),
-    params: ShelvingJobDiscrepancyParams = Depends()
+    params: ShelvingJobDiscrepancyParams = Depends(),
 ) -> list:
     """
     Returns a list of ShelvingJobDiscrepancy objects.
     """
     query = select(ShelvingJobDiscrepancy).distinct()
     if params.shelving_job_id:
-        query = query.where(ShelvingJobDiscrepancy.shelving_job_id == params.shelving_job_id)
+        query = query.where(
+            ShelvingJobDiscrepancy.shelving_job_id == params.shelving_job_id
+        )
     if params.assigned_user_id:
-        query = query.where(ShelvingJobDiscrepancy.assigned_user_id == params.assigned_user_id)
+        query = query.where(
+            ShelvingJobDiscrepancy.assigned_user_id == params.assigned_user_id
+        )
     if params.owner_id:
         query = query.where(ShelvingJobDiscrepancy.owner_id == params.owner_id)
     if params.size_class_id:
-        query = query.where(ShelvingJobDiscrepancy.size_class_id == params.size_class_id)
+        query = query.where(
+            ShelvingJobDiscrepancy.size_class_id == params.size_class_id
+        )
     if params.from_dt:
         query = query.where(ShelvingJobDiscrepancy.create_dt >= params.from_dt)
     if params.to_dt:
@@ -246,7 +256,7 @@ def get_shelving_job_discrepancy_list(
 @router.get("/shelving-job-discrepancies/download", response_class=StreamingResponse)
 def get_shelving_job_report_csv(
     session: Session = Depends(get_session),
-    params: ShelvingJobDiscrepancyParams = Depends()
+    params: ShelvingJobDiscrepancyParams = Depends(),
 ):
     """
     Translates list response of ShelvingJobDiscrepancy objects to csv,
@@ -255,13 +265,19 @@ def get_shelving_job_report_csv(
     query = select(ShelvingJobDiscrepancy).distinct()
 
     if params.shelving_job_id:
-        query = query.where(ShelvingJobDiscrepancy.shelving_job_id == params.shelving_job_id)
+        query = query.where(
+            ShelvingJobDiscrepancy.shelving_job_id == params.shelving_job_id
+        )
     if params.assigned_user_id:
-        query = query.where(ShelvingJobDiscrepancy.assigned_user_id == params.assigned_user_id)
+        query = query.where(
+            ShelvingJobDiscrepancy.assigned_user_id == params.assigned_user_id
+        )
     if params.owner_id:
         query = query.where(ShelvingJobDiscrepancy.owner_id == params.owner_id)
     if params.size_class_id:
-        query = query.where(ShelvingJobDiscrepancy.size_class_id == params.size_class_id)
+        query = query.where(
+            ShelvingJobDiscrepancy.size_class_id == params.size_class_id
+        )
     if params.from_dt:
         query = query.where(ShelvingJobDiscrepancy.create_dt >= params.from_dt)
     if params.to_dt:
@@ -270,25 +286,27 @@ def get_shelving_job_report_csv(
     result = session.execute(query)
     rows = result.scalars().all()
 
-        # Create an in-memory CSV
+    # Create an in-memory CSV
     output = StringIO()
     writer = csv.writer(output)
 
     # Write headers (optional: use column names dynamically)
-    writer.writerow([
-        "discrepancy_id",
-        "shelving_job_id",
-        "tray",
-        "non_tray_item",
-        "assigned_user",
-        "owner",
-        "size_class",
-        "assigned_location",
-        "pre_assigned_location",
-        "error",
-        "create_dt",
-        "update_dt"
-    ])
+    writer.writerow(
+        [
+            "discrepancy_id",
+            "shelving_job_id",
+            "tray",
+            "non_tray_item",
+            "assigned_user",
+            "owner",
+            "size_class",
+            "assigned_location",
+            "pre_assigned_location",
+            "error",
+            "create_dt",
+            "update_dt",
+        ]
+    )
 
     tray_barcode_value = None
     non_tray_item_barcode_value = None
@@ -308,20 +326,22 @@ def get_shelving_job_report_csv(
             owner_name = row.owner.name
         if row.size_class:
             size_class_shortname = row.size_class.short_name
-        writer.writerow([
-            row.id,
-            row.shelving_job_id,
-            tray_barcode_value,
-            non_tray_item_barcode_value,
-            assigned_user_name,
-            owner_name,
-            size_class_shortname,
-            row.assigned_location,
-            row.pre_assigned_location,
-            row.error,
-            row.create_dt,
-            row.update_dt
-        ])
+        writer.writerow(
+            [
+                row.id,
+                row.shelving_job_id,
+                tray_barcode_value,
+                non_tray_item_barcode_value,
+                assigned_user_name,
+                owner_name,
+                size_class_shortname,
+                row.assigned_location,
+                row.pre_assigned_location,
+                row.error,
+                row.create_dt,
+                row.update_dt,
+            ]
+        )
 
     # Reset the buffer position
     output.seek(0)
@@ -330,12 +350,18 @@ def get_shelving_job_report_csv(
     return StreamingResponse(
         output,
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=shelving_discrepancies.csv"}
+        headers={
+            "Content-Disposition": "attachment; filename=shelving_discrepancies.csv"
+        },
     )
 
 
-@router.get("/shelving-job-discrepancies/{id}", response_model=ShelvingJobDiscrepancyOutput)
-def get_shelving_job_discrepancy_detail(id: int, session: Session = Depends(get_session)):
+@router.get(
+    "/shelving-job-discrepancies/{id}", response_model=ShelvingJobDiscrepancyOutput
+)
+def get_shelving_job_discrepancy_detail(
+    id: int, session: Session = Depends(get_session)
+):
     """
     Returns a single Shelving Job Discrepancy object
     """
@@ -350,8 +376,7 @@ def get_shelving_job_discrepancy_detail(id: int, session: Session = Depends(get_
 # OPEN LOCATIONS REPORT
 @router.get("/open-locations/", response_model=Page[OpenLocationsOutput])
 def get_open_locations_list(
-    session: Session = Depends(get_session),
-    params: OpenLocationParams = Depends()
+    session: Session = Depends(get_session), params: OpenLocationParams = Depends()
 ) -> list:
     """
     Returns a paginated list of shelf objects with
@@ -360,7 +385,7 @@ def get_open_locations_list(
     total_positions_subquery = (
         select(
             ShelfPosition.shelf_id,
-            func.count(ShelfPosition.id).label("total_positions")
+            func.count(ShelfPosition.id).label("total_positions"),
         )
         .group_by(ShelfPosition.shelf_id)
         .subquery()
@@ -369,33 +394,26 @@ def get_open_locations_list(
     occupied_positions_subquery = (
         select(
             ShelfPosition.shelf_id,
-            func.count(ShelfPosition.id).label("occupied_positions")
+            func.count(ShelfPosition.id).label("occupied_positions"),
         )
-        .where(
-            or_(
-                ShelfPosition.tray != None,
-                ShelfPosition.non_tray_item != None
-            )
-        )
+        .where(or_(ShelfPosition.tray != None, ShelfPosition.non_tray_item != None))
         .group_by(ShelfPosition.shelf_id)
         .subquery()
     )
 
     shelf_query = (
-        select(
-            Shelf
-        ).distinct().join(
-            ShelfType, Shelf.shelf_type_id == ShelfType.id
-        ).join(
-            SizeClass, ShelfType.size_class_id == SizeClass.id
-        ).join(
-            Shelf.barcode
-        ).join(
-            Shelf.owner
-        ).outerjoin(
+        select(Shelf)
+        .distinct()
+        .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
+        .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
+        .join(Shelf.barcode)
+        .join(Shelf.owner)
+        .outerjoin(
             total_positions_subquery, Shelf.id == total_positions_subquery.c.shelf_id
-        ).outerjoin(
-            occupied_positions_subquery, Shelf.id == occupied_positions_subquery.c.shelf_id
+        )
+        .outerjoin(
+            occupied_positions_subquery,
+            Shelf.id == occupied_positions_subquery.c.shelf_id,
         )
     )
 
@@ -407,13 +425,16 @@ def get_open_locations_list(
     else:
         # Show shelves with at least some space available
         shelf_query = shelf_query.where(
-            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) < ShelfType.max_capacity
+            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0)
+            < ShelfType.max_capacity
         )
 
     if params.owner_id:
         shelf_query = shelf_query.where(Shelf.owner_id.in_(params.owner_id))
     if params.size_class_id:
-        shelf_query = shelf_query.where(ShelfType.size_class_id.in_(params.size_class_id))
+        shelf_query = shelf_query.where(
+            ShelfType.size_class_id.in_(params.size_class_id)
+        )
     if params.height:
         shelf_query = shelf_query.where(Shelf.height == params.height)
     if params.width:
@@ -424,54 +445,38 @@ def get_open_locations_list(
     # Now location constraints
     if params.ladder_id:
         # shelf_query = shelf_query.where(Shelf.ladder_id == params.ladder_id)
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).where(
+        shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).where(
             Ladder.id == params.ladder_id
         )
     elif params.side_id:
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).where(
-            Side.id == params.side_id
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .where(Side.id == params.side_id)
         )
     elif params.aisle_id:
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).join(
-            Aisle, Side.aisle_id == Aisle.id
-        ).where(
-            Aisle.id == params.aisle_id
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .where(Aisle.id == params.aisle_id)
         )
     elif params.module_id:
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).join(
-            Aisle, Side.aisle_id == Aisle.id
-        ).join(
-            Module, Aisle.module_id == Module.id
-        ).where(
-            Module.id == params.module_id
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .join(Module, Aisle.module_id == Module.id)
+            .where(Module.id == params.module_id)
         )
     elif params.building_id:
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).join(
-            Aisle, Side.aisle_id == Aisle.id
-        ).join(
-            Module, Aisle.module_id == Module.id
-        ).join(
-            Building, Module.building_id == Building.id
-        ).where(
-            Building.id == params.building_id
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .join(Module, Aisle.module_id == Module.id)
+            .join(Building, Module.building_id == Building.id)
+            .where(Building.id == params.building_id)
         )
 
     return paginate(session, shelf_query)
@@ -479,8 +484,7 @@ def get_open_locations_list(
 
 @router.get("/open-locations/download", response_class=StreamingResponse)
 def get_open_locations_csv(
-    session: Session = Depends(get_session),
-    params: OpenLocationParams = Depends()
+    session: Session = Depends(get_session), params: OpenLocationParams = Depends()
 ):
     """
     Returns a csv report of shelf objects with
@@ -489,7 +493,7 @@ def get_open_locations_csv(
     total_positions_subquery = (
         select(
             ShelfPosition.shelf_id,
-            func.count(ShelfPosition.id).label("total_positions")
+            func.count(ShelfPosition.id).label("total_positions"),
         )
         .group_by(ShelfPosition.shelf_id)
         .subquery()
@@ -498,33 +502,26 @@ def get_open_locations_csv(
     occupied_positions_subquery = (
         select(
             ShelfPosition.shelf_id,
-            func.count(ShelfPosition.id).label("occupied_positions")
+            func.count(ShelfPosition.id).label("occupied_positions"),
         )
-        .where(
-            or_(
-                ShelfPosition.tray != None,
-                ShelfPosition.non_tray_item != None
-            )
-        )
+        .where(or_(ShelfPosition.tray != None, ShelfPosition.non_tray_item != None))
         .group_by(ShelfPosition.shelf_id)
         .subquery()
     )
 
     shelf_query = (
-        select(
-            Shelf
-        ).distinct().join(
-            ShelfType, Shelf.shelf_type_id == ShelfType.id
-        ).join(
-            SizeClass, ShelfType.size_class_id == SizeClass.id
-        ).join(
-            Shelf.barcode
-        ).join(
-            Shelf.owner
-        ).outerjoin(
+        select(Shelf)
+        .distinct()
+        .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
+        .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
+        .join(Shelf.barcode)
+        .join(Shelf.owner)
+        .outerjoin(
             total_positions_subquery, Shelf.id == total_positions_subquery.c.shelf_id
-        ).outerjoin(
-            occupied_positions_subquery, Shelf.id == occupied_positions_subquery.c.shelf_id
+        )
+        .outerjoin(
+            occupied_positions_subquery,
+            Shelf.id == occupied_positions_subquery.c.shelf_id,
         )
     )
 
@@ -536,13 +533,16 @@ def get_open_locations_csv(
     else:
         # Show shelves with at least some space available
         shelf_query = shelf_query.where(
-            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) < ShelfType.max_capacity
+            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0)
+            < ShelfType.max_capacity
         )
 
     if params.owner_id:
         shelf_query = shelf_query.where(Shelf.owner_id.in_(params.owner_id))
     if params.size_class_id:
-        shelf_query = shelf_query.where(ShelfType.size_class_id.in_(params.size_class_id))
+        shelf_query = shelf_query.where(
+            ShelfType.size_class_id.in_(params.size_class_id)
+        )
     if params.height:
         shelf_query = shelf_query.where(Shelf.height == params.height)
     if params.width:
@@ -553,87 +553,75 @@ def get_open_locations_csv(
     # Now location constraints
     if params.ladder_id:
         # shelf_query = shelf_query.where(Shelf.ladder_id == params.ladder_id)
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).where(
+        shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).where(
             Ladder.id == params.ladder_id
         )
     elif params.side_id:
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).where(
-            Side.id == params.side_id
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .where(Side.id == params.side_id)
         )
     elif params.aisle_id:
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).join(
-            Aisle, Side.aisle_id == Aisle.id
-        ).where(
-            Aisle.id == params.aisle_id
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .where(Aisle.id == params.aisle_id)
         )
     elif params.module_id:
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).join(
-            Aisle, Side.aisle_id == Aisle.id
-        ).join(
-            Module, Aisle.module_id == Module.id
-        ).where(
-            Module.id == params.module_id
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .join(Module, Aisle.module_id == Module.id)
+            .where(Module.id == params.module_id)
         )
     elif params.building_id:
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).join(
-            Aisle, Side.aisle_id == Aisle.id
-        ).join(
-            Module, Aisle.module_id == Module.id
-        ).join(
-            Building, Module.building_id == Building.id
-        ).where(
-            Building.id == params.building_id
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .join(Module, Aisle.module_id == Module.id)
+            .join(Building, Module.building_id == Building.id)
+            .where(Building.id == params.building_id)
         )
 
     result = session.execute(shelf_query)
     rows = result.scalars().all()
 
-        # Create an in-memory CSV
+    # Create an in-memory CSV
     output = StringIO()
     writer = csv.writer(output)
 
     # Write headers (optional: use column names dynamically)
-    writer.writerow([
-        "shelf_barcode",
-        "available_space",
-        "location",
-        "owner",
-        "height",
-        "width",
-        "depth",
-        "size_class"
-    ])
+    writer.writerow(
+        [
+            "shelf_barcode",
+            "available_space",
+            "location",
+            "owner",
+            "height",
+            "width",
+            "depth",
+            "size_class",
+        ]
+    )
 
     # Write rows
     for row in rows:
-        writer.writerow([
-            row.barcode.value,
-            row.available_space,
-            row.location,
-            row.owner.name,
-            row.height,
-            row.width,
-            row.depth,
-            row.shelf_type.size_class.short_name
-        ])
+        writer.writerow(
+            [
+                row.barcode.value,
+                row.available_space,
+                row.location,
+                row.owner.name,
+                row.height,
+                row.width,
+                row.depth,
+                row.shelf_type.size_class.short_name,
+            ]
+        )
 
     # Reset the buffer position
     output.seek(0)
@@ -642,11 +630,13 @@ def get_open_locations_csv(
     return StreamingResponse(
         output,
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=open_locations.csv"}
+        headers={"Content-Disposition": "attachment; filename=open_locations.csv"},
     )
 
 
-def get_aisle_item_counts_query(building_id: int, aisle_num_from: Optional[int], aisle_num_to: Optional[int]):
+def get_aisle_item_counts_query(
+    building_id: int, aisle_num_from: Optional[int], aisle_num_to: Optional[int]
+):
     """
     Construct the query to fetch aisles with their associated counts.
     """
@@ -667,7 +657,9 @@ def get_aisle_item_counts_query(building_id: int, aisle_num_from: Optional[int],
         .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id, isouter=True)
         .join(Tray, Tray.shelf_position_id == ShelfPosition.id, isouter=True)
         .join(Item, Item.tray_id == Tray.id, isouter=True)
-        .join(NonTrayItem, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)
+        .join(
+            NonTrayItem, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True
+        )
         .filter(Module.building_id == building_id)
         .order_by(asc(AisleNumber.number))
         .group_by(Aisle.id, AisleNumber.number)
@@ -687,8 +679,7 @@ def get_aisle_item_counts_query(building_id: int, aisle_num_from: Optional[int],
     response_description="List of item counts per aisle",
 )
 def get_aisle_items_count(
-    session: Session = Depends(get_session),
-    params: AisleItemsCountParams = Depends()
+    session: Session = Depends(get_session), params: AisleItemsCountParams = Depends()
 ) -> list:
     """
     Get the total number of items in an aisle.
@@ -707,7 +698,9 @@ def get_aisle_items_count(
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
 
-    aisles_query = get_aisle_item_counts_query(params.building_id, params.aisle_num_from, params.aisle_num_to)
+    aisles_query = get_aisle_item_counts_query(
+        params.building_id, params.aisle_num_from, params.aisle_num_to
+    )
 
     # Paginate and transform results into the schema
     paginated_result = paginate(session, aisles_query)
@@ -751,7 +744,9 @@ def get_aisles_items_count_csv(
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
 
-    aisles_query = get_aisle_item_counts_query(params.building_id, params.aisle_num_from, params.aisle_num_to)
+    aisles_query = get_aisle_item_counts_query(
+        params.building_id, params.aisle_num_from, params.aisle_num_to
+    )
 
     # Define the generator to stream data
     def generate_csv():
@@ -759,8 +754,14 @@ def get_aisles_items_count_csv(
         writer = csv.writer(output)
         # Write header row
         writer.writerow(
-            ["aisle_number", "shelf_count", "tray_count", "item_count",
-             "non_tray_item_count", "total_item_count"]
+            [
+                "aisle_number",
+                "shelf_count",
+                "tray_count",
+                "item_count",
+                "non_tray_item_count",
+                "total_item_count",
+            ]
         )
         yield output.getvalue()
         output.seek(0)
@@ -776,9 +777,15 @@ def get_aisles_items_count_csv(
             total_item_count = item_count + non_tray_item_count
 
             writer.writerow(
-                [aisle_number, shelf_count, tray_count, item_count, non_tray_item_count,
-                 total_item_count]
-                )
+                [
+                    aisle_number,
+                    shelf_count,
+                    tray_count,
+                    item_count,
+                    non_tray_item_count,
+                    total_item_count,
+                ]
+            )
             yield output.getvalue()
             output.seek(0)
             output.truncate(0)
@@ -787,7 +794,7 @@ def get_aisles_items_count_csv(
     return StreamingResponse(
         generate_csv(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=aisles_item_count.csv"}
+        headers={"Content-Disposition": "attachment; filename=aisles_item_count.csv"},
     )
 
 
@@ -839,8 +846,7 @@ def get_non_tray_item_counts_query(params):
 
 @router.get("/non_tray_items/count/", response_model=Page[NonTrayItemCountReadOutput])
 def get_non_tray_item_count(
-    session: Session = Depends(get_session),
-    params: NonTrayItemsCountParams = Depends()
+    session: Session = Depends(get_session), params: NonTrayItemsCountParams = Depends()
 ) -> list:
     """
     Get the total number of non tray items in an aisle.
@@ -871,7 +877,11 @@ def get_non_tray_item_count(
 
     # Ensure the size class exists (if size_class_id is provided)
     if params.size_class_id:
-        size_classes = session.query(SizeClass).filter(SizeClass.id.in_(params.size_class_id)).all()
+        size_classes = (
+            session.query(SizeClass)
+            .filter(SizeClass.id.in_(params.size_class_id))
+            .all()
+        )
         if not size_classes:
             raise NotFound(detail="Size class not found")
 
@@ -884,20 +894,20 @@ def get_non_tray_item_count_csv(
     params: NonTrayItemsCountParams = Depends(),
 ):
     """
-    Download  the count of non-tray items in the building.
+      Download  the count of non-tray items in the building.
 
-    **Parameters**:
-    - params: Non Tray Items Count Params: The parameters for the request.
-        - building_id: ID of the building to filter aisles.
-        - owner_id: ID of the owner to filter by.
-        - size_class_id: ID of the size class to filter by.
-        - aisle_num_from: Starting aisle number.
-        - aisle_num_to: Ending aisle number.
-        - from_dt: Start Accession date to filter by.
-        - to_dt: End Accession date to filter by.
+      **Parameters**:
+      - params: Non Tray Items Count Params: The parameters for the request.
+          - building_id: ID of the building to filter aisles.
+          - owner_id: ID of the owner to filter by.
+          - size_class_id: ID of the size class to filter by.
+          - aisle_num_from: Starting aisle number.
+          - aisle_num_to: Ending aisle number.
+          - from_dt: Start Accession date to filter by.
+          - to_dt: End Accession date to filter by.
 
-    **Returns**:
-  - Non Tray Item Count Read Output: The total number of non tray items.
+      **Returns**:
+    - Non Tray Item Count Read Output: The total number of non tray items.
     """
     # Ensure the building exists
     building = session.get(Building, params.building_id)
@@ -912,9 +922,11 @@ def get_non_tray_item_count_csv(
 
     # Ensure the size class exists (if size_class_id is provided)
     if params.size_class_id:
-        size_classes = session.query(SizeClass).filter(
-            SizeClass.id.in_(params.size_class_id)
-        ).all()
+        size_classes = (
+            session.query(SizeClass)
+            .filter(SizeClass.id.in_(params.size_class_id))
+            .all()
+        )
         if not size_classes:
             raise NotFound(detail="Size class not found")
 
@@ -925,7 +937,12 @@ def get_non_tray_item_count_csv(
         writer = csv.writer(output)
         # Write header row
         writer.writerow(
-            ["size_class_id", "size_class_name", "size_class_short_name", "non_tray_item_count"]
+            [
+                "size_class_id",
+                "size_class_name",
+                "size_class_short_name",
+                "non_tray_item_count",
+            ]
         )
         yield output.getvalue()
         output.seek(0)
@@ -938,7 +955,12 @@ def get_non_tray_item_count_csv(
             non_tray_item_count = row.non_tray_item_count
 
             writer.writerow(
-                [size_class_id, size_class_name, size_class_short_nam, non_tray_item_count]
+                [
+                    size_class_id,
+                    size_class_name,
+                    size_class_short_nam,
+                    non_tray_item_count,
+                ]
             )
             yield output.getvalue()
             output.seek(0)
@@ -947,7 +969,7 @@ def get_non_tray_item_count_csv(
     return StreamingResponse(
         generate_csv(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=non_tray_item_count.csv"}
+        headers={"Content-Disposition": "attachment; filename=non_tray_item_count.csv"},
     )
 
 
@@ -993,15 +1015,13 @@ def get_tray_item_counts_query(params):
     if params.to_dt:
         query = query.where(Tray.shelved_dt <= params.to_dt)
 
-    inventory_logger.filter(f"get_tray_item_counts_query: {query}")
     # Execute the query and fetch the result
     return query
 
 
 @router.get("/tray_items/count/", response_model=Page[TrayItemCountReadOutput])
 def get_tray_item_count(
-    session: Session = Depends(get_session),
-    params: TrayItemCountParams = Depends()
+    session: Session = Depends(get_session), params: TrayItemCountParams = Depends()
 ) -> list:
     """
     Get the total number of tray items in an aisle.
@@ -1031,8 +1051,7 @@ def get_tray_item_count(
 
     # Ensure the owners exists (if owner_id is provided)
     if params.owner_id:
-        owners = session.query(Owner).filter(Owner.id.in_(
-            params.owner_id)).all()
+        owners = session.query(Owner).filter(Owner.id.in_(params.owner_id)).all()
         if not owners:
             raise NotFound(detail="Owners not found")
 
@@ -1045,19 +1064,19 @@ def get_tray_item_count_csv(
     params: TrayItemCountParams = Depends(),
 ):
     """
-    Download the count of tray items in the building.
+      Download the count of tray items in the building.
 
-    **Parameters**:
-    - params: Tray Items Count Params: The parameters for the request.
-        - building_id: ID of the building to filter aisles.
-        - owner_id: ID of the owner to filter by.
-        - aisle_num_from: Starting aisle number.
-        - aisle_num_to: Ending aisle number.
-        - from_dt: Start Accession date to filter by.
-        - to_dt: End Accession date to filter by.
+      **Parameters**:
+      - params: Tray Items Count Params: The parameters for the request.
+          - building_id: ID of the building to filter aisles.
+          - owner_id: ID of the owner to filter by.
+          - aisle_num_from: Starting aisle number.
+          - aisle_num_to: Ending aisle number.
+          - from_dt: Start Accession date to filter by.
+          - to_dt: End Accession date to filter by.
 
-    **Returns**:
-  - Tray Item Count Read Output: The total number of tray items.
+      **Returns**:
+    - Tray Item Count Read Output: The total number of tray items.
     """
     # Ensure the building exists
     building = session.get(Building, params.building_id)
@@ -1072,8 +1091,7 @@ def get_tray_item_count_csv(
 
     # Ensure the owners exists (if owner_id is provided)
     if params.owner_id:
-        owners = session.query(Owner).filter(Owner.id.in_(
-            params.owner_id)).all()
+        owners = session.query(Owner).filter(Owner.id.in_(params.owner_id)).all()
         if not owners:
             raise NotFound(detail="Owners not found")
 
@@ -1084,8 +1102,13 @@ def get_tray_item_count_csv(
         writer = csv.writer(output)
         # Write header row
         writer.writerow(
-            ["size_class_id", "size_class_name", "size_class_short_name", "tray_count",
-             "tray_item_count"]
+            [
+                "size_class_id",
+                "size_class_name",
+                "size_class_short_name",
+                "tray_count",
+                "tray_item_count",
+            ]
         )
         yield output.getvalue()
         output.seek(0)
@@ -1099,7 +1122,13 @@ def get_tray_item_count_csv(
             tray_item_count = row.tray_item_count
 
             writer.writerow(
-                [size_class_id, size_class_name, size_class_short_name, tray_count, tray_item_count]
+                [
+                    size_class_id,
+                    size_class_name,
+                    size_class_short_name,
+                    tray_count,
+                    tray_item_count,
+                ]
             )
             yield output.getvalue()
             output.seek(0)
@@ -1108,107 +1137,320 @@ def get_tray_item_count_csv(
     return StreamingResponse(
         generate_csv(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=tray_item_count.csv"}
+        headers={"Content-Disposition": "attachment; filename=tray_item_count.csv"},
     )
 
 
-def get_user_job_summary_query(params, sort_params):
-    job_queries = []
+def accession_job_summary_query(params):
+    selection = [literal("Accession Job").label("job_type")]
+    conditions = [AccessionJob.status == "Completed"]
+    group_by = []
 
-    job_types = [
-        {
-            "model": AccessionJob, "user_field": "user_id",
-            "item_field": "accession_job_id"
-        },
-        {
-            "model": VerificationJob, "user_field": "user_id",
-            "item_field": "verification_job_id"
-        },
-        {"model": PickList, "user_field": "user_id", "item_field": "pick_list_id"},
-        {
-            "model": RefileJob, "user_field": "assigned_user_id",
-            "item_field": "refile_job_id"
-        },
-        {
-            "model": WithdrawJob, "user_field": "assigned_user_id",
-            "item_field": "withdraw_job_id"
-        },
-    ]
-
-    for job_type in job_types:
-        model = job_type["model"]
-        user_field = job_type["user_field"]
-        item_field = job_type["item_field"]
-
-        # Base query for the job model
-        query = (
-            select(
-                literal(model.__tablename__).label("job_type"),
-                model.id.label("job_id"),
-                User.id.label("user_id"),
+    # Apply filters for user and date range
+    if params.user_id:
+        selection.append(User.id.label("user_id"))
+        selection.append(
+            func.concat(
                 User.first_name.label("first_name"),
+                literal(" "),
                 User.last_name.label("last_name"),
-                func.count(Item.id).label("item_count"),
-                func.count(NonTrayItem.id).label("non_tray_item_count"),
-            )
-            .select_from(model)
-            .join(User, User.id == getattr(model, user_field))
-            .where(model.status == "Completed")
+            ).label("user_name")
         )
+        conditions.append(User.id.in_(params.user_id))
+        group_by.append(User.id)
+    if params.from_dt:
+        conditions.append(AccessionJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        conditions.append(AccessionJob.create_dt <= params.to_dt)
 
-        # Dynamically join `Item` if the field exists
-        if hasattr(Item, item_field):
-            query = query.outerjoin(Item, getattr(Item, item_field) == model.id)
-
-        # Dynamically join `NonTrayItem` if the field exists
-        if hasattr(NonTrayItem, item_field):
-            query = query.outerjoin(
-                NonTrayItem, getattr(NonTrayItem, item_field) == model.id
-                )
-
-        # Apply filters for user and date range
-        if params.user_id:
-            query = query.where(getattr(model, user_field).in_(params.user_id))
-        if params.from_dt:
-            query = query.where(model.create_dt >= params.from_dt)
-        if params.to_dt:
-            query = query.where(model.create_dt <= params.to_dt)
-
-        # Group by necessary fields
-        query = query.group_by(model.id, User.id, User.first_name, User.last_name)
-        job_queries.append(query)
-
-    # Add a separate query for ShelvingJob
-    shelving_query = (
+    items_query = (
         select(
-            literal(ShelvingJob.__tablename__).label("job_type"),
-            ShelvingJob.id.label("job_id"),
-            User.id.label("user_id"),
-            User.first_name.label("first_name"),
-            User.last_name.label("last_name"),
+            *selection,
             func.count(Item.id).label("item_count"),
-            func.count(NonTrayItem.id).label("non_tray_item_count"),
         )
-        .select_from(ShelvingJob)
-        .join(User, User.id == ShelvingJob.user_id)
-        .outerjoin(Tray, Tray.shelving_job_id == ShelvingJob.id)
-        .outerjoin(Item, Item.tray_id == Tray.id)
-        .outerjoin(NonTrayItem, NonTrayItem.shelving_job_id == ShelvingJob.id)
-        .where(ShelvingJob.status == "Completed")
+        .select_from(Item)
+        .join(AccessionJob, AccessionJob.id == Item.accession_job_id)
+        .join(User, User.id == AccessionJob.user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+    non_tray_item_query = (
+        select(
+            *selection,
+            func.count(NonTrayItem.id).label("item_count"),
+        )
+        .select_from(NonTrayItem)
+        .join(AccessionJob, AccessionJob.id == NonTrayItem.accession_job_id)
+        .join(User, User.id == AccessionJob.user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
     )
 
+    final_query = union_all(items_query, non_tray_item_query)
+
+    return final_query
+
+
+def verification_job_summary_query(params):
+    selection = [literal("Verification Job").label("job_type")]
+    conditions = [VerificationJob.status == "Completed"]
+    group_by = []
+
+    # Apply filters for user and date range
+    if params.user_id:
+        selection.append(User.id.label("user_id"))
+        selection.append(
+            func.concat(
+                User.first_name.label("first_name"),
+                literal(" "),
+                User.last_name.label("last_name"),
+            ).label("user_name")
+        )
+        conditions.append(User.id.in_(params.user_id))
+        group_by.append(User.id)
+    if params.from_dt:
+        conditions.append(VerificationJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        conditions.append(VerificationJob.create_dt <= params.to_dt)
+
+    items_query = (
+        select(
+            *selection,
+            func.count(Item.id).label("item_count"),
+        )
+        .select_from(Item)
+        .join(VerificationJob, VerificationJob.id == Item.verification_job_id)
+        .join(User, User.id == VerificationJob.user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+    non_tray_items_query = (
+        select(
+            *selection,
+            func.count(NonTrayItem.id).label("item_count"),
+        )
+        .select_from(NonTrayItem)
+        .join(VerificationJob, VerificationJob.id == NonTrayItem.verification_job_id)
+        .join(User, User.id == VerificationJob.user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+
+    final_query = union_all(items_query, non_tray_items_query)
+
+    return final_query
+
+
+def shelving_job_summary_query(params):
+    # Add a separate query for ShelvingJob
+    selection = [literal("Shelving Job").label("job_type")]
+    conditions = [ShelvingJob.status == "Completed"]
+    group_by = []
+
+    # Apply filters for user and date range
+    if params.user_id:
+        selection.append(User.id.label("user_id"))
+        selection.append(
+            func.concat(
+                User.first_name.label("first_name"),
+                literal(" "),
+                User.last_name.label("last_name"),
+            ).label("user_name")
+        )
+        conditions.append(User.id.in_(params.user_id))
+        group_by.append(User.id)
+    if params.from_dt:
+        conditions.append(ShelvingJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        conditions.append(ShelvingJob.create_dt <= params.to_dt)
+
+    items_query = (
+        select(
+            *selection,
+            func.count(distinct(Item.id)).label("item_count"),
+        )
+        .select_from(Item)
+        .join(Tray, Tray.id == Item.tray_id)
+        .join(ShelvingJob, ShelvingJob.id == Tray.shelving_job_id)
+        .join(User, User.id == ShelvingJob.user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+
+    non_tray_items_query = (
+        select(
+            *selection,
+            func.count(distinct(NonTrayItem.id)).label("item_count"),
+        )
+        .select_from(NonTrayItem)
+        .join(ShelvingJob, ShelvingJob.id == NonTrayItem.shelving_job_id)
+        .join(User, User.id == ShelvingJob.user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+
+    final_query = union_all(items_query, non_tray_items_query)
+
+    return final_query
+
+
+def picklist_summary_query(params):
+    # Add a separate query for PickList
+    selection = [literal("Pick List").label("job_type")]
+    conditions = [PickList.status == "Completed"]
+    group_by = []
 
     if params.user_id:
-        shelving_query = shelving_query.where(ShelvingJob.user_id.in_(params.user_id))
-    if params.from_dt:
-        shelving_query = shelving_query.where(ShelvingJob.create_dt >= params.from_dt)
-    if params.to_dt:
-        shelving_query = shelving_query.where(ShelvingJob.create_dt <= params.to_dt)
-
-    shelving_query = shelving_query.group_by(
-        ShelvingJob.id, User.id, User.first_name, User.last_name
+        selection.append(User.id.label("user_id"))
+        selection.append(
+            func.concat(
+                User.first_name.label("first_name"),
+                literal(" "),
+                User.last_name.label("last_name"),
+            ).label("user_name")
         )
+        conditions.append(User.id.in_(params.user_id))
+        group_by.append(User.id)
+    if params.from_dt:
+        conditions.append(PickList.create_dt >= params.from_dt)
+    if params.to_dt:
+        conditions.append(PickList.create_dt <= params.to_dt)
+
+    query = (
+        select(
+            *selection,
+            func.count(Request.id).label("item_count"),
+        )
+        .select_from(Request)
+        .join(PickList, PickList.id == Request.pick_list_id)
+        .join(User, User.id == PickList.user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+
+    return query
+
+
+def refile_job_summary_query(params):
+    # Add a separate query for RefileJob
+    selection = [literal("Refile Job").label("job_type")]
+    conditions = [RefileJob.status == "Completed"]
+    group_by = []
+
+    if params.user_id:
+        selection.append(User.id.label("user_id"))
+        selection.append(
+            func.concat(
+                User.first_name.label("first_name"),
+                literal(" "),
+                User.last_name.label("last_name"),
+            ).label("user_name")
+        )
+        conditions.append(User.id.in_(params.user_id))
+        group_by.append(User.id)
+    if params.from_dt:
+        conditions.append(RefileJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        conditions.append(RefileJob.create_dt <= params.to_dt)
+
+    items_query = (
+        select(
+            *selection,
+            func.count(Item.id).label("item_count"),
+        )
+        .select_from(RefileItem)
+        .join(RefileJob, RefileJob.id == RefileItem.refile_job_id)
+        .join(Item, Item.id == RefileItem.item_id)
+        .join(User, User.id == RefileJob.assigned_user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+
+    non_tray_items_query = (
+        select(*selection, func.count(NonTrayItem.id).label("item_count"))
+        .select_from(RefileNonTrayItem)
+        .join(RefileJob, RefileJob.id == RefileNonTrayItem.refile_job_id)
+        .join(NonTrayItem, NonTrayItem.id == RefileNonTrayItem.non_tray_item_id)
+        .join(User, User.id == RefileJob.assigned_user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+
+    final_query = union_all(items_query, non_tray_items_query)
+
+    return final_query
+
+
+def withdrawal_job_summary_query(params):
+    # Add a separate query for WithdrawalJob
+    selection = [literal("Withdraw Job").label("job_type")]
+    conditions = [RefileJob.status == "Completed"]
+    group_by = []
+
+    if params.user_id:
+        selection.append(User.id.label("user_id"))
+        selection.append(
+            func.concat(
+                User.first_name.label("first_name"),
+                literal(" "),
+                User.last_name.label("last_name"),
+            ).label("user_name")
+        )
+        conditions.append(User.id.in_(params.user_id))
+        group_by.append(User.id)
+    if params.from_dt:
+        conditions.append(WithdrawJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        conditions.append(WithdrawJob.create_dt <= params.to_dt)
+
+    items_query = (
+        select(*selection, func.count(Item.id).label("item_count"))
+        .select_from(ItemWithdrawal)
+        .join(WithdrawJob, WithdrawJob.id == ItemWithdrawal.withdraw_job_id)
+        .join(Item, Item.id == ItemWithdrawal.item_id)
+        .join(User, User.id == WithdrawJob.assigned_user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+
+    non_tray_items_query = (
+        select(*selection, func.count(NonTrayItem.id).label("item_count"))
+        .select_from(NonTrayItemWithdrawal)
+        .join(WithdrawJob, WithdrawJob.id == NonTrayItemWithdrawal.withdraw_job_id)
+        .join(NonTrayItem, NonTrayItem.id == NonTrayItemWithdrawal.non_tray_item_id)
+        .join(User, User.id == WithdrawJob.assigned_user_id)
+        .where(and_(*conditions))
+        .group_by(*group_by)
+    )
+
+    final_query = union_all(items_query, non_tray_items_query)
+
+    return final_query
+
+
+def get_user_job_summary_query(params, sort_params=None):
+    job_queries = []
+
+    # Add a separate query for AccessionJob
+    accession_query = accession_job_summary_query(params)
+    job_queries.append(accession_query)
+
+    # Add a separate query for VerificationJob
+    verification_query = verification_job_summary_query(params)
+    job_queries.append(verification_query)
+
+    # Add a separate query for ShelvingJob
+    shelving_query = shelving_job_summary_query(params)
     job_queries.append(shelving_query)
+
+    picklist_query = picklist_summary_query(params)
+    job_queries.append(picklist_query)
+
+    refile_query = refile_job_summary_query(params)
+    job_queries.append(refile_query)
+
+    withdrawal_query = withdrawal_job_summary_query(params)
+    job_queries.append(withdrawal_query)
 
     # Combine all job queries using `union_all`
     combined_query = union_all(*job_queries).subquery()
@@ -1216,30 +1458,25 @@ def get_user_job_summary_query(params, sort_params):
     # Aggregate final results grouped by job_type
     selection = [
         combined_query.c.job_type,
-        (func.sum(combined_query.c.item_count) + func.sum(combined_query.c.non_tray_item_count)).label("total_items_processed"),
+        func.sum(combined_query.c.item_count).label("total_items_processed"),
     ]
-    group_by = [combined_query.c.job_type]
+    group_by = []
     order_by = []
 
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         if sort_params.sort_order not in ["asc", "desc"]:
             raise BadRequest(
                 detail=f"Invalid value for ‘sort_order'. Allowed values are: ‘asc’, ‘desc’",
             )
 
         if sort_params.sort_by == "user_name":
-            selection.append(
-                func.concat(
-                    combined_query.c.first_name, " ", combined_query.c.last_name
-                ).label("user_name"), )
-            group_by.append(combined_query.c.first_name)
-            group_by.append(combined_query.c.last_name)
+            selection.append(combined_query.c.user_name)
+            group_by.append(combined_query.c.user_id)
+            group_by.append(combined_query.c.user_name)
             if sort_params.sort_order == "asc":
-                order_by.append(asc(combined_query.c.first_name))
-                order_by.append(asc(combined_query.c.last_name))
+                order_by.append(asc(combined_query.c.user_name))
             else:
-                order_by.append(desc(combined_query.c.first_name))
-                order_by.append(desc(combined_query.c.last_name))
+                order_by.append(desc(combined_query.c.user_name))
         if sort_params.sort_by == "job_type":
             if sort_params.sort_order == "asc":
                 order_by.append(asc(combined_query.c.job_type))
@@ -1247,27 +1484,21 @@ def get_user_job_summary_query(params, sort_params):
                 order_by.append(desc(combined_query.c.job_type))
         if sort_params.sort_by == "total_items_processed":
             if sort_params.sort_order == "asc":
-                order_by.append(asc(func.sum(combined_query.c.item_count) + func.sum(combined_query.c.non_tray_item_count)))
+                order_by.append(asc(combined_query.c.total_items_processed))
             else:
-                order_by.append(desc(func.sum(combined_query.c.item_count) + func.sum(combined_query.c.non_tray_item_count)))
+                order_by.append(desc(combined_query.c.total_items_processed))
 
-    elif params.user_id:
-        selection.append(func.concat(combined_query.c.first_name, " ", combined_query.c.last_name).label("user_name"),)
-        group_by.append(combined_query.c.first_name)
-        group_by.append(combined_query.c.last_name)
-        order_by.append(combined_query.c.first_name)
-        order_by.append(combined_query.c.last_name)
+    if params.user_id:
+        selection.append(combined_query.c.user_name)
+        group_by.append(combined_query.c.job_type)
+        group_by.append(combined_query.c.user_name)
+        order_by.append(combined_query.c.user_name)
     else:
         selection.append(selection.append(literal("All").label("user_name")))
+        group_by.append(combined_query.c.job_type)
         order_by.append(combined_query.c.job_type)
 
-    final_query = (
-        select(
-            *selection
-        )
-        .group_by(*group_by)
-        .order_by(*order_by)
-    )
+    final_query = select(*selection).group_by(*group_by).order_by(*order_by)
 
     return final_query
 
@@ -1276,27 +1507,22 @@ def get_user_job_summary_query(params, sort_params):
 def get_user_job_summary(
     session: Session = Depends(get_session),
     params: UserJobItemsCountParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
 
     if params.user_id:
-        user = session.query(User).filter(
-            User.id.in_(
-                params.user_id
-            )
-        ).all()
+        user = session.query(User).filter(User.id.in_(params.user_id)).all()
         if not user:
             raise NotFound(detail="User not found")
 
+    query = get_user_job_summary_query(params, sort_params)
 
-
-    return paginate(session, get_user_job_summary_query(params, sort_params))
+    return paginate(session, query)
 
 
 @router.get("/user-jobs/count/download", response_class=StreamingResponse)
 def get_tray_item_count_csv(
-    session: Session = Depends(get_session),
-    params: UserJobItemsCountParams = Depends(),
+    session: Session = Depends(get_session), params: UserJobItemsCountParams = Depends()
 ):
     query = get_user_job_summary_query(params)
 
@@ -1304,9 +1530,7 @@ def get_tray_item_count_csv(
         output = StringIO()
         writer = csv.writer(output)
         # Write header row
-        writer.writerow(
-            ["user_name", "job_type", "total_items_processed"]
-        )
+        writer.writerow(["user_name", "job_type", "total_items_processed"])
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
@@ -1316,9 +1540,7 @@ def get_tray_item_count_csv(
             job_type = row.job_type
             total_items_processed = row.total_items_processed
 
-            writer.writerow(
-                [user_name, job_type, total_items_processed]
-            )
+            writer.writerow([user_name, job_type, total_items_processed])
             yield output.getvalue()
             output.seek(0)
             output.truncate(0)
@@ -1326,6 +1548,5 @@ def get_tray_item_count_csv(
     return StreamingResponse(
         generate_csv(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=user_job_count.csv"}
+        headers={"Content-Disposition": "attachment; filename=user_job_count.csv"},
     )
-
