@@ -840,6 +840,9 @@ def get_non_tray_item_counts_query(params):
     if params.to_dt:
         query = query.where(NonTrayItem.shelved_dt <= params.to_dt)
 
+    if not params.from_dt or not params.to_dt:
+        query = query.where(NonTrayItem.shelved_dt != None)
+
     # Execute the query and fetch the result
     return query
 
@@ -1014,6 +1017,9 @@ def get_tray_item_counts_query(params):
         query = query.where(Tray.shelved_dt >= params.from_dt)
     if params.to_dt:
         query = query.where(Tray.shelved_dt <= params.to_dt)
+
+    if not params.from_dt or not params.to_dt:
+        query = query.where(Tray.shelved_dt != None)
 
     # Execute the query and fetch the result
     return query
@@ -1384,7 +1390,7 @@ def refile_job_summary_query(params):
 def withdrawal_job_summary_query(params):
     # Add a separate query for WithdrawalJob
     selection = [literal("Withdraw Job").label("job_type")]
-    conditions = [RefileJob.status == "Completed"]
+    conditions = [WithdrawJob.status == "Completed"]
     group_by = []
 
     if params.user_id:
@@ -1413,6 +1419,8 @@ def withdrawal_job_summary_query(params):
         .group_by(*group_by)
     )
 
+    inventory_logger.info(f"Items Query: {items_query}")
+
     non_tray_items_query = (
         select(*selection, func.count(NonTrayItem.id).label("item_count"))
         .select_from(NonTrayItemWithdrawal)
@@ -1422,6 +1430,8 @@ def withdrawal_job_summary_query(params):
         .where(and_(*conditions))
         .group_by(*group_by)
     )
+
+    inventory_logger.info(f"Non Tray Items Query: {non_tray_items_query}")
 
     final_query = union_all(items_query, non_tray_items_query)
 
@@ -1521,7 +1531,7 @@ def get_user_job_summary(
 
 
 @router.get("/user-jobs/count/download", response_class=StreamingResponse)
-def get_tray_item_count_csv(
+def get_user_job_summary_csv(
     session: Session = Depends(get_session), params: UserJobItemsCountParams = Depends()
 ):
     query = get_user_job_summary_query(params)
