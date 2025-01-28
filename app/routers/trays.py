@@ -4,7 +4,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 
-from app.database.session import get_session
+from app.database.session import get_session, commit_record
 from app.filter_params import SortParams
 from app.models.non_tray_items import NonTrayItem
 from app.models.shelf_position_numbers import ShelfPositionNumber
@@ -14,6 +14,8 @@ from app.models.trays import Tray
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
 from app.models.items import Item
+from app.models.verification_changes import VerificationChange
+from app.models.verification_jobs import VerificationJob
 from app.schemas.trays import (
     TrayInput,
     TrayMoveInput,
@@ -224,16 +226,46 @@ def update_tray(
 
     # Checking if size class has changed
     if tray.size_class_id and tray.size_class_id != existing_tray.size_class_id:
+        verification_job = session.get(VerificationJob, tray.verification_job_id)
+        new_verification_changes = []
+        tray_barcode = session.get(Barcode, tray.barcode_id)
+
         for item in existing_tray.items:
             session.query(Item).filter(Item.id == item.id).update(
                 {"size_class_id": tray.size_class_id, "update_dt": datetime.utcnow()}
             )
+            item_barcode = session.get(Barcode, item.barcode_id)
+            new_verification_changes.append(
+                VerificationChange(
+                    workflow_id=verification_job.workflow_id,
+                    tray_barcode_value=tray_barcode.value,
+                    item_barcode_value=item_barcode.value,
+                    change_type="SizeClassEdit",
+                    completed_by_id=verification_job.user_id
+                )
+            )
+        session.add_all(new_verification_changes)
+
     # Checking if media type class has changed
     if tray.media_type_id and tray.media_type_id != existing_tray.media_type_id:
+        verification_job = session.get(VerificationJob, tray.verification_job_id)
+        new_verification_changes = []
+        tray_barcode = session.get(Barcode, tray.barcode_id)
         for item in existing_tray.items:
             session.query(Item).filter(Item.id == item.id).update(
                 {"media_type_id": tray.media_type_id, "update_dt": datetime.utcnow()}
             )
+            item_barcode = session.get(Barcode, item.barcode_id)
+            new_verification_changes.append(
+                VerificationChange(
+                    workflow_id=verification_job.workflow_id,
+                    tray_barcode_value=tray_barcode.value,
+                    item_barcode_value=item_barcode.value,
+                    change_type="MediaTypeEdit",
+                    completed_by_id=verification_job.user_id
+                )
+            )
+        session.add_all(new_verification_changes)
 
     # Update the tray record with the mutated data
     mutated_data = tray.model_dump(exclude_unset=True)

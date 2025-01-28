@@ -207,3 +207,24 @@ class UserJobItemCountReadOutput(BaseModel):
             }
         }
 
+
+class VerificationChangesOutput(BaseModel):
+    workflow_id: int
+    completed_dt: datetime
+    completed_by: str
+    tray_barcode: Optional[str] = None
+    item_barcode: Optional[str] = None
+    action: Optional[str] = None
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "workflow_id": 1,
+                "completed_dt": "2023-10-08T20:46:56.764426",
+                "completed_by": "Bilbo Baggins",
+                "tray_barcode_value": "12345",
+                "item_barcode_value": "12345",
+                "action": "Added"
+            }
+        }
+

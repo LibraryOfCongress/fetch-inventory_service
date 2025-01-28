@@ -4,12 +4,14 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 
-from app.database.session import get_session
+from app.database.session import get_session, commit_record
 from app.filter_params import SortParams
 from app.models.barcodes import Barcode
 from app.models.items import Item, ItemStatus
 from app.models.non_tray_items import NonTrayItem
 from app.models.trays import Tray
+from app.models.verification_changes import VerificationChange
+from app.models.verification_jobs import VerificationJob
 from app.schemas.items import (
     ItemInput,
     ItemMoveInput,
@@ -42,7 +44,7 @@ def get_item_list(
     from_dt: datetime = Query(default=None),
     to_dt: datetime = Query(default=None),
     status: ItemStatus | None = None,
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Retrieve a paginated list of items from the database.
@@ -207,6 +209,23 @@ def update_item(
         for key, value in mutated_data.items():
             setattr(existing_item, key, value)
         setattr(existing_item, "update_dt", datetime.utcnow())
+
+        if item.verification_job_id:
+            verification_job = session.get(VerificationJob, item.verification_job_id)
+            if verification_job:
+
+                item_barcode = session.get(Barcode, existing_item.barcode_id)
+                tray_barcode = session.get(Barcode, Barcode.id == Tray.barcode_id).join(Tray, item.tray_id == Tray.id)
+
+                new_verification_change = VerificationChange(
+                    workflow_id=verification_job.workflow_id,
+                    tray_barcode_value=tray_barcode.value,
+                    item_barcode_value=item_barcode.value,
+                    change_type="Added",
+                    completed_by_id=verification_job.user_id
+                )
+
+                commit_record(session, new_verification_change)
 
         # Commit the changes to the database
         session.add(existing_item)

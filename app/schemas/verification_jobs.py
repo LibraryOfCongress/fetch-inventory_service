@@ -87,6 +87,29 @@ class VerificationJobUpdateInput(BaseModel):
         }
 
 
+class VerificationJobAddInput(BaseModel):
+    user_id: int
+    barcode_value: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": 1,
+                "barcode_value": "1234567890"
+            }
+        }
+
+
+class VerificationJobRemoveInput(VerificationJobAddInput):
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": 1,
+                "barcode_value": "1234567890"
+            }
+        }
+
+
 class VerificationJobBaseOutput(BaseModel):
     id: int
     workflow_id: Optional[int] = None

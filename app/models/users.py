@@ -154,3 +154,4 @@ class User(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
+    verification_changes: List["VerificationChange"] = Relationship(back_populates="completed_by")

@@ -28,3 +28,6 @@ class Workflow(SQLModel, table=True):
     verification_job: Optional["VerificationJob"] = Relationship(
         back_populates="workflow"
     )
+    verification_change: Optional["VerificationChange"] = Relationship(
+        back_populates="workflow"
+    )

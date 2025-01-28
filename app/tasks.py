@@ -8,6 +8,7 @@ from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
 from app.models.size_class import SizeClass
+from app.models.verification_changes import VerificationChange
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
@@ -59,11 +60,28 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
     tray_query = select(Tray).where(Tray.accession_job_id == accession_job.id)
     trays = session.exec(tray_query)
     if trays:
+        updated_trays = []
+        new_verification_changes = []
         for tray in trays:
             tray.verification_job_id = new_verification_job.id
             tray.owner_id = accession_job.owner_id
             tray.scanned_for_accession = True
-            session.add(tray)
+            updated_trays.append(tray)
+
+            tray_barcode = session.get(Barcode, tray.barcode_id)
+            items = tray.items
+            for item in items:
+                item_barcode = session.get(Barcode, item.barcode_id)
+                new_verification_changes.append(VerificationChange(
+                        workflow_id=accession_job.workflow_id,
+                        tray_barcode_value=tray_barcode.value,
+                        item_barcode_value=item_barcode.value,
+                        change_type="Added",
+                        completed_by_id=accession_job.user_id
+                    ))
+
+        session.add_all(updated_trays)
+        session.add_all(new_verification_changes)
 
     # Update Non Tray Item Records
     non_tray_query = select(NonTrayItem).where(
@@ -71,21 +89,37 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
     )
     non_trays_items = session.exec(non_tray_query)
     if non_trays_items:
+        updated_non_trays_items = []
+        new_verification_changes = []
         for non_tray_item in non_trays_items:
             non_tray_item.verification_job_id = new_verification_job.id
             non_tray_item.owner_id = accession_job.owner_id
             non_tray_item.scanned_for_accession = True
-            session.add(non_tray_item)
+            updated_non_trays_items.append(non_tray_item)
+
+            item_barcode = session.get(Barcode, non_tray_item.barcode_id)
+            new_verification_changes.append(VerificationChange(
+                workflow_id=accession_job.workflow_id,
+                item_barcode_value=item_barcode.value,
+                change_type="Added",
+                completed_by_id=accession_job.user_id
+            ))
+
+        session.add_all(updated_non_trays_items)
+        session.add_all(new_verification_changes)
 
     # Update Item Records
     item_query = select(Item).where(Item.accession_job_id == accession_job.id)
     items = session.exec(item_query)
     if items:
+        updated_items = []
         for item in items:
             item.verification_job_id = new_verification_job.id
             item.owner_id = accession_job.owner_id
             item.scanned_for_accession = True
-            session.add(item)
+            updated_items.append(item)
+
+        session.add_all(updated_items)
 
     session.commit()
 
@@ -289,3 +323,91 @@ def process_non_tray_item_move(session: Session, non_tray_item: NonTrayItem, sou
     session.commit()
     session.refresh(non_tray_item)
     return non_tray_item
+
+
+def manage_verification_job_change_action(session: Session, verification_job: VerificationJob, update_input: str, value: int):
+    new_verification_changes = []
+
+    trays = verification_job.trays
+    items = verification_job.items
+    non_tray_items = verification_job.non_tray_items
+
+    if trays:
+        for tray in trays:
+            barcode = session.query(Barcode).filter(
+                Barcode.id == tray.barcode_id
+            ).first()
+            if update_input == "media_type_id":
+                session.query(Tray).filter(Tray.id == tray.id).update({update_input: value})
+                new_verification_changes.append(
+                    VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        tray_barcode_value=barcode.value,
+                        change_type="MediaTypeEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                )
+            if update_input == "size_class_id":
+                session.query(Tray).filter(Tray.id == tray.id).update({update_input: value})
+                new_verification_changes.append(
+                    VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        tray_barcode_value=barcode.value,
+                        change_type="SizeClassEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                )
+    if items:
+        for item in items:
+            barcode = session.query(Barcode).filter(
+                Barcode.id == item.barcode_id
+            )
+            if update_input == "media_type_id":
+                session.query(Item).filter(Item.id == item.id).update({update_input: value})
+                new_verification_changes.append(
+                    VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        item_barcode_value=barcode.value,
+                        change_type="MediaTypeEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                )
+            if update_input == "size_class_id":
+                session.query(Item).filter(Item.id == item.id).update({update_input: value})
+                new_verification_changes.append(
+                    VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        item_barcode_value=barcode.value,
+                        change_type="SizeClassEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                )
+    if non_tray_items:
+        for non_tray_item in non_tray_items:
+            barcode = session.query(Barcode).filter(
+                Barcode.id == non_tray_item.barcode_id
+            )
+            if update_input == "media_type_id":
+                session.query(NonTrayItem).filter(
+                    NonTrayItem.id == non_tray_item.id
+                    ).update({update_input: value})
+                new_verification_changes.append(
+                    VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        non_tray_item_barcode_value=barcode.value,
+                        change_type="MediaTypeEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                )
+            if update_input == "size_class_id":
+                session.query(NonTrayItem).filter(
+                    NonTrayItem.id == non_tray_item.id
+                    ).update({update_input: value})
+                new_verification_changes.append(
+                    VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        non_tray_item_barcode_value=barcode.value,
+                        change_type="SizeClassEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                )

@@ -59,8 +59,8 @@ class Item(SQLModel, table=True):
         sa_column=Column(
             UUID(as_uuid=True),
             ForeignKey("barcodes.id", name="withdrawn_item_barcode_id"),
-            unique=True
-        )
+            unique=True,
+        ),
     )
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     size_class_id: int = Field(foreign_key="size_class.id", nullable=True)
@@ -135,14 +135,14 @@ class Item(SQLModel, table=True):
         sa_relationship_kwargs=dict(
             backref=backref("barcode_item"),
             foreign_keys="Item.barcode_id",
-            uselist=False
+            uselist=False,
         )
     )
     withdrawn_barcode: Optional["Barcode"] = Relationship(
         sa_relationship_kwargs=dict(
             backref=backref("withdrawn_item"),
             foreign_keys="Item.withdrawn_barcode_id",
-            uselist=False
+            uselist=False,
         )
     )
     accession_job: Optional["AccessionJob"] = Relationship(back_populates="items")

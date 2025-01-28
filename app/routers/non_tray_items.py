@@ -4,7 +4,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
 
-from app.database.session import get_session
+from app.database.session import get_session, commit_record
 from app.filter_params import SortParams
 from app.models.non_tray_items import NonTrayItem, NonTrayItemStatus
 from app.models.barcodes import Barcode
@@ -14,6 +14,8 @@ from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.models.items import Item
 from app.models.trays import Tray
+from app.models.verification_changes import VerificationChange
+from app.models.verification_jobs import VerificationJob
 from app.schemas.non_tray_items import (
     NonTrayItemInput,
     NonTrayItemMoveInput,
@@ -227,6 +229,19 @@ def update_non_tray_item(
                 raise NotFound(
                     detail=f"Shelf Position ID {existing_non_tray_item.shelf_position_id} Not Found"
                 )
+    if non_tray_item.verification_job_id:
+        verification_job = session.get(VerificationJob, non_tray_item.verification_job_id)
+        if verification_job:
+            barcode = session.get(Barcode, existing_non_tray_item.barcode_id)
+
+            new_verification_change = VerificationChange(
+                workflow_id=verification_job.workflow_id,
+                item_barcode_value=barcode.value,
+                change_type="Added",
+                completed_by_id=verification_job.user_id
+            )
+
+            commit_record(session, new_verification_change)
 
     # Update the non_tray_item record with the mutated data
     mutated_data = non_tray_item.model_dump(exclude_unset=True)

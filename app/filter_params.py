@@ -183,3 +183,21 @@ class UserJobItemsCountParams:
         self.from_dt = from_dt
         self.to_dt = to_dt
 
+
+class VerificationChangesParams:
+    def __init__(
+        self,
+        workflow_id: list[int] = Query(default=None, description="ID of the workflow to filter jobs."),
+        completed_by_id: list[int] = Query(
+            default=None, description="ID of the user to filter jobs."
+            ),
+        from_dt: datetime = Query(default=None, description="Start created date to "
+                                                       "filter by."),
+        to_dt: datetime = Query(default=None, description="End created date to "
+                                                     "filter by."),
+
+    ):
+        self.workflow_id = workflow_id
+        self.completed_by_id = completed_by_id
+        self.from_dt = from_dt
+        self.to_dt = to_dt

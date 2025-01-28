@@ -3,13 +3,19 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime
+from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
 from app.filter_params import JobFilterParams, SortParams
+from app.models.barcodes import Barcode
+from app.models.items import Item
+from app.models.non_tray_items import NonTrayItem
+from app.models.trays import Tray
+from app.models.verification_changes import VerificationChange
 from app.tasks import (
     complete_verification_job,
-    manage_verification_job_transition,
+    manage_verification_job_transition, manage_verification_job_change_action,
 )
 from app.models.verification_jobs import VerificationJob, VerificationJobStatus
 from app.schemas.verification_jobs import (
@@ -17,6 +23,8 @@ from app.schemas.verification_jobs import (
     VerificationJobUpdateInput,
     VerificationJobListOutput,
     VerificationJobDetailOutput,
+    VerificationJobAddInput,
+    VerificationJobRemoveInput
 )
 from app.config.exceptions import (
     NotFound,
@@ -194,6 +202,21 @@ def update_verification_job(
         mutated_data = verification_job.model_dump(exclude_unset=True)
 
         for key, value in mutated_data.items():
+            if key == "media_type_id":
+                if existing_verification_job.media_type_id != value:
+                    background_tasks.add_task(
+                        manage_verification_job_change_action(
+                            session, existing_verification_job, key, value
+                        )
+                    )
+            if key == "size_class_id":
+                if existing_verification_job.size_class_id != value:
+                    background_tasks.add_task(
+                        manage_verification_job_change_action(
+                            session, existing_verification_job, key, value
+                        )
+                    )
+
             setattr(existing_verification_job, key, value)
 
         setattr(existing_verification_job, "update_dt", datetime.utcnow())
@@ -243,3 +266,172 @@ def delete_verification_job(id: int, session: Session = Depends(get_session)):
         )
 
     raise NotFound(detail=f"Verification Job ID {id} Not Found")
+
+
+@router.patch("/{id}/add", response_model=VerificationJobDetailOutput)
+def add_item_to_verification_job(
+    id: int,
+    input: VerificationJobAddInput,
+    session: Session = Depends(get_session)
+):
+    """
+    Add an item to a verification job.
+
+    **Args:**
+    - id: The ID of the verification job.
+    - item_id: The ID of the item to add.
+
+    **Returns:**
+    - Verification Job Detail Output: The updated verification job.
+    """
+
+    verification_job = session.get(VerificationJob, id)
+
+    if not verification_job:
+        raise NotFound(detail=f"Verification Job ID {id} Not Found")
+
+    barcode = (
+        session.query(Barcode).filter(Barcode.value == input.barcode_value).first()
+    )
+
+    if not barcode:
+        raise NotFound(detail=f"Barcode with value {input.barcode_value} Not Found")
+
+    tray = session.query(Tray).filter(Tray.barcode_id == barcode.id).first()
+    item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    non_tray_item = (
+        session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
+    )
+
+    if not tray and not item and not non_tray_item:
+        raise NotFound(detail=f"Item with barcode value {input.barcode_value} Not "
+                              f"Found")
+    if tray:
+        new_verification_changes = []
+        new_verification_changes.append(VerificationChange(
+            tray_barcode_value=barcode.value,
+            workflow_id=verification_job.workflow_id,
+            change_type="Added",
+            completed_by_id=input.user_id
+        ))
+        items = tray.items
+        if items:
+            for item in items:
+                item_barcode = session.get(Barcode, item.barcode_id)
+                new_verification_changes.append(VerificationChange(
+                    workflow_id=verification_job.workflow_id,
+                    item_barcode_value=item_barcode.value,
+                    tray_barcode_value=barcode.value,
+                    change_type="Added",
+                    completed_by_id=verification_job.user_id
+                ))
+        session.bulk_save_objects(new_verification_changes)
+        session.commit()
+    if item:
+        tray_barcode = session.query(Barcode).join(Tray, Barcode.id == Tray.barcode_id).filter(Tray.id == item.tray_id).first()
+        new_verification_change = VerificationChange(
+            workflow_id=verification_job.workflow_id,
+            tray_barcode_value=tray_barcode.value,
+            item_barcode_value=barcode.value,
+            change_type="Added",
+            completed_by_id=verification_job.user_id
+        )
+        commit_record(session, new_verification_change)
+    else:
+        new_verification_change = VerificationChange(
+            workflow_id=verification_job.workflow_id,
+            non_tray_item_barcode_value=barcode.value,
+            change_type="Added",
+            completed_by_id=verification_job.user_id
+        )
+        commit_record(session, new_verification_change)
+
+    verification_job.update_dt = datetime.utcnow()
+    session.refresh(verification_job)
+
+    return verification_job
+
+
+@router.patch("/{id}/remove", response_model=VerificationJobDetailOutput)
+def remove_item_from_verification_job(
+    id: int,
+    input: VerificationJobRemoveInput,
+    session: Session = Depends(get_session)
+):
+    """
+    Remove an item from a verification job.
+
+    **Args:**
+    - id: The ID of the verification job.
+    - item_id: The ID of the item to remove.
+
+    **Returns:**
+    - Verification Job Detail Output: The updated verification job.
+    """
+    verification_job = session.get(VerificationJob, id)
+
+    if not verification_job:
+        raise NotFound(detail=f"Verification Job ID {id} Not Found")
+
+    barcode = (
+        session.query(Barcode).filter(Barcode.value == input.barcode_value).first()
+    )
+
+    if not barcode:
+        raise NotFound(detail=f"Barcode with value {input.barcode_value} Not Found")
+
+    tray = session.query(Tray).filter(Tray.barcode_id == barcode.id).first()
+    item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    non_tray_item = (
+        session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
+    )
+
+    if not item and not non_tray_item:
+        raise NotFound(detail=f"Item with barcode value {input.barcode_value} Not "
+                              f"Found")
+    if tray:
+        new_verification_changes = []
+        new_verification_changes.append(VerificationChange(
+            workflow_id=verification_job.workflow_id,
+            tray_barcode_value=barcode.value,
+            change_type="Removed",
+            completed_by_id=input.user_id
+        ))
+        items = tray.items
+        if items:
+            for item in items:
+                item_barcode = session.get(Barcode, item.barcode_id)
+                new_verification_changes.append(VerificationChange(
+                    workflow_id=verification_job.workflow_id,
+                    item_barcode_value=item_barcode.value,
+                    tray_barcode_value=barcode.value,
+                    change_type="Removed",
+                    completed_by_id=verification_job.user_id
+                ))
+        session.bulk_save_objects(new_verification_changes)
+        session.commit()
+    elif item:
+        tray_barcode = session.query(Barcode).join(Tray, Barcode.id ==
+                                        Tray.barcode_id).filter(Tray.id ==
+                                                         item.tray_id).first()
+        new_verification_change = VerificationChange(
+            workflow_id=verification_job.workflow_id,
+            tray_barcode_value=barcode.value,
+            item_barcode_value=tray_barcode.value,
+            change_type="Removed",
+            completed_by_id=verification_job.user_id
+        )
+        commit_record(session, new_verification_change)
+    else:
+        new_verification_change = VerificationChange(
+            workflow_id=verification_job.workflow_id,
+            non_tray_item_barcode_value=barcode.value,
+            change_type="Removed",
+            completed_by_id=verification_job.user_id
+        )
+        commit_record(session, new_verification_change)
+
+    verification_job.update_dt = datetime.utcnow()
+    session.refresh(verification_job)
+
+    return verification_job

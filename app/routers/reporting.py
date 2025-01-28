@@ -20,10 +20,11 @@ from app.filter_params import (
     NonTrayItemsCountParams,
     TrayItemCountParams,
     UserJobItemsCountParams,
-    SortParams,
+    SortParams, VerificationChangesParams,
 )
 from app.models.accession_jobs import AccessionJob
 from app.models.aisle_numbers import AisleNumber
+from app.models.barcodes import Barcode
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
 from app.models.media_types import MediaType
@@ -48,6 +49,7 @@ from app.models.modules import Module
 from app.models.ladders import Ladder
 from app.models.trays import Tray
 from app.models.users import User
+from app.models.verification_changes import VerificationChange
 from app.models.verification_jobs import VerificationJob
 from app.models.withdraw_jobs import WithdrawJob
 from app.schemas.reporting import (
@@ -58,6 +60,7 @@ from app.schemas.reporting import (
     NonTrayItemCountReadOutput,
     TrayItemCountReadOutput,
     UserJobItemCountReadOutput,
+    VerificationChangesOutput,
 )
 from app.config.exceptions import (
     NotFound,
@@ -1419,8 +1422,6 @@ def withdrawal_job_summary_query(params):
         .group_by(*group_by)
     )
 
-    inventory_logger.info(f"Items Query: {items_query}")
-
     non_tray_items_query = (
         select(*selection, func.count(NonTrayItem.id).label("item_count"))
         .select_from(NonTrayItemWithdrawal)
@@ -1430,8 +1431,6 @@ def withdrawal_job_summary_query(params):
         .where(and_(*conditions))
         .group_by(*group_by)
     )
-
-    inventory_logger.info(f"Non Tray Items Query: {non_tray_items_query}")
 
     final_query = union_all(items_query, non_tray_items_query)
 
@@ -1559,4 +1558,148 @@ def get_user_job_summary_csv(
         generate_csv(),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=user_job_count.csv"},
+    )
+
+
+def get_verification_change_query(params, sort_params=None):
+    conditions = [VerificationJob.status == "Completed"]
+    order_by = []
+
+    if params.workflow_id:
+        conditions.append(VerificationChange.workflow_id.in_(params.workflow_id))
+    if params.completed_by_id:
+        conditions.append(VerificationChange.completed_by_id.in_(params.completed_by_id))
+    if params.from_dt:
+        conditions.append(VerificationJob.update_dt >= params.from_dt)
+    if params.to_dt:
+        conditions.append(VerificationJob.update_dt <= params.to_dt)
+
+    if sort_params is not None and sort_params.sort_by:
+        if sort_params.sort_order not in ["asc", "desc"]:
+            raise BadRequest(
+                detail=f"Invalid value for ‘sort_order'. Allowed values are: ‘asc’, ‘desc’",
+            )
+
+        if sort_params.sort_by == "workflow_id":
+            if sort_params.sort_order == "asc":
+                order_by.append(asc(VerificationChange.workflow_id))
+            else:
+                order_by.append(desc(VerificationChange.workflow_id))
+        if sort_params.sort_by == "completed_dt":
+            if sort_params.sort_order == "asc":
+                order_by.append(asc(VerificationJob.update_dt))
+            else:
+                order_by.append(desc(VerificationJob.update_dt))
+        if sort_params.sort_by == "completed_by":
+            if sort_params.sort_order == "asc":
+                order_by.append(asc(VerificationChange.completed_by_id))
+            else:
+                order_by.append(desc(VerificationChange.completed_by_id))
+        if (sort_params.sort_by == "item_barcode"):
+            if sort_params.sort_order == "asc":
+                order_by.append(asc(VerificationChange.item_barcode_value))
+            else:
+                order_by.append(desc(VerificationChange.item_barcode_value))
+        if sort_params.sort_by == "tray_barcode":
+            if sort_params.sort_order == "asc":
+                order_by.append(asc(VerificationChange.tray_barcode_value))
+            else:
+                order_by.append(desc(VerificationChange.tray_barcode_value))
+        if sort_params.sort_by == "action":
+            if sort_params.sort_order == "asc":
+                order_by.append(asc(VerificationChange.change_type))
+            else:
+                order_by.append(desc(VerificationChange.change_type))
+
+    query = (
+        select(
+            VerificationChange.workflow_id,
+            VerificationChange.item_barcode_value.label("item_barcode"),
+            VerificationChange.tray_barcode_value.label("tray_barcode"),
+            VerificationJob.update_dt.label("completed_dt"),
+            func.concat(User.first_name, literal(" "), User.last_name).label(
+                "completed_by"
+            ),
+            VerificationChange.change_type.label("action"),
+        )
+        .select_from(VerificationChange)
+        .join(VerificationJob, VerificationJob.workflow_id == VerificationChange.workflow_id)
+        .join(User, User.id == VerificationChange.completed_by_id)
+        .where(and_(*conditions))
+        .order_by(*order_by)
+    )
+
+    return query
+
+
+@router.get("/verification-changes/summary/", response_model=Page[VerificationChangesOutput])
+def get_verification_change_summary(
+    session: Session = Depends(get_session),
+    params: VerificationChangesParams = Depends(),
+    sort_params: SortParams = Depends(),
+) -> list:
+    """
+    Returns a list of VerificationChanges objects.
+    """
+    if params.workflow_id:
+        job_workflow = session.query(VerificationJob).filter(
+            VerificationJob.workflow_id.in_(params.workflow_id)).all()
+        if not job_workflow:
+            raise NotFound(detail="Verification Job(s) with workflow id(s) not found")
+    if params.completed_by_id:
+        user = session.query(User).filter(User.id.in_(params.completed_by_id)).all()
+        if not user:
+            raise NotFound(detail="User(s) not found")
+
+    query = get_verification_change_query(params, sort_params)
+    inventory_logger.info(f"get_verification_change_summary: {query}")
+    query = query.subquery()
+
+    return paginate(session, select(query))
+
+
+@router.get("/verification-changes/summary/download", response_class=StreamingResponse)
+def get_verification_change_summary_csv(
+    session: Session = Depends(get_session), params: VerificationChangesParams = Depends()
+):
+    query = get_verification_change_query(params)
+    query = query.subquery()
+
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+        # Write header row
+        writer.writerow(
+            [
+                "workflow_id",
+                "item_barcode",
+                "tray_barcode",
+                "completed_dt",
+                "completed_by",
+                "action",
+            ]
+        )
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+        for row in session.execute(select(query)):
+            workflow_id = row.workflow_id
+            item_barcode = row.item_barcode if row.item_barcode else None
+            tray_barcode = row.tray_barcode if row.tray_barcode else None
+            completed_dt = row.completed_dt
+            completed_by = row.completed_by
+            action = row.action
+
+            writer.writerow(
+                [workflow_id, item_barcode, tray_barcode, completed_dt,
+                 completed_by, action]
+            )
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=verification_change_summary.csv"},
     )

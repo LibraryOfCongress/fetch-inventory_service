@@ -50,3 +50,4 @@ from app.models.workflows import Workflow
 from app.models.shelf_types import ShelfType
 from app.models.owners_size_classes import OwnersSizeClassesLink
 from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
+from app.models.verification_changes import VerificationChange

@@ -76,6 +76,7 @@ from app.routers import (
     shelf_types,
     reporting,
     audit_trails,
+    verification_changes,
 )
 
 
@@ -95,7 +96,7 @@ def alembic_context():
             last_slash_pos = get_settings().DATABASE_URL.find("/") + 1
             db_host = get_settings().DATABASE_URL[at_pos:last_colon_pos]
             db_port = get_settings().DATABASE_URL[
-                last_colon_pos + 1 : last_colon_pos + 5
+                last_colon_pos + 1: last_colon_pos + 5
             ]
             db_user_password = get_settings().DATABASE_URL[last_slash_pos + 1 : bat_pos]
             db_user, db_password = db_user_password.split(":")
@@ -247,5 +248,6 @@ app.include_router(status.router)
 app.include_router(batch_upload.router)
 app.include_router(reporting.router)
 app.include_router(audit_trails.router)
+app.include_router(verification_changes.router)
 
 add_pagination(app)
