@@ -131,6 +131,7 @@ class NestedWithdrawnBarcode(BaseModel):
 
 class ItemNestedForTrayOutput(BaseModel):
     id: int
+    status: Optional[str] = None
     scanned_for_accession: bool
     scanned_for_verification: bool
     barcode: Optional[BarcodeDetailReadOutput] = None

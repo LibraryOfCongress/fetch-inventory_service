@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from datetime import datetime
 from fastapi_pagination import Page
+from fastapi_pagination import paginate as paginate_list
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
@@ -17,6 +18,9 @@ from app.models.modules import Module
 from app.models.aisles import Aisle
 from app.models.sides import Side
 from app.models.ladders import Ladder
+from app.models.trays import Tray
+from app.models.non_tray_items import NonTrayItem
+from app.models.shelf_positions import ShelfPosition
 from app.schemas.shelves import (
     ShelfInput,
     ShelfUpdateInput,
@@ -181,6 +185,52 @@ def get_shelf_by_barcode_value(value: str, session: Session = Depends(get_sessio
     if not shelf:
         raise NotFound(detail=f"Shelf with barcode value {value} not found")
     return shelf
+
+
+@router.get("/barcode/{value}/shelved", response_model=Page[dict])
+def get_shelved_entities_by_shelf_barcode_value(value: str, session: Session = Depends(get_session)):
+    """
+    Retrieve tray and non_tray barcode list from things on a shelf
+    using a shelf barcode value
+
+    **Parameters:**
+    - value (str): The value of the barcode to retrieve.
+    """
+    shelf_statement = select(Shelf).join(Barcode).where(Barcode.value == value)
+    shelf = session.exec(shelf_statement).first()
+    if not shelf:
+        raise NotFound(detail=f"Shelf with barcode value {value} not found")
+
+    shelf_positions = session.exec(
+        select(ShelfPosition).where(ShelfPosition.shelf_id == shelf.id)
+    ).all()
+
+ # Collect combined results of Trays and NonTrays
+    results = []
+    for shelf_position in shelf_positions:
+        # Check if a Tray exists at the ShelfPosition
+        tray = session.exec(
+            select(Tray)
+            .join(Barcode, Tray.barcode_id == Barcode.id)
+            .where(Tray.shelf_position_id == shelf_position.id)
+        ).first()
+
+        if tray:
+            results.append({"type": "tray", "barcode_value": tray.barcode.value})
+            continue  # Skip to the next ShelfPosition since 1:1 ensures no NonTray here
+
+        # Check if a NonTray exists at the ShelfPosition
+        non_tray = session.exec(
+            select(NonTrayItem)
+            .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
+            .where(NonTrayItem.shelf_position_id == shelf_position.id)
+        ).first()
+
+        if non_tray:
+            results.append({"type": "non_tray", "barcode_value": non_tray.barcode.value})
+
+    # Paginate the results
+    return paginate_list(results)
 
 
 @router.post("/", response_model=ShelfDetailWriteOutput, status_code=201)
