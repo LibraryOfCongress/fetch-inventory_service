@@ -16,6 +16,7 @@ class VerificationChangeStatus(str, Enum):
     Removed = "Removed"
     SizeClassEdit = "SizeClassEdit"
     MediaTypeEdit = "MediaTypeEdit"
+    BarcodeValueEdit = "BarcodeValueEdit"
 
 
 class VerificationChange(SQLModel, table=True):

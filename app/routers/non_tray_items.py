@@ -6,6 +6,7 @@ from datetime import datetime
 
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams
+from app.logger import inventory_logger
 from app.models.non_tray_items import NonTrayItem, NonTrayItemStatus
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
@@ -190,6 +191,7 @@ def update_non_tray_item(
     """
     Update a non_tray_item record in the database
     """
+    inventory_logger.info(f"Updating Non Tray Items: {non_tray_item}")
     # Get the existing non_tray_item record from the database
     existing_non_tray_item = session.get(NonTrayItem, id)
 
@@ -229,24 +231,28 @@ def update_non_tray_item(
                 raise NotFound(
                     detail=f"Shelf Position ID {existing_non_tray_item.shelf_position_id} Not Found"
                 )
-    if non_tray_item.verification_job_id:
-        verification_job = session.get(VerificationJob, non_tray_item.verification_job_id)
-        if verification_job:
-            barcode = session.get(Barcode, existing_non_tray_item.barcode_id)
-
-            new_verification_change = VerificationChange(
-                workflow_id=verification_job.workflow_id,
-                item_barcode_value=barcode.value,
-                change_type="Added",
-                completed_by_id=verification_job.user_id
-            )
-
-            commit_record(session, new_verification_change)
 
     # Update the non_tray_item record with the mutated data
     mutated_data = non_tray_item.model_dump(exclude_unset=True)
 
     for key, value in mutated_data.items():
+        if key in ["media_type_id", "size_class_id"] and existing_non_tray_item.__getattribute__(
+            key
+            ) != value and existing_non_tray_item.verification_job_id:
+            verification_job = session.query(VerificationJob).filter(
+                VerificationJob.id == existing_non_tray_item.verification_job_id
+                ).first()
+            non_tray_item_barcode = session.get(Barcode, existing_non_tray_item.barcode_id)
+
+            new_verification_change = VerificationChange(
+                workflow_id=verification_job.workflow_id,
+                item_barcode_value=non_tray_item_barcode.value,
+                change_type="MediaTypeEdit" if key == "media_type_id" else "SizeClassEdit",
+                completed_by_id=verification_job.user_id
+            )
+
+            session.add(new_verification_change)
+
         setattr(existing_non_tray_item, key, value)
     setattr(existing_non_tray_item, "update_dt", datetime.utcnow())
 

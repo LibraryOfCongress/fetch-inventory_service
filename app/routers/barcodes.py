@@ -9,9 +9,15 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.filter_params import SortParams
+from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.barcode_types import BarcodeType
+from app.models.items import Item
+from app.models.non_tray_items import NonTrayItem
 from app.models.size_class import SizeClass
+from app.models.trays import Tray
+from app.models.verification_changes import VerificationChange
+from app.models.verification_jobs import VerificationJob
 from app.schemas.barcodes import (
     BarcodeInput,
     BarcodeUpdateInput,
@@ -238,6 +244,7 @@ def update_barcode(
         existing_barcode_type = session.exec(
             select(BarcodeType).where(BarcodeType.id == existing_barcode.type_id)
         ).first()
+        inventory_logger.info(f"Existing Barcode Type: {existing_barcode_type}")
         if (
             barcode.type
             and barcode.type == "Tray"
@@ -255,6 +262,38 @@ def update_barcode(
                     detail=f"The tray can not be added, the container size "
                     f"{short_name} doesnt exist in the system. Please add it and try again."
                 )
+
+        if (existing_barcode_type.name == "Item" and existing_barcode.value !=
+            barcode.value):
+            item = session.query(Item).filter(Item.barcode_id ==
+                                              existing_barcode.id).first()
+            non_tray_item = session.query(NonTrayItem).filter(
+                NonTrayItem.barcode_id == existing_barcode.id
+            ).first()
+            if item:
+                verification_job = session.query(VerificationJob).filter(
+                    VerificationJob.id == item.verification_job_id
+                ).first()
+                tray_barcode = session.query(Barcode).join(Tray, Barcode.id == Tray.barcode_id).filter(Tray.id == item.tray_id).first()
+                new_verification_change = VerificationChange(
+                    workflow_id=verification_job.workflow_id,
+                    tray_barcode_value=tray_barcode.value,
+                    item_barcode_value=existing_barcode.value,
+                    change_type="BarcodeValueEdit",
+                    completed_by_id=verification_job.user_id
+                )
+                session.add(new_verification_change)
+            else:
+                verification_job = session.query(VerificationJob).filter(
+                    VerificationJob.id == non_tray_item.verification_job_id
+                ).first()
+                new_verification_change = VerificationChange(
+                    workflow_id=verification_job.workflow_id,
+                    item_barcode_value=existing_barcode.value,
+                    change_type="BarcodeValueEdit",
+                    completed_by_id=verification_job.user_id
+                )
+                session.add(new_verification_change)
 
     mutated_data = barcode.model_dump(exclude={"type"}, exclude_unset=True)
 

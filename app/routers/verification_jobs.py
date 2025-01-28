@@ -202,20 +202,13 @@ def update_verification_job(
         mutated_data = verification_job.model_dump(exclude_unset=True)
 
         for key, value in mutated_data.items():
-            if key == "media_type_id":
-                if existing_verification_job.media_type_id != value:
-                    background_tasks.add_task(
-                        manage_verification_job_change_action(
-                            session, existing_verification_job, key, value
-                        )
+            if (key in ["media_type_id", "size_class_id"] and
+                existing_verification_job.__getattribute__(key) != value):
+                background_tasks.add_task(
+                    manage_verification_job_change_action(
+                        session, existing_verification_job, key, value
                     )
-            if key == "size_class_id":
-                if existing_verification_job.size_class_id != value:
-                    background_tasks.add_task(
-                        manage_verification_job_change_action(
-                            session, existing_verification_job, key, value
-                        )
-                    )
+                )
 
             setattr(existing_verification_job, key, value)
 
@@ -308,26 +301,20 @@ def add_item_to_verification_job(
                               f"Found")
     if tray:
         new_verification_changes = []
-        new_verification_changes.append(VerificationChange(
-            tray_barcode_value=barcode.value,
-            workflow_id=verification_job.workflow_id,
-            change_type="Added",
-            completed_by_id=input.user_id
-        ))
         items = tray.items
         if items:
             for item in items:
                 item_barcode = session.get(Barcode, item.barcode_id)
                 new_verification_changes.append(VerificationChange(
                     workflow_id=verification_job.workflow_id,
-                    item_barcode_value=item_barcode.value,
                     tray_barcode_value=barcode.value,
+                    item_barcode_value=item_barcode.value,
                     change_type="Added",
                     completed_by_id=verification_job.user_id
                 ))
         session.bulk_save_objects(new_verification_changes)
         session.commit()
-    if item:
+    elif item:
         tray_barcode = session.query(Barcode).join(Tray, Barcode.id == Tray.barcode_id).filter(Tray.id == item.tray_id).first()
         new_verification_change = VerificationChange(
             workflow_id=verification_job.workflow_id,
@@ -340,7 +327,7 @@ def add_item_to_verification_job(
     else:
         new_verification_change = VerificationChange(
             workflow_id=verification_job.workflow_id,
-            non_tray_item_barcode_value=barcode.value,
+            item_barcode_value=barcode.value,
             change_type="Added",
             completed_by_id=verification_job.user_id
         )
@@ -386,25 +373,19 @@ def remove_item_from_verification_job(
         session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
     )
 
-    if not item and not non_tray_item:
+    if not tray and not item and not non_tray_item:
         raise NotFound(detail=f"Item with barcode value {input.barcode_value} Not "
                               f"Found")
     if tray:
         new_verification_changes = []
-        new_verification_changes.append(VerificationChange(
-            workflow_id=verification_job.workflow_id,
-            tray_barcode_value=barcode.value,
-            change_type="Removed",
-            completed_by_id=input.user_id
-        ))
         items = tray.items
         if items:
             for item in items:
                 item_barcode = session.get(Barcode, item.barcode_id)
                 new_verification_changes.append(VerificationChange(
                     workflow_id=verification_job.workflow_id,
-                    item_barcode_value=item_barcode.value,
                     tray_barcode_value=barcode.value,
+                    item_barcode_value=item_barcode.value,
                     change_type="Removed",
                     completed_by_id=verification_job.user_id
                 ))
@@ -416,8 +397,8 @@ def remove_item_from_verification_job(
                                                          item.tray_id).first()
         new_verification_change = VerificationChange(
             workflow_id=verification_job.workflow_id,
-            tray_barcode_value=barcode.value,
-            item_barcode_value=tray_barcode.value,
+            tray_barcode_value=tray_barcode.value,
+            item_barcode_value=barcode.value,
             change_type="Removed",
             completed_by_id=verification_job.user_id
         )
@@ -425,7 +406,7 @@ def remove_item_from_verification_job(
     else:
         new_verification_change = VerificationChange(
             workflow_id=verification_job.workflow_id,
-            non_tray_item_barcode_value=barcode.value,
+            item_barcode_value=barcode.value,
             change_type="Removed",
             completed_by_id=verification_job.user_id
         )

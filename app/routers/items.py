@@ -207,25 +207,29 @@ def update_item(
         mutated_data = item.model_dump(exclude_unset=True)
 
         for key, value in mutated_data.items():
-            setattr(existing_item, key, value)
-        setattr(existing_item, "update_dt", datetime.utcnow())
-
-        if item.verification_job_id:
-            verification_job = session.get(VerificationJob, item.verification_job_id)
-            if verification_job:
-
+            if key in ["media_type_id", "size_class_id"] and existing_item.__getattribute__(key) != value\
+                and existing_item.verification_job_id:
+                verification_job = session.query(VerificationJob).filter(
+                    VerificationJob.id == existing_item.verification_job_id).first()
+                tray_barcode = session.query(Barcode).join(
+                    Tray, Barcode.id == Tray.barcode_id
+                    ).filter(
+                    Tray.id == item.tray_id
+                    ).first()
                 item_barcode = session.get(Barcode, existing_item.barcode_id)
-                tray_barcode = session.get(Barcode, Barcode.id == Tray.barcode_id).join(Tray, item.tray_id == Tray.id)
 
                 new_verification_change = VerificationChange(
                     workflow_id=verification_job.workflow_id,
                     tray_barcode_value=tray_barcode.value,
                     item_barcode_value=item_barcode.value,
-                    change_type="Added",
+                    change_type="MediaTypeEdit" if key == "media_type_id" else "SizeClassEdit",
                     completed_by_id=verification_job.user_id
                 )
 
-                commit_record(session, new_verification_change)
+                session.add(new_verification_change)
+
+            setattr(existing_item, key, value)
+        setattr(existing_item, "update_dt", datetime.utcnow())
 
         # Commit the changes to the database
         session.add(existing_item)
