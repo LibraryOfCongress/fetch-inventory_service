@@ -68,16 +68,16 @@ class Item(SQLModel, table=True):
     container_type_id: Optional[int] = Field(
         foreign_key="container_types.id", nullable=True
     )
-    title: str = Field(
+    title: Optional[str] = Field(
         max_length=4000, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
-    volume: str = Field(
+    volume: Optional[str] = Field(
         max_length=15, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
-    condition: str = Field(
+    condition: Optional[str] = Field(
         max_length=30, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
-    arbitrary_data: str = Field(
+    arbitrary_data: Optional[str] = Field(
         max_length=255, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
     subcollection_id: Optional[int] = Field(

@@ -1,3 +1,5 @@
+import re
+
 from datetime import datetime
 
 from app.models.trays import Tray
@@ -39,6 +41,10 @@ def load_tray(
             for _ in range(missing_zeros):
                 shelf_barcode_value = f"0{shelf_barcode_value}"
 
+        # deal with weird characters
+        if re.search(r'[^a-zA-Z0-9]', container_barcode):
+            raise ValueError("Non alphanumeric characters in barcode")
+
         # create container barcode object
         tray_barcode_instance = Barcode(
             value=container_barcode,
@@ -54,6 +60,7 @@ def load_tray(
             media_type = 'Microfilm'
 
         # determine shelf position assignment
+        shelf_position_number = int(shelf_position_number)
         positions_for_shelf = shelf_position_dict.get(shelf_barcode_value, [])
         sp_id = next(
             (position[shelf_position_number] for position in positions_for_shelf if shelf_position_number in position),
@@ -61,6 +68,14 @@ def load_tray(
         )
 
         # sanitize unknown dates
+        """
+        in pattern "%m/%d/%y"
+            For two-digit years 00-68, Python assumes they are in the 21st century (2000-2068).
+            For two-digit years 69-99, Python assumes they are in the 20th century (1969-1999).
+
+        If your system has something from 1968 or earlier, modify ingested dates to always be 4 digit
+        and use pattern "%m/%d/%Y" instead
+        """
         if shelved_dt == '?':
             shelved_dt = None
         else:
@@ -69,6 +84,10 @@ def load_tray(
             accession_dt = None
         else:
             accession_dt=datetime.strptime(accession_dt, "%m/%d/%y")
+
+        # fix owner_name casing
+        if owner_name in ["lc", "Lc", "lC"]:
+            owner_name = "LC"
 
         # create the tray
         tray_instance = Tray(

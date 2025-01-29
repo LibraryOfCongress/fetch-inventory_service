@@ -6,7 +6,6 @@ from concurrent.futures import as_completed, ThreadPoolExecutor
 from app.database.session import get_sqlalchemy_session
 from app.logger import migration_logger
 from app.seed.scripts.load_tray import load_tray
-from app.seed.scripts.load_non_tray import load_non_tray
 
 from app.models.container_types import ContainerType
 from app.models.shelf_position_numbers import ShelfPositionNumber
@@ -89,8 +88,7 @@ def process_container_row(
 
     (
         int: skipped_row_count,
-        list: tray_result,
-        list: non_tray_result
+        list: tray_result
     )
     """
     session = next(get_sqlalchemy_session())
@@ -135,38 +133,15 @@ def process_container_row(
             media_types_dict,
             barcode_types_dict
         )
-
-        session.close()
-        return (
-            skipped_row_count,
-            tray_result,
-            None
-        )
     else:
-        non_tray_result = load_non_tray(
-            row_num,
-            container_barcode,
-            media_type,
-            shelf_barcode_value,
-            owner_name,
-            accession_dt,
-            shelved_dt,
-            size_class_short_name,
-            shelf_position_number,
-            session,
-            container_types_dict,
-            shelf_position_dict,
-            size_class_dict,
-            owners_dict,
-            media_types_dict,
-            barcode_types_dict
-        )
-        session.close()
-        return (
-            skipped_row_count,
-            None,
-            non_tray_result
-        )
+        skipped_row_count = 1
+        tray_result = [0, 0, None]
+    session.close()
+    return (
+        skipped_row_count,
+        tray_result
+    )
+
 
 def load_containers():
     """
@@ -185,11 +160,6 @@ def load_containers():
 
     results = {
         'trays': {
-            'successful_rows': 0,
-            'failed_rows': 0,
-            'errors': []
-        },
-        'non_trays': {
             'successful_rows': 0,
             'failed_rows': 0,
             'errors': []
@@ -215,9 +185,9 @@ def load_containers():
     }
     sp_lookup_query = (
         session.query(
-            Barcode.value.label("shelf_barcode_value"),
-            ShelfPosition.id.label("shelf_position_id"),
-            ShelfPositionNumber.number.label("shelf_position_number_value"),
+            Barcode.value.label('shelf_barcode_value'),
+            ShelfPosition.id.label('shelf_position_id'),
+            ShelfPositionNumber.number.label('shelf_position_number_value'),
         )
         .join(Shelf, Shelf.barcode_id == Barcode.id)
         .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id)
@@ -252,22 +222,16 @@ def load_containers():
 
             # Collect and unpack results
             for future in as_completed(futures):
-                p_skipped_row_count, p_tray_result, p_non_tray_result = future.result()
+                p_skipped_row_count, p_tray_result = future.result()
                 skipped_row_count += p_skipped_row_count
                 if p_tray_result:
                     results["trays"]["successful_rows"] += p_tray_result[0]
                     results["trays"]["failed_rows"] += p_tray_result[1]
                     if p_tray_result[2]:
                         results["trays"]["errors"].append(p_tray_result[2])
-                if p_non_tray_result:
-                    results["non_trays"]["successful_rows"] += p_non_tray_result[0]
-                    results["non_trays"]["failed_rows"] += p_non_tray_result[1]
-                    if p_non_tray_result[2]:
-                        results["non_trays"]["errors"].append(p_non_tray_result[2])
 
     # Gen error files
     generate_seed_error_report("tray_tray_errors.csv", results["trays"]["errors"])
-    generate_seed_error_report("tray_non_tray_errors.csv", results["non_trays"]["errors"])
 
     # Summary Result
     migration_logger.info("======Container INGEST COMPLETE======")
@@ -282,11 +246,3 @@ def load_containers():
         f"Failed to process {results['trays']['failed_rows']} rows"
     )
     migration_logger.info(f"Failed data output to tray_tray_errors.csv")
-    migration_logger.info("====NON-TRAY RESULTS====")
-    migration_logger.info(
-        f"Successfully processed {results['non_trays']['successful_rows']} rows"
-    )
-    migration_logger.info(
-        f"Failed to process {results['non_trays']['failed_rows']} rows"
-    )
-    migration_logger.info(f"Failed data output to tray_non_tray_errors.csv")

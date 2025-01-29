@@ -11,6 +11,7 @@ from app.seed.seeder_session import get_session
 from app.logger import migration_logger
 from app.seed.load_storage_locations import load_storage_locations
 from app.seed.load_containers import load_containers
+from app.seed.load_items import load_items
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -100,3 +101,12 @@ def seed_containers():
         "Yo dawg I heard you like scanning, so we put a box in your box so you can scan while you scan!"
     )
     load_containers()
+
+
+def seed_items():
+    """Load item migration snapshot"""
+    migration_logger.disabled = False
+    migration_logger.info(
+        "Starting Item ingest. There will be millions..."
+    )
+    load_items()

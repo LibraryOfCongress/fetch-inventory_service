@@ -55,6 +55,17 @@ seed_containers()
     docker exec -it fetch-inventory-api python -c "$RUN_TRAY_MIGRATION";
 }
 
+run-item-migration() {
+# do not indent on shell str
+RUN_ITEM_MIGRATION="
+from app import main
+from app.seed.seed_data import seed_items
+seed_items()
+";
+
+    docker exec -it fetch-inventory-api python -c "$RUN_ITEM_MIGRATION";
+}
+
 extract-data-migration() {
   (docker cp fetch-inventory-api:/code/app/seed/errors ~/Desktop/fetch_migration);
   (docker exec -i inventory-database pg_dump -U postgres -d inventory_service | gzip > ~/Desktop/fetch_migration/fetch_dump_`date +%m-%d-%Y`.sql.gz);
