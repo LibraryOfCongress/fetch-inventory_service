@@ -369,3 +369,6 @@ def manage_verification_job_change_action(session: Session, verification_job: Ve
                     completed_by_id=verification_job.user_id
                 )
             )
+
+    if new_verification_changes:
+        session.add_all(new_verification_changes)
