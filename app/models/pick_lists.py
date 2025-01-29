@@ -75,3 +75,10 @@ class PickList(SQLModel, table=True):
     building: Optional[Building] = Relationship(back_populates="pick_lists")
     requests: List["Request"] = Relationship(back_populates="pick_list")
     withdraw_jobs: List["WithdrawJob"] = Relationship(back_populates="pick_list")
+    items_retrieval_events: List["ItemRetrievalEvent"] = Relationship(
+        back_populates="pick_list"
+    )
+    non_tray_items_retrieval_events: List["NonTrayItemRetrievalEvent"] = (
+        Relationship(
+            back_populates="pick_list"
+    ))

@@ -201,3 +201,20 @@ class VerificationChangesParams:
         self.completed_by_id = completed_by_id
         self.from_dt = from_dt
         self.to_dt = to_dt
+
+
+class RetrievalCountParams:
+    def __init__(
+        self,
+        owner_id: list[int] = Query(
+            default=None, description="ID of the user to filter jobs."
+            ),
+        from_dt: datetime = Query(default=None, description="Start created date to "
+                                                       "filter by."),
+        to_dt: datetime = Query(default=None, description="End created date to "
+                                                     "filter by."),
+
+    ):
+        self.owner_id = owner_id
+        self.from_dt = from_dt
+        self.to_dt = to_dt

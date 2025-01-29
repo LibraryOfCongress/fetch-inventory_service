@@ -10,7 +10,9 @@ from app.database.session import get_session
 from app.logger import inventory_logger
 from app.filter_params import JobFilterParams, SortParams
 from app.models.buildings import Building
+from app.models.item_retrieval_events import ItemRetrievalEvent
 from app.models.items import Item
+from app.models.non_tray_item_retrieval_events import NonTrayItemRetrievalEvent
 from app.models.non_tray_items import NonTrayItem
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
@@ -311,8 +313,33 @@ def update_pick_list(
                 .filter(WithdrawJob.pick_list_id == id)
                 .first()
             )
-
-            if existing_withdraw_job:
+            # handle picklist retrieval for Request
+            if not existing_withdraw_job:
+                if item_ids:
+                    items = session.query(Item).filter(Item.id.in_(item_ids)).all()
+                    new_item_retrieval_event = []
+                    for item in items:
+                        new_item_retrieval_event.append(
+                            ItemRetrievalEvent(
+                                item_id=item.id,
+                                owner_id=item.owner_id,
+                                pick_list_id=id
+                            )
+                        )
+                    session.add_all(new_item_retrieval_event)
+                if non_tray_item_ids:
+                    non_tray_items = session.query(NonTrayItem).filter(NonTrayItem.id.in_(non_tray_item_ids)).all()
+                    new_non_tray_item_retrieval_event = []
+                    for non_tray_items in non_tray_items:
+                        new_non_tray_item_retrieval_event.append(
+                            NonTrayItemRetrievalEvent(
+                                non_tray_item_id=non_tray_items.id,
+                                owner_id=non_tray_items.owner_id,
+                                pick_list_id=id
+                            )
+                        )
+                    session.add_all(new_non_tray_item_retrieval_event)
+            elif existing_withdraw_job:
                 # Get related item ids through the ItemWithdrawal relationship
                 withdraw_item_ids = [
                     w.item_id

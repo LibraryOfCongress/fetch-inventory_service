@@ -162,3 +162,6 @@ class Item(SQLModel, table=True):
     withdraw_jobs: List[WithdrawJob] = Relationship(
         back_populates="items", link_model=ItemWithdrawal
     )
+    items_retrieval_events: List["ItemRetrievalEvent"] = Relationship(
+        back_populates="item"
+    )

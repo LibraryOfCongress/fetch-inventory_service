@@ -77,6 +77,8 @@ from app.routers import (
     reporting,
     audit_trails,
     verification_changes,
+    item_retrieval_events,
+    non_tray_item_retrieval_events,
 )
 
 
@@ -249,5 +251,7 @@ app.include_router(batch_upload.router)
 app.include_router(reporting.router)
 app.include_router(audit_trails.router)
 app.include_router(verification_changes.router)
+app.include_router(item_retrieval_events.router)
+app.include_router(non_tray_item_retrieval_events.router)
 
 add_pagination(app)

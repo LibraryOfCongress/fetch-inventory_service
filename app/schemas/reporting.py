@@ -228,3 +228,19 @@ class VerificationChangesOutput(BaseModel):
             }
         }
 
+
+class RetrievalItemCountReadOutput(BaseModel):
+    owner_name: str
+    total_item_retrieved_count: Optional[int] = 0
+    max_retrieved_count: Optional[int] = 0
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "owner_name": "Bilbo Baggins",
+                "total_item_retrieved_count": 1,
+                "max_retrieved_count": 1
+            }
+        }
+
+

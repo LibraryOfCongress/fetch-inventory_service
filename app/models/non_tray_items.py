@@ -191,3 +191,7 @@ class NonTrayItem(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
+    non_tray_items_retrieval_events: List["NonTrayItemRetrievalEvent"] = (
+        Relationship(
+        back_populates="non_tray_item"
+    ))

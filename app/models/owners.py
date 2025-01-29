@@ -68,5 +68,9 @@ class Owner(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
-    # trays (could support if needed)
-    # non-tray-items (could support if needed)
+    items_retrieval_events: List["ItemRetrievalEvent"] = Relationship(
+        back_populates="owner"
+    )
+    non_tray_items_retrieval_events: List["NonTrayItemRetrievalEvent"] = Relationship(
+        back_populates="owner"
+    )

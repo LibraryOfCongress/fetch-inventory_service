@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 from app.database.session import get_session
 from app.logger import inventory_logger
 from app.filter_params import (
+    SortParams,
     ShelvingJobDiscrepancyParams,
     OpenLocationParams,
     AccessionedItemsParams,
@@ -20,7 +21,8 @@ from app.filter_params import (
     NonTrayItemsCountParams,
     TrayItemCountParams,
     UserJobItemsCountParams,
-    SortParams, VerificationChangesParams,
+    VerificationChangesParams,
+    RetrievalCountParams
 )
 from app.models.accession_jobs import AccessionJob
 from app.models.aisle_numbers import AisleNumber
@@ -52,6 +54,8 @@ from app.models.users import User
 from app.models.verification_changes import VerificationChange
 from app.models.verification_jobs import VerificationJob
 from app.models.withdraw_jobs import WithdrawJob
+from app.models.item_retrieval_events import ItemRetrievalEvent
+from app.models.non_tray_item_retrieval_events import NonTrayItemRetrievalEvent
 from app.schemas.reporting import (
     AccessionItemsDetailOutput,
     ShelvingJobDiscrepancyOutput,
@@ -61,6 +65,7 @@ from app.schemas.reporting import (
     TrayItemCountReadOutput,
     UserJobItemCountReadOutput,
     VerificationChangesOutput,
+    RetrievalItemCountReadOutput,
 )
 from app.config.exceptions import (
     NotFound,
@@ -1703,3 +1708,161 @@ def get_verification_change_summary_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=verification_change_summary.csv"},
     )
+
+
+def get_retrieval_item_count_query(params, sort_params=None):
+    item_conditions = []
+    non_tray_item_conditions = []
+    order_by = []
+    group_by = [Owner.name]
+
+    if params.owner_id:
+        item_conditions.append(ItemRetrievalEvent.owner_id.in_(params.owner_id))
+        non_tray_item_conditions.append(
+            NonTrayItemRetrievalEvent.owner_id.in_(params.owner_id)
+            )
+    if params.from_dt:
+        item_conditions.append(ItemRetrievalEvent.create_dt >= params.from_dt)
+        non_tray_item_conditions.append(
+            NonTrayItemRetrievalEvent.create_dt >= params.from_dt
+            )
+    if params.to_dt:
+        item_conditions.append(ItemRetrievalEvent.create_dt <= params.to_dt)
+        non_tray_item_conditions.append(
+            NonTrayItemRetrievalEvent.create_dt <= params.to_dt
+            )
+
+
+    # Query for ItemRetrievalEvent
+    item_retrieved_query = (
+        select(
+            Owner.name.label("owner_name"),
+            func.count(distinct(ItemRetrievalEvent.item_id)).label(
+                "total_item_retrieved_count"
+                ),
+            func.count(ItemRetrievalEvent.item_id).label(
+                "max_retrieved_count"
+                ),
+        )
+        .select_from(ItemRetrievalEvent)
+        .join(Owner, Owner.id == ItemRetrievalEvent.owner_id)
+        .where(and_(*item_conditions))
+        .group_by(*group_by, ItemRetrievalEvent.owner_id, ItemRetrievalEvent.item_id)
+    )
+
+    # Query for NonTrayItemRetrievalEvent
+    non_tray_item_retrieved_query = (
+        select(
+            Owner.name.label("owner_name"),
+            func.count(distinct(NonTrayItemRetrievalEvent.non_tray_item_id)).label(
+                "total_item_retrieved_count"
+                ),
+            func.count(NonTrayItemRetrievalEvent.non_tray_item_id).label("max_retrieved_count")
+        )
+        .select_from(NonTrayItemRetrievalEvent)
+        .join(Owner, Owner.id == NonTrayItemRetrievalEvent.owner_id)
+        .where(and_(*non_tray_item_conditions))
+        .group_by(*group_by, NonTrayItemRetrievalEvent.owner_id,
+                  NonTrayItemRetrievalEvent.non_tray_item_id)
+    )
+
+    # Combine both queries using union_all
+    combined_query = union_all(
+        item_retrieved_query, non_tray_item_retrieved_query
+    ).subquery()
+
+    # Sorting logic
+    if sort_params:
+        if sort_params.sort_by == "owner_name":
+            order_by.append(
+                asc(
+                    combined_query.c.owner_name
+                    ) if sort_params.sort_order == "asc" else desc(
+                    combined_query.c.owner_name
+                    )
+            )
+        elif sort_params.sort_by == "total_item_retrieved_count":
+            order_by.append(
+                asc(
+                    func.sum(combined_query.c.total_item_retrieved_count)
+                    ) if sort_params.sort_order == "asc" else desc(
+                    func.sum(combined_query.c.total_item_retrieved_count)
+                    )
+            )
+        elif sort_params.sort_by == "max_retrieved_count":
+            order_by.append(
+                asc(
+                    func.max(combined_query.c.max_retrieved_count)
+                    ) if sort_params.sort_order == "asc" else desc(
+                    func.max(combined_query.c.max_retrieved_count)
+                    )
+            )
+
+    # Aggregate results to sum up total retrievals and get the maximum retrieval count per owner
+    final_aggregation_query = (
+        select(
+            combined_query.c.owner_name,
+            func.sum(combined_query.c.total_item_retrieved_count).label(
+                "total_item_retrieved_count"
+                ),
+            func.max(combined_query.c.max_retrieved_count).label("max_retrieved_count"),
+        )
+        .group_by(combined_query.c.owner_name)
+        .order_by(*order_by)
+    )
+
+    return final_aggregation_query
+
+
+@router.get("/retrievals/count/", response_model=Page[RetrievalItemCountReadOutput])
+def get_retrieval_count(
+    session: Session = Depends(get_session),
+    params: RetrievalCountParams = Depends(),
+    sort_params: SortParams = Depends()
+):
+    """
+    The count of items retrieved.
+
+    **Parameters**:
+    - params: Retrieval Count Params: The parameters for the request.
+        - owner_id: ID of the owner to filter by.
+        - from_dt: Start Accession date to filter by.
+        - to_dt: End Accession date to filter by.
+
+    **Returns**:
+    - Retrieval Count Read Output: The total number of retrievals.
+    """
+    query = get_retrieval_item_count_query(params, sort_params)
+
+    return paginate(session, query)
+
+
+@router.get("/retrievals/count/download", response_class=StreamingResponse)
+def get_retrieval_count_csv(
+    session: Session = Depends(get_session), params: RetrievalCountParams = Depends()
+):
+    query = get_retrieval_item_count_query(params)
+
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+        # Write header row
+        writer.writerow(["owner_name", "total_item_retrieved_count", "max_retrieved_count"])
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+        for row in session.execute(query):
+            owner_name = row.owner_name
+            total_item_retrieved_count = row.total_item_retrieved_count
+            max_retrieved_count = row.max_retrieved_count
+
+            writer.writerow([owner_name, total_item_retrieved_count, max_retrieved_count])
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=retrieval_count.csv"},
+        )
