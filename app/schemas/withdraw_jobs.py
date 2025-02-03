@@ -110,6 +110,8 @@ class ShelfPositionNestedForWithdrawJob(BaseModel):
     id: int
     shelf_position_number: NestedShelfPositionNumberForWithdrawJob
     shelf: NestedShelfForWithdrawJob
+    location: Optional[str] = None
+    internal_location: Optional[str] = None
 
 
 class NestedTrayForWithdrawJob(BaseModel):
