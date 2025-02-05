@@ -83,13 +83,10 @@ def add_to_refile_queue(
     )
 
     if item:
+        if item.status != "Out":
+            raise ValidationException(detail="Item must be in 'Out' status")
         if item.scanned_for_refile_queue:
             raise ValidationException(detail="Item is already in the refile queue")
-        if item.status == "In":
-            raise ValidationException(detail="Item is already has status 'In'")
-        if item.status == "PickList":
-            raise ValidationException(detail="Item is associated with "
-                                             "uncompleted Pick List")
 
         existing_refile_items = (
             session.query(RefileItem).filter(RefileItem.item_id == item.id).all()
@@ -121,13 +118,10 @@ def add_to_refile_queue(
         session.add(item)
 
     elif non_tray_item:
+        if non_tray_item.status != "Out":
+            raise ValidationException(detail="Item must be in 'Out' status")
         if non_tray_item.scanned_for_refile_queue:
             raise ValidationException(detail="Item is already in the refile queue")
-        if non_tray_item.status == "In":
-            raise ValidationException(detail="Item is already has status 'In'")
-        if non_tray_item.status == "PickList":
-            raise ValidationException(detail="Item is associated with "
-                                             "uncompleted Pick List")
 
         existing_refile_non_tray_items = (
             session.query(RefileNonTrayItem)
