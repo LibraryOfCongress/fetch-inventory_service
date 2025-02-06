@@ -1,4 +1,4 @@
-import time, jwt
+import time, jwt, sqltap
 from datetime import datetime, timedelta
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -9,8 +9,10 @@ from app.config.config import get_settings
 from app.database.session import get_session, session_manager
 from app.models.users import User
 from app.utilities import set_session_to_request
+from app.profiling import profiler, USE_PROFILER
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 
 class JWTMiddleware(BaseHTTPMiddleware):
     """
@@ -47,7 +49,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
         elif request.url.path.startswith("/status"):
             response = await call_next(request)
         elif not token:
-            if get_settings().APP_ENVIRONMENT not in ["local", "develop", "test"]:
+            if get_settings().APP_ENVIRONMENT not in ["debug", "local", "develop", "test"]:
                 response = JSONResponse(status_code=401, content={"detail": "Not Authorized"})
             else:
                 response = await call_next(request)
@@ -103,4 +105,13 @@ class JWTMiddleware(BaseHTTPMiddleware):
             if any(request.url.path.startswith(route) for route in security_log_route_filter):
                 data_activity_logger.info(security_log_dict)
 
+        return response
+
+
+# Middleware query profiling
+class SQLProfilerMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if USE_PROFILER:
+            profiler = sqltap.start() # resets profiler per request
+        response = await call_next(request)
         return response

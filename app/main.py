@@ -4,7 +4,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.logger import inventory_logger
-from app.middlware import JWTMiddleware
+from app.middlware import JWTMiddleware, SQLProfilerMiddleware
+from app.profiling import USE_PROFILER
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -79,6 +80,7 @@ from app.routers import (
     verification_changes,
     item_retrieval_events,
     non_tray_item_retrieval_events,
+    query_profiler
 )
 
 
@@ -160,6 +162,10 @@ app = FastAPI(lifespan=lifespan)
 
 # add log and auth check middleware
 app.add_middleware(JWTMiddleware)
+
+# add query profiling middleware
+if USE_PROFILER:
+    app.add_middleware(SQLProfilerMiddleware)
 
 # add CORS middleware
 app.add_middleware(
@@ -253,5 +259,6 @@ app.include_router(audit_trails.router)
 app.include_router(verification_changes.router)
 app.include_router(item_retrieval_events.router)
 app.include_router(non_tray_item_retrieval_events.router)
+app.include_router(query_profiler.router)
 
 add_pagination(app)
