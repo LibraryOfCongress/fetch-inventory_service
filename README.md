@@ -6,8 +6,8 @@ An API serving the Findings Environment for Collected Holdings application
 
 This is a containerized application for both local and deployed environments.  Below steps will get you up and running locally. Virtual Environment management is only needed for developers who will be updating the application's dependencies and working with scripts. Otherwise, everything is handled inside Containers managed out of the `fetch-local` repository.
 
-## Docker
-This project assumes you have locally setup [Docker Desktop](https://www.docker.com/products/docker-desktop/). It is posssible to use Homebrew for this. https://formulae.brew.sh/cask/docker
+## Podman
+This project assumes you have locally setup [Podman Desktop](https://podman-desktop.io/). It is posssible to use Homebrew for this. https://formulae.brew.sh/cask/podman-desktop
 
 ## Poetry
 This project's environment and dependencies are managed with Poetry.
@@ -18,7 +18,7 @@ This project's environment and dependencies are managed with Poetry.
 ```sh
 $ python3 -m ensurepip
 $ python3 -m pip install --upgrade pip
-$ pip3 install poetry
+$ pip3 install poetry==1.6.1
 ```
 
 ### Configuration
@@ -66,11 +66,15 @@ $ poetry add <package>
 $ poetry remove <package>
 ```
 
+If you are using VSCode (or any IDE debugger), I'd recommend switching your debug interpretter to this virtual env so that it'll have all dependencies met. There is an included launch profile for debugging in VSCode for convenience.
+
 # Run
 
 ```
 ./helper.sh build local
 ```
+(Though I recommend instead running the whole project from the fetch-local repo instead).
+
 Simply calling the command again will take care of tear down and rebuild. The application should now be running on your localhost at http://127.0.0.1:8001/
 
 Under the hood, the image takes the necessary steps to generate the API's package requirements from the pyproject.toml and poetry lock files.
@@ -78,7 +82,7 @@ Under the hood, the image takes the necessary steps to generate the API's packag
 Additional helpful commands:
 
 * `./helper.sh build-db` - Rebuilds the inventory-database container.
-* `./helper.sh rebuild-db` - Wipes the inventory-database volume and re-seeds initial data.
+* `./helper.sh rebuild-db` - Wipes the inventory-database volume and re-seeds fake data.
 
 
 # Project
@@ -326,13 +330,13 @@ More coming soon...
 
 ## Running
 
-This migration scripts are intended to be run in a local environment while all application containers are running on the Docker Desktop engine. You should be operating in a unix or linux environment yourself.  This is ideally MacOS, but can be a Linux distro, or WSL on a Windows machine.
+This migration scripts are intended to be run in a local environment while all application containers are running on the Podman Desktop machine. You should be operating in a unix or linux environment yourself.  This is ideally MacOS, but can be a Linux distro, or WSL on a Windows machine.
 
 All below commands assume you've cloned components of the application in a workspace directory under your user. `~/workspace/fetch/inventory_service`, `~/workspace/fetch/fetch-local` and `~/workspace/fetch/database`.
 
 Build & run the FETCH app from the `fetch-local` context.
 ```sh
-docker compose up --build
+podman compose up --build
 ```
 If this is your first time building the application, this should get you running with the application's schema migrations (database tables) defined in the `inventory_service` database, and you can skip the next command.  Otherwise, you'll need to run `refresh-db`.
 
@@ -347,11 +351,11 @@ Now that you have the database tables of the application set up, you can call th
 ```
 The script will log out what is processing from the spreadsheets you placed in the `legacy_snapshot` directory.
 
-This processing will take hours, possibly upwards of 72 - 84, depending on your machine, your docker resource allocation, and the size of the database you are translating / ingesting. Once it completes, the logs will give a summary report. Detailed reporting will have been piped to files in the container. If there were no errors on a given section, the file for that section won't actually be generated.
+This processing will take hours, possibly upwards of 72 - 84, depending on your machine, your podman resource allocation, and the size of the database you are translating / ingesting. Once it completes, the logs will give a summary report. Detailed reporting will have been piped to files in the container. If there were no errors on a given section, the file for that section won't actually be generated.
 
 More coming soon...
 
-After processing is complete, run the following helper command to extract the output files from the inventory service docker container
+After processing is complete, run the following helper command to extract the output files from the inventory service container
 to your local operating system
 
 

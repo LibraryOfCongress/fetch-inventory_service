@@ -41,7 +41,7 @@ from app.seed.seed_data import seed_data
 seed_data()
 ";
 
-  docker exec -it fetch-inventory-api python -c "$RUN_DATA_MIGRATION";
+  podman exec -it fetch-inventory-api python -c "$RUN_DATA_MIGRATION";
 }
 
 run-tray-migration() {
@@ -52,7 +52,7 @@ from app.seed.seed_data import seed_containers
 seed_containers()
 ";
 
-    docker exec -it fetch-inventory-api python -c "$RUN_TRAY_MIGRATION";
+    podman exec -it fetch-inventory-api python -c "$RUN_TRAY_MIGRATION";
 }
 
 run-item-migration() {
@@ -63,12 +63,12 @@ from app.seed.seed_data import seed_items
 seed_items()
 ";
 
-    docker exec -it fetch-inventory-api python -c "$RUN_ITEM_MIGRATION";
+    podman exec -it fetch-inventory-api python -c "$RUN_ITEM_MIGRATION";
 }
 
 extract-data-migration() {
-  (docker cp fetch-inventory-api:/code/app/seed/errors ~/Desktop/fetch_migration);
-  (docker exec -i inventory-database pg_dump -U postgres -d inventory_service | gzip > ~/Desktop/fetch_migration/fetch_dump_`date +%m-%d-%Y`.sql.gz);
+  (podman cp fetch-inventory-api:/code/app/seed/errors ~/Desktop/fetch_migration);
+  (podman exec -i inventory-database pg_dump -U postgres -d inventory_service | gzip > ~/Desktop/fetch_migration/fetch_dump_`date +%m-%d-%Y`.sql.gz);
 }
 
 makemigrations() {
@@ -84,11 +84,11 @@ current() {
 }
 
 api() {
-  docker exec -it fetch-inventory-api /bin/bash;
+  podman exec -it fetch-inventory-api /bin/bash;
 }
 
 psql() {
-  docker exec -it -u postgres inventory-database psql -a inventory_service
+  podman exec -it -u postgres inventory-database psql -a inventory_service
 }
 
 unzip-dump() {
@@ -96,24 +96,24 @@ unzip-dump() {
 }
 
 pg-restore() {
-    docker cp ~/Desktop/fetch_migration/$1 inventory-database:/tmp/$1;
-    docker exec -it -u postgres inventory-database psql -d inventory_service -f /tmp/$1
+    podman cp ~/Desktop/fetch_migration/$1 inventory-database:/tmp/$1;
+    podman exec -it -u postgres inventory-database psql -d inventory_service -f /tmp/$1
 }
 
 inspect-table() {
   tablename=$1
-  docker exec -ti -u postgres inventory-database psql -a inventory_service -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '${tablename}';"
+  podman exec -ti -u postgres inventory-database psql -a inventory_service -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '${tablename}';"
 }
 
 inspect-records() {
     tablename=$1
-    docker exec -ti -u postgres inventory-database psql -a inventory_service -c "SELECT * FROM $1;"
+    podman exec -ti -u postgres inventory-database psql -a inventory_service -c "SELECT * FROM $1;"
 }
 
 idle() {
 #   poetry shell;
 #   python;
-    docker exec -it fetch-inventory-api python;
+    podman exec -it fetch-inventory-api python;
 }
 
 test() {
