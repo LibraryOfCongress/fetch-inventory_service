@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy.sql import exists
 from sqlalchemy import func, union_all, literal, and_, or_, asc, distinct, desc, case
 from sqlmodel import Session, select
 
@@ -70,6 +71,7 @@ from app.schemas.reporting import (
 from app.config.exceptions import (
     NotFound,
     BadRequest,
+    InternalServerError
 )
 
 router = APIRouter(
@@ -390,104 +392,101 @@ def get_open_locations_list(
     Returns a paginated list of shelf objects with
     unoccupied nested shelf positions based on search criteria
     """
-    total_positions_subquery = (
-        select(
-            ShelfPosition.shelf_id,
-            func.count(ShelfPosition.id).label("total_positions"),
-        )
-        .group_by(ShelfPosition.shelf_id)
-        .subquery()
-    )
-
-    occupied_positions_subquery = (
-        select(
-            ShelfPosition.shelf_id,
-            func.count(ShelfPosition.id).label("occupied_positions"),
-        )
-        .where(or_(ShelfPosition.tray != None, ShelfPosition.non_tray_item != None))
-        .group_by(ShelfPosition.shelf_id)
-        .subquery()
-    )
-
-    shelf_query = (
-        select(Shelf)
-        .distinct()
-        .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
-        .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
-        .join(Shelf.barcode)
-        .join(Shelf.owner)
-        .outerjoin(
-            total_positions_subquery, Shelf.id == total_positions_subquery.c.shelf_id
-        )
-        .outerjoin(
-            occupied_positions_subquery,
-            Shelf.id == occupied_positions_subquery.c.shelf_id,
-        )
-    )
-
-    if not params.show_partial:
-        # Show shelves with no occupied positions
-        shelf_query = shelf_query.where(
-            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) == 0
-        )
-    else:
-        # Show shelves with at least some space available
-        shelf_query = shelf_query.where(
-            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0)
-            < ShelfType.max_capacity
+    try:
+        occupied_positions_cte = (
+            select(
+                ShelfPosition.shelf_id,
+                func.count(ShelfPosition.id).label("occupied_positions"),
+            )
+            .where(
+                (exists().where(ShelfPosition.id == Tray.shelf_position_id)) |
+                (exists().where(ShelfPosition.id == NonTrayItem.shelf_position_id))
+            )
+            .group_by(ShelfPosition.shelf_id)
+            .cte("occupied_positions_cte")
         )
 
-    if params.owner_id:
-        shelf_query = shelf_query.where(Shelf.owner_id.in_(params.owner_id))
-    if params.size_class_id:
-        shelf_query = shelf_query.where(
-            ShelfType.size_class_id.in_(params.size_class_id)
+        # Use CTE for total positions
+        total_positions_cte = (
+            select(
+                ShelfPosition.shelf_id,
+                func.count(ShelfPosition.id).label("total_positions"),
+            )
+            .group_by(ShelfPosition.shelf_id)
+            .cte("total_positions_cte")
         )
-    if params.height:
-        shelf_query = shelf_query.where(Shelf.height == params.height)
-    if params.width:
-        shelf_query = shelf_query.where(Shelf.width == params.width)
-    if params.depth:
-        shelf_query = shelf_query.where(Shelf.depth == params.depth)
 
-    # Now location constraints
-    if params.ladder_id:
-        # shelf_query = shelf_query.where(Shelf.ladder_id == params.ladder_id)
-        shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).where(
-            Ladder.id == params.ladder_id
-        )
-    elif params.side_id:
+        # Optimize joins using precomputed CTEs
         shelf_query = (
-            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
-            .join(Side, Ladder.side_id == Side.id)
-            .where(Side.id == params.side_id)
-        )
-    elif params.aisle_id:
-        shelf_query = (
-            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
-            .join(Side, Ladder.side_id == Side.id)
-            .join(Aisle, Side.aisle_id == Aisle.id)
-            .where(Aisle.id == params.aisle_id)
-        )
-    elif params.module_id:
-        shelf_query = (
-            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
-            .join(Side, Ladder.side_id == Side.id)
-            .join(Aisle, Side.aisle_id == Aisle.id)
-            .join(Module, Aisle.module_id == Module.id)
-            .where(Module.id == params.module_id)
-        )
-    elif params.building_id:
-        shelf_query = (
-            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
-            .join(Side, Ladder.side_id == Side.id)
-            .join(Aisle, Side.aisle_id == Aisle.id)
-            .join(Module, Aisle.module_id == Module.id)
-            .join(Building, Module.building_id == Building.id)
-            .where(Building.id == params.building_id)
+            select(Shelf)
+            .distinct()
+            .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
+            .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
+            .join(Barcode, Shelf.barcode_id == Barcode.id)
+            .join(Owner, Shelf.owner_id == Owner.id)
+            .outerjoin(
+                total_positions_cte,
+                Shelf.id == total_positions_cte.c.shelf_id
+            )
+            .outerjoin(
+                occupied_positions_cte,
+                Shelf.id == occupied_positions_cte.c.shelf_id
+            )
         )
 
-    return paginate(session, shelf_query)
+        # Optimize filtering
+        if not params.show_partial:
+            shelf_query = shelf_query.where(
+                func.coalesce(occupied_positions_cte.c.occupied_positions, 0) == 0
+            )
+        else:
+            shelf_query = shelf_query.where(
+                func.coalesce(occupied_positions_cte.c.occupied_positions, 0)
+                < ShelfType.max_capacity
+            )
+
+        # Optimize owner filter with direct join
+        if params.owner_id:
+            shelf_query = shelf_query.filter(Owner.id.in_(params.owner_id))
+
+        # Optimize location filtering
+        if params.ladder_id:
+            shelf_query = shelf_query.join(
+                Ladder, Shelf.ladder_id == Ladder.id
+            ).filter(Shelf.ladder_id == params.ladder_id)
+        elif params.side_id:
+            shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).join(
+                Side, Ladder.side_id == Side.id
+            ).filter(Side.id == params.side_id)
+        elif params.aisle_id:
+            shelf_query = (
+                shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+                .join(Side, Ladder.side_id == Side.id)
+                .join(Aisle, Side.aisle_id == Aisle.id)
+                .filter(Aisle.id == params.aisle_id)
+            )
+        elif params.module_id:
+            shelf_query = (
+                shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+                .join(Side, Ladder.side_id == Side.id)
+                .join(Aisle, Side.aisle_id == Aisle.id)
+                .join(Module, Aisle.module_id == Module.id)
+                .filter(Module.id == params.module_id)
+            )
+        elif params.building_id:
+            shelf_query = (
+                shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+                .join(Side, Ladder.side_id == Side.id)
+                .join(Aisle, Side.aisle_id == Aisle.id)
+                .join(Module, Aisle.module_id == Module.id)
+                .join(Building, Module.building_id == Building.id)
+                .filter(Building.id == params.building_id)
+            )
+
+        return paginate(session, shelf_query)
+    except Exception as e:
+        inventory_logger.error(e)
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.get("/open-locations/download", response_class=StreamingResponse)
@@ -498,84 +497,77 @@ def get_open_locations_csv(
     Returns a csv report of shelf objects with
     unoccupied nested shelf positions based on search criteria
     """
-    total_positions_subquery = (
+    occupied_positions_cte = (
+        select(
+            ShelfPosition.shelf_id,
+            func.count(ShelfPosition.id).label("occupied_positions"),
+        )
+        .where(
+            (exists().where(ShelfPosition.id == Tray.shelf_position_id)) |
+            (exists().where(ShelfPosition.id == NonTrayItem.shelf_position_id))
+        )
+        .group_by(ShelfPosition.shelf_id)
+        .cte("occupied_positions_cte")
+    )
+
+    # Use CTE for total positions
+    total_positions_cte = (
         select(
             ShelfPosition.shelf_id,
             func.count(ShelfPosition.id).label("total_positions"),
         )
         .group_by(ShelfPosition.shelf_id)
-        .subquery()
+        .cte("total_positions_cte")
     )
 
-    occupied_positions_subquery = (
-        select(
-            ShelfPosition.shelf_id,
-            func.count(ShelfPosition.id).label("occupied_positions"),
-        )
-        .where(or_(ShelfPosition.tray != None, ShelfPosition.non_tray_item != None))
-        .group_by(ShelfPosition.shelf_id)
-        .subquery()
-    )
-
+    # Optimize joins using precomputed CTEs
     shelf_query = (
         select(Shelf)
         .distinct()
         .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
         .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
-        .join(Shelf.barcode)
-        .join(Shelf.owner)
+        .join(Barcode, Shelf.barcode_id == Barcode.id)
+        .join(Owner, Shelf.owner_id == Owner.id)
         .outerjoin(
-            total_positions_subquery, Shelf.id == total_positions_subquery.c.shelf_id
+            total_positions_cte,
+            Shelf.id == total_positions_cte.c.shelf_id
         )
         .outerjoin(
-            occupied_positions_subquery,
-            Shelf.id == occupied_positions_subquery.c.shelf_id,
+            occupied_positions_cte,
+            Shelf.id == occupied_positions_cte.c.shelf_id
         )
     )
 
+    # Optimize filtering
     if not params.show_partial:
-        # Show shelves with no occupied positions
         shelf_query = shelf_query.where(
-            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0) == 0
+            func.coalesce(occupied_positions_cte.c.occupied_positions, 0) == 0
         )
     else:
-        # Show shelves with at least some space available
         shelf_query = shelf_query.where(
-            func.coalesce(occupied_positions_subquery.c.occupied_positions, 0)
+            func.coalesce(occupied_positions_cte.c.occupied_positions, 0)
             < ShelfType.max_capacity
         )
 
+    # Optimize owner filter with direct join
     if params.owner_id:
-        shelf_query = shelf_query.where(Shelf.owner_id.in_(params.owner_id))
-    if params.size_class_id:
-        shelf_query = shelf_query.where(
-            ShelfType.size_class_id.in_(params.size_class_id)
-        )
-    if params.height:
-        shelf_query = shelf_query.where(Shelf.height == params.height)
-    if params.width:
-        shelf_query = shelf_query.where(Shelf.width == params.width)
-    if params.depth:
-        shelf_query = shelf_query.where(Shelf.depth == params.depth)
+        shelf_query = shelf_query.filter(Owner.id.in_(params.owner_id))
 
-    # Now location constraints
+    # Optimize location filtering
     if params.ladder_id:
-        # shelf_query = shelf_query.where(Shelf.ladder_id == params.ladder_id)
-        shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).where(
-            Ladder.id == params.ladder_id
-        )
+        shelf_query = shelf_query.join(
+            Ladder, Shelf.ladder_id == Ladder.id
+        ).filter(Shelf.ladder_id == params.ladder_id)
     elif params.side_id:
-        shelf_query = (
-            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
-            .join(Side, Ladder.side_id == Side.id)
-            .where(Side.id == params.side_id)
-        )
+        shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).join(
+            Side, Ladder.side_id == Side.id
+        ).filter(Side.id == params.side_id)
     elif params.aisle_id:
         shelf_query = (
             shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
             .join(Side, Ladder.side_id == Side.id)
             .join(Aisle, Side.aisle_id == Aisle.id)
-            .where(Aisle.id == params.aisle_id)
+            .filter(Aisle.id == params.aisle_id)
         )
     elif params.module_id:
         shelf_query = (
@@ -583,7 +575,7 @@ def get_open_locations_csv(
             .join(Side, Ladder.side_id == Side.id)
             .join(Aisle, Side.aisle_id == Aisle.id)
             .join(Module, Aisle.module_id == Module.id)
-            .where(Module.id == params.module_id)
+            .filter(Module.id == params.module_id)
         )
     elif params.building_id:
         shelf_query = (
@@ -592,7 +584,7 @@ def get_open_locations_csv(
             .join(Aisle, Side.aisle_id == Aisle.id)
             .join(Module, Aisle.module_id == Module.id)
             .join(Building, Module.building_id == Building.id)
-            .where(Building.id == params.building_id)
+            .filter(Building.id == params.building_id)
         )
 
     result = session.execute(shelf_query)

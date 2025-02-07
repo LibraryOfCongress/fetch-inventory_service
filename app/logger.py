@@ -6,7 +6,7 @@ inventory_logger.setLevel(logging.DEBUG)
 migration_logger = logging.getLogger("migration")
 migration_logger.setLevel(logging.DEBUG)
 
-# output to log file
+# output to log stream
 data_activity_logger = logging.getLogger("security-log")
 data_activity_logger.setLevel(logging.DEBUG)
 

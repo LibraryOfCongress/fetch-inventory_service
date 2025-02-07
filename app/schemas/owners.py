@@ -42,7 +42,6 @@ class OwnerBaseOutput(BaseModel):
     name: str
     owner_tier_id: int
     parent_owner_id: Optional[int] = None
-    size_classes: Optional[list] = None
 
 
 class NestedOwnerTierDetailOutput(BaseModel):
@@ -75,17 +74,7 @@ class OwnerListOutput(OwnerBaseOutput):
                 "parent_owner": {
                     "id": 2,
                     "name": "Library of Congress"
-                },
-                "size_classes": [
-                    {
-                        "id": 1,
-                        "name": "C-Low",
-                        "short_name": "CL",
-                        "height": 15.7,
-                        "width": 30.33,
-                        "depth": 27
-                    }
-                ]
+                }
             }
         }
 
@@ -112,16 +101,6 @@ class OwnerDetailWriteOutput(OwnerBaseOutput):
                     "id": 2,
                     "name": "Library of Congress"
                 },
-                "size_classes": [
-                    {
-                        "id": 1,
-                        "name": "C-Low",
-                        "short_name": "CL",
-                        "height": 15.7,
-                        "width": 30.33,
-                        "depth": 27
-                    }
-                ],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -165,16 +144,6 @@ class OwnerDetailReadOutput(OwnerBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
-                "size_classes": [
-                    {
-                        "id": 1,
-                        "name": "C-Low",
-                        "short_name": "CL",
-                        "height": 15.7,
-                        "width": 30.33,
-                        "depth": 27
-                    }
-                ],
                 "children": [],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"

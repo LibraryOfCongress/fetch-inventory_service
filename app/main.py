@@ -16,7 +16,6 @@ from fastapi_pagination import add_pagination
 from alembic.config import Config
 from alembic import command
 
-from app.seed.seed_fake_data import seed_fake_data
 from app.config.config import get_settings
 from app.config.exceptions import (
     BadRequest,
@@ -128,18 +127,6 @@ def alembic_context():
                 f"{db_port}",
             ]
             subprocess.run(create_schemaspy)
-        # Only allow fake data seeding in local, dev, test, or stage
-        if get_settings().APP_ENVIRONMENT in ["local", "develop", "test"]:
-            # Only attempt seeding if seed flag is set
-            SEED_FAKE_DATA = os.environ.get("SEED_FAKE_DATA", False)
-            if SEED_FAKE_DATA in ["True", "true", True]:
-                # have to do this silliness for shell to py translation
-                SEED_FAKE_DATA = True
-            else:
-                # have to do this if shell script 'false' is str or lower
-                SEED_FAKE_DATA = False
-            if SEED_FAKE_DATA:
-                seed_fake_data()
     except Exception as e:
         print(f"{e}")
         raise
@@ -176,13 +163,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Configure logging directory for data activity log rotation
-# This is git ignored
-data_activity_log_dir = "app/logs"
-log_file = os.path.join(data_activity_log_dir, "data_activity.log")
-# Create the log directory if it doesn't exist
-os.makedirs(data_activity_log_dir, exist_ok=True)
 
 
 @app.get("/")

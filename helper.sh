@@ -1,9 +1,9 @@
 #!/bin/bash
 
 build() {
+  # this is old, use fetch-local and podman compose
   if [[ "$1" == "local" ]]; then
     (cd ../fetch-local \
-      && export SEED_FAKE_DATA=false \
       && exec ./helper.sh build-inventory-api);
   fi
   if [[ "$1" == "develop" ]]; then
@@ -25,12 +25,22 @@ refresh-db() {
   (cd ../fetch-local && exec ./helper.sh wipe-inventory-db);
   # Give the db a moment to catch its breath
   sleep 5;
-  # Then re-schema and re-seed
+  # Then rebuild from podman compose for schema
   (cd ../fetch-local \
-    && export SEED_FAKE_DATA=true \
-    && exec ./helper.sh build-inventory-api \
-    && export SEED_FAKE_DATA=false);
-    # Reset seed arg in case user runs compose elsewhere
+    && exec ./helper.sh build-inventory-api);
+}
+
+seed-fake-data() {
+# this gets called from fetch-local
+# don't call this directly
+# do not indent on shell str
+SEED_FAKE_DATA="
+from app import main
+from app.seed.seed_fake_data import seed_fake_data
+seed_fake_data()
+";
+
+  podman exec -it fetch-inventory-api python -c "$SEED_FAKE_DATA";
 }
 
 run-storage-migration() {

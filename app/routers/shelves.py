@@ -54,6 +54,7 @@ def get_shelf_list(
     owner_id: int | None = None,
     size_class_id: int | None = None,
     unassigned: bool | None = None,
+    location: str | None = None,
     sort_params: SortParams = Depends()
 ) -> list:
     """
@@ -69,6 +70,7 @@ def get_shelf_list(
     - owner_id (int): The ID of the owner to filter by.
     - size_class_id (int): The ID of the size class to filter by.
     - unassigned (bool): Whether to include unassigned shelves.
+    - location (str): Lookup against external location
     - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
@@ -142,6 +144,9 @@ def get_shelf_list(
 
     if unassigned:
         shelf_queryset = shelf_queryset.where(Shelf.barcode_id == None)
+
+    if location:
+        shelf_queryset = shelf_queryset.where(Shelf.location == location)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

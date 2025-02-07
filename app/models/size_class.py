@@ -6,8 +6,6 @@ from sqlalchemy import Column, DateTime
 from pydantic import condecimal
 from sqlmodel import SQLModel, Field, Relationship
 
-from app.models.owners_size_classes import OwnersSizeClassesLink
-
 
 class SizeClass(SQLModel, table=True):
     """
@@ -42,9 +40,6 @@ class SizeClass(SQLModel, table=True):
     trays: List["Tray"] = Relationship(back_populates="size_class")
     items: List["Item"] = Relationship(back_populates="size_class")
     non_tray_items: List["NonTrayItem"] = Relationship(back_populates="size_class")
-    owners: List["Owner"] = Relationship(
-        back_populates="size_classes", link_model=OwnersSizeClassesLink
-    )
     shelf_types: List["ShelfType"] = Relationship(back_populates="size_class")
     shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
         back_populates="size_class",
