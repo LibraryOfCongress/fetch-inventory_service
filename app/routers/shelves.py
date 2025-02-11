@@ -76,7 +76,7 @@ def get_shelf_list(
     **Returns:**
     - Shelf List Output: The paginated list of shelves.
     """
-    shelf_queryset = select(Shelf).distinct()
+    shelf_queryset = select(Shelf)
 
     if owner_id:
         shelf_queryset = shelf_queryset.where(Shelf.owner_id == owner_id)

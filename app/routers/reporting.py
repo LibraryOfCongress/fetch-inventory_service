@@ -393,61 +393,31 @@ def get_open_locations_list(
     unoccupied nested shelf positions based on search criteria
     """
     try:
-        occupied_positions_cte = (
-            select(
-                ShelfPosition.shelf_id,
-                func.count(ShelfPosition.id).label("occupied_positions"),
-            )
-            .where(
-                (exists().where(ShelfPosition.id == Tray.shelf_position_id)) |
-                (exists().where(ShelfPosition.id == NonTrayItem.shelf_position_id))
-            )
-            .group_by(ShelfPosition.shelf_id)
-            .cte("occupied_positions_cte")
-        )
-
-        # Use CTE for total positions
-        total_positions_cte = (
-            select(
-                ShelfPosition.shelf_id,
-                func.count(ShelfPosition.id).label("total_positions"),
-            )
-            .group_by(ShelfPosition.shelf_id)
-            .cte("total_positions_cte")
-        )
-
-        # Optimize joins using precomputed CTEs
         shelf_query = (
             select(Shelf)
-            .distinct()
             .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
             .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
             .join(Barcode, Shelf.barcode_id == Barcode.id)
             .join(Owner, Shelf.owner_id == Owner.id)
-            .outerjoin(
-                total_positions_cte,
-                Shelf.id == total_positions_cte.c.shelf_id
-            )
-            .outerjoin(
-                occupied_positions_cte,
-                Shelf.id == occupied_positions_cte.c.shelf_id
-            )
+            .filter(Shelf.available_space > 0)
         )
 
         # Optimize filtering
         if not params.show_partial:
             shelf_query = shelf_query.where(
-                func.coalesce(occupied_positions_cte.c.occupied_positions, 0) == 0
+                Shelf.available_space == ShelfType.max_capacity
             )
         else:
             shelf_query = shelf_query.where(
-                func.coalesce(occupied_positions_cte.c.occupied_positions, 0)
-                < ShelfType.max_capacity
+                Shelf.available_space <= ShelfType.max_capacity
             )
 
         # Optimize owner filter with direct join
         if params.owner_id:
             shelf_query = shelf_query.filter(Owner.id.in_(params.owner_id))
+
+        if params.size_class_id:
+            shelf_query = shelf_query.filter(SizeClass.id.in_(params.size_class_id))
 
         # Optimize location filtering
         if params.ladder_id:
@@ -497,61 +467,31 @@ def get_open_locations_csv(
     Returns a csv report of shelf objects with
     unoccupied nested shelf positions based on search criteria
     """
-    occupied_positions_cte = (
-        select(
-            ShelfPosition.shelf_id,
-            func.count(ShelfPosition.id).label("occupied_positions"),
-        )
-        .where(
-            (exists().where(ShelfPosition.id == Tray.shelf_position_id)) |
-            (exists().where(ShelfPosition.id == NonTrayItem.shelf_position_id))
-        )
-        .group_by(ShelfPosition.shelf_id)
-        .cte("occupied_positions_cte")
-    )
-
-    # Use CTE for total positions
-    total_positions_cte = (
-        select(
-            ShelfPosition.shelf_id,
-            func.count(ShelfPosition.id).label("total_positions"),
-        )
-        .group_by(ShelfPosition.shelf_id)
-        .cte("total_positions_cte")
-    )
-
-    # Optimize joins using precomputed CTEs
     shelf_query = (
         select(Shelf)
-        .distinct()
         .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
         .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
         .join(Barcode, Shelf.barcode_id == Barcode.id)
         .join(Owner, Shelf.owner_id == Owner.id)
-        .outerjoin(
-            total_positions_cte,
-            Shelf.id == total_positions_cte.c.shelf_id
-        )
-        .outerjoin(
-            occupied_positions_cte,
-            Shelf.id == occupied_positions_cte.c.shelf_id
-        )
+        .filter(Shelf.available_space > 0)
     )
 
     # Optimize filtering
     if not params.show_partial:
         shelf_query = shelf_query.where(
-            func.coalesce(occupied_positions_cte.c.occupied_positions, 0) == 0
+            Shelf.available_space == ShelfType.max_capacity
         )
     else:
         shelf_query = shelf_query.where(
-            func.coalesce(occupied_positions_cte.c.occupied_positions, 0)
-            < ShelfType.max_capacity
+            Shelf.available_space <= ShelfType.max_capacity
         )
 
     # Optimize owner filter with direct join
     if params.owner_id:
         shelf_query = shelf_query.filter(Owner.id.in_(params.owner_id))
+
+    if params.size_class_id:
+        shelf_query = shelf_query.filter(SizeClass.id.in_(params.size_class_id))
 
     # Optimize location filtering
     if params.ladder_id:

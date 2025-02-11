@@ -92,6 +92,11 @@ class NestedShelfTypeDetailOutput(BaseModel):
     update_dt: datetime
 
 
+class NestedContainerTypeDetailForShelfOutput(BaseModel):
+    id: int
+    type: str
+
+
 class ShelfBaseOutput(BaseModel):
     id: int
     location: Optional[str] = None
@@ -104,10 +109,14 @@ class ShelfListOutput(ShelfBaseOutput):
     ladder_id: int
     shelf_number: ShelfNumberDetailOutput
     container_type_id: Optional[int] = None
+    container_type: Optional[NestedContainerTypeDetailForShelfOutput] = None
     shelf_type_id: int
     shelf_type: NestedShelfTypeDetailOutput
     owner_id: Optional[int] = None
     owner: Optional[OwnerDetailReadOutput] = None
+    width: Optional[float] = None
+    height: Optional[float] = None
+    depth: Optional[float] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
 
     class Config:
@@ -189,9 +198,9 @@ class ShelfDetailWriteOutput(ShelfBaseOutput):
     shelf_number_id: int
     owner_id: Optional[int] = None
     available_space: int
-    height: float
-    width: float
-    depth: float
+    width: Optional[float] = None
+    height: Optional[float] = None
+    depth: Optional[float] = None
     container_type: Optional[ContainerTypeDetailReadOutput] = None
     shelf_type: NestedShelfTypeDetailOutput
     ladder: LadderDetailWriteOutput
@@ -311,9 +320,9 @@ class ShelfDetailReadOutput(ShelfBaseOutput):
     container_type: Optional[ContainerTypeDetailReadOutput] = None
     owner: Optional[OwnerDetailReadOutput] = None
     available_space: int
-    height: float
-    width: float
-    depth: float
+    width: Optional[float] = None
+    height: Optional[float] = None
+    depth: Optional[float] = None
     barcode_id: Optional[uuid.UUID] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
     create_dt: datetime

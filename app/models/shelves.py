@@ -36,6 +36,9 @@ class Shelf(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
+    available_space: int = Field(
+        sa_column=sa.SmallInteger, default=0, nullable=False
+    )
     location: Optional[str] = Field(
         max_length=175, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
     )
@@ -69,24 +72,31 @@ class Shelf(SQLModel, table=True):
         sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
-    @property
-    def available_space(self) -> int:
+    def calc_available_space(self, session: Optional[Session] = None) -> int:
+        """
+        The reason this isn't done in memory is because of N+1 select issues.
+        You'll thank me later.
+        """
+        # This is called on-demand in events or legacy data migration
+        # session compatible with both sqlmodel and sqlalchemy (run time usage vs legacy migration)
         ShelfPosition = importlib.import_module("app.models.shelf_positions").ShelfPosition
-        with session_manager() as session:
-            total_positions = session.exec(
-                select(func.count(ShelfPosition.id)).where(ShelfPosition.shelf_id == self.id)
-            ).first() or 0
-            occupied_positions = session.exec(
-                select(func.count(ShelfPosition.id))
-                .where(ShelfPosition.shelf_id == self.id)
-                .where(
-                    or_(
-                        ShelfPosition.tray != None,
-                        ShelfPosition.non_tray_item != None
-                    )
+        # Get total shelf positions
+        total_positions = session.execute(
+            select(func.count(ShelfPosition.id)).where(ShelfPosition.shelf_id == self.id)
+        ).scalar() or 0  # Ensure it's an integer, not None
+        # Get occupied positions (positions with a tray or non-tray item)
+        occupied_positions = session.execute(
+            select(func.count(ShelfPosition.id))
+            .where(ShelfPosition.shelf_id == self.id)
+            .where(
+                or_(
+                    ShelfPosition.tray != None,
+                    ShelfPosition.non_tray_item != None
                 )
-            ).first()
-            return total_positions - occupied_positions
+            )
+        ).scalar() or 0  # Ensure it's an integer, not None
+        # Compute available space
+        self.available_space = total_positions - occupied_positions
 
     ladder: Ladder = Relationship(back_populates="shelves")
     owner: Owner = Relationship(back_populates="shelves")

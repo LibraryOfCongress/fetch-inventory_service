@@ -59,8 +59,6 @@ def get_ladder_list(
 @router.get("/{id}", response_model=LadderDetailReadOutput)
 def get_ladder_detail(
     id: int,
-    owner_id: Optional[int] | None = None,
-    size_class_id: Optional[int] | None = None,
     session: Session = Depends(get_session),
 ):
     """
@@ -75,32 +73,17 @@ def get_ladder_detail(
     **Raises:**
     - HTTPException: If the ladder is not found.
     """
-    ladder = session.get(Ladder, id)
+    try:
+        ladder = session.get(Ladder, id)
 
-    if not ladder:
-        raise NotFound(detail=f"Ladder ID {id} Not Found")
+        if not ladder:
+            raise NotFound(detail=f"Ladder ID {id} Not Found")
+        return ladder
 
-    # Filter shelves if `owner_id` or `size_class_id` are provided
-    if owner_id or size_class_id:
-        filter_shelves = [
-            shelf
-            for shelf in ladder.shelves
-            if (not owner_id or shelf.owner_id == owner_id)
-            and (not size_class_id or shelf.shelf_type.size_class_id == size_class_id)
-        ]
-    else:
-        filter_shelves = ladder.shelves
-
-    # Return a new dictionary with `shelves` overridden, rather than modifying `ladder` directly
-    return {
-        "id": ladder.id,
-        "side": ladder.side,
-        "ladder_number": ladder.ladder_number,
-        "sort_priority": ladder.sort_priority,
-        "shelves": filter_shelves,  # Override shelves with filtered result
-        "create_dt": ladder.create_dt,
-        "update_dt": ladder.update_dt,
-    }
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.post("/", response_model=LadderDetailWriteOutput, status_code=201)

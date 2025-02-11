@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 
 from app.database.session import get_session, commit_record
+from app.events import update_shelf_space_after_tray
 from app.filter_params import SortParams
 from app.models.non_tray_items import NonTrayItem
 from app.models.shelf_position_numbers import ShelfPositionNumber
@@ -154,6 +155,8 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(new_tray)
 
+    update_shelf_space_after_tray(new_tray, None, None)
+
     return new_tray
 
 
@@ -277,7 +280,14 @@ def update_tray(
     # Commit the changes to the database
     session.add(existing_tray)
     session.commit()
+
     session.refresh(existing_tray)
+
+    update_shelf_space_after_tray(
+        existing_tray,
+        existing_tray.shelf_position_id,
+        tray.shelf_position_id
+    )
 
     return existing_tray
 
@@ -297,8 +307,10 @@ def delete_tray(id: int, session: Session = Depends(get_session)):
             session.delete(item)
             session.commit()
 
+        update_shelf_space_after_tray(None, None, tray.shelf_position_id)
         session.delete(tray)
         session.commit()
+
         for item in items_to_delete:
             session.delete(session.get(Barcode, item.barcode_id))
             session.commit()
@@ -431,6 +443,8 @@ def move_tray(
                 )
             break
 
+    old_shelf_position_id = tray.shelf_position_id
+    
     tray.shelf_position_id = destination_shelf_position_id
 
     # Update the update_dt field
@@ -439,5 +453,7 @@ def move_tray(
 
     session.add(tray)
     session.commit()
+
+    update_shelf_space_after_tray(tray, destination_shelf_position_id, old_shelf_position_id)
 
     return tray

@@ -12,6 +12,7 @@ from app.logger import migration_logger
 from app.seed.load_storage_locations import load_storage_locations
 from app.seed.load_containers import load_containers
 from app.seed.load_items import load_items
+from app.seed.load_available_space_calc import load_available_space_calc
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -110,3 +111,15 @@ def seed_items():
         "Starting Item ingest. There will be millions..."
     )
     load_items()
+
+
+def seed_initial_available_space_calc():
+    """
+    Loops over all shelves in the system
+    to update the shelf.available_space value.
+    This is separated out due to how expensive it is.
+    ONLY run AFTER seed_items()
+    """
+    migration_logger.disabled = False
+    migration_logger.info("Calculating available space for all shelves...")
+    load_available_space_calc()

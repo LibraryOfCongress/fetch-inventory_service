@@ -8,6 +8,7 @@ from app.events import generate_location, generate_shelf_location
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.seed.seeder_session import get_session
+from app.seed.load_available_space_calc import load_available_space_calc
 from app.logger import inventory_logger
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -269,3 +270,5 @@ def seed_fake_data():
     generate_shelves_for_system()
     # 41040 shelf positions (3 positions per shelf) to match capacity=3
     generate_shelf_positions_for_system()
+    # set available space on shelves
+    load_available_space_calc()

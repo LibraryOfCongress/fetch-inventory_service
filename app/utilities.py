@@ -16,6 +16,7 @@ from fastapi import Header, Depends
 from app.database.session import get_session
 from app.config.exceptions import NotFound, BadRequest
 from app.logger import inventory_logger
+from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.models.aisle_numbers import AisleNumber
 from app.models.barcodes import Barcode
 from app.models.buildings import Building
@@ -265,6 +266,11 @@ def process_containers_for_shelving(
         session.add(container_object)
         session.commit()
         session.refresh(container_object)
+
+        if container_type == "Tray":
+            update_shelf_space_after_tray(container_object, None, None)
+        else:
+            update_shelf_space_after_non_tray(container_object, None, None)
 
     return
 

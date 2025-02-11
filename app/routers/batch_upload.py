@@ -14,6 +14,7 @@ from starlette.responses import JSONResponse
 
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams
+from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.models.barcode_types import BarcodeType
 from app.models.barcodes import Barcode
 from app.models.batch_upload import BatchUpload
@@ -472,6 +473,11 @@ async def batch_upload_withdraw_job(
 
     session.commit()
     session.refresh(withdraw_job)
+
+    for tray in withdraw_trays:
+        update_shelf_space_after_tray(tray, None, None)
+    for non_tray_item in withdraw_non_tray_items:
+        update_shelf_space_after_non_tray(non_tray_item, None, None)
 
     if errored_barcodes.get("errors"):
         return JSONResponse(status_code=status.HTTP_200_OK, content=errored_barcodes)

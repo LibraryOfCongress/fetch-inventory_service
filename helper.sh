@@ -76,9 +76,34 @@ seed_items()
     podman exec -it fetch-inventory-api python -c "$RUN_ITEM_MIGRATION";
 }
 
+run-available-space-migration() {
+# do not indent on shell str
+RUN_SPACE_MIGRATION="
+from app import main
+from app.seed.seed_data import seed_initial_available_space_calc
+seed_initial_available_space_calc()
+";
+
+    podman exec -it fetch-inventory-api python -c "$RUN_SPACE_MIGRATION";
+}
+
 extract-data-migration() {
+  # This can take like 20 minutes
+  # dump in postgres native sql format
+    (podman exec -i inventory-database pg_dump -U postgres -d inventory_service -Fc > /tmp/fetch_dump_$(date +%m-%d-%Y).dump);
+  # compress to xz
+    (podman exec -i inventory-database xz /tmp/fetch_dump_$(date +%m-%d-%Y).dump);
+  # podman doesn't create host directory, so you have to do this
+    (mkdir -p ~/Desktop/fetch_migration);
+  # copy the compressed dump to host
+    (podman cp inventory-database:/tmp/fetch_dump_$(date +%m-%d-%Y).dump.xz ~/Desktop/fetch_migration/fetch_dump_$(date +%m-%d-%Y).dump.xz);
+}
+
+extract-migration-errors() {
+  # podman doesn't create host directory, so you have to do this
+  (mkdir -p ~/Desktop/fetch_migration);
+  # If there are none, this will have an error
   (podman cp fetch-inventory-api:/code/app/seed/errors ~/Desktop/fetch_migration);
-  (podman exec -i inventory-database pg_dump -U postgres -d inventory_service | gzip > ~/Desktop/fetch_migration/fetch_dump_`date +%m-%d-%Y`.sql.gz);
 }
 
 makemigrations() {
@@ -94,20 +119,30 @@ current() {
 }
 
 api() {
+  # gets you inside the inventory_service api shell
   podman exec -it fetch-inventory-api /bin/bash;
 }
 
+database() {
+  # gets you inside the db container shell
+  podman exec -it inventory-database /bin/bash;
+}
+
 psql() {
+  # gets you into the pg engine psql on the container
   podman exec -it -u postgres inventory-database psql -a inventory_service
 }
 
 unzip-dump() {
-    gzip -d ~/Desktop/fetch_migration/$1
+  # decompresses without destruction. Not necessary. pg_restore can read compressed.
+  xz -dk ~/Desktop/fetch_migration/$1
 }
 
 pg-restore() {
-    podman cp ~/Desktop/fetch_migration/$1 inventory-database:/tmp/$1;
-    podman exec -it -u postgres inventory-database psql -d inventory_service -f /tmp/$1
+  # restores database on database container from compressed dump
+  (podman cp ~/Desktop/fetch_migration/$1 inventory-database:/tmp/$1);
+
+  (podman exec -it -u postgres inventory-database sh -c "xz -dc /tmp/$1 | pg_restore -U postgres -d inventory_service");
 }
 
 inspect-table() {

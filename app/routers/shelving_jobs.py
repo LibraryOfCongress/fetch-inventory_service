@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
 from app.filter_params import JobFilterParams, SortParams
+from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.utilities import (
     process_containers_for_shelving, manage_transition,
     get_sorted_query,
@@ -560,6 +561,7 @@ def reassign_container_location(
 
     # only reassign actual, not proposed
     container.shelving_job_id = id
+    old_shelf_position_id = container.shelf_position_id
     container.shelf_position_id = shelf_position_position_number_join.ShelfPosition.id
 
     if reassignment_input.shelved_dt is not None:
@@ -572,5 +574,10 @@ def reassign_container_location(
     session.add(container)
     session.commit()
     session.refresh(container)
+
+    if container.container_type_id == 1:
+        update_shelf_space_after_tray(container, container.shelf_position_id, old_shelf_position_id)
+    else:
+        update_shelf_space_after_non_tray(container, container.shelf_position_id, old_shelf_position_id)
 
     return container

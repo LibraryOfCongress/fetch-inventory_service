@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 
 from app.database.session import get_session, commit_record
+from app.events import update_shelf_space_after_non_tray
 from app.filter_params import SortParams
 from app.logger import inventory_logger
 from app.models.non_tray_items import NonTrayItem, NonTrayItemStatus
@@ -178,6 +179,8 @@ def create_non_tray_item(
     session.commit()
     session.refresh(new_non_tray_item)
 
+    update_shelf_space_after_non_tray(new_non_tray_item, None, None)
+
     return new_non_tray_item
 
 
@@ -261,6 +264,12 @@ def update_non_tray_item(
     session.commit()
     session.refresh(existing_non_tray_item)
 
+    update_shelf_space_after_non_tray(
+        existing_non_tray_item,
+        existing_non_tray_item.shelf_position_id,
+        non_tray_item.shelf_position_id
+    )
+
     return existing_non_tray_item
 
 
@@ -272,6 +281,7 @@ def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
     non_tray_item = session.get(NonTrayItem, id)
 
     if non_tray_item:
+        update_shelf_space_after_non_tray(None, None, non_tray_item.shelf_position_id)
         session.delete(non_tray_item)
         session.commit()
 
@@ -390,6 +400,8 @@ def move_item(
                 )
             break
 
+    old_shelf_position_id = non_tray_item.shelf_position_id
+
     # Update the non_tray_item and shelves
     non_tray_item.shelf_position_id = destination_shelf_position_id
 
@@ -407,5 +419,11 @@ def move_item(
     session.refresh(non_tray_item)
     session.refresh(source_shelf)
     session.refresh(destination_shelf)
+
+    update_shelf_space_after_non_tray(
+        non_tray_item,
+        destination_shelf_position_id,
+        old_shelf_position_id
+    )
 
     return non_tray_item

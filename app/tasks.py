@@ -3,6 +3,7 @@ from datetime import datetime
 
 from app.config.exceptions import NotFound
 from app.logger import inventory_logger
+from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.models.accession_jobs import AccessionJob
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_types import ShelfType
@@ -284,10 +285,12 @@ def process_tray_move(session: Session, tray: Tray, source_shelf: Shelf,
     Task processes a tray move between shelves
     """
     update_dt = datetime.utcnow()
+    old_position_id = tray.shelf_position_id
     tray.shelf_position_id = destination_shelf_position_id
     tray.update_dt = update_dt
     session.commit()
     session.refresh(tray)
+    update_shelf_space_after_tray(tray, destination_shelf_position_id, old_position_id)
 
 
 def process_non_tray_item_move(session: Session, non_tray_item: NonTrayItem, source_shelf: Shelf,
@@ -296,10 +299,12 @@ def process_non_tray_item_move(session: Session, non_tray_item: NonTrayItem, sou
     Task processes a non tray item move between shelves
     """
     update_dt = datetime.utcnow()
+    old_position_id = non_tray_item.shelf_position_id
     non_tray_item.shelf_position_id = destination_shelf_position_id
     non_tray_item.update_dt = update_dt
     session.commit()
     session.refresh(non_tray_item)
+    update_shelf_space_after_non_tray(non_tray_item, destination_shelf_position_id, old_position_id)
     return non_tray_item
 
 
