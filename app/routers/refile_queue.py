@@ -12,9 +12,11 @@ from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
+from app.models.pick_lists import PickList
 from app.models.refile_items import RefileItem
 from app.models.refile_jobs import RefileJob
 from app.models.refile_non_tray_items import RefileNonTrayItem
+from app.models.requests import Request
 
 from app.schemas.refile_queue import (
     RefileQueueInput,
@@ -77,6 +79,11 @@ def add_to_refile_queue(
         session.query(Barcode).filter(Barcode.value == lookup_barcode_value).first()
     )
 
+    if not barcode:
+        raise NotFound(detail=f"Barcode value {lookup_barcode_value} not found")
+    if barcode.withdrawn:
+        raise ValidationException(detail="Item has already been withdrawn")
+
     item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
     non_tray_item = (
         session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
@@ -110,6 +117,20 @@ def add_to_refile_queue(
                     "refile "
                     f"Job ID: {existing_refile_job.id}"
                 )
+        existing_pick_list_items = (
+            session.query(PickList.id)
+            .join(Request, PickList.id == Request.pick_list_id)
+            .filter(Request.item_id == item.id)
+            .filter(PickList.status != "Completed")
+            .all()
+        )
+
+        if existing_pick_list_items:
+            raise ValidationException(
+                detail=f"Item already exists in a uncompleted Pick List Job {existing_pick_list_items}"
+            )
+
+        item = session.get(Item, item.id)
 
         item.scanned_for_refile_queue = True
         item.scanned_for_refile_queue_dt = update_dt
@@ -144,11 +165,24 @@ def add_to_refile_queue(
 
             if existing_refile_job:
                 raise ValidationException(
-                    detail=f"Non TrayItem already exists in an "
+                    detail=f"Non Tray Item already exists in an "
                     "uncompleted "
                     "refile "
                     f"Job ID: {existing_refile_job.id}"
                 )
+
+        existing_pick_list_items = (
+            session.query(PickList.id)
+            .join(Request, PickList.id == Request.pick_list_id)
+            .filter(Request.non_tray_item_id == non_tray_item.id)
+            .filter(PickList.status != "Completed")
+            .all()
+        )
+
+        if existing_pick_list_items:
+            raise ValidationException(
+                detail=f"Non Tray Item already exists in a uncompleted Pick List Job {existing_pick_list_items}"
+            )
 
         non_tray_item.scanned_for_refile_queue = True
         non_tray_item.scanned_for_refile_queue_dt = update_dt
