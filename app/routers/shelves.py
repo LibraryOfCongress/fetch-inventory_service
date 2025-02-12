@@ -206,37 +206,30 @@ def get_shelved_entities_by_shelf_barcode_value(value: str, session: Session = D
     if not shelf:
         raise NotFound(detail=f"Shelf with barcode value {value} not found")
 
-    shelf_positions = session.exec(
+    shelf_positions = list(session.exec(
         select(ShelfPosition).where(ShelfPosition.shelf_id == shelf.id)
-    ).all()
+    ).all())
 
- # Collect combined results of Trays and NonTrays
+    trays = {t.shelf_position_id: t for t in session.exec(
+        select(Tray).join(
+            Barcode, Tray.barcode_id == Barcode.id
+        ).where(Tray.shelf_position_id.in_([p.id for p in shelf_positions]))
+    ).all()}
+
+    non_trays = {nt.shelf_position_id: nt for nt in session.exec(
+        select(NonTrayItem).join(
+            Barcode, NonTrayItem.barcode_id == Barcode.id
+        ).where(NonTrayItem.shelf_position_id.in_([p.id for p in shelf_positions]))
+    ).all()}
+
     results = []
     for shelf_position in shelf_positions:
-        # Check if a Tray exists at the ShelfPosition
-        tray = session.exec(
-            select(Tray)
-            .join(Barcode, Tray.barcode_id == Barcode.id)
-            .where(Tray.shelf_position_id == shelf_position.id)
-        ).first()
+        if shelf_position.id in trays:
+            results.append({"type": "tray", "barcode_value": trays[shelf_position.id].barcode.value})
+        elif shelf_position.id in non_trays:
+            results.append({"type": "non_tray", "barcode_value": non_trays[shelf_position.id].barcode.value})
 
-        if tray:
-            results.append({"type": "tray", "barcode_value": tray.barcode.value})
-            continue  # Skip to the next ShelfPosition since 1:1 ensures no NonTray here
-
-        # Check if a NonTray exists at the ShelfPosition
-        non_tray = session.exec(
-            select(NonTrayItem)
-            .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
-            .where(NonTrayItem.shelf_position_id == shelf_position.id)
-        ).first()
-
-        if non_tray:
-            results.append({"type": "non_tray", "barcode_value": non_tray.barcode.value})
-
-    # Paginate the results
     return paginate_list(results)
-
 
 @router.post("/", response_model=ShelfDetailWriteOutput, status_code=201)
 def create_shelf(
