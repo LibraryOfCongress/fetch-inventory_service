@@ -408,8 +408,8 @@ def add_request_to_pick_list(
     update_dt = datetime.now(timezone.utc)
     errored_request_ids = []
 
-    if pick_list.status == "Completed":
-        raise BadRequest(detail="Pick List Already Completed")
+    if pick_list.status in ["Running", "Completed"]:
+        raise BadRequest(detail="Can not add request to 'Running' or 'Completed' Pick List")
 
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
