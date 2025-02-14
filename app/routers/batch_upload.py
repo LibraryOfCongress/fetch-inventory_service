@@ -15,6 +15,7 @@ from starlette.responses import JSONResponse
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams
 from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
+from app.logger import inventory_logger
 from app.models.barcode_types import BarcodeType
 from app.models.barcodes import Barcode
 from app.models.batch_upload import BatchUpload
@@ -42,7 +43,7 @@ from app.utilities import (
 )
 from app.config.exceptions import (
     BadRequest,
-    NotFound,
+    NotFound, InternalServerError,
 )
 
 router = APIRouter(
@@ -302,189 +303,194 @@ async def batch_upload_withdraw_job(
     **Returns:**
     - BatchUploadOutput: The result of the batch processing including any errors.
     """
-    if not job_id:
-        raise BadRequest(detail="Withdraw Job ID is required")
+    try:
+        if not job_id:
+            raise BadRequest(detail="Withdraw Job ID is required")
 
-    file_name = file.filename
-    file_size = file.size
-    file_content_type = file.content_type
-    contents = await file.read()
+        file_name = file.filename
+        file_size = file.size
+        file_content_type = file.content_type
+        contents = await file.read()
 
-    if (
-        file_name.endswith(".xlsx")
-        or file_content_type
-        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    ):
-        df = pd.read_excel(
-            contents,
-            dtype={"Item Barcode": str, "Tray Barcode": str},
-        )
-    if file_name.endswith(".csv"):
-        df = pd.read_csv(
-            StringIO(contents.decode("utf-8")),
-            dtype={"Item Barcode": str, "Tray Barcode": str},
-        )
-
-    # Check if the necessary column exists
-    withdraw_job = session.get(WithdrawJob, job_id)
-
-    if not withdraw_job:
-        raise NotFound(detail=f"Withdraw job id {job_id} not found")
-
-    # Create a new batch upload
-    new_batch_upload = BatchUpload(
-        file_name=file_name,
-        file_size=file_size,
-        file_type=file_content_type,
-        withdraw_job_id=withdraw_job.id,
-    )
-
-    session.add(new_batch_upload)
-    session.commit()
-    session.refresh(new_batch_upload)
-
-    # Remove rows with NaN values in 'Item Barcode' and 'Tray Barcode'
-    df = df.dropna(subset=["Item Barcode", "Tray Barcode"], how="all")
-
-    if not withdraw_job:
-        session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
-            synchronize_session=False,
-        )
-        session.commit()
-        raise NotFound(detail=f"Withdraw job id {job_id} not found")
-
-    if "Item Barcode" not in df.columns and "Tray Barcode" not in df.columns:
-        session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
-            synchronize_session=False,
-        )
-        session.commit()
-        raise BadRequest(
-            detail="Batch file must contain a 'Item Barcode' or 'Tray "
-            "Barcode' columns."
-        )
-
-    # Drop NaN and empty string values
-    item_df = df["Item Barcode"].replace("", pd.NA).dropna()
-    tray_df = df["Tray Barcode"].replace("", pd.NA).dropna()
-
-    # Concatenate the cleaned columns into a single Series
-    merged_series = pd.concat([item_df, tray_df])
-
-    # Create a new DataFrame from the concatenated Series
-    merged_df = pd.DataFrame(merged_series, columns=["Barcode"])
-
-    # Reset the index if necessary
-    merged_df.reset_index(drop=True, inplace=True)
-
-    lookup_barcode_values = []
-    if not merged_df["Barcode"].empty:
-        lookup_barcode_values.extend(merged_df["Barcode"].astype(str).tolist())
-
-    if not lookup_barcode_values:
-        session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
-            synchronize_session=False,
-        )
-        raise NotFound(
-            detail="All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
-        )
-
-    session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-        {"status": "Processing", "update_dt": datetime.now(timezone.utc)},
-        synchronize_session=False,
-    )
-    session.commit()
-
-    lookup_barcode_values = list(set(lookup_barcode_values))
-    barcodes = (
-        session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
-    )
-
-    found_barcodes = set(barcode.value for barcode in barcodes)
-    missing_barcodes = set(lookup_barcode_values) - found_barcodes
-
-    errored_barcodes = {"errors": []}
-
-    for barcode in missing_barcodes:
-        index = merged_df.index[merged_df["Barcode"] == barcode].tolist()
-        if index:
-            errored_barcodes["errors"].append(
-                {"line": index[0] + 1, "error": f"Barcode value {barcode} not found"}
+        if (
+            file_name.endswith(".xlsx")
+            or file_content_type
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ):
+            df = pd.read_excel(
+                contents,
+                dtype={"Item Barcode": str, "Tray Barcode": str},
+            )
+        if file_name.endswith(".csv"):
+            df = pd.read_csv(
+                StringIO(contents.decode("utf-8")),
+                dtype={"Item Barcode": str, "Tray Barcode": str},
             )
 
-    if not barcodes:
-        session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
-            synchronize_session=False,
+        # Check if the necessary column exists
+        withdraw_job = session.get(WithdrawJob, job_id)
+
+        if not withdraw_job:
+            raise NotFound(detail=f"Withdraw job id {job_id} not found")
+
+        # Create a new batch upload
+        new_batch_upload = BatchUpload(
+            file_name=file_name,
+            file_size=file_size,
+            file_type=file_content_type,
+            withdraw_job_id=withdraw_job.id,
         )
+
+        session.add(new_batch_upload)
         session.commit()
-        raise BadRequest(
-            detail="All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
-        )
+        session.refresh(new_batch_upload)
 
-    (
-        withdraw_items,
-        withdraw_non_tray_items,
-        withdraw_trays,
-        errored_barcodes_from_processing,
-    ) = process_withdraw_job_data(session, withdraw_job.id, barcodes, df)
+        # Remove rows with NaN values in 'Item Barcode' and 'Tray Barcode'
+        df = df.dropna(subset=["Item Barcode", "Tray Barcode"], how="all")
 
-    errored_barcodes["errors"].extend(
-        errored_barcodes_from_processing.get("errors", [])
-    )
-
-    if not withdraw_items and not withdraw_non_tray_items and not withdraw_trays:
-        if not errored_barcodes.get("errors"):
-            session.query(BatchUpload).filter(
-                BatchUpload.id == new_batch_upload.id
-            ).update(
-                {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
+        if not withdraw_job:
+            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
+                {"status": "Failed", "update_dt": datetime.utcnow()},
                 synchronize_session=False,
             )
             session.commit()
+            raise NotFound(detail=f"Withdraw job id {job_id} not found")
+
+        if "Item Barcode" not in df.columns and "Tray Barcode" not in df.columns:
+            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
+                {"status": "Failed", "update_dt": datetime.utcnow()},
+                synchronize_session=False,
+            )
+            session.commit()
+            raise BadRequest(
+                detail="Batch file must contain a 'Item Barcode' or 'Tray "
+                "Barcode' columns."
+            )
+
+        # Drop NaN and empty string values
+        item_df = df["Item Barcode"].replace("", pd.NA).dropna()
+
+        # Reset the index if necessary
+        item_df.reset_index(drop=True, inplace=True)
+
+        # Create DataFrame
+        item_df = pd.DataFrame(item_df)
+        #rename columns
+        item_df.rename(columns={"Item Barcode": "Barcode"}, inplace=True)
+
+        lookup_barcode_values = []
+        if not item_df["Barcode"].empty:
+            lookup_barcode_values.extend(item_df["Barcode"].astype(str).tolist())
+            inventory_logger.info(f"Lookup Barcodes: {lookup_barcode_values}")
+
+        if not lookup_barcode_values:
+            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
+                {"status": "Failed", "update_dt": datetime.utcnow()},
+                synchronize_session=False,
+            )
             raise NotFound(
                 detail="All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
             )
-        else:
-            session.query(BatchUpload).filter(
-                BatchUpload.id == new_batch_upload.id
-            ).update(
-                {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
+
+        session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
+            {"status": "Processing", "update_dt": datetime.utcnow()},
+            synchronize_session=False,
+        )
+        session.commit()
+
+        lookup_barcode_values = list(set(lookup_barcode_values))
+        barcodes = (
+            session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
+        )
+
+        found_barcodes = set(barcode.value for barcode in barcodes)
+        missing_barcodes = set(lookup_barcode_values) - found_barcodes
+
+        errored_barcodes = {"errors": []}
+
+        for barcode in missing_barcodes:
+            index = item_df.index[item_df["Barcode"] == barcode].tolist()
+            if index:
+                errored_barcodes["errors"].append(
+                    {"line": index[0] + 1, "error": f"Barcode value {barcode} not found"}
+                )
+
+        if not barcodes:
+            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
+                {"status": "Failed", "update_dt": datetime.utcnow()},
                 synchronize_session=False,
             )
             session.commit()
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST, content=errored_barcodes
+            raise BadRequest(
+                detail="All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
             )
 
-    session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-        {"status": "Completed", "update_dt": datetime.now(timezone.utc)},
-        synchronize_session=False,
-    )
+        (
+            withdraw_items,
+            withdraw_non_tray_items,
+            withdraw_trays,
+            errored_barcodes_from_processing,
+        ) = process_withdraw_job_data(session, withdraw_job.id, barcodes, df)
 
-    if withdraw_trays:
-        session.bulk_save_objects(withdraw_trays)
-    if withdraw_items:
-        session.bulk_save_objects(withdraw_items)
-    if withdraw_non_tray_items:
-        session.bulk_save_objects(withdraw_non_tray_items)
+        errored_barcodes["errors"].extend(
+            errored_barcodes_from_processing.get("errors", [])
+        )
 
-    session.commit()
-    session.refresh(withdraw_job)
+        if not withdraw_items and not withdraw_non_tray_items and not withdraw_trays:
+            if not errored_barcodes.get("errors"):
+                session.query(BatchUpload).filter(
+                    BatchUpload.id == new_batch_upload.id
+                ).update(
+                    {"status": "Failed", "update_dt": datetime.utcnow()},
+                    synchronize_session=False,
+                )
+                session.commit()
+                raise NotFound(
+                    detail="All barcodes are invalid to process bulk withdraw upload. Please check your barcodes and try again."
+                )
+            else:
+                session.query(BatchUpload).filter(
+                    BatchUpload.id == new_batch_upload.id
+                ).update(
+                    {"status": "Failed", "update_dt": datetime.utcnow()},
+                    synchronize_session=False,
+                )
+                session.commit()
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST, content=errored_barcodes
+                )
 
-    for tray in withdraw_trays:
-        update_shelf_space_after_tray(tray, None, None)
-    for non_tray_item in withdraw_non_tray_items:
-        update_shelf_space_after_non_tray(non_tray_item, None, None)
+        session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
+            {"status": "Completed", "update_dt": datetime.utcnow()},
+            synchronize_session=False,
+        )
 
-    if errored_barcodes.get("errors"):
-        return JSONResponse(status_code=status.HTTP_200_OK, content=errored_barcodes)
+        if withdraw_trays:
+            session.bulk_save_objects(withdraw_trays)
+        if withdraw_items:
+            session.bulk_save_objects(withdraw_items)
+        if withdraw_non_tray_items:
+            session.bulk_save_objects(withdraw_non_tray_items)
 
-    return JSONResponse(
-        status_code=status.HTTP_200_OK, content="Batch Upload Successful"
-    )
+        session.commit()
+        session.refresh(withdraw_job)
+
+        for tray in withdraw_trays:
+            update_shelf_space_after_tray(tray, None, None)
+        for non_tray_item in withdraw_non_tray_items:
+            update_shelf_space_after_non_tray(non_tray_item, None, None)
+
+        if errored_barcodes.get("errors"):
+            return JSONResponse(status_code=status.HTTP_200_OK, content=errored_barcodes)
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK, content="Batch Upload Successful"
+        )
+    except Exception as e:
+        inventory_logger.error(f"Batch Upload Internal Server Error: {e}")
+        raise InternalServerError(detail=f"Internal Server Error: {e}")
+
+
 
 
 @router.post("/location-management")

@@ -942,24 +942,18 @@ def process_withdraw_job_data(
     non_tray_items = (
         session.query(NonTrayItem).filter(NonTrayItem.barcode_id.in_(barcode_ids)).all()
     )
-    trays = session.query(Tray).filter(Tray.barcode_id.in_(barcode_ids)).all()
 
     # Create dictionaries for quick lookup
     item_dict = {item.barcode_id: item for item in items}
     non_tray_item_dict = {
         non_tray_item.barcode_id: non_tray_item for non_tray_item in non_tray_items
     }
-    tray_dict = {tray.barcode_id: tray for tray in trays}
 
     for barcode in barcodes:
         item = item_dict.get(barcode.id)
         non_tray_item = non_tray_item_dict.get(barcode.id)
-        tray = tray_dict.get(barcode.id)
 
-        if not df[df["Item Barcode"].astype(str) == barcode.value].empty:
-            index = df[df["Item Barcode"].astype(str) == barcode.value].index[0]
-        else:
-            index = df[df["Tray Barcode"].astype(str) == barcode.value].index[0]
+        index = df[df["Item Barcode"].astype(str) == barcode.value].index[0]
 
         if item:
             item_withdrawal, item_errors = _validate_withdraw_item(
@@ -967,6 +961,11 @@ def process_withdraw_job_data(
             )
             if item_withdrawal:
                 withdraw_items.append(item_withdrawal)
+                new_tray_withdrawal = TrayWithdrawal(tray_id=item.tray_id, withdraw_job_id=withdraw_job_id),
+
+                if new_tray_withdrawal not in withdraw_trays:
+                    withdraw_trays.append(new_tray_withdrawal)
+
                 item.update_dt = update_dt
                 session.add(item)
         elif non_tray_item:
@@ -1008,20 +1007,6 @@ def process_withdraw_job_data(
                 )
                 non_tray_item.update_dt = update_dt
                 session.add(non_tray_item)
-        elif tray:
-            existing_tray_withdrawal = (
-                session.query(TrayWithdrawal)
-                .filter(
-                    TrayWithdrawal.tray_id == tray.id,
-                    TrayWithdrawal.withdraw_job_id == withdraw_job_id,
-                )
-                .first()
-            )
-
-            if not existing_tray_withdrawal:
-                withdraw_trays.append(
-                    TrayWithdrawal(tray_id=tray.id, withdraw_job_id=withdraw_job_id)
-                )
         else:
             errors.append({"line": int(index) + 1, "error": "Barcode not found"})
 
