@@ -45,7 +45,7 @@ def get_request_list(
     requestor_name: Optional[str] = None,
     item_barcode: Optional[str] = None,
     non_tray_item_barcode: Optional[str] = None,
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Get a list of requests
@@ -79,20 +79,18 @@ def get_request_list(
         query = query.where(Request.pick_list_id == None)
     if item_barcode:
         item_subquery = (
-            select(Item.id).join(
-                Barcode, Barcode.id == Item.barcode_id
-            ).where(
-                Barcode.value == item_barcode
-            ).distinct()
+            select(Item.id)
+            .join(Barcode, Barcode.id == Item.barcode_id)
+            .where(Barcode.value == item_barcode)
+            .distinct()
         )
         query = query.where(Request.item_id.in_(item_subquery))
     if non_tray_item_barcode:
         non_tray_item_subquery = (
-            select(NonTrayItem.id).join(
-                Barcode, Barcode.id == NonTrayItem.barcode_id
-            ).where(
-                Barcode.value == non_tray_item_barcode
-            ).distinct()
+            select(NonTrayItem.id)
+            .join(Barcode, Barcode.id == NonTrayItem.barcode_id)
+            .where(Barcode.value == non_tray_item_barcode)
+            .distinct()
         )
         query = query.where(Request.non_tray_item_id.in_(non_tray_item_subquery))
 
@@ -178,13 +176,14 @@ def create_request(
 
         session.query(Item).filter(Item.id == item.id).update(
             {"status": "Requested", "update_dt": datetime.now()},
-            synchronize_session="fetch",
+            synchronize_session=False,
         )
 
     elif non_tray_item:
         if non_tray_item.status == "PickList":
-            raise BadRequest(detail="Non Tray Item Item is in pick list and cannot be "
-                                    "requested")
+            raise BadRequest(
+                detail="Non Tray Item Item is in pick list and cannot be " "requested"
+            )
 
         existing_non_tray_item = (
             session.query(Request)
@@ -206,7 +205,7 @@ def create_request(
 
         session.query(NonTrayItem).filter(NonTrayItem.id == non_tray_item.id).update(
             {"status": "Requested", "update_dt": datetime.now()},
-            synchronize_session="fetch",
+            synchronize_session=False,
         )
 
         request_input.non_tray_item_id = non_tray_item.id
@@ -308,13 +307,13 @@ def delete_request(id: int, session: Session = Depends(get_session)):
         # Delete request from pick_list_requests
         if request.item:
             session.query(Item).filter(Item.id == request.item.id).update(
-                {"status": "In"}, synchronize_session="fetch"
+                {"status": "In"}, synchronize_session=False
             )
 
         else:
             session.query(NonTrayItem).filter(
                 NonTrayItem.id == request.non_tray_item.id
-            ).update({"status": "In"}, synchronize_session="fetch")
+            ).update({"status": "In"}, synchronize_session=False)
 
         # Deleting request
         session.delete(request)

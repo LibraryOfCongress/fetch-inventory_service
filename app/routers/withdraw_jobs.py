@@ -28,7 +28,8 @@ from app.models.withdraw_jobs import WithdrawJob, WithdrawJobStatus
 from app.models.pick_lists import PickList
 from app.models.requests import Request
 from app.utilities import (
-    validate_item_not_shelved, validate_non_tray_item_not_shelved,
+    validate_item_not_shelved,
+    validate_non_tray_item_not_shelved,
     get_sorted_query,
 )
 from starlette import status
@@ -69,7 +70,7 @@ def get_withdraw_job_list(
     queue: bool = Query(default=False),
     params: JobFilterParams = Depends(),
     status: WithdrawJobStatus | None = None,
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Retrieve a paginated list of withdraw jobs.
@@ -88,9 +89,7 @@ def get_withdraw_job_list(
 
     if queue:
         # filter out completed.  maybe someday hide cancelled.
-        query = query.where(
-            WithdrawJob.status != "Completed"
-        )
+        query = query.where(WithdrawJob.status != "Completed")
     if params.workflow_id:
         query = query.where(WithdrawJob.id == params.workflow_id)
     if params.user_id:
@@ -135,9 +134,8 @@ def get_withdraw_job_detail(id: int, session: Session = Depends(get_session)):
 
 @router.post("/", response_model=WithdrawJobWriteOutput)
 def create_withdraw_job(
-    withdraw_job_input: WithdrawJobInput,
-    session: Session = Depends(get_session)
-)-> WithdrawJob:
+    withdraw_job_input: WithdrawJobInput, session: Session = Depends(get_session)
+) -> WithdrawJob:
     """
     Creates a new withdraw job in the database.
 
@@ -201,14 +199,15 @@ def update_withdraw_job(
             session.refresh(pick_list)
             session.commit()
 
-
-
         elif withdraw_job_input.add_to_picklist:
             pick_list = session.get(PickList, existing_withdraw_job.pick_list_id)
             if not pick_list:
                 raise NotFound(
                     detail=f"Pick list id {withdraw_job_input.pick_list_id} not found"
                 )
+
+            if pick_list.status == "Completed":
+                raise BadRequest(detail="Pick List Already Completed")
 
         item_ids = []
         non_tray_item_ids = []
@@ -234,6 +233,15 @@ def update_withdraw_job(
                     )
                 )
                 item_ids.append(item.id)
+            if item.status == "Requested":
+                session.query(Request).filter(
+                    Request.item == item.id,
+                    Request.pick_list_id == None,
+                    Request.fulfilled == False,
+                ).update(
+                    {"pick_list_id": pick_list.id, "update_dt": updated_dt},
+                    synchronize_session=False,
+                )
 
         for non_tray_item in existing_withdraw_job.non_tray_items:
             if not building_id:
@@ -256,21 +264,30 @@ def update_withdraw_job(
                 )
                 non_tray_item_ids.append(non_tray_item.id)
 
+            if non_tray_item.status == "Requested":
+                session.query(Request).filter(
+                    Request.non_tray_item_id == non_tray_item.id,
+                    Request.pick_list_id == None,
+                    Request.fulfilled == False,
+                ).update(
+                    {"pick_list_id": pick_list.id, "update_dt": updated_dt},
+                    synchronize_session=False,
+                )
+
         if new_request:
             session.bulk_save_objects(new_request)
             session.commit()
 
         item_ids = [item.id for item in existing_withdraw_job.items]
-        non_tray_item_ids = [non_tray_item.id for non_tray_item in
-                             existing_withdraw_job.non_tray_items]
+        non_tray_item_ids = [
+            non_tray_item.id for non_tray_item in existing_withdraw_job.non_tray_items
+        ]
 
         session.query(Item).filter(Item.id.in_(item_ids)).update(
             {"status": "PickList", "update_dt": updated_dt},
             synchronize_session=False,
         )
-        session.query(NonTrayItem).filter(
-            NonTrayItem.id.in_(non_tray_item_ids)
-        ).update(
+        session.query(NonTrayItem).filter(NonTrayItem.id.in_(non_tray_item_ids)).update(
             {"status": "PickList", "update_dt": updated_dt},
             synchronize_session=False,
         )
@@ -326,9 +343,7 @@ def update_withdraw_job(
             # Checking if the tray is empty and updating the shelf position
             if tray_ids:
 
-                trays = session.query(Tray).filter(
-                    Tray.id.in_(tray_ids)
-                )
+                trays = session.query(Tray).filter(Tray.id.in_(tray_ids))
                 empty_trays = [tray for tray in trays if len(tray.items) == 0]
 
                 if empty_trays:
@@ -424,23 +439,36 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
     if withdraw_job.items:
         for item in withdraw_job.items:
             session.query(Item).filter(Item.id == item.id).update(
-                {"update_dt": update_dt, "withdrawal_dt": None, "barcode_id": item.withdrawn_barcode_id,
-                "withdrawn_barcode_id": None}
+                {
+                    "update_dt": update_dt,
+                    "withdrawal_dt": None,
+                    "barcode_id": item.withdrawn_barcode_id,
+                    "withdrawn_barcode_id": None,
+                }
             )
     if withdraw_job.non_tray_items:
         for non_tray_item in withdraw_job.non_tray_items:
             session.query(NonTrayItem).filter(
                 NonTrayItem.id == non_tray_item.id
-            ).update({"update_dt": update_dt, "withdrawal_dt": None, "barcode_id":
-                non_tray_item.withdrawn_barcode_id, "withdrawn_barcode_id": None}
-                     )
+            ).update(
+                {
+                    "update_dt": update_dt,
+                    "withdrawal_dt": None,
+                    "barcode_id": non_tray_item.withdrawn_barcode_id,
+                    "withdrawn_barcode_id": None,
+                }
+            )
 
     if withdraw_job.trays:
         for tray in withdraw_job.trays:
             for item in tray.items:
                 session.query(Item).filter(Item.id == item.id).update(
-                    {"update_dt": update_dt, "withdrawal_dt": None,  "barcode_id":
-                item.withdrawn_barcode_id, "withdrawn_barcode_id": None}
+                    {
+                        "update_dt": update_dt,
+                        "withdrawal_dt": None,
+                        "barcode_id": item.withdrawn_barcode_id,
+                        "withdrawn_barcode_id": None,
+                    }
                 )
 
     session.delete(withdraw_job)
@@ -698,70 +726,91 @@ def remove_items_from_withdraw_job(
 
     if item:
         # deleting request from pick_list_requests
-        request_item = session.query(Request).join(PickList, Request.pick_list_id ==
-                                     PickList.id).filter(
-            PickList.id == withdraw_job.pick_list_id, Request.item_id == item.id
-        ).first()
+        request_item = (
+            session.query(Request)
+            .join(PickList, Request.pick_list_id == PickList.id)
+            .filter(
+                PickList.id == withdraw_job.pick_list_id, Request.item_id == item.id
+            )
+            .first()
+        )
 
         if request_item:
             session.query(Request).filter_by(id=request_item.id).delete()
 
         session.query(ItemWithdrawal).filter_by(
             item_id=item.id, withdraw_job_id=job_id
-            ).delete()
+        ).delete()
         session.query(Item).filter_by(id=item.id).update(
             {
-                "status": "In" if item.status in ["Requested", "PickList"] else item.status,
-                "update_dt": update_dt, "withdrawal_dt": None
+                "status": (
+                    "In" if item.status in ["Requested", "PickList"] else item.status
+                ),
+                "update_dt": update_dt,
+                "withdrawal_dt": None,
             }
         )
     elif non_tray_item:
-        request_non_tray_item = session.query(Request).join(
-            PickList, Request.pick_list_id ==
-            PickList.id
-            ).filter(
-            PickList.id == withdraw_job.pick_list_id, Request.non_tray_item_id == non_tray_item.id
-        ).first()
+        request_non_tray_item = (
+            session.query(Request)
+            .join(PickList, Request.pick_list_id == PickList.id)
+            .filter(
+                PickList.id == withdraw_job.pick_list_id,
+                Request.non_tray_item_id == non_tray_item.id,
+            )
+            .first()
+        )
 
         if request_non_tray_item:
             session.query(Request).filter_by(id=request_non_tray_item.id).delete()
 
         session.query(NonTrayItemWithdrawal).filter_by(
             non_tray_item_id=non_tray_item.id, withdraw_job_id=job_id
-            ).delete()
+        ).delete()
         session.query(NonTrayItem).filter_by(id=non_tray_item.id).update(
             {
-                "status": "In" if non_tray_item.status in ["Requested", "PickList"]
-                else item.status,
-                "update_dt": update_dt, "withdrawal_dt": None
+                "status": (
+                    "In"
+                    if non_tray_item.status in ["Requested", "PickList"]
+                    else item.status
+                ),
+                "update_dt": update_dt,
+                "withdrawal_dt": None,
             }
         )
     elif tray:
         session.query(TrayWithdrawal).filter_by(
             tray_id=tray.id, withdraw_job_id=job_id
-            ).delete()
+        ).delete()
         session.query(Tray).filter_by(id=tray.id).update(
             {"update_dt": update_dt, "withdrawal_dt": None}
-            )
+        )
         for item in tray.items:
             # deleting request from pick_list_requests
-            request_item = session.query(Request).join(
-                PickList, Request.pick_list_id ==
-                PickList.id
-                ).filter(
-                PickList.id == withdraw_job.pick_list_id, Request.item_id == item.id
-            ).first()
+            request_item = (
+                session.query(Request)
+                .join(PickList, Request.pick_list_id == PickList.id)
+                .filter(
+                    PickList.id == withdraw_job.pick_list_id, Request.item_id == item.id
+                )
+                .first()
+            )
 
             if request_item:
                 session.query(Request).filter_by(id=request_item.id).delete()
 
             session.query(ItemWithdrawal).filter_by(
                 item_id=item.id, withdraw_job_id=job_id
-                ).delete()
+            ).delete()
             session.query(Item).filter_by(id=item.id).update(
                 {
-                    "status": "In" if item.status in ["Requested", "PickList"] else item.status,
-                    "update_dt": update_dt, "withdrawal_dt": None
+                    "status": (
+                        "In"
+                        if item.status in ["Requested", "PickList"]
+                        else item.status
+                    ),
+                    "update_dt": update_dt,
+                    "withdrawal_dt": None,
                 }
             )
     else:

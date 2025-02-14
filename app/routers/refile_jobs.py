@@ -127,7 +127,7 @@ def get_refile_job_list(
     queue: bool = Query(default=False),
     params: JobFilterParams = Depends(),
     status: RefileJobStatus | None = None,
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Get a list of refile jobs
@@ -402,7 +402,7 @@ def delete_refile_job(id: int, session: Session = Depends(get_session)):
             "scanned_for_refile_queue_dt": update_dt,
             "update_dt": update_dt,
         },
-        synchronize_session="fetch",
+        synchronize_session=False,
     )
 
     session.query(NonTrayItem).filter(NonTrayItem.id.in_(non_tray_item_ids)).update(
@@ -411,7 +411,7 @@ def delete_refile_job(id: int, session: Session = Depends(get_session)):
             "scanned_for_refile_queue_dt": update_dt,
             "update_dt": update_dt,
         },
-        synchronize_session="fetch",
+        synchronize_session=False,
     )
 
     # Delete refile items
