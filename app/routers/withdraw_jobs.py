@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
@@ -180,7 +180,7 @@ def update_withdraw_job(
     """
 
     existing_withdraw_job = session.get(WithdrawJob, id)
-    updated_dt = datetime.utcnow()
+    updated_dt = datetime.now(timezone.utc)
 
     if not existing_withdraw_job:
         raise NotFound(detail=f"Withdraw job id {id} not found")
@@ -412,7 +412,7 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
     - HTTPException: If the withdraw job is not found in the database.
     """
     withdraw_job = session.get(WithdrawJob, job_id)
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not withdraw_job:
         raise NotFound(detail=f"Withdraw job id {job_id} not found")
@@ -459,7 +459,7 @@ def add_items_to_withdraw_job(
     session: Session = Depends(get_session),
 ):
     lookup_barcode_value = withdraw_job_input.barcode_value
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not lookup_barcode_value:
         raise BadRequest(detail="A barcode value must be provided")
@@ -672,7 +672,7 @@ def remove_items_from_withdraw_job(
     - HTTPException: If the withdraw job is not found in the database.
     """
     lookup_barcode_value = withdraw_job_input.barcode_value
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not lookup_barcode_value:
         raise BadRequest(detail="A barcode value must be provided")

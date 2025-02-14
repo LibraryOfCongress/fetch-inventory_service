@@ -1,8 +1,8 @@
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 from pydantic import condecimal
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -18,9 +18,9 @@ class SizeClass(SQLModel, table=True):
     __tablename__ = "size_class"
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True))
-    name: str = Field(max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=True)
+    name: str = Field(sa_column=sa.Column(sa.VARCHAR(50), nullable=False, unique=True))
     short_name: str = Field(
-        max_length=11, sa_column=sa.VARCHAR, nullable=False, unique=True
+        sa_column=sa.Column(sa.VARCHAR(11), nullable=False, unique=True)
     )
     height: condecimal(decimal_places=2) = Field(
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
@@ -32,10 +32,10 @@ class SizeClass(SQLModel, table=True):
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     trays: List["Tray"] = Relationship(back_populates="size_class")
     items: List["Item"] = Relationship(back_populates="size_class")

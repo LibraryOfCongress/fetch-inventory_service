@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -23,10 +23,10 @@ class ShelfPositionNumber(SQLModel, table=True):
         sa_column=sa.Column(sa.SmallInteger, nullable=False, unique=True)
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     # shelf positions assigned this number

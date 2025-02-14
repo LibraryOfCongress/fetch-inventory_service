@@ -1,6 +1,6 @@
 import re
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models.non_tray_items import NonTrayItem
 from app.models.barcodes import Barcode

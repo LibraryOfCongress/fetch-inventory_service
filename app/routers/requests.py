@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -280,7 +280,7 @@ def update_request(
         for key, value in mutated_data.items():
             setattr(existing_request, key, value)
 
-        setattr(existing_request, "update_dt", datetime.utcnow())
+        setattr(existing_request, "update_dt", datetime.now(timezone.utc))
         session.add(existing_request)
         session.commit()
         session.refresh(existing_request)

@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination import paginate as paginate_list
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -310,7 +310,7 @@ def update_shelf(
     for key, value in mutated_data.items():
         setattr(existing_shelf, key, value)
 
-    setattr(existing_shelf, "update_dt", datetime.utcnow())
+    setattr(existing_shelf, "update_dt", datetime.now(timezone.utc))
     session.add(existing_shelf)
     session.commit()
     session.refresh(existing_shelf)

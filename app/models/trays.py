@@ -1,9 +1,9 @@
 import uuid
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import backref
 from sqlalchemy import ForeignKey
@@ -33,7 +33,7 @@ class Tray(SQLModel, table=True):
         ),
     )
 
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
     accession_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="accession_jobs.id"
     )
@@ -50,28 +50,28 @@ class Tray(SQLModel, table=True):
         foreign_key="barcodes.id", nullable=True, default=None, unique=True
     )
     withdrawn_barcode_id: Optional[uuid.UUID] = Field(
-        default=None,
-        nullable=True,
-        sa_column=Column(
+        sa_column=sa.Column(
             UUID(as_uuid=True),
             ForeignKey("barcodes.id", name="withdrawn_tray_barcode_id"),
-            unique=True
+            unique=True,
+            default=None,
+            nullable=True,
         )
     )
     scanned_for_accession: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     scanned_for_verification: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     scanned_for_shelving: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     collection_accessioned: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     collection_verified: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     size_class_id: int = Field(foreign_key="size_class.id", nullable=False)
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
@@ -86,19 +86,19 @@ class Tray(SQLModel, table=True):
         foreign_key="conveyance_bins.id", nullable=True
     )
     accession_dt: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=None, nullable=True)
     )
     shelved_dt: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=None, nullable=True)
     )
     withdrawal_dt: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=None, nullable=True)
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     # derived item count

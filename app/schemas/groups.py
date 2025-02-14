@@ -1,6 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.schemas.permissions import PermissionBaseReadOutput
 

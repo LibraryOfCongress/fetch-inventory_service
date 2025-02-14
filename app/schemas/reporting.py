@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.size_class import SizeClassDetailReadOutput
@@ -164,7 +164,7 @@ class NonTrayItemCountReadOutput(BaseModel):
     non_tray_item_count: Optional[int] = 0
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "size_class_id": 1,
                 "size_class_name": "C-Low",
@@ -182,7 +182,7 @@ class TrayItemCountReadOutput(BaseModel):
     tray_item_count: Optional[int] = 0
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "size_class_id": 1,
                 "size_class_name": "C-Low",
@@ -199,7 +199,7 @@ class UserJobItemCountReadOutput(BaseModel):
     total_items_processed: Optional[int] = 0
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "user_name": "Bilbo Baggins",
                 "job_type": "Shelving",
@@ -217,7 +217,7 @@ class VerificationChangesOutput(BaseModel):
     action: Optional[str] = None
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "workflow_id": 1,
                 "completed_dt": "2023-10-08T20:46:56.764426",
@@ -235,7 +235,7 @@ class RetrievalItemCountReadOutput(BaseModel):
     max_retrieved_count: Optional[int] = 0
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "owner_name": "Bilbo Baggins",
                 "total_item_retrieved_count": 1,

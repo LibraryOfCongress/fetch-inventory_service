@@ -3,7 +3,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from sqlalchemy import asc, desc
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database.session import get_session, commit_record, remove_record
 from app.filter_params import SortParams
@@ -124,7 +124,7 @@ def update_group(
     for key, value in mutated_data.items():
         setattr(existing_group, key, value)
 
-    setattr(existing_group, "update_dt", datetime.utcnow())
+    setattr(existing_group, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_group)
     session.commit()

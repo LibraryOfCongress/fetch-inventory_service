@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
@@ -212,7 +212,7 @@ def update_verification_job(
 
             setattr(existing_verification_job, key, value)
 
-        setattr(existing_verification_job, "update_dt", datetime.utcnow())
+        setattr(existing_verification_job, "update_dt", datetime.now(timezone.utc))
 
         existing_verification_job = commit_record(session, existing_verification_job)
 
@@ -333,7 +333,7 @@ def add_item_to_verification_job(
         )
         commit_record(session, new_verification_change)
 
-    verification_job.update_dt = datetime.utcnow()
+    verification_job.update_dt = datetime.now(timezone.utc)
     session.refresh(verification_job)
 
     return verification_job
@@ -412,7 +412,7 @@ def remove_item_from_verification_job(
         )
         commit_record(session, new_verification_change)
 
-    verification_job.update_dt = datetime.utcnow()
+    verification_job.update_dt = datetime.now(timezone.utc)
     session.refresh(verification_job)
 
     return verification_job

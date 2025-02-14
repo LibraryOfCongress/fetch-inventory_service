@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams
@@ -158,7 +158,7 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
     new_item.withdrawal_dt = None
     # accession is how items are created. Set accession_dt
     if not new_item.accession_dt:
-        new_item.accession_dt = datetime.utcnow()
+        new_item.accession_dt = datetime.now(timezone.utc)
 
     # check if existing withdrawn item with this barcode
     previous_item = session.exec(
@@ -229,7 +229,7 @@ def update_item(
                 session.add(new_verification_change)
 
             setattr(existing_item, key, value)
-        setattr(existing_item, "update_dt", datetime.utcnow())
+        setattr(existing_item, "update_dt", datetime.now(timezone.utc))
 
         # Commit the changes to the database
         session.add(existing_item)

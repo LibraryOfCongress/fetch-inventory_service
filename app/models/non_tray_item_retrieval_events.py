@@ -1,9 +1,9 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlmodel import SQLModel, Field, Relationship
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 
 
 class NonTrayItemRetrievalEvent(SQLModel, table=True):
@@ -13,17 +13,17 @@ class NonTrayItemRetrievalEvent(SQLModel, table=True):
 
     __tablename__ = "non_tray_items_retrieval_events"
 
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
     non_tray_item_id: Optional[int] = Field(
        foreign_key="non_tray_items.id", nullable=False, unique=False)
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=False, unique=False)
     pick_list_id: Optional[int] = Field(
         foreign_key="pick_lists.id", nullable=False, unique=False)
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     non_tray_item: Optional["NonTrayItem"] = Relationship(
         back_populates="non_tray_items_retrieval_events"

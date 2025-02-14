@@ -6,6 +6,7 @@ import logging
 
 import pandas as pd
 import pytz
+from datetime import timezone
 from sqlalchemy import and_, text, asc, desc
 from sqlalchemy.orm import joinedload, aliased
 from sqlalchemy.inspection import inspect
@@ -13,10 +14,9 @@ from sqlalchemy.sql import not_
 from sqlmodel import select, Session
 from fastapi import Header, Depends
 
-from app.database.session import get_session
+from app.database.session import get_session, session_manager
 from app.config.exceptions import NotFound, BadRequest
 from app.logger import inventory_logger
-from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.models.aisle_numbers import AisleNumber
 from app.models.barcodes import Barcode
 from app.models.buildings import Building
@@ -266,11 +266,6 @@ def process_containers_for_shelving(
         session.add(container_object)
         session.commit()
         session.refresh(container_object)
-
-        if container_type == "Tray":
-            update_shelf_space_after_tray(container_object, None, None)
-        else:
-            update_shelf_space_after_non_tray(container_object, None, None)
 
     return
 
@@ -937,7 +932,7 @@ def process_withdraw_job_data(
     withdraw_items = []
     withdraw_non_tray_items = []
     withdraw_trays = []
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     # Collect all barcode ids
     barcode_ids = [barcode.id for barcode in barcodes]
@@ -1033,23 +1028,29 @@ def process_withdraw_job_data(
     return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
 
 
-async def start_session_with_user_id(user_email: str, session):
-    """
-    This method is to add the user id for any database change.
-    """
-    session.execute(text(f"select set_config('audit.user_id', '{user_email}', true)"))
+# def start_session_with_user_id(user_email: str, session):
+#     """
+#     This method is to add the user id for any database change.
+#     """
+#     session.execute(text(f"select set_config('audit.user_id', '{user_email}', true)"))
 
 
-async def set_session_to_request(
+def set_session_to_request(
     request: Request,
-    session: Session,
+    # session: Session,
     user_email: str,
 ):
+    # if request.method != "GET":
+    #     request.state.db_session = session
+
+    #     await start_session_with_user_id(user_email, session=request.state.db_session)
+
+    # return request
     if request.method != "GET":
-        request.state.db_session = session
-
-        await start_session_with_user_id(user_email, session=request.state.db_session)
-
+        with session_manager() as session:
+            request.state.db_session = session
+            session.exec(text(f"select set_config('audit.user_id', '{user_email}', true)"))
+            # await start_session_with_user_id(user_email, session=session)  # Explicitly pass session
     return request
 
 
@@ -1083,3 +1084,8 @@ def get_sorted_query(model, query, sort_params):
         )
 
     return query
+
+
+def is_tz_naive(dt: datetime) -> bool:
+    """Checks if a date is timezone naive"""
+    return dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None

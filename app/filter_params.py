@@ -2,7 +2,7 @@
 from fastapi import Query
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class JobFilterParams(BaseModel):

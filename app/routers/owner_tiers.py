@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -130,7 +130,7 @@ def update_owner_tier(
         for key, value in mutated_data.items():
             setattr(existing_owner_tier, key, value)
 
-        setattr(existing_owner_tier, "update_dt", datetime.utcnow())
+        setattr(existing_owner_tier, "update_dt", datetime.now(timezone.utc))
         session.add(existing_owner_tier)
         session.commit()
         session.refresh(existing_owner_tier)

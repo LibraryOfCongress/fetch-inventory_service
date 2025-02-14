@@ -3,7 +3,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy import not_, or_
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
@@ -229,7 +229,7 @@ def update_accession_job(
         setattr(existing_accession_job, key, value)
 
     # setting the update_dt to now
-    setattr(existing_accession_job, "update_dt", datetime.utcnow())
+    setattr(existing_accession_job, "update_dt", datetime.now(timezone.utc))
     # Update container_type_id based on trayed status
     if existing_accession_job.trayed:
         container_type = (
@@ -255,7 +255,7 @@ def update_accession_job(
             session.query(Barcode).filter(
                 Barcode.id.in_(items_barcode_ids), Barcode.withdrawn == True
             ).update(
-                {"withdrawn": False, "update_dt": datetime.utcnow()},
+                {"withdrawn": False, "update_dt": datetime.now(timezone.utc)},
                 synchronize_session=False,
             )
 
@@ -267,7 +267,7 @@ def update_accession_job(
             session.query(Barcode).filter(
                 Barcode.id.in_(non_tray_items_barcode_ids), Barcode.withdrawn == True
             ).update(
-                {"withdrawn": False, "update_dt": datetime.utcnow()},
+                {"withdrawn": False, "update_dt": datetime.now(timezone.utc)},
                 synchronize_session=False,
             )
         if existing_accession_job.trays:
@@ -278,7 +278,7 @@ def update_accession_job(
             session.query(Barcode).filter(
                 Barcode.id.in_(trays_barcode_ids), Barcode.withdrawn == True
             ).update(
-                {"withdrawn": False, "update_dt": datetime.utcnow()},
+                {"withdrawn": False, "update_dt": datetime.now(timezone.utc)},
                 synchronize_session=False,
             )
 
@@ -289,7 +289,7 @@ def update_accession_job(
                     session.query(Barcode).filter(
                         Barcode.id.in_(items_barcode_ids), Barcode.withdrawn == True
                     ).update(
-                        {"withdrawn": False, "update_dt": datetime.utcnow()},
+                        {"withdrawn": False, "update_dt": datetime.now(timezone.utc)},
                         synchronize_session=False,
                     )
 

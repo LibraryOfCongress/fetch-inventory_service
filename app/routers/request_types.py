@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
@@ -103,7 +103,7 @@ def update_request_type(
         for key, value in mutated_data.items():
             setattr(existing_request_type, key, value)
 
-        setattr(existing_request_type, "update_dt", datetime.utcnow())
+        setattr(existing_request_type, "update_dt", datetime.now(timezone.utc))
         session.add(existing_request_type)
         session.commit()
         session.refresh(existing_request_type)

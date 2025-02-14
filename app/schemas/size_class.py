@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, constr, condecimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class SizeClassInput(BaseModel):

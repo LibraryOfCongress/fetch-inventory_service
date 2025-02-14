@@ -1,6 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel, conint, constr
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.schemas.buildings import BuildingDetailWriteOutput
 

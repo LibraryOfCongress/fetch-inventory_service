@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
@@ -170,7 +170,7 @@ def update_shelf_type(
         for key, value in mutated_data.items():
             setattr(existing_shelf_type, key, value)
 
-        setattr(existing_shelf_type, "update_dt", datetime.utcnow())
+        setattr(existing_shelf_type, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_shelf_type)
         session.commit()

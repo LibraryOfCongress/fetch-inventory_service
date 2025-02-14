@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Optional, List
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.item_withdrawals import ItemWithdrawal
@@ -31,7 +31,7 @@ class WithdrawJob(SQLModel, table=True):
 
     __tablename__ = "withdraw_jobs"
 
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
     assigned_user_id: Optional[int] = Field(
         foreign_key="users.id", nullable=True, unique=False
     )
@@ -47,17 +47,17 @@ class WithdrawJob(SQLModel, table=True):
         default=WithdrawJobStatus.Created,
     )
     last_transition: Optional[datetime] = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     run_time: Optional[timedelta] = Field(
-        sa_column=sa.Interval(6), nullable=False, default=timedelta()
+        sa_column=sa.Column(sa.Interval(6), nullable=False, default=timedelta())
     )
     pick_list_id: Optional[int] = Field(foreign_key="pick_lists.id", nullable=True)
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     assigned_user: Optional["User"] = Relationship(

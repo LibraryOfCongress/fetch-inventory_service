@@ -5,7 +5,7 @@ from pydantic import (
     field_validator,
     computed_field,
 )
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
 from app.models.withdraw_jobs import WithdrawJobStatus

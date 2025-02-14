@@ -1,7 +1,7 @@
 import uuid
 
 from pydantic import BaseModel, field_validator, computed_field
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
 from app.models.verification_jobs import VerificationJobStatus

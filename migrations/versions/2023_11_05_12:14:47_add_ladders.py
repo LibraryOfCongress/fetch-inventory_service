@@ -33,7 +33,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('ladder_number_id', sa.Integer(), nullable=False),
     sa.Column('side_id', sa.Integer(), nullable=False),
-    sa.Column('barcode', sqlmodel.sql.sqltypes.GUID(), nullable=True),
+    sa.Column('barcode', sa.dialects.postgresql.UUID(), nullable=True),
     sa.Column('create_dt', sa.DateTime(), nullable=False),
     sa.Column('update_dt', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['ladder_number_id'], ['ladder_numbers.id'], ),

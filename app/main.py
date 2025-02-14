@@ -4,7 +4,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.logger import inventory_logger
-from app.middlware import JWTMiddleware, SQLProfilerMiddleware
+from app.middlware import JWTMiddleware#, SQLProfilerMiddleware
 from app.profiling import USE_PROFILER
 
 from fastapi import FastAPI, Request
@@ -152,8 +152,8 @@ app.add_middleware(JWTMiddleware)
 
 # add query profiling middleware
 # TODO DISABLE THIS DURING legacy data migration runs
-if USE_PROFILER:
-    app.add_middleware(SQLProfilerMiddleware)
+# if USE_PROFILER:
+#     app.add_middleware(SQLProfilerMiddleware)
 
 # add CORS middleware
 app.add_middleware(
@@ -241,7 +241,7 @@ app.include_router(verification_changes.router)
 app.include_router(item_retrieval_events.router)
 app.include_router(non_tray_item_retrieval_events.router)
 
-if USE_PROFILER:
-    app.include_router(query_profiler.router)
+# if USE_PROFILER:
+#     app.include_router(query_profiler.router)
 
 add_pagination(app)

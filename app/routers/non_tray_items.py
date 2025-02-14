@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database.session import get_session, commit_record
 from app.events import update_shelf_space_after_non_tray
@@ -156,7 +156,7 @@ def create_non_tray_item(
     new_non_tray_item.container_type_id = container_type.id
     # non-trays are created in accession, set accession date
     if not new_non_tray_item.accession_dt:
-        new_non_tray_item.accession_dt = datetime.utcnow()
+        new_non_tray_item.accession_dt = datetime.now(timezone.utc)
     # check if existing withdrawn non-tray with this barcode
     previous_non_tray_item = session.exec(
         select(NonTrayItem).where(
@@ -257,7 +257,7 @@ def update_non_tray_item(
             session.add(new_verification_change)
 
         setattr(existing_non_tray_item, key, value)
-    setattr(existing_non_tray_item, "update_dt", datetime.utcnow())
+    setattr(existing_non_tray_item, "update_dt", datetime.now(timezone.utc))
 
     # Commit the changes to the database
     session.add(existing_non_tray_item)
@@ -406,7 +406,7 @@ def move_item(
     non_tray_item.shelf_position_id = destination_shelf_position_id
 
     # Update the update_dt field
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
     non_tray_item.update_dt = update_dt
     source_shelf.update_dt = update_dt
     destination_shelf.update_dt = update_dt

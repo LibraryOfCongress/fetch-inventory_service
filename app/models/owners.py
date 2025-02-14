@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import backref
@@ -29,21 +29,22 @@ class Owner(SQLModel, table=True):
         default=None, foreign_key="owners.id", nullable=True
     )
     name: str = Field(
-        max_length=150,
-        sa_column=sa.VARCHAR,
-        nullable=False,
-        index=True,
-        default=None
+        sa_column=sa.Column(
+            sa.VARCHAR(150),
+            nullable=False,
+            index=True,
+            default=None
+        )
     )
     owner_tier_id: int = Field(
         foreign_key="owner_tiers.id",
         nullable=False,
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     owner_tier: OwnerTier = Relationship(back_populates="owners")

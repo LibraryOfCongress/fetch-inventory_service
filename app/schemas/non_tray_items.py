@@ -2,7 +2,7 @@ import uuid
 
 from typing import Optional
 from pydantic import BaseModel, field_validator
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models.non_tray_items import NonTrayItemStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput

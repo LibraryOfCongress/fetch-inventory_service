@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -130,7 +130,7 @@ def update_building(
         for key, value in mutated_data.items():
             setattr(existing_building, key, value)
 
-        setattr(existing_building, "update_dt", datetime.utcnow())
+        setattr(existing_building, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_building)
         session.commit()

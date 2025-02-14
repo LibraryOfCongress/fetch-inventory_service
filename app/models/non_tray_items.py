@@ -1,10 +1,10 @@
 import uuid
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime, ForeignKey
+
 from sqlalchemy.dialects.postgresql import UUID
 from enum import Enum
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import backref
 from sqlmodel import SQLModel, Field, Relationship
@@ -41,7 +41,7 @@ class NonTrayItem(SQLModel, table=True):
             name="ck_non_tray_item_barcode_xor_withdrawn_barcode",
         ),
     )
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
     status: Optional[str] = Field(
         sa_column=sa.Column(
             sa.Enum(
@@ -56,12 +56,12 @@ class NonTrayItem(SQLModel, table=True):
         foreign_key="barcodes.id", nullable=True, default=None, unique=True
     )
     withdrawn_barcode_id: Optional[uuid.UUID] = Field(
-        default=None,
-        nullable=True,
-        sa_column=Column(
+        sa_column=sa.Column(
             UUID(as_uuid=True),
-            ForeignKey("barcodes.id", name="withdrawn_non_tray_item_barcode_id"),
-            unique=True
+            sa.ForeignKey("barcodes.id", name="withdrawn_non_tray_item_barcode_id"),
+            unique=True,
+            default=None,
+            nullable=True
         )
     )
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
@@ -76,16 +76,16 @@ class NonTrayItem(SQLModel, table=True):
         default=None, nullable=True, foreign_key="accession_jobs.id"
     )
     scanned_for_accession: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     scanned_for_verification: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     scanned_for_shelving: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     scanned_for_refile_queue: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     verification_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="verification_jobs.id"
@@ -100,26 +100,26 @@ class NonTrayItem(SQLModel, table=True):
         sa_column=sa.Column(sa.Integer, nullable=True, unique=False)
     )
     accession_dt: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=None, nullable=True)
     )
     withdrawal_dt: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=None, nullable=True)
     )
     shelved_dt: Optional[datetime] = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=None, nullable=True)
     )
     condition: str = Field(
-        max_length=30, sa_column=sa.VARCHAR, nullable=True, unique=False
+        sa_column=sa.Column(sa.VARCHAR(30), nullable=True, unique=False)
     )
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     scanned_for_refile_queue_dt: datetime = Field(
-        sa_column=sa.DateTime, default=None, nullable=True
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=None, nullable=True)
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     @property

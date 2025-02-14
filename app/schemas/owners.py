@@ -2,7 +2,7 @@ import uuid
 
 from typing import Optional, List
 from pydantic import BaseModel, conint
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.schemas.owner_tiers import OwnerTierDetailOutput
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
@@ -125,7 +125,7 @@ def update_barcode_types(
         for key, value in mutated_data.items():
             setattr(existing_barcode_types, key, value)
 
-        setattr(existing_barcode_types, "update_dt", datetime.utcnow())
+        setattr(existing_barcode_types, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_barcode_types)
         session.commit()

@@ -23,9 +23,25 @@ def get_session(request: Request = None):
     """
     Database sessions are injected as Path Operation Dependencies
     """
-    with Session(engine) as session:
+    with Session(engine, autoflush=False) as session:
         existing_session = None if not request else getattr(request.state, 'db_session', None)
-        yield session if not existing_session else existing_session
+        
+        # Use no_autoflush context for more control over session flush
+        with session.no_autoflush:
+            try:
+                # Yield the session to the path operation
+                yield session if not existing_session else existing_session
+            except Exception:
+                session.rollback()  # Rollback in case of errors
+                raise  # Re-raise the exception to propagate it
+            else:
+                pass
+                # our commits are called explicitly on purpose
+                # session.commit()  # Commit any changes at the end of the path operation
+            finally:
+                # Cleanup session and close it
+                session.close()  # This is optional; `with` should manage it.
+
 
 def get_sqlalchemy_session():
     """
@@ -44,12 +60,19 @@ def get_sqlalchemy_session():
 def session_manager():
     """
     For use when a generator is not valid
+    Context manager for database sessions.
+    Ensures sessions are properly scoped and closed.
     """
-    session = next(get_session())
+    session = Session(engine, autoflush=False)  # Disabling autoflush to prevent unintended mutations
     try:
         yield session
+        # our commits are called explicitly on purpose
+        # session.commit()  # Commit only if everything is successful
+    except Exception:
+        session.rollback()  # Rollback in case of error
+        raise
     finally:
-        session.close()
+        session.close()  # Always close the session
 
 
 def commit_record(session, record):

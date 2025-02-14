@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
@@ -264,7 +264,7 @@ def update_shelving_job(
         for key, value in mutated_data.items():
             setattr(existing_shelving_job, key, value)
 
-        setattr(existing_shelving_job, "update_dt", datetime.utcnow())
+        setattr(existing_shelving_job, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_shelving_job)
         session.commit()

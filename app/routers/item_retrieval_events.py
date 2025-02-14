@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
@@ -126,7 +126,7 @@ def update_item_retrieval_event(
     for key, value in mutated_data.items():
         setattr(existing_item_retrieval_event, key, value)
 
-    setattr(existing_item_retrieval_event, "update_dt", datetime.utcnow())
+    setattr(existing_item_retrieval_event, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_item_retrieval_event)
     session.commit()

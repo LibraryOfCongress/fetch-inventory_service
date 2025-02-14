@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
@@ -127,7 +127,7 @@ def update_ladder_number(
         for key, value in mutated_data.items():
             setattr(existing_ladder_number, key, value)
 
-        setattr(existing_ladder_number, "update_dt", datetime.utcnow())
+        setattr(existing_ladder_number, "update_dt", datetime.now(timezone.utc))
         session.add(existing_ladder_number)
         session.commit()
         session.refresh(existing_ladder_number)

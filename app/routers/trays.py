@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database.session import get_session, commit_record
 from app.events import update_shelf_space_after_tray
@@ -149,7 +149,7 @@ def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
     )
     # trays are created at accession, set accession date
     if not new_tray.accession_dt:
-        new_tray.accession_dt = datetime.utcnow()
+        new_tray.accession_dt = datetime.now(timezone.utc)
     new_tray.container_type_id = container_type.id
     session.add(new_tray)
     session.commit()
@@ -235,7 +235,7 @@ def update_tray(
 
         for item in existing_tray.items:
             session.query(Item).filter(Item.id == item.id).update(
-                {"size_class_id": tray.size_class_id, "update_dt": datetime.utcnow()}
+                {"size_class_id": tray.size_class_id, "update_dt": datetime.now(timezone.utc)}
             )
             item_barcode = session.get(Barcode, item.barcode_id)
             new_verification_changes.append(
@@ -256,7 +256,7 @@ def update_tray(
         tray_barcode = session.get(Barcode, tray.barcode_id)
         for item in existing_tray.items:
             session.query(Item).filter(Item.id == item.id).update(
-                {"media_type_id": tray.media_type_id, "update_dt": datetime.utcnow()}
+                {"media_type_id": tray.media_type_id, "update_dt": datetime.now(timezone.utc)}
             )
             item_barcode = session.get(Barcode, item.barcode_id)
             new_verification_changes.append(
@@ -275,7 +275,7 @@ def update_tray(
 
     for key, value in mutated_data.items():
         setattr(existing_tray, key, value)
-    setattr(existing_tray, "update_dt", datetime.utcnow())
+    setattr(existing_tray, "update_dt", datetime.now(timezone.utc))
 
     # Commit the changes to the database
     session.add(existing_tray)
@@ -448,7 +448,7 @@ def move_tray(
     tray.shelf_position_id = destination_shelf_position_id
 
     # Update the update_dt field
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
     tray.update_dt = update_dt
 
     session.add(tray)

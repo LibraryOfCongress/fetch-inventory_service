@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -19,10 +19,10 @@ class Workflow(SQLModel, table=True):
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True))
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     accession_job: Optional["AccessionJob"] = Relationship(back_populates="workflow")
     verification_job: Optional["VerificationJob"] = Relationship(

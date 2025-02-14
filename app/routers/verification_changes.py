@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
@@ -110,7 +110,7 @@ def update_verification_change(
     for key, value in mutated_data.items():
         setattr(existing_verification_change, key, value)
 
-    setattr(existing_verification_change, "update_dt", datetime.utcnow())
+    setattr(existing_verification_change, "update_dt", datetime.now(timezone.utc))
 
     existing_verification_change = commit_record(session, existing_verification_change)
 

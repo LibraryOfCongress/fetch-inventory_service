@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -142,7 +142,7 @@ def update_shelf_position_number(
         for key, value in mutated_data.items():
             setattr(existing_shelf_position_number, key, value)
 
-        setattr(existing_shelf_position_number, "update_dt", datetime.utcnow())
+        setattr(existing_shelf_position_number, "update_dt", datetime.now(timezone.utc))
         session.add(existing_shelf_position_number)
         session.commit()
         session.refresh(existing_shelf_position_number)

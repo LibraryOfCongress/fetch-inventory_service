@@ -1,7 +1,7 @@
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
 
-from datetime import datetime
+
+from datetime import datetime, timezone
 from typing import Optional, List
 
 from sqlmodel import SQLModel, Field, Relationship
@@ -15,14 +15,14 @@ class Permission(SQLModel, table=True):
 
     __tablename__ = "permissions"
 
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
-    name: str = Field(max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=True)
-    description: str = Field(max_length=255, sa_column=sa.VARCHAR, nullable=True)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
+    name: str = Field(sa_column=sa.Column(sa.VARCHAR(50), nullable=False, unique=True))
+    description: str = Field(sa_column=sa.Column(sa.VARCHAR(255), nullable=True))
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     groups: List["Group"] = Relationship(

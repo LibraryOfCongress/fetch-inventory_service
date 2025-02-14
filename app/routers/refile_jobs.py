@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
@@ -201,7 +201,7 @@ def create_refile_job(
     """
 
     lookup_barcode_values = refile_job_input.barcode_values
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not lookup_barcode_values:
         raise BadRequest(detail="At least one barcode value must be provided")
@@ -340,7 +340,7 @@ def update_refile_job(
     for key, value in mutated_data.items():
         setattr(existing_refile_job, key, value)
 
-    setattr(existing_refile_job, "update_dt", datetime.utcnow())
+    setattr(existing_refile_job, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_refile_job)
     session.commit()
@@ -385,7 +385,7 @@ def delete_refile_job(id: int, session: Session = Depends(get_session)):
         for refile_non_tray_item in refile_non_tray_items
     ]
 
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     session.query(Item).filter(Item.id.in_(item_ids)).update(
         {
@@ -443,7 +443,7 @@ def add_items_to_refile_job(
     - Not Found HTTPException: If the refile job or item is not found.
     """
     lookup_barcode_values = refile_job_input.barcode_values
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not lookup_barcode_values:
         raise BadRequest(detail="At least one barcode value must be provided")
@@ -571,7 +571,7 @@ def remove_item_from_refile_job(
     """
 
     lookup_barcode_values = refile_job_input.barcode_values
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not lookup_barcode_values:
         raise BadRequest(detail="At least one barcode value must be provided")
@@ -679,7 +679,7 @@ def update_item_in_refile_job(
 
     for key, value in mutated_data.items():
         setattr(existing_item, key, value)
-    setattr(existing_item, "update_dt", datetime.utcnow())
+    setattr(existing_item, "update_dt", datetime.now(timezone.utc))
 
     # Commit the changes to the database
     session.add(existing_item)
@@ -735,7 +735,7 @@ def update_non_tray_item_in_refile_job(
 
     for key, value in mutated_data.items():
         setattr(existing_item, key, value)
-    setattr(existing_item, "update_dt", datetime.utcnow())
+    setattr(existing_item, "update_dt", datetime.now(timezone.utc))
 
     # Commit the changes to the database
     session.add(existing_item)

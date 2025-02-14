@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.pick_lists import PickList
@@ -47,7 +47,7 @@ class Request(SQLModel, table=True):
         default=None, nullable=True, unique=False, foreign_key="priorities.id"
     )
     external_request_id: Optional[str] = Field(
-        max_length=255, sa_column=sa.VARCHAR, nullable=True, unique=False, default=None
+        sa_column=sa.Column(sa.VARCHAR(255), nullable=True, unique=False, default=None)
     )
     pick_list_id: Optional[int] = Field(
         default=None, nullable=True, unique=False, foreign_key="pick_lists.id"
@@ -56,16 +56,16 @@ class Request(SQLModel, table=True):
         default=None, nullable=True, unique=False, foreign_key="batch_uploads.id"
     )
     fulfilled: Optional[bool] = Field(
-        sa_column=sa.Boolean, default=False, nullable=False
+        sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
     requestor_name: Optional[str] = Field(
-        max_length=50, sa_column=sa.VARCHAR, nullable=True, unique=False, default=None
+        sa_column=sa.Column(sa.VARCHAR(50), nullable=True, unique=False, default=None)
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     item: Optional["Item"] = Relationship(back_populates="requests")

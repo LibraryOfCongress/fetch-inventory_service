@@ -1,6 +1,6 @@
 import re
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models.items import Item
 from app.models.barcodes import Barcode

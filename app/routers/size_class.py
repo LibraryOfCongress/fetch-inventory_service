@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.config.exceptions import BadRequest, InternalServerError
 from app.database.session import get_session
@@ -107,7 +107,7 @@ def update_size_class(
 
     for key, value in mutated_data.items():
         setattr(existing_size_class, key, value)
-    setattr(existing_size_class, "update_dt", datetime.utcnow())
+    setattr(existing_size_class, "update_dt", datetime.now(timezone.utc))
 
     # Commit the changes to the database
     session.add(existing_size_class)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -70,7 +70,7 @@ def add_to_refile_queue(
     - HTTPException: If the item is not found.
     """
     lookup_barcode_value = refile_input.barcode_value
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not lookup_barcode_value:
         raise BadRequest(detail="No barcode value found in request")
@@ -222,7 +222,7 @@ def remove_from_refile_queue(
     - HTTPException: If the item is not found.
     """
     lookup_barcode_value = refile_input.barcode_value
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not lookup_barcode_value:
         raise BadRequest(detail="No barcode values found in request")

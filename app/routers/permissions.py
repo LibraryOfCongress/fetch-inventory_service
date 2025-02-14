@@ -4,7 +4,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import asc, desc
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams
@@ -126,7 +126,7 @@ def update_permission(
     for key, value in mutated_data.items():
         setattr(existing_permission, key, value)
 
-    setattr(existing_permission, "update_dt", datetime.utcnow())
+    setattr(existing_permission, "update_dt", datetime.now(timezone.utc))
 
     return commit_record(session, existing_permission)
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
@@ -373,7 +373,7 @@ def update_pick_list(
     for key, value in mutated_data.items():
         setattr(existing_pick_list, key, value)
 
-    setattr(existing_pick_list, "update_dt", datetime.utcnow())
+    setattr(existing_pick_list, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_pick_list)
     session.commit()
@@ -405,7 +405,7 @@ def add_request_to_pick_list(
         raise BadRequest(detail="Pick List ID Not Found")
 
     pick_list = session.get(PickList, pick_list_id)
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
     errored_request_ids = []
 
     if pick_list.status == "Completed":
@@ -429,7 +429,7 @@ def add_request_to_pick_list(
         )
 
     session.query(Request).filter(Request.id.in_(pick_list_input.request_ids)).update(
-        {"pick_list_id": pick_list_id, "update_dt": datetime.utcnow()},
+        {"pick_list_id": pick_list_id, "update_dt": datetime.now(timezone.utc)},
         synchronize_session="fetch",
     )
 
@@ -493,7 +493,7 @@ def update_request_for_pick_list(
         .filter(PickList.requests.any(Request.id == request_id))
         .first()
     )
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not existing_pick_list:
         raise NotFound(
@@ -553,7 +553,7 @@ def remove_request_from_pick_list(
     - HTTPException: If the request is not found in the pick list.
     """
     pick_list = session.query(PickList).get(pick_list_id)
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
@@ -569,7 +569,7 @@ def remove_request_from_pick_list(
         raise NotFound(detail=f"Request ID {request_id} Not Found")
 
     session.query(Request).filter(Request.id == request_id).update(
-        {"update_dt": datetime.utcnow(), "pick_list_id": None},
+        {"update_dt": datetime.now(timezone.utc), "pick_list_id": None},
         synchronize_session="fetch",
     )
 
@@ -622,21 +622,21 @@ def delete_pick_list(id: int, session: Session = Depends(get_session)):
     session.query(Item).filter(
         Item.id.in_(item_ids)
     ).update(
-        {"status": "Requested", "update_dt": datetime.utcnow()},
+        {"status": "Requested", "update_dt": datetime.now(timezone.utc)},
         synchronize_session="fetch",
     )
 
     session.query(NonTrayItem).filter(
         NonTrayItem.id.in_(non_tray_item_ids)
     ).update(
-        {"status": "Requested", "update_dt": datetime.utcnow()},
+        {"status": "Requested", "update_dt": datetime.now(timezone.utc)},
         synchronize_session="fetch",
     )
 
     session.query(Request).filter(
         Request.id.in_([r.id for r in requests])
     ).update(
-        {"pick_list_id": None, "update_dt": datetime.utcnow()},
+        {"pick_list_id": None, "update_dt": datetime.now(timezone.utc)},
         synchronize_session="fetch",
     )
 

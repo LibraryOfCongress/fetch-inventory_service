@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, Form
@@ -158,7 +158,7 @@ async def update_batch_upload(
     for key, value in mutated_data.items():
         setattr(existing_batch_upload, key, value)
 
-    setattr(existing_batch_upload, "update_dt", datetime.utcnow())
+    setattr(existing_batch_upload, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_batch_upload)
     session.commit()
@@ -242,7 +242,7 @@ async def batch_upload_request(
     # Check if the necessary column exists
     if "Item Barcode" not in df.columns:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.utcnow()},
+            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
         raise BadRequest(detail="Excel file must contain a 'Item Barcode' column.")
@@ -250,7 +250,7 @@ async def batch_upload_request(
     df["Item Barcode"] = df["Item Barcode"].astype(str)
 
     session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-        {"status": "Processing", "update_dt": datetime.utcnow()},
+        {"status": "Processing", "update_dt": datetime.now(timezone.utc)},
         synchronize_session=False,
     )
 
@@ -258,7 +258,7 @@ async def batch_upload_request(
     # Process the request data
     if validated_df.empty:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.utcnow()},
+            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
         session.commit()
@@ -272,14 +272,14 @@ async def batch_upload_request(
 
     if errors.get("errors"):
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Completed", "update_dt": datetime.utcnow()},
+            {"status": "Completed", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
         session.commit()
         return JSONResponse(status_code=status.HTTP_200_OK, content=errors)
 
     session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-        {"status": "Completed", "update_dt": datetime.utcnow()},
+        {"status": "Completed", "update_dt": datetime.now(timezone.utc)},
         synchronize_session=False,
     )
     session.commit()
@@ -348,7 +348,7 @@ async def batch_upload_withdraw_job(
 
     if not withdraw_job:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.utcnow()},
+            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
         session.commit()
@@ -356,7 +356,7 @@ async def batch_upload_withdraw_job(
 
     if "Item Barcode" not in df.columns and "Tray Barcode" not in df.columns:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.utcnow()},
+            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
         session.commit()
@@ -384,7 +384,7 @@ async def batch_upload_withdraw_job(
 
     if not lookup_barcode_values:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.utcnow()},
+            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
         raise NotFound(
@@ -392,7 +392,7 @@ async def batch_upload_withdraw_job(
         )
 
     session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-        {"status": "Processing", "update_dt": datetime.utcnow()},
+        {"status": "Processing", "update_dt": datetime.now(timezone.utc)},
         synchronize_session=False,
     )
     session.commit()
@@ -416,7 +416,7 @@ async def batch_upload_withdraw_job(
 
     if not barcodes:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.utcnow()},
+            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
         session.commit()
@@ -440,7 +440,7 @@ async def batch_upload_withdraw_job(
             session.query(BatchUpload).filter(
                 BatchUpload.id == new_batch_upload.id
             ).update(
-                {"status": "Failed", "update_dt": datetime.utcnow()},
+                {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
                 synchronize_session=False,
             )
             session.commit()
@@ -451,7 +451,7 @@ async def batch_upload_withdraw_job(
             session.query(BatchUpload).filter(
                 BatchUpload.id == new_batch_upload.id
             ).update(
-                {"status": "Failed", "update_dt": datetime.utcnow()},
+                {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
                 synchronize_session=False,
             )
             session.commit()
@@ -460,7 +460,7 @@ async def batch_upload_withdraw_job(
             )
 
     session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-        {"status": "Completed", "update_dt": datetime.utcnow()},
+        {"status": "Completed", "update_dt": datetime.now(timezone.utc)},
         synchronize_session=False,
     )
 

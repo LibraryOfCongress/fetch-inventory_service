@@ -4,7 +4,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database.session import get_session
 from app.filter_params import SortParams
@@ -137,7 +137,7 @@ def update_user(
     for key, value in mutated_data.items():
         setattr(existing_user, key, value)
 
-    setattr(existing_user, "update_dt", datetime.utcnow())
+    setattr(existing_user, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_user)
     session.commit()

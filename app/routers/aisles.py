@@ -3,7 +3,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from app.database.session import get_session
@@ -164,7 +164,7 @@ def update_aisle(
         for key, value in mutated_data.items():
             setattr(existing_aisle, key, value)
 
-        setattr(existing_aisle, "update_dt", datetime.utcnow())
+        setattr(existing_aisle, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_aisle)
         session.commit()

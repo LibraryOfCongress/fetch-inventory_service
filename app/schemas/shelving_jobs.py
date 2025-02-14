@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator, computed_field
 from sqlmodel import Field
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
 from app.schemas.users import UserDetailReadOutput
