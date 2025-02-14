@@ -63,9 +63,16 @@ def sorted_requests(session, refile_job):
     request_data = []
     withdrawn_items = []
     withdrawn_non_tray_items = []
+    assigned_user = None
+    created_by = None
+
     items = refile_job.items
     non_tray_items = refile_job.non_tray_items
 
+    if refile_job.assigned_user:
+        assigned_user = refile_job.assigned_user
+    if refile_job.created_by:
+        created_by = refile_job.created_by
     if items:
         for item in items:
             if item.tray:
@@ -109,6 +116,8 @@ def sorted_requests(session, refile_job):
     refile_job["refile_job_items"] = sorted_list
     refile_job["items"] = items
     refile_job["non_tray_items"] = non_tray_items
+    refile_job["assigned_user"] = assigned_user
+    refile_job["created_by"] = created_by
     return refile_job
 
 
