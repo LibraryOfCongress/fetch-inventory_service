@@ -137,7 +137,7 @@ def get_refile_job_list(
     query = select(RefileJob).distinct()
 
     if queue:
-        query = query.where(RefileJob.status != "Completed")
+        query = query.where(RefileJob.status == "Completed")
     if params.workflow_id:
         query = query.where(RefileJob.id == params.workflow_id)
     if params.user_id:
@@ -452,6 +452,9 @@ def add_items_to_refile_job(
 
     if not refile_job:
         raise NotFound(detail=f"Refile Job ID {job_id} Not Found")
+
+    if refile_job.status in ["Running", "Completed"]:
+        raise BadRequest(detail=f"""Can not add to Refile Job ID {job_id} in '{refile_job.status}' status""")
 
     refile_items = []
     refile_non_tray_items = []
