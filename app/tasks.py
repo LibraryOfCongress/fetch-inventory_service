@@ -31,9 +31,6 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
     This task allows us to auto-create verification jobs in queue,
     and to support job ownership change efficiently.
     """
-    # detatch orm object from path operation session
-    session.expunge(accession_job)
-    session.close()
     with session_manager() as session:
         # update accession job run_time and last_transition
         if original_status == "Running":
@@ -114,9 +111,6 @@ def complete_verification_job(session, verification_job: VerificationJob):
 
     This task allows us to support job ownership change efficiently.
     """
-    # detatch orm object from path operation session
-    session.expunge(verification_job)
-    session.close()
     with session_manager() as session:
         # Update Tray Records
         tray_query = select(Tray).where(Tray.verification_job_id == verification_job.id)
@@ -158,8 +152,6 @@ def manage_accession_job_transition(
         - If job cancelled, rolls back accessioned entities
         - Rolls back barcodes used by deleted entities
     """
-    # detatch orm object from path operation session
-    session.expunge(accession_job)
     with session_manager() as session:
         # Compute time delta before changing last_transition
         if original_status == "Running":
@@ -219,9 +211,6 @@ def manage_verification_job_transition(
 
     Verification jobs do not get cancelled, so no item rollback needed.
     """
-    # detatch orm object from path operation session
-    session.expunge(verification_job)
-    session.close()
     with session_manager() as session:
         # Compute time delta before changing last_transition
         if original_status == "Running":
@@ -240,11 +229,6 @@ def process_tray_item_move(
     """
     Task processes a tray item move
     """
-    # detatch orm objects from path operation session
-    session.expunge(item)
-    session.expunge(source_tray)
-    session.expunge(destination_tray)
-    session.close()
     with session_manager() as session:
         # Move the item to the destination tray and update the tray
         item.tray_id = destination_tray.id
@@ -330,9 +314,6 @@ def process_non_tray_item_move(session: Session, non_tray_item: NonTrayItem, sou
 
 
 def manage_verification_job_change_action(session: Session, verification_job: VerificationJob, update_input: str, value: int):
-    # detatch orm object from path operation session
-    session.expunge(verification_job)
-    session.close()
     with session_manager() as session:
         new_verification_changes = []
 
