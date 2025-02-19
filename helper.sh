@@ -118,6 +118,10 @@ current() {
   USE_MIGRATION_URL=true alembic current
 }
 
+downgrade-1() {
+    USE_MIGRATION_URL=true alembic downgrade -1
+}
+
 api() {
   # gets you inside the inventory_service api shell
   podman exec -it fetch-inventory-api /bin/bash;
@@ -131,6 +135,10 @@ database() {
 psql() {
   # gets you into the pg engine psql on the container
   podman exec -it -u postgres inventory-database psql -a inventory_service
+}
+
+drop-db() {
+    podman exec -it -u postgres inventory-database psql -d postgres -c "DROP DATABASE IF EXISTS inventory_service WITH (FORCE);" -c "CREATE DATABASE inventory_service;"
 }
 
 unzip-dump() {

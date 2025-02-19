@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
@@ -21,6 +22,7 @@ from app.models.ladders import Ladder
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
 from app.models.shelf_positions import ShelfPosition
+from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.schemas.shelves import (
     ShelfInput,
     ShelfUpdateInput,
@@ -31,6 +33,7 @@ from app.schemas.shelves import (
 from app.config.exceptions import (
     NotFound,
     ValidationException,
+    InternalServerError
 )
 from app.utilities import get_sorted_query
 
@@ -253,33 +256,60 @@ def create_shelf(
     - **width**: Required numeric (scale 4, precision 2) width in inches
     - **depth**: Required numeric (scale 4, precision 2) depth in inches
     """
-    # Check if shelf # or shelf_number_id
-    shelf_number = shelf_input.shelf_number
-    shelf_number_id = shelf_input.shelf_number_id
-    mutated_data = shelf_input.model_dump(exclude="shelf_number")
+    try:
+        # Check if shelf # or shelf_number_id
+        shelf_number = shelf_input.shelf_number
+        shelf_number_id = shelf_input.shelf_number_id
+        mutated_data = shelf_input.model_dump(exclude="shelf_number")
 
-    if not shelf_number_id and not shelf_number:
-        raise ValidationException(detail=f"shelf_number_id OR shelf_number required")
-    elif shelf_number and not shelf_number_id:
-        # get shelf_number_id from shelf number
-        shelf_num_object = (
-            session.query(ShelfNumber)
-            .filter(ShelfNumber.number == shelf_number)
-            .first()
-        )
-        if not shelf_num_object:
-            raise ValidationException(
-                detail=f"No shelf_number entity exists for shelf number {shelf_number}"
+        if not shelf_number_id and not shelf_number:
+            raise ValidationException(detail=f"shelf_number_id OR shelf_number required")
+        elif shelf_number and not shelf_number_id:
+            # get shelf_number_id from shelf number
+            shelf_num_object = (
+                session.query(ShelfNumber)
+                .filter(ShelfNumber.number == shelf_number)
+                .first()
             )
-        mutated_data["shelf_number_id"] = shelf_num_object.id
+            if not shelf_num_object:
+                raise ValidationException(
+                    detail=f"No shelf_number entity exists for shelf number {shelf_number}"
+                )
+            mutated_data["shelf_number_id"] = shelf_num_object.id
 
-    # new_shelf = Shelf(**shelf_input.model_dump())
-    new_shelf = Shelf(**mutated_data)
-    session.add(new_shelf)
-    session.commit()
-    session.refresh(new_shelf)
+        # new_shelf = Shelf(**shelf_input.model_dump())
+        new_shelf = Shelf(**mutated_data)
+        session.add(new_shelf)
+        session.commit()
+        session.refresh(new_shelf)
 
-    return new_shelf
+        shelf_type = (session.query(ShelfType).filter(ShelfType.id == new_shelf.shelf_type_id).first())
+        shelf_position_list = []
+        for position in range(shelf_type.max_capacity):
+            shelf_position_number = (session.query(ShelfPositionNumber).filter(
+                ShelfPositionNumber.number == (position + 1)
+            ).first())
+            new_shelf_position = {
+                "shelf_id": new_shelf.id,
+                "shelf_position_number_id": shelf_position_number.id
+            }
+            shelf_position_list.append(new_shelf_position)
+
+        # Convert dictionaries to ORM instances
+        shelf_positions_to_create: List[ShelfPosition] = [ShelfPosition(**data) for data in shelf_position_list]
+
+        session.add_all(shelf_positions_to_create)
+        session.commit()
+        # re-calc space. This is blocking, for now
+        new_shelf.calc_available_space(session=session)
+        session.add(new_shelf)
+        session.commit()
+        session.refresh(new_shelf)
+
+        return new_shelf
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
+
 
 
 @router.patch("/{id}", response_model=ShelfDetailWriteOutput)
