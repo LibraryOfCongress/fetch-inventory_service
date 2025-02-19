@@ -198,7 +198,7 @@ def manage_accession_job_transition(
                 session.delete(barcode)
 
         session.commit()
-        session.refresh()
+        # session.refresh()
 
 
 def manage_verification_job_transition(

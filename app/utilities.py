@@ -1013,30 +1013,30 @@ def process_withdraw_job_data(
     return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
 
 
-# def start_session_with_user_id(user_email: str, session):
-#     """
-#     This method is to add the user id for any database change.
-#     """
-#     session.execute(text(f"select set_config('audit.user_id', '{user_email}', true)"))
+async def start_session_with_user_id(user_email: str, session):
+    """
+    This method is to add the user id for any database change.
+    """
+    session.execute(text(f"select set_config('audit.user_id', '{user_email}', true)"))
 
 
-def set_session_to_request(
+async def set_session_to_request(
     request: Request,
-    # session: Session,
+    session: Session,
     user_email: str,
 ):
-    # if request.method != "GET":
-    #     request.state.db_session = session
-
-    #     await start_session_with_user_id(user_email, session=request.state.db_session)
-
-    # return request
     if request.method != "GET":
-        with session_manager() as session:
-            request.state.db_session = session
-            session.exec(text(f"select set_config('audit.user_id', '{user_email}', true)"))
-            # await start_session_with_user_id(user_email, session=session)  # Explicitly pass session
+        request.state.db_session = session
+
+        await start_session_with_user_id(user_email, session=request.state.db_session)
+
     return request
+    # if request.method != "GET":
+    #     with session_manager() as session:
+    #         request.state.db_session = session
+    #         session.exec(text(f"select set_config('audit.user_id', '{user_email}', true)"))
+    #         # await start_session_with_user_id(user_email, session=session)  # Explicitly pass session
+    # return request
 
 
 def get_sortable_fields(model):
