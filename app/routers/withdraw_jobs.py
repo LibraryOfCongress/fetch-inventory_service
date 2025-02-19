@@ -308,10 +308,16 @@ def update_withdraw_job(
         ]
         if item_ids:
             # Updating items status to withdrawn
-            session.query(Item).filter(Item.id.in_(item_ids)).update(
+            session.query(Item).join(
+                Tray, Item.tray_id == Tray.id
+            ).join(
+                ShelfPosition, Tray.shelf_position_id == ShelfPosition.id
+            ).filter(Item.id.in_(item_ids)).update(
                 {
                     "withdrawal_dt": updated_dt,
                     "withdrawn_barcode_id": Item.barcode_id,
+                    "withdrawn_location": ShelfPosition.location,
+                    "withdrawn_internal_location": ShelfPosition.internal_location,
                     "barcode_id": None,
                     "update_dt": updated_dt,
                     "status": "Withdrawn",
@@ -356,11 +362,15 @@ def update_withdraw_job(
                         synchronize_session=False,
                     )
 
-                    session.query(Tray).filter(Tray.id.in_(tray_ids)).update(
+                    session.query(Tray).join(
+                        ShelfPosition, Tray.shelf_position_id == ShelfPosition.id
+                    ).filter(Tray.id.in_(tray_ids)).update(
                         {
                             "shelf_position_id": None,
                             "shelf_position_proposed_id": None,
                             "withdrawn_barcode_id": Tray.barcode_id,
+                            "withdrawn_location": ShelfPosition.location,
+                            "withdrawn_internal_location": ShelfPosition.internal_location,
                             "barcode_id": None,
                             "withdrawal_dt": updated_dt,
                             "update_dt": updated_dt,
@@ -369,12 +379,16 @@ def update_withdraw_job(
                     )
 
         if non_tray_item_ids:
-            session.query(NonTrayItem).filter(
+            session.query(NonTrayItem).join(
+                ShelfPosition, ShelfPosition.id == NonTrayItem.shelf_position_id
+            ).filter(
                 NonTrayItem.id.in_(non_tray_item_ids)
             ).update(
                 {
                     "withdrawal_dt": updated_dt,
                     "withdrawn_barcode_id": NonTrayItem.barcode_id,
+                    "withdrawn_location": ShelfPosition.location,
+                    "withdrawn_internal_location": ShelfPosition.internal_location,
                     "barcode_id": None,
                     "update_dt": updated_dt,
                     "status": "Withdrawn",
@@ -444,6 +458,8 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
                     "withdrawal_dt": None,
                     "barcode_id": item.withdrawn_barcode_id,
                     "withdrawn_barcode_id": None,
+                    "withdrawn_location": None,
+                    "withdrawn_internal_location": None,
                 }
             )
     if withdraw_job.non_tray_items:
@@ -456,6 +472,8 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
                     "withdrawal_dt": None,
                     "barcode_id": non_tray_item.withdrawn_barcode_id,
                     "withdrawn_barcode_id": None,
+                    "withdrawn_location": None,
+                    "withdrawn_internal_location": None,
                 }
             )
 
@@ -468,6 +486,8 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
                         "withdrawal_dt": None,
                         "barcode_id": item.withdrawn_barcode_id,
                         "withdrawn_barcode_id": None,
+                        "withdrawn_location": None,
+                        "withdrawn_internal_location": None,
                     }
                 )
 

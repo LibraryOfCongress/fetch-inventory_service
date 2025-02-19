@@ -118,6 +118,8 @@ class NestedTrayForWithdrawJob(BaseModel):
     id: int
     barcode: Optional[BarcodeDetailOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailOutput] = None
+    withdrawn_location: Optional[str] = None
+    withdrawn_internal_location: Optional[str] = None
     shelf_position: ShelfPositionNestedForWithdrawJob
 
 
@@ -131,6 +133,8 @@ class ItemNestedForWithdrawJob(BaseModel):
     status: str
     barcode: Optional[BarcodeDetailOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailOutput] = None
+    withdrawn_location: Optional[str] = None
+    withdrawn_internal_location: Optional[str] = None
     owner: Optional[NestedOwnerForWithdrawJob] = None
     tray: Optional[NestedTrayForWithdrawJob] = None
 
@@ -151,6 +155,8 @@ class NonTrayNestedForWithdrawJob(BaseModel):
     status: str
     barcode: Optional[BarcodeDetailOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailOutput] = None
+    withdrawn_location: Optional[str] = None
+    withdrawn_internal_location: Optional[str] = None
     owner: Optional[NestedOwnerForWithdrawJob] = None
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForWithdrawJob] = None

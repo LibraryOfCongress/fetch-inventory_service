@@ -58,6 +58,12 @@ class Tray(SQLModel, table=True):
             nullable=True,
         )
     )
+    withdrawn_location: Optional[str] = Field(
+        sa_column=sa.Column(sa.VARCHAR(175), nullable=True, unique=False, default=None)
+    )
+    withdrawn_internal_location: Optional[str] = Field(
+        sa_column=sa.Column(sa.VARCHAR(200), nullable=True, unique=False, default=None)
+    )
     scanned_for_accession: Optional[bool] = Field(
         sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )

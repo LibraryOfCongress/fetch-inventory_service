@@ -62,6 +62,12 @@ class Item(SQLModel, table=True):
             nullable=True,
         ),
     )
+    withdrawn_location: Optional[str] = Field(
+        sa_column=sa.Column(sa.VARCHAR(175), nullable=True, unique=False, default=None)
+    )
+    withdrawn_internal_location: Optional[str] = Field(
+        sa_column=sa.Column(sa.VARCHAR(200), nullable=True, unique=False, default=None)
+    )
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     size_class_id: int = Field(foreign_key="size_class.id", nullable=True)
     tray_id: Optional[int] = Field(default=None, nullable=True, foreign_key="trays.id")
