@@ -381,7 +381,6 @@ async def batch_upload_withdraw_job(
         lookup_barcode_values = []
         if not item_df["Barcode"].empty:
             lookup_barcode_values.extend(item_df["Barcode"].astype(str).tolist())
-            inventory_logger.info(f"Lookup Barcodes: {lookup_barcode_values}")
 
         if not lookup_barcode_values:
             session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(

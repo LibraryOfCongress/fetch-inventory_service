@@ -16,6 +16,7 @@ from app.database.session import get_session, commit_record
 from app.filter_params import JobFilterParams, SortParams
 from app.logger import inventory_logger
 from app.models.barcodes import Barcode
+from app.models.batch_upload import BatchUpload
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
@@ -278,11 +279,6 @@ def update_withdraw_job(
             session.bulk_save_objects(new_request)
             session.commit()
 
-        item_ids = [item.id for item in existing_withdraw_job.items]
-        non_tray_item_ids = [
-            non_tray_item.id for non_tray_item in existing_withdraw_job.non_tray_items
-        ]
-
         session.query(Item).filter(Item.id.in_(item_ids)).update(
             {"status": "PickList", "update_dt": updated_dt},
             synchronize_session=False,
@@ -308,23 +304,32 @@ def update_withdraw_job(
         ]
         if item_ids:
             # Updating items status to withdrawn
-            session.query(Item).join(
+            # Step 1: Get the items and their corresponding shelf locations
+            items_to_update = session.query(
+                Item.id, Item.barcode_id, ShelfPosition.location,
+                ShelfPosition.internal_location
+            ).join(
                 Tray, Item.tray_id == Tray.id
             ).join(
                 ShelfPosition, Tray.shelf_position_id == ShelfPosition.id
-            ).filter(Item.id.in_(item_ids)).update(
-                {
-                    "withdrawal_dt": updated_dt,
-                    "withdrawn_barcode_id": Item.barcode_id,
-                    "withdrawn_location": ShelfPosition.location,
-                    "withdrawn_internal_location": ShelfPosition.internal_location,
-                    "barcode_id": None,
-                    "update_dt": updated_dt,
-                    "status": "Withdrawn",
-                    "tray_id": None,
-                },
-                synchronize_session=False,
-            )
+            ).filter(Item.id.in_(item_ids)).all()
+
+            # Step 2: Perform the update using a separate query
+            for item_id, barcode_id, location, internal_location in items_to_update:
+                session.query(Item).filter(Item.id == item_id).update(
+                    {
+                        "withdrawal_dt": updated_dt,
+                        "withdrawn_barcode_id": barcode_id,
+                        "withdrawn_location": location,
+                        "withdrawn_internal_location": internal_location,
+                        "barcode_id": None,
+                        "update_dt": updated_dt,
+                        "status": "Withdrawn",
+                        "tray_id": None,
+                    },
+                    synchronize_session=False,
+                )
+
             # Updating items barcode status to withdrawn
             session.query(Barcode).filter(Barcode.id.in_(item_barcodes)).update(
                 {"withdrawn": True, "update_dt": updated_dt},
@@ -362,41 +367,57 @@ def update_withdraw_job(
                         synchronize_session=False,
                     )
 
-                    session.query(Tray).join(
+                    # Step 1: Get the trays and their corresponding shelf locations
+                    trays_to_update = session.query(
+                        Tray.id, Tray.barcode_id, ShelfPosition.location,
+                        ShelfPosition.internal_location
+                    ).join(
                         ShelfPosition, Tray.shelf_position_id == ShelfPosition.id
-                    ).filter(Tray.id.in_(tray_ids)).update(
-                        {
-                            "shelf_position_id": None,
-                            "shelf_position_proposed_id": None,
-                            "withdrawn_barcode_id": Tray.barcode_id,
-                            "withdrawn_location": ShelfPosition.location,
-                            "withdrawn_internal_location": ShelfPosition.internal_location,
-                            "barcode_id": None,
-                            "withdrawal_dt": updated_dt,
-                            "update_dt": updated_dt,
-                        },
-                        synchronize_session=False,
-                    )
+                    ).filter(Tray.id.in_(tray_ids)).all()
+
+                    # Step 2: Perform the update using a separate query
+                    for tray_id, barcode_id, location, internal_location in trays_to_update:
+                        session.query(Tray).filter(Tray.id == tray_id).update(
+                            {
+                                "shelf_position_id": None,
+                                "shelf_position_proposed_id": None,
+                                "withdrawn_barcode_id": barcode_id,
+                                "withdrawn_location": location,
+                                "withdrawn_internal_location": internal_location,
+                                "barcode_id": None,
+                                "withdrawal_dt": updated_dt,
+                                "update_dt": updated_dt,
+                            },
+                            synchronize_session=False,
+                        )
 
         if non_tray_item_ids:
-            session.query(NonTrayItem).join(
+            # Step 1: Fetch necessary data before updating
+            non_tray_items_to_update = session.query(
+                NonTrayItem.id, NonTrayItem.barcode_id, ShelfPosition.location,
+                ShelfPosition.internal_location
+            ).join(
                 ShelfPosition, ShelfPosition.id == NonTrayItem.shelf_position_id
             ).filter(
                 NonTrayItem.id.in_(non_tray_item_ids)
-            ).update(
-                {
-                    "withdrawal_dt": updated_dt,
-                    "withdrawn_barcode_id": NonTrayItem.barcode_id,
-                    "withdrawn_location": ShelfPosition.location,
-                    "withdrawn_internal_location": ShelfPosition.internal_location,
-                    "barcode_id": None,
-                    "update_dt": updated_dt,
-                    "status": "Withdrawn",
-                    "shelf_position_id": None,
-                    "shelf_position_proposed_id": None,
-                },
-                synchronize_session=False,
-            )
+            ).all()
+
+            # Step 2: Perform a separate update for each record
+            for item_id, barcode_id, location, internal_location in non_tray_items_to_update:
+                session.query(NonTrayItem).filter(NonTrayItem.id == item_id).update(
+                    {
+                        "withdrawal_dt": updated_dt,
+                        "withdrawn_barcode_id": barcode_id,
+                        "withdrawn_location": location,
+                        "withdrawn_internal_location": internal_location,
+                        "barcode_id": None,
+                        "update_dt": updated_dt,
+                        "status": "Withdrawn",
+                        "shelf_position_id": None,
+                        "shelf_position_proposed_id": None,
+                    },
+                    synchronize_session=False,
+                )
             session.query(Barcode).filter(
                 Barcode.id.in_(non_tray_item_barcodes)
             ).update(
@@ -491,6 +512,13 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
                     }
                 )
 
+    existing_batch_upload = session.query(BatchUpload).where(
+        BatchUpload.withdraw_job_id == job_id).first()
+
+    if existing_batch_upload:
+        session.query(BatchUpload).where(BatchUpload.withdraw_job_id ==
+                                         job_id).update({"withdraw_job_id": None,
+                                                         "update_dt": update_dt})
     session.delete(withdraw_job)
     session.commit()
 

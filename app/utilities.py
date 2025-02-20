@@ -868,7 +868,6 @@ def _get_existing_withdrawals(session: Session, item_ids, item_type):
 
 
 def _validate_withdraw_job_existing_item(existing_withdraws, job_id, status):
-    inventory_logger.info(f"Existing Withdraws: {existing_withdraws}")
     return any(
         item.id != job_id and item.status != status for item in existing_withdraws
     )
@@ -938,22 +937,34 @@ def process_withdraw_job_data(
     barcode_ids = [barcode.id for barcode in barcodes]
 
     # Fetch all necessary data in batch
-    items = session.query(Item).filter(Item.barcode_id.in_(barcode_ids)).all()
-    non_tray_items = (
-        session.query(NonTrayItem).filter(NonTrayItem.barcode_id.in_(barcode_ids)).all()
-    )
-
-    # Create dictionaries for quick lookup
-    item_dict = {item.barcode_id: item for item in items}
-    non_tray_item_dict = {
-        non_tray_item.barcode_id: non_tray_item for non_tray_item in non_tray_items
+    items = {item.barcode_id: item for item in session.query(Item).filter(Item.barcode_id.in_(barcode_ids)).all()}
+    non_tray_items = {
+        non_tray_item.barcode_id: non_tray_item for non_tray_item in session.query(NonTrayItem).filter(NonTrayItem.barcode_id.in_(barcode_ids)).all()
     }
 
-    for barcode in barcodes:
-        item = item_dict.get(barcode.id)
-        non_tray_item = non_tray_item_dict.get(barcode.id)
+    # Fetch existing withdrawals in one batch query
+    existing_withdrawals = {
+        non_tray_item_id: withdraw_job_id
+        for non_tray_item_id, withdraw_job_id in session.query(NonTrayItemWithdrawal.non_tray_item_id, NonTrayItemWithdrawal.withdraw_job_id)
+        .filter(NonTrayItemWithdrawal.non_tray_item_id.in_(non_tray_items.keys()))
+        .all()
+    }
 
-        index = df[df["Item Barcode"].astype(str) == barcode.value].index[0]
+    # Use a set for duplicate checks in withdraw_trays
+    withdraw_tray_set = {(tw.tray_id, tw.withdraw_job_id) for tw in withdraw_trays}
+
+    # Create a lookup dictionary for barcodes in the DataFrame for retrieval
+    barcode_to_index = {str(value): idx for idx, value in enumerate(df["Item Barcode"].astype(str))}
+
+    for barcode in barcodes:
+        item = items.get(barcode.id)
+        non_tray_item = non_tray_items.get(barcode.id)
+
+        # Get the index from preprocessed barcode_to_index dictionary
+        index = barcode_to_index.get(str(barcode.value), None)
+        if index is None:
+            errors.append({"error": f"Barcode {barcode.value} not found"})
+            continue
 
         if item:
             item_withdrawal, item_errors = _validate_withdraw_item(
@@ -961,9 +972,16 @@ def process_withdraw_job_data(
             )
             if item_withdrawal:
                 withdraw_items.append(item_withdrawal)
-                new_tray_withdrawal = TrayWithdrawal(tray_id=item.tray_id, withdraw_job_id=withdraw_job_id),
+                new_tray_withdrawal = TrayWithdrawal(tray_id=item.tray_id, withdraw_job_id=withdraw_job_id)
 
-                if new_tray_withdrawal not in withdraw_trays:
+                # Check if the tray_id and withdraw_job_id already exist in withdraw_trays
+                # Use a set for faster lookup instead of `any()`
+                if (new_tray_withdrawal.tray_id,
+                    new_tray_withdrawal.withdraw_job_id) not in withdraw_tray_set:
+                    withdraw_tray_set.add(
+                        (new_tray_withdrawal.tray_id,
+                         new_tray_withdrawal.withdraw_job_id)
+                        )
                     withdraw_trays.append(new_tray_withdrawal)
 
                 item.update_dt = update_dt
@@ -975,19 +993,7 @@ def process_withdraw_job_data(
                 errors,
                 "Non Tray Item must have status of ['In', 'Out']",
             )
-
-            existing_withdrawals = (
-                session.query(WithdrawJob)
-                .join(
-                    NonTrayItemWithdrawal,
-                    WithdrawJob.id == NonTrayItemWithdrawal.withdraw_job_id,
-                )
-                .filter(NonTrayItemWithdrawal.non_tray_item_id == non_tray_item.id)
-                .all()
-            )
-            if _validate_withdraw_job_existing_item(
-                existing_withdrawals, withdraw_job_id, "Completed"
-            ):
+            if existing_withdrawals.get(non_tray_item.id) == withdraw_job_id:
                 errors.append(
                     {
                         "line": int(index) + 1,
