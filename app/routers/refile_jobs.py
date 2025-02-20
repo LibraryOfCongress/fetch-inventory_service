@@ -146,7 +146,7 @@ def get_refile_job_list(
     query = select(RefileJob).distinct()
 
     if queue:
-        query = query.where(RefileJob.status == "Completed")
+        query = query.where(RefileJob.status != "Completed")
     if params.workflow_id:
         query = query.where(RefileJob.id == params.workflow_id)
     if params.user_id:
