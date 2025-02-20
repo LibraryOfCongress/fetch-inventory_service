@@ -370,8 +370,12 @@ def update_withdraw_job(
 
                     # Step 1: Get the trays and their corresponding shelf locations
                     trays_to_update = session.query(
-                        Tray.id, Tray.barcode_id, ShelfPosition.location,
-                        ShelfPosition.internal_location, ShelfPosition.id
+                        Tray.id,
+                        Tray.barcode_id,
+                        Tray.shelf_position_id,
+                        ShelfPosition.location,
+                        ShelfPosition.internal_location,
+                        ShelfPosition.id
                     ).join(
                         ShelfPosition, Tray.shelf_position_id == ShelfPosition.id
                     ).filter(Tray.id.in_(tray_ids)).all()
@@ -398,8 +402,12 @@ def update_withdraw_job(
         if non_tray_item_ids:
             # Step 1: Fetch necessary data before updating
             non_tray_items_to_update = session.query(
-                NonTrayItem.id, NonTrayItem.barcode_id, ShelfPosition.location,
-                ShelfPosition.internal_location, ShelfPosition.id
+                NonTrayItem.id,
+                NonTrayItem.barcode_id,
+                NonTrayItem.shelf_position_id,
+                ShelfPosition.location,
+                ShelfPosition.internal_location,
+                ShelfPosition.id
             ).join(
                 ShelfPosition, ShelfPosition.id == NonTrayItem.shelf_position_id
             ).filter(
