@@ -13,6 +13,7 @@ from app.config.exceptions import (
     ValidationException,
 )
 from app.database.session import get_session, commit_record
+from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.filter_params import JobFilterParams, SortParams
 from app.logger import inventory_logger
 from app.models.barcodes import Barcode
@@ -370,7 +371,7 @@ def update_withdraw_job(
                     # Step 1: Get the trays and their corresponding shelf locations
                     trays_to_update = session.query(
                         Tray.id, Tray.barcode_id, ShelfPosition.location,
-                        ShelfPosition.internal_location
+                        ShelfPosition.internal_location, ShelfPosition.id
                     ).join(
                         ShelfPosition, Tray.shelf_position_id == ShelfPosition.id
                     ).filter(Tray.id.in_(tray_ids)).all()
@@ -390,12 +391,15 @@ def update_withdraw_job(
                             },
                             synchronize_session=False,
                         )
+                    for tray in trays_to_update:
+                        # this list still has shelf_position_id in memory
+                        update_shelf_space_after_tray(tray, None, None)
 
         if non_tray_item_ids:
             # Step 1: Fetch necessary data before updating
             non_tray_items_to_update = session.query(
                 NonTrayItem.id, NonTrayItem.barcode_id, ShelfPosition.location,
-                ShelfPosition.internal_location
+                ShelfPosition.internal_location, ShelfPosition.id
             ).join(
                 ShelfPosition, ShelfPosition.id == NonTrayItem.shelf_position_id
             ).filter(
@@ -424,6 +428,9 @@ def update_withdraw_job(
                 {"withdrawn": True, "update_dt": updated_dt},
                 synchronize_session=False,
             )
+            for non_tray_item in non_tray_items_to_update:
+                # this list still has shelf_position_id in memory
+                update_shelf_space_after_non_tray(non_tray_item, None, None)
 
     # Manage transitions and calculate run time if needed
     if withdraw_job_input.status and withdraw_job_input.run_timestamp:
@@ -820,7 +827,7 @@ def remove_items_from_withdraw_job(
                 "status": (
                     "In"
                     if non_tray_item.status in ["Requested", "PickList"]
-                    else item.status
+                    else non_tray_item.status
                 ),
                 "update_dt": update_dt,
                 "withdrawal_dt": None,

@@ -945,8 +945,12 @@ def process_withdraw_job_data(
     # Fetch existing withdrawals in one batch query
     existing_withdrawals = {
         non_tray_item_id: withdraw_job_id
-        for non_tray_item_id, withdraw_job_id in session.query(NonTrayItemWithdrawal.non_tray_item_id, NonTrayItemWithdrawal.withdraw_job_id)
-        .filter(NonTrayItemWithdrawal.non_tray_item_id.in_(non_tray_items.keys()))
+        for non_tray_item_id, withdraw_job_id in session.query(
+            NonTrayItemWithdrawal.non_tray_item_id, NonTrayItemWithdrawal.withdraw_job_id
+        )
+        .filter(NonTrayItemWithdrawal.non_tray_item_id.in_(
+            [item.id for item in non_tray_items.values()]  # Extract `id` values
+        ))
         .all()
     }
 
