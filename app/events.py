@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, debugpy
 from sqlmodel import Session
 from sqlalchemy import event
 from concurrent.futures import ThreadPoolExecutor
@@ -205,6 +205,7 @@ async def update_shelf_available_space_on_non_tray_item_mutation(
     """
     Update a shelf's available_space if a non_tray_item shelf_position mapping changes
     """
+    # debugpy.breakpoint()
     with Session(engine) as session:
         if non_tray_item and not current_shelf_position_id:
             new_position_id = non_tray_item.shelf_position_id
@@ -242,9 +243,12 @@ async def update_shelf_available_space_on_non_tray_item_mutation(
 
 
 def update_shelf_space_after_tray_sync(tray, current_shelf_position_id, old_shelf_position_id):
-    asyncio.run(update_shelf_available_space_on_tray_mutation(
+    loop = asyncio.new_event_loop()  # Create a new event loop for the thread
+    asyncio.set_event_loop(loop)  
+    loop.run_until_complete(update_shelf_available_space_on_tray_mutation(
         tray, current_shelf_position_id, old_shelf_position_id
     ))
+    loop.close()
 
 def update_shelf_space_after_tray(
         tray,
@@ -263,9 +267,12 @@ def update_shelf_space_after_non_tray_sync(
         non_tray_item, current_shelf_position_id,
         old_shelf_position_id
 ):
-    asyncio.run(update_shelf_available_space_on_non_tray_item_mutation(
+    loop = asyncio.new_event_loop()  # Create a new event loop for the thread
+    asyncio.set_event_loop(loop)  
+    loop.run_until_complete(update_shelf_available_space_on_non_tray_item_mutation(
         non_tray_item, current_shelf_position_id, old_shelf_position_id
     ))
+    loop.close()
 
 
 def update_shelf_space_after_non_tray(
