@@ -374,14 +374,14 @@ def update_withdraw_job(
                         Tray.barcode_id,
                         Tray.shelf_position_id,
                         ShelfPosition.location,
-                        ShelfPosition.internal_location,
-                        ShelfPosition.id
+                        ShelfPosition.internal_location
                     ).join(
                         ShelfPosition, Tray.shelf_position_id == ShelfPosition.id
                     ).filter(Tray.id.in_(tray_ids)).all()
 
                     # Step 2: Perform the update using a separate query
-                    for tray_id, barcode_id, location, internal_location in trays_to_update:
+                    for tray_id, barcode_id, shelf_position_id, location, internal_location in trays_to_update:
+                        # ignore shelf_position_id. It has to be unpacked and is needed after this update
                         session.query(Tray).filter(Tray.id == tray_id).update(
                             {
                                 "shelf_position_id": None,
@@ -397,7 +397,7 @@ def update_withdraw_job(
                         )
                     for tray in trays_to_update:
                         # this list still has shelf_position_id in memory
-                        update_shelf_space_after_tray(tray, None, None)
+                        update_shelf_space_after_tray(tray, tray.shelf_position_id, None)
 
         if non_tray_item_ids:
             # Step 1: Fetch necessary data before updating
@@ -406,8 +406,7 @@ def update_withdraw_job(
                 NonTrayItem.barcode_id,
                 NonTrayItem.shelf_position_id,
                 ShelfPosition.location,
-                ShelfPosition.internal_location,
-                ShelfPosition.id
+                ShelfPosition.internal_location
             ).join(
                 ShelfPosition, ShelfPosition.id == NonTrayItem.shelf_position_id
             ).filter(
@@ -415,7 +414,8 @@ def update_withdraw_job(
             ).all()
 
             # Step 2: Perform a separate update for each record
-            for item_id, barcode_id, location, internal_location in non_tray_items_to_update:
+            for item_id, barcode_id, shelf_position_id, location, internal_location in non_tray_items_to_update:
+                # ignore shelf_position_id. It has to be unpacked and is needed after this update
                 session.query(NonTrayItem).filter(NonTrayItem.id == item_id).update(
                     {
                         "withdrawal_dt": updated_dt,
@@ -438,7 +438,7 @@ def update_withdraw_job(
             )
             for non_tray_item in non_tray_items_to_update:
                 # this list still has shelf_position_id in memory
-                update_shelf_space_after_non_tray(non_tray_item, None, None)
+                update_shelf_space_after_non_tray(non_tray_item, non_tray_item.shelf_position_id, None)
 
     # Manage transitions and calculate run time if needed
     if withdraw_job_input.status and withdraw_job_input.run_timestamp:
