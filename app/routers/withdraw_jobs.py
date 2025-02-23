@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from sqlalchemy import asc, desc
+from sqlalchemy.orm import aliased
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from starlette.responses import JSONResponse
@@ -48,6 +49,10 @@ router = APIRouter(
     prefix="/withdraw-jobs",
     tags=["withdraw jobs"],
 )
+
+
+ShelfBarcodeAlias = aliased(Barcode)
+TrayBarcodeAlias = aliased(Barcode)
 
 
 def validate_withdraw_item(items, job_id, status, session):
@@ -307,22 +312,42 @@ def update_withdraw_job(
             # Updating items status to withdrawn
             # Step 1: Get the items and their corresponding shelf locations
             items_to_update = session.query(
-                Item.id, Item.barcode_id, ShelfPosition.location,
-                ShelfPosition.internal_location
+                Item.id,
+                Item.barcode_id,
+                ShelfPosition.location,
+                ShelfPosition.internal_location,
+                ShelfBarcodeAlias.value.label("shelf_barcode_value"),
+                TrayBarcodeAlias.value.label("tray_barcode_value"),
             ).join(
                 Tray, Item.tray_id == Tray.id
             ).join(
                 ShelfPosition, Tray.shelf_position_id == ShelfPosition.id
-            ).filter(Item.id.in_(item_ids)).all()
+            ).join(
+                Shelf, ShelfPosition.shelf_id == Shelf.id
+            ).join(
+                ShelfBarcodeAlias, Shelf.barcode_id == ShelfBarcodeAlias.id
+            ).join(
+                TrayBarcodeAlias, Tray.barcode_id == TrayBarcodeAlias.id
+            ).filter(
+                Item.id.in_(item_ids)
+            ).all()
 
             # Step 2: Perform the update using a separate query
-            for item_id, barcode_id, location, internal_location in items_to_update:
+            for (
+                item_id,
+                barcode_id,
+                location,
+                internal_location,
+                shelf_barcode_value,
+                tray_barcode_value,
+            ) in items_to_update:
                 session.query(Item).filter(Item.id == item_id).update(
                     {
                         "withdrawal_dt": updated_dt,
                         "withdrawn_barcode_id": barcode_id,
                         "withdrawn_location": location,
                         "withdrawn_internal_location": internal_location,
+                        "withdrawn_loc_bcodes":f"{shelf_barcode_value}-{tray_barcode_value}",
                         "barcode_id": None,
                         "update_dt": updated_dt,
                         "status": "Withdrawn",
@@ -339,18 +364,19 @@ def update_withdraw_job(
             # Committing the changes
             session.commit()
 
-            # updating available space for the shelf
-            for item_id in item_ids:
-                # updating available space for the shelf
+            # leftover deprecated, slated for removal
+            # # updating available space for the shelf
+            # for item_id in item_ids:
+            #     # updating available space for the shelf
 
-                shelf = (
-                    session.query(Shelf, Tray)
-                    .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id)
-                    .join(Item, Item.id == item_id)
-                    .join(Tray, Tray.id == Item.tray_id)
-                    .filter(ShelfPosition.id == Tray.shelf_position_id)
-                    .first()
-                )
+            #     shelf = (
+            #         session.query(Shelf, Tray)
+            #         .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id)
+            #         .join(Item, Item.id == item_id)
+            #         .join(Tray, Tray.id == Item.tray_id)
+            #         .filter(ShelfPosition.id == Tray.shelf_position_id)
+            #         .first()
+            #     )
 
             # Checking if the tray is empty and updating the shelf position
             if tray_ids:
@@ -374,13 +400,31 @@ def update_withdraw_job(
                         Tray.barcode_id,
                         Tray.shelf_position_id,
                         ShelfPosition.location,
-                        ShelfPosition.internal_location
+                        ShelfPosition.internal_location,
+                        ShelfBarcodeAlias.value.label("shelf_barcode_value"),
+                        TrayBarcodeAlias.value.label("tray_barcode_value"),
                     ).join(
                         ShelfPosition, Tray.shelf_position_id == ShelfPosition.id
-                    ).filter(Tray.id.in_(tray_ids)).all()
+                    ).join(
+                        Shelf, ShelfPosition.shelf_id == Shelf.id
+                    ).join(
+                        ShelfBarcodeAlias, Shelf.barcode_id == ShelfBarcodeAlias.id
+                    ).join(
+                        TrayBarcodeAlias, Tray.barcode_id == TrayBarcodeAlias.id
+                    ).filter(
+                        Tray.id.in_(tray_ids)
+                    ).all()
 
                     # Step 2: Perform the update using a separate query
-                    for tray_id, barcode_id, shelf_position_id, location, internal_location in trays_to_update:
+                    for (
+                        tray_id,
+                        barcode_id,
+                        shelf_position_id,
+                        location,
+                        internal_location,
+                        shelf_barcode_value,
+                        tray_barcode_value,
+                    ) in trays_to_update:
                         # ignore shelf_position_id. It has to be unpacked and is needed after this update
                         session.query(Tray).filter(Tray.id == tray_id).update(
                             {
@@ -389,6 +433,7 @@ def update_withdraw_job(
                                 "withdrawn_barcode_id": barcode_id,
                                 "withdrawn_location": location,
                                 "withdrawn_internal_location": internal_location,
+                                "withdrawn_loc_bcodes":f"{shelf_barcode_value}-{tray_barcode_value}",
                                 "barcode_id": None,
                                 "withdrawal_dt": updated_dt,
                                 "update_dt": updated_dt,
@@ -406,15 +451,27 @@ def update_withdraw_job(
                 NonTrayItem.barcode_id,
                 NonTrayItem.shelf_position_id,
                 ShelfPosition.location,
-                ShelfPosition.internal_location
+                ShelfPosition.internal_location,
+                ShelfBarcodeAlias.value.label("shelf_barcode_value"),
             ).join(
                 ShelfPosition, ShelfPosition.id == NonTrayItem.shelf_position_id
+            ).join(
+                Shelf, Shelf.id == ShelfPosition.shelf_id
+            ).join(
+                ShelfBarcodeAlias, ShelfBarcodeAlias.id == Shelf.barcode_id
             ).filter(
                 NonTrayItem.id.in_(non_tray_item_ids)
             ).all()
 
             # Step 2: Perform a separate update for each record
-            for item_id, barcode_id, shelf_position_id, location, internal_location in non_tray_items_to_update:
+            for (
+                item_id,
+                barcode_id,
+                shelf_position_id,
+                location,
+                internal_location,
+                shelf_barcode_value
+            ) in non_tray_items_to_update:
                 # ignore shelf_position_id. It has to be unpacked and is needed after this update
                 session.query(NonTrayItem).filter(NonTrayItem.id == item_id).update(
                     {
@@ -422,6 +479,7 @@ def update_withdraw_job(
                         "withdrawn_barcode_id": barcode_id,
                         "withdrawn_location": location,
                         "withdrawn_internal_location": internal_location,
+                        "withdrawn_loc_bcodes": f"{shelf_barcode_value}",
                         "barcode_id": None,
                         "update_dt": updated_dt,
                         "status": "Withdrawn",
@@ -496,6 +554,7 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
                     "withdrawn_barcode_id": None,
                     "withdrawn_location": None,
                     "withdrawn_internal_location": None,
+                    "withdrawn_loc_bcodes": None,
                 }
             )
     if withdraw_job.non_tray_items:
@@ -510,6 +569,7 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
                     "withdrawn_barcode_id": None,
                     "withdrawn_location": None,
                     "withdrawn_internal_location": None,
+                    "withdrawn_loc_bcodes": None,
                 }
             )
 
@@ -524,6 +584,7 @@ def delete_withdraw_job(job_id: int, session: Session = Depends(get_session)):
                         "withdrawn_barcode_id": None,
                         "withdrawn_location": None,
                         "withdrawn_internal_location": None,
+                        "withdrawn_loc_bcodes": None,
                     }
                 )
 
