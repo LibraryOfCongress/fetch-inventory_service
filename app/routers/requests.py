@@ -4,15 +4,22 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, or_
 
 from app.database.session import get_session
-from app.filter_params import SortParams
+from app.filter_params import SortParams, RequestFilterParams
+from app.logger import inventory_logger
+from app.models.buildings import Building
+from app.models.delivery_locations import DeliveryLocation
+from app.models.media_types import MediaType
+from app.models.priorities import Priority
+from app.models.request_types import RequestType
 from app.models.requests import Request
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.barcodes import Barcode
 from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
 from app.models.trays import Tray
 from app.schemas.requests import (
     RequestInput,
@@ -26,7 +33,8 @@ from app.config.exceptions import (
     NotFound,
     InternalServerError,
 )
-from app.utilities import get_module_shelf_position, get_sorted_query
+from app.sorting import RequestSorter
+from app.utilities import get_module_shelf_position
 
 router = APIRouter(
     prefix="/requests",
@@ -37,15 +45,8 @@ router = APIRouter(
 @router.get("/", response_model=Page[RequestListOutput])
 def get_request_list(
     session: Session = Depends(get_session),
-    building_id: int = None,
-    queue: bool = False,
-    unassociated_pick_list: bool = False,
-    from_dt: Optional[datetime] = None,
-    to_dt: Optional[datetime] = None,
-    requestor_name: Optional[str] = None,
-    item_barcode: Optional[str] = None,
-    non_tray_item_barcode: Optional[str] = None,
-    sort_params: SortParams = Depends(),
+    params: RequestFilterParams = Depends(),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of requests
@@ -62,41 +63,113 @@ def get_request_list(
     - Request List Output: The paginated list of requests.
     """
     # Create a query to select all Request from the database
-    query = select(Request).distinct()
+    query = select(Request)
 
-    if queue:
+    if params.queue:
         # only return unfulfilled requests
         query = query.where(Request.fulfilled == False)
-    if requestor_name:
-        query = query.where(Request.requestor_name.like(f"%{requestor_name}%"))
-    if from_dt:
-        query = query.where(Request.create_dt >= from_dt)
-    if to_dt:
-        query = query.where(Request.create_dt <= to_dt)
-    if building_id:
-        query = query.where(Request.building_id == building_id)
-    if unassociated_pick_list:
+    if params.requestor_name:
+        query = query.where(Request.requestor_name.like(f"%{params.requestor_name}%"))
+    if params.request_type:
+        request_type_subquery = (
+            select(RequestType.id).where(RequestType.type.in_(params.request_type))
+        )
+        query = query.where(Request.request_type_id.in_(request_type_subquery))
+    if params.from_dt:
+        query = query.where(Request.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(Request.create_dt <= params.to_dt)
+    if params.building_id:
+        query = query.where(Request.building_id == params.building_id)
+    if params.building_name:
+        building_subquery = (
+            select(Building.id)
+            .where(Building.name.in_(params.building_name))
+        )
+        query = query.where(Request.building_id.in_(building_subquery))
+    if params.unassociated_pick_list:
         query = query.where(Request.pick_list_id == None)
-    if item_barcode:
+    if params.item_barcode:
         item_subquery = (
-            select(Item.id)
-            .join(Barcode, Barcode.id == Item.barcode_id)
-            .where(Barcode.value == item_barcode)
-            .distinct()
+            select(Item.id).join(
+                Barcode, Barcode.id == Item.barcode_id
+            ).where(
+                Barcode.value == params.item_barcode
+            ).distinct()
         )
         query = query.where(Request.item_id.in_(item_subquery))
-    if non_tray_item_barcode:
+    if params.non_tray_item_barcode:
         non_tray_item_subquery = (
-            select(NonTrayItem.id)
-            .join(Barcode, Barcode.id == NonTrayItem.barcode_id)
-            .where(Barcode.value == non_tray_item_barcode)
-            .distinct()
+            select(NonTrayItem.id).join(
+                Barcode, Barcode.id == NonTrayItem.barcode_id
+            ).where(
+                Barcode.value == params.non_tray_item_barcode
+            ).distinct()
         )
         query = query.where(Request.non_tray_item_id.in_(non_tray_item_subquery))
+    if params.status:
+        item_subquery = select(Item.id).where(Item.status.in_(params.status))
+        non_tray_item_subquery = select(NonTrayItem.id).where(
+            NonTrayItem.status.in_(params.status)
+            )
+
+        query = query.where(
+            or_(
+                Request.item_id.in_(item_subquery),
+                Request.non_tray_item_id.in_(non_tray_item_subquery)
+            )
+        )
+    if params.media_type:
+        item_subquery = (
+            select(Item.id).join(MediaType, MediaType.id == Item.media_type_id)
+            .where(MediaType.name.in_(params.media_type))
+        )
+        non_tray_item_subquery = (
+            select(NonTrayItem.id).join(
+                MediaType, MediaType.id == NonTrayItem.media_type_id
+                )
+            .where(MediaType.name.in_(params.media_type))
+        )
+        query = query.where(
+            or_(
+                Request.item_id.in_(item_subquery),
+                Request.non_tray_item_id.in_(non_tray_item_subquery)
+            )
+        )
+    if params.priority:
+        priority_subquery = (
+            select(Priority.id)
+            .where(Priority.value.in_(params.priority))
+        )
+        query = query.where(Request.priority_id.in_(priority_subquery))
+    if params.delivery_location:
+        delivery_location_subquery = (
+            select(DeliveryLocation.id)
+            .where(DeliveryLocation.name.in_(params.delivery_location))
+        )
+        query = query.where(Request.delivery_location_id.in_(delivery_location_subquery))
+    if params.item_location:
+        tem_location_subquery = (
+            select(Item.id)
+            .join(Tray, Tray.id == Item.tray_id)
+            .join(Shelf, Shelf.id == Tray.shelf_id)
+            .join(ShelfPosition, ShelfPosition.id == Shelf.shelf_position_id)
+            .where(ShelfPosition.location == params.non_tray_item_location).distinct()
+        )
+        query = query.where(Request.item_id.in_(tem_location_subquery))
+    if params.non_tray_item_location:
+        non_tray_item_location_subquery = (
+            select(NonTrayItem.id)
+            .join(ShelfPosition, ShelfPosition.id == NonTrayItem.shelf_position_id)
+            .where(ShelfPosition.location == params.non_tray_item_location).distinct()
+        )
+        query = query.where(Request.non_tray_item_id.in_(non_tray_item_location_subquery))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(Request, query, sort_params)
+        # Apply sorting using RequestSorter
+        sorter = RequestSorter(Request)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

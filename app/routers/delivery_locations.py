@@ -20,7 +20,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.utilities import get_sorted_query
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/requests",
@@ -48,7 +48,9 @@ def get_delivery_location_list(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(DeliveryLocation, query, sort_params)
+        # Apply sorting using RequestSorter
+        sorter = BaseSorter(DeliveryLocation)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

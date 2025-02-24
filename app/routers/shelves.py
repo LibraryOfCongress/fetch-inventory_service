@@ -10,6 +10,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
 from app.filter_params import SortParams
+from app.models.owners import Owner
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
 from app.models.barcodes import Barcode
@@ -19,9 +20,11 @@ from app.models.modules import Module
 from app.models.aisles import Aisle
 from app.models.sides import Side
 from app.models.ladders import Ladder
+from app.models.size_class import SizeClass
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
 from app.models.shelf_positions import ShelfPosition
+from app.filter_params import ShelfFilterParams
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.schemas.shelves import (
     ShelfInput,
@@ -35,6 +38,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError
 )
+from app.sorting import ShelvingSorter
 from app.utilities import get_sorted_query
 
 router = APIRouter(
@@ -48,67 +52,61 @@ LOGGER = logging.getLogger("app.routers.shelves")
 @router.get("/", response_model=Page[ShelfListOutput])
 def get_shelf_list(
     session: Session = Depends(get_session),
-    building_id: int | None = None,
-    module_id: int | None = None,
-    aisle_id: int | None = None,
-    side_id: int | None = None,
-    ladder_id: int | None = None,
-    shelf_id: int | None = None,
-    owner_id: int | None = None,
-    size_class_id: int | None = None,
-    unassigned: bool | None = None,
-    location: str | None = None,
+    params: ShelfFilterParams = Depends(),
     sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of shelves.
 
     **Parameters:**
-    - building_id (int): The ID of the building to filter by.
-    - module_id (int): The ID of the module to filter by.
-    - aisle_id (int): The ID of the aisle to filter by.
-    - side_id (int): The ID of the side to filter by.
-    - ladder_id (int): The ID of the ladder to filter by.
-    - shelf_id (int): The ID of the shelf to filter by.
-    - owner_id (int): The ID of the owner to filter by.
-    - size_class_id (int): The ID of the size class to filter by.
-    - unassigned (bool): Whether to include unassigned shelves.
-    - location (str): Lookup against external location
+    - params: The filter parameters.
+        - building_id (int): The ID of the building to filter by.
+        - module_id (int): The ID of the module to filter by.
+        - aisle_id (int): The ID of the aisle to filter by.
+        - side_id (int): The ID of the side to filter by.
+        - ladder_id (int): The ID of the ladder to filter by.
+        - shelf_id (int): The ID of the shelf to filter by.
+        - owner_id (int): The ID of the owner to filter by.
+        - size_class_id (int): The ID of the size class to filter by.
+        - unassigned (bool): Whether to include unassigned shelves.
+        - location (str): Lookup against external location
     - sort_params (SortParams): The sorting parameters.
+        - sort_by (str): The field to sort by.
+        - sort_order (str): The order to sort by.
 
     **Returns:**
     - Shelf List Output: The paginated list of shelves.
     """
     shelf_queryset = select(Shelf)
 
-    if owner_id:
-        shelf_queryset = shelf_queryset.where(Shelf.owner_id == owner_id)
+    if params.owner_id:
+        shelf_queryset = shelf_queryset.where(Shelf.owner_id == params.owner_id)
 
-    if size_class_id:
+    if params.size_class_id:
         shelf_queryset = shelf_queryset.join(
             ShelfType, Shelf.shelf_type_id == ShelfType.id
         ).where(
-            ShelfType.size_class_id == size_class_id
+            ShelfType.size_class_id == params.size_class_id
         )
 
     # location from most to least constrained
-    if shelf_id:
-        shelf_queryset = shelf_queryset.where(Shelf.id == shelf_id)
-    elif ladder_id:
+    if params.shelf_id:
+        shelf_queryset = shelf_queryset.where(Shelf.id == params.shelf_id)
+    elif params.ladder_id:
         shelf_queryset = shelf_queryset.join(
             Ladder, Shelf.ladder_id == Ladder.id
         ).where(
-            Ladder.id == ladder_id
+            Ladder.id == params.ladder_id
         )
-    elif side_id:
+    elif params.side_id:
         shelf_queryset = shelf_queryset.join(
             Ladder, Shelf.ladder_id == Ladder.id
         ).join(
             Side, Ladder.side_id == Side.id
         ).where(
-            Side.id == side_id
+            Side.id == params.side_id
         )
-    elif aisle_id:
+    elif params.aisle_id:
         shelf_queryset = shelf_queryset.join(
             Ladder, Shelf.ladder_id == Ladder.id
         ).join(
@@ -116,9 +114,9 @@ def get_shelf_list(
         ).join(
             Aisle, Side.aisle_id == Aisle.id
         ).where(
-            Aisle.id == aisle_id
+            Aisle.id == params.aisle_id
         )
-    elif module_id:
+    elif params.module_id:
         shelf_queryset = shelf_queryset.join(
             Ladder, Shelf.ladder_id == Ladder.id
         ).join(
@@ -128,9 +126,9 @@ def get_shelf_list(
         ).join(
             Module, Aisle.module_id == Module.id
         ).where(
-            Module.id == module_id
+            Module.id == params.module_id
         )
-    elif building_id:
+    elif params.building_id:
         shelf_queryset = shelf_queryset.join(
             Ladder, Shelf.ladder_id == Ladder.id
         ).join(
@@ -142,18 +140,40 @@ def get_shelf_list(
         ).join(
             Building, Module.building_id == Building.id
         ).where(
-            Building.id == building_id
+            Building.id == params.building_id
         )
 
-    if unassigned:
+    if params.unassigned:
         shelf_queryset = shelf_queryset.where(Shelf.barcode_id == None)
-
-    if location:
-        shelf_queryset = shelf_queryset.where(Shelf.location == location)
+    if params.barcode_value:
+        barcode_value_subquery = (
+            select(Barcode.id)
+            .where(Barcode.value == params.barcode_value)
+        )
+        shelf_queryset = shelf_queryset.where(Shelf.barcode_id == barcode_value_subquery)
+    if params.owner:
+        owner_subquery = (
+            select(Owner.id)
+            .where(Owner.name == params.owner)
+        )
+        shelf_queryset = shelf_queryset.where(Shelf.owner_id == owner_subquery)
+    if params.size_class:
+        size_class_subquery = (
+            select(SizeClass.id)
+            .where(SizeClass.name == params.size_class)
+        )
+        shelf_queryset = shelf_queryset.join(
+            ShelfType, Shelf.shelf_type_id == ShelfType.id
+        ).where(
+            ShelfType.size_class_id == size_class_subquery
+        )
+    if params.location:
+        shelf_queryset = shelf_queryset.where(Shelf.location == params.location)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        shelf_queryset = get_sorted_query(Shelf, shelf_queryset, sort_params)
+        sorter = ShelvingSorter(Shelf)
+        shelf_queryset = sorter.apply_sorting(shelf_queryset, sort_params)
 
     return paginate(session, shelf_queryset)
 

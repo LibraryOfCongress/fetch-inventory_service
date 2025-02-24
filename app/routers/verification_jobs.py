@@ -1,23 +1,26 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime, timezone
-from sqlalchemy import and_
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams, SortParams
+from app.filter_params import SortParams, JobFilterParams
 from app.models.barcodes import Barcode
+from app.models.container_types import ContainerType
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from app.models.trays import Tray
+from app.models.users import User
 from app.models.verification_changes import VerificationChange
+from app.sorting import BaseSorter
 from app.tasks import (
     complete_verification_job,
     manage_verification_job_transition, manage_verification_job_change_action,
 )
-from app.models.verification_jobs import VerificationJob, VerificationJobStatus
+from app.models.verification_jobs import VerificationJob
 from app.schemas.verification_jobs import (
     VerificationJobInput,
     VerificationJobUpdateInput,
@@ -31,7 +34,6 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/verification-jobs",
@@ -42,10 +44,8 @@ router = APIRouter(
 @router.get("/", response_model=Page[VerificationJobListOutput])
 def get_verification_job_list(
     unshelved: bool | None = False,
-    queue: bool = Query(default=False),
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
-    status: VerificationJobStatus | None = None,
     sort_params: SortParams = Depends()
 ) -> list:
     """
@@ -53,10 +53,19 @@ def get_verification_job_list(
 
     **Parameters:**
     - unshelved: Filters out shelved verification jobs.
-    - queue: Filters out cancelled verification jobs.
     - params: The filter parameters.
-    - status: The status of the verification job.
+        - queue: Filters out cancelled verification jobs.
+        - workflow_id: The ID of the workflow.
+        - created_by_id: The ID of the user who created the pick list.
+        - user_id: The ID of the user.
+        - assigned_user: The name of the assigned user.
+        - status: The status of the verification job.
+        - from_dt: The start date.
+        - to_dt: The end date.
+
     - sort_params: The sort parameters.
+        - sort_by: The field to sort by.
+        - sort_order: The order to sort by.
 
     **Returns:**
     - Verification Job List Output: The paginated list of verification jobs.
@@ -69,25 +78,46 @@ def get_verification_job_list(
         query = query.where(VerificationJob.shelving_job_id == None).where(
             VerificationJob.status == "Completed"
         )
-    if queue:
+    if params.queue:
         # filter out completed.  maybe someday hide cancelled.
         query = query.where(VerificationJob.status != "Completed")
+    if params.status and len(list(filter(None, params.status))) > 0:
+        query = query.where(VerificationJob.status.in_(params.status))
     if params.workflow_id:
         query = query.where(VerificationJob.workflow_id == params.workflow_id)
     if params.user_id:
-        query = query.where(VerificationJob.user_id == params.user_id)
+        query = query.where(VerificationJob.user_id.in_(params.user_id))
+    if params.assigned_user:
+        assigned_user_subquery = (
+            select(User.id)
+            .where(
+                func.concat(User.first_name, ' ', User.last_name).in_(
+                    params.assigned_user
+                )
+            )
+            .distinct()
+        )
+        query = query.where(VerificationJob.user_id.in_(assigned_user_subquery))
+    if params.container_type:
+        subquery = (
+            select(ContainerType.id)
+            .where(ContainerType.type == params.container_type)
+            .distinct()
+        )
+        query = query.where(VerificationJob.container_type_id == subquery)
+    if params.trayed is not None:
+        query = query.where(VerificationJob.trayed == params.trayed)
     if params.created_by_id:
         query = query.where(VerificationJob.created_by_id == params.created_by_id)
     if params.from_dt:
         query = query.where(VerificationJob.create_dt >= params.from_dt)
     if params.to_dt:
         query = query.where(VerificationJob.create_dt <= params.to_dt)
-    if status:
-        query = query.where(VerificationJob.status == status.value)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(VerificationJob, query, sort_params)
+        sorter = BaseSorter(VerificationJob)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

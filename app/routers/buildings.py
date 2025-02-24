@@ -20,7 +20,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.utilities import get_sorted_query
+from app.sorting import BaseSorter
 
 # For future circular imports
 # https://sqlmodel.tiangolo.com/tutorial/code-structure/#import-only-while-editing-with-type_checking
@@ -50,7 +50,9 @@ def get_building_list(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(Building, query, sort_params)
+        # Apply sorting using RequestSorter
+        sorter = BaseSorter(Building)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

@@ -1764,6 +1764,11 @@ def get_retrieval_count(
     **Returns**:
     - Retrieval Count Read Output: The total number of retrievals.
     """
+    if params.owner_id:
+        owner = session.query(Owner).filter(Owner.id.in_(params.owner_id)).all()
+        if not owner:
+            raise NotFound(detail="Owner(s) not found")
+
     query = get_retrieval_item_count_query(params, sort_params)
 
     return paginate(session, query)

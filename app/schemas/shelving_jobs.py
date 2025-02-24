@@ -105,6 +105,11 @@ class ShelvingJobListOutput(ShelvingJobBaseOutput):
     def non_tray_item_count(self) -> int:
         return len(self.non_tray_items)
 
+    @computed_field(title='Container Count')
+    @property
+    def container_count(self) -> int:
+        return self.tray_count + self.non_tray_item_count
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -131,7 +136,8 @@ class ShelvingJobListOutput(ShelvingJobBaseOutput):
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
                 "tray_count": 10,
-                "non_tray_item_count": 5
+                "non_tray_item_count": 5,
+                "container_count": 15
             }
         }
 

@@ -18,7 +18,7 @@ from app.schemas.aisle_numbers import (
     AisleNumberListOutput,
     AisleNumberDetailOutput,
 )
-from app.utilities import get_sorted_query
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/aisles",
@@ -44,7 +44,9 @@ def get_aisle_number_list(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(AisleNumber, query, sort_params)
+        # Apply sorting using BaseSorter
+        sorter = BaseSorter(AisleNumber)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

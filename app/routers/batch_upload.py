@@ -23,12 +23,14 @@ from app.models.container_types import ContainerType
 from app.models.ladder_numbers import LadderNumber
 from app.models.ladders import Ladder
 from app.models.owners import Owner
+from app.models.requests import Request
 from app.models.shelf_numbers import ShelfNumber
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
 from app.models.size_class import SizeClass
+from app.models.users import User
 from app.models.withdraw_jobs import WithdrawJob
 from app.schemas.batch_upload import (
     BatchUploadListOutput,
@@ -36,10 +38,11 @@ from app.schemas.batch_upload import (
     BatchUploadUpdateInput,
     LocationManagementSpreadSheetInput,
 )
+from app.sorting import BaseSorter
 from app.utilities import (
     validate_request_data,
     process_request_data,
-    process_withdraw_job_data, get_sorted_query,
+    process_withdraw_job_data,
 )
 from app.config.exceptions import (
     BadRequest,
@@ -56,6 +59,7 @@ router = APIRouter(
 async def get_batch_upload(
     session: Session = Depends(get_session),
     batch_upload_type: str | None = None,
+    uploaded_by: str | None = None,
     sort_params: SortParams = Depends()
 ) -> list:
     """
@@ -73,12 +77,21 @@ async def get_batch_upload(
     if batch_upload_type:
         if batch_upload_type == "request":
             query = query.filter(BatchUpload.withdraw_job_id.is_(None))
+            query = query.join(Request)
         elif batch_upload_type == "withdraw":
             query = query.filter(BatchUpload.withdraw_job_id.isnot(None))
+    if uploaded_by:
+        uploaded_by_subquery = (
+            select(User.id)
+            .where(User.email == uploaded_by)
+        )
+        query = query.filter(BatchUpload.user_id == uploaded_by_subquery)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(BatchUpload, query, sort_params)
+        # Apply sorting using RequestSorter
+        sorter = BaseSorter(BatchUpload)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

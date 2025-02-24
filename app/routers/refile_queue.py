@@ -26,8 +26,9 @@ from app.schemas.refile_queue import (
     NonTrayNestedForRefileQueue,
 )
 from app.config.exceptions import BadRequest, NotFound, ValidationException
+from app.sorting import RefileQueueSorter
 from app.utilities import get_refile_queue
-
+from app.filter_params import RefileQueueParams, SortParams
 
 router = APIRouter(
     prefix="/refile-queue",
@@ -37,8 +38,9 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[RefileQueueListOutput])
 def get_refile_queue_list(
-    building_id: int = None,
+    params: RefileQueueParams = Depends(),
     session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of refile jobs
@@ -50,7 +52,14 @@ def get_refile_queue_list(
     **Returns:**
     - Refile Job List Output: The paginated list of refile jobs
     """
-    return paginate(session, get_refile_queue(building_id))
+    query = get_refile_queue(params)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = RefileQueueSorter(PickList)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.patch("/", response_model=RefileQueueWriteOutput)

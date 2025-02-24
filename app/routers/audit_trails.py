@@ -12,7 +12,7 @@ from app.config.exceptions import (
 )
 from app.filter_params import SortParams
 from app.schemas.audit_trails import AuditTrailListOutput, AuditTrailDetailOutput
-from app.utilities import get_sorted_query
+from app.sorting import BaseSorter
 from app.models.audit_trails import AuditTrail
 
 router = APIRouter(
@@ -57,7 +57,9 @@ def get_audit_trails_list(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(AuditTrail, query, sort_params)
+        # Apply sorting using BaseSorter
+        sorter = BaseSorter(AuditTrail)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 
@@ -93,12 +95,14 @@ def get_audit_trails_detail_list(
     )
 
     # Validate and Apply sorting based on sort_params
+    sorter = BaseSorter(AuditTrail)
+
     if sort_params.sort_by:
-        query = get_sorted_query(AuditTrail, query, sort_params)
+        query = sorter.apply_sorting(query, sort_params)
     else:
         sort_params.sort_by = "updated_at"
         sort_params.sort_order = "desc"
-        query = get_sorted_query(AuditTrail, query, sort_params)
+        query = sorter.apply_sorting(query, sort_params)
 
     results = session.exec(query).all()
 

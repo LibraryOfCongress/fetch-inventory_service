@@ -24,7 +24,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.utilities import get_sorted_query
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/owners",
@@ -37,6 +37,7 @@ def get_owner_list(
     session: Session = Depends(get_session),
     owner_tier_id: Optional[int] = Query(None),
     parent_owner_id: Optional[Union[int, str]] = Query(None),
+    parent_owner: Optional[str] = Query(None),
     sort_params: SortParams = Depends()
 ) -> list:
     """
@@ -61,10 +62,16 @@ def get_owner_list(
         query = query.where(Owner.parent_owner_id.is_(None))
     elif parent_owner_id is not None:
         query = query.where(Owner.parent_owner_id == int(parent_owner_id))
+    if parent_owner is not None:
+        parent_owner_subquery = (
+            select(Owner.id).where(Owner.name == parent_owner)
+        )
+        query = query.where(Owner.parent_owner_id == parent_owner_subquery)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(Owner, query, sort_params)
+        sorter = BaseSorter(Owner)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

@@ -217,6 +217,11 @@ class WithdrawJobListOutput(WithdrawJobBaseOutput):
     def tray_count(self) -> int:
         return len(self.trays)
 
+    @computed_field(title="Container Count")
+    @property
+    def container_count(self) -> int:
+        return self.tray_count + self.non_tray_item_count
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -239,6 +244,7 @@ class WithdrawJobListOutput(WithdrawJobBaseOutput):
                 "item_count": 1,
                 "tray_count": 1,
                 "non_tray_item_count": 1,
+                "container_count": 2
             }
         }
 

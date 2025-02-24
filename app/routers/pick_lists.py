@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import func
 
 from sqlmodel import Session, select
 from datetime import datetime, timezone
@@ -8,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
 from app.logger import inventory_logger
-from app.filter_params import JobFilterParams, SortParams
+from app.filter_params import SortParams, JobFilterParams
 from app.models.buildings import Building
 from app.models.item_retrieval_events import ItemRetrievalEvent
 from app.models.items import Item
@@ -16,10 +17,11 @@ from app.models.non_tray_item_retrieval_events import NonTrayItemRetrievalEvent
 from app.models.non_tray_items import NonTrayItem
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
-from app.models.pick_lists import PickList, PickListStatus
+from app.models.pick_lists import PickList
 from app.models.requests import Request
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
+from app.models.users import User
 from app.models.withdraw_jobs import WithdrawJob
 from app.schemas.pick_lists import (
     PickListInput,
@@ -33,7 +35,8 @@ from app.config.exceptions import (
     NotFound,
     InternalServerError,
 )
-from app.utilities import get_location, manage_transition, get_sorted_query
+from app.sorting import PickListSorter
+from app.utilities import get_location, manage_transition
 
 router = APIRouter(
     prefix="/pick-lists",
@@ -44,45 +47,71 @@ router = APIRouter(
 @router.get("/", response_model=Page[PickListListOutput])
 def get_pick_list_list(
     session: Session = Depends(get_session),
-    queue: bool = Query(default=False),
     params: JobFilterParams = Depends(),
-    status: PickListStatus | None = None,
-    sort_params: SortParams = Depends(),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of pick lists.
 
     **Parameters:**
-    - queue: If true, only return pick lists that are not completed.
     - params: The filter parameters.
-    - status: The status of the pick list.
+        - queue: If true, only return pick lists that are not completed.
+        - workflow_id: The ID of the workflow.
+        - created_by_id: The ID of the user who created the pick list.
+        - building_name: The name of the building.
+        - user_id: The ID of the user.
+        - assigned_user: The name of the assigned user.
+        - status: The status of the pick list.
+        - from_dt: The start date.
+        - to_dt: The end date.
     - sort_params: The sort parameters.
+        - sort_by: The field to sort by.
+        - sort_order: The order to sort by.
 
     **Returns:**
     - Pick List List Output: The paginated list of pick lists.
     """
     # Create a query to select all Pick List from the database
-    query = select(PickList).distinct()
+    query = select(PickList)
 
     try:
-        if queue:
-            query = query.where(PickList.status != "Completed")
+        if params.queue:
+            query = query.where(
+                PickList.status != "Completed"
+            )
+        if params.building_name:
+            building_subquery = (
+                select(Building.id)
+                .where(Building.name.in_(params.building_name))
+            )
+            query = query.where(PickList.building_id.in_(building_subquery))
+        if params.status and len(list(filter(None, params.status))) > 0:
+            query = query.where(PickList.status.in_(params.status))
         if params.workflow_id:
             query = query.where(PickList.id == params.workflow_id)
         if params.user_id:
-            query = query.where(PickList.user_id == params.user_id)
+            query = query.where(PickList.user_id.in_(params.user_id))
+        if params.assigned_user:
+            assigned_user_subquery = (
+                select(User.id)
+                .where(
+                    func.concat(User.first_name, ' ', User.last_name).in_(
+                        params.assigned_user
+                        )
+                    )
+            )
+            query = query.where(PickList.user_id.in_(assigned_user_subquery))
         if params.created_by_id:
             query = query.where(PickList.created_by_id == params.created_by_id)
         if params.from_dt:
             query = query.where(PickList.create_dt >= params.from_dt)
         if params.to_dt:
             query = query.where(PickList.create_dt <= params.to_dt)
-        if status:
-            query = query.where(PickList.status == status.value)
 
         # Validate and Apply sorting based on sort_params
         if sort_params.sort_by:
-            query = get_sorted_query(PickList, query, sort_params)
+            sorter = PickListSorter(PickList)
+            query = sorter.apply_sorting(query, sort_params)
 
         return paginate(session, query)
 

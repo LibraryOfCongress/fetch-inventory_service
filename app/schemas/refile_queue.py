@@ -20,8 +20,11 @@ class RefileQueueInput(BaseModel):
 
 class RefileQueueListOutput(BaseModel):
     id: int
+    barcode_value: str
     shelf_position_id: int
     shelf_position_number: int
+    location: str
+    internal_location: str
     shelf_id: int
     shelf_number: int
     ladder_id: int

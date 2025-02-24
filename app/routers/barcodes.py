@@ -27,7 +27,7 @@ from app.schemas.barcodes import (
     BarcodeMutationInput,
 )
 from app.config.exceptions import NotFound, ValidationException
-from app.utilities import get_sorted_query
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/barcodes",
@@ -54,7 +54,9 @@ def get_barcode_list(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(Barcode, query, sort_params)
+        # Apply sorting using BaseSorter
+        sorter = BaseSorter(Barcode)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

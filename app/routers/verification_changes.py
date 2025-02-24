@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 
 from app.config.exceptions import BadRequest, NotFound
 from app.database.session import get_session, commit_record
+from app.filter_params import SortParams
 from app.models.verification_changes import VerificationChange
 from app.schemas.verification_changes import (
     VerificationChangeInput,
@@ -14,6 +15,7 @@ from app.schemas.verification_changes import (
     VerificationChangeListOutput,
     VerificationChangeDetailOutput,
 )
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/verification-changes",
@@ -22,14 +24,23 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[VerificationChangeListOutput])
-def get_verification_change_list(session: Session = Depends(get_session)):
+def get_verification_change_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a paginated list of verification changes.
 
     **Returns:**
     - Verification Change List Output: The paginated list of verification changes.
     """
-    return paginate(session, select(VerificationChange))
+    query = select(VerificationChange)
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = BaseSorter(VerificationChange)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=VerificationChangeDetailOutput)

@@ -1,18 +1,20 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import not_, or_
+from sqlalchemy import not_, or_, func
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams, SortParams
-from app.models.accession_jobs import AccessionJob, AccessionJobStatus
+from app.filter_params import SortParams, JobFilterParams
+from app.models.accession_jobs import AccessionJob
 from app.models.barcodes import Barcode
+from app.models.users import User
 from app.models.verification_jobs import VerificationJob
 from app.models.container_types import ContainerType
 from app.models.workflows import Workflow
+from app.sorting import BaseSorter
 from app.tasks import complete_accession_job, manage_accession_job_transition
 from app.config.exceptions import (
     NotFound,
@@ -26,7 +28,6 @@ from app.schemas.accession_jobs import (
     AccessionJobListOutput,
     AccessionJobDetailOutput,
 )
-from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/accession-jobs",
@@ -37,16 +38,25 @@ router = APIRouter(
 @router.get("/", response_model=Page[AccessionJobListOutput])
 def get_accession_job_list(
     session: Session = Depends(get_session),
-    queue: bool = Query(default=False),
     params: JobFilterParams = Depends(),
-    sort_params: SortParams = Depends(),
-    status: AccessionJobStatus | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a paginated list of accession jobs.
 
     **Params**
-    - queue: Filters out cancelled Acc Jobs and Acc Jobs where Verification has started.
+    - params: The filter parameters.
+        - queue: Filters out cancelled Acc Jobs and Acc Jobs where Verification has started.
+        - workflow_id: The ID of the workflow.
+        - created_by_id: The ID of the user who created the pick list.
+        - user_id: The ID of the user.
+        - assigned_user: The name of the assigned user.
+        - status: The status of the accession job list.
+        - from_dt: The start date.
+        - to_dt: The end date.
+    - sort_params: The sort parameters.
+        - sort_by: The field to sort by.
+        - sort_order: The order to sort by.
 
     **Returns:**
     - list: A paginated list of accession jobs.
@@ -54,7 +64,7 @@ def get_accession_job_list(
     try:
         query = select(AccessionJob).distinct()
 
-        if queue:
+        if params.queue:
             # queue is the default view on the accession job screen
             # It is not used in advanced search on jobs
             # hide cancelled jobs
@@ -76,22 +86,43 @@ def get_accession_job_list(
                     not_(subquery.exists()),  # Or no related VerificationJobs at all
                 )
             )
+        if params.status and len(list(filter(None, params.status))) > 0:
+            query = query.where(AccessionJob.status.in_(params.status))
         if params.workflow_id:
             query = query.where(AccessionJob.workflow_id == params.workflow_id)
         if params.user_id:
-            query = query.where(AccessionJob.user_id == params.user_id)
+            query = query.where(AccessionJob.user_id.in_(params.user_id))
+        if params.assigned_user:
+            assigned_user_subquery = (
+                select(User.id)
+                .where(
+                    func.concat(User.first_name, ' ', User.last_name).in_(
+                        params.assigned_user
+                        )
+                    )
+                .distinct()
+            )
+            query = query.where(AccessionJob.user_id.in_(assigned_user_subquery))
+        if params.container_type:
+            subquery = (
+                select(ContainerType.id)
+                .where(ContainerType.type == params.container_type)
+                .distinct()
+            )
+            query = query.where(AccessionJob.container_type_id == subquery)
+        if params.trayed is not None:
+            query = query.where(AccessionJob.trayed == params.trayed)
         if params.created_by_id:
             query = query.where(AccessionJob.created_by_id == params.created_by_id)
         if params.from_dt:
             query = query.where(AccessionJob.create_dt >= params.from_dt)
         if params.to_dt:
             query = query.where(AccessionJob.create_dt <= params.to_dt)
-        if status:
-            query = query.where(AccessionJob.status == status.value)
 
         # Validate and Apply sorting based on sort_params
         if sort_params.sort_by:
-            query = get_sorted_query(AccessionJob, query, sort_params)
+            sorter = BaseSorter(AccessionJob)
+            query = sorter.apply_sorting(query, sort_params)
 
         return paginate(session, query)
     except IntegrityError as e:

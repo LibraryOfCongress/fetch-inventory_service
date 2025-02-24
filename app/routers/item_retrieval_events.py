@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from app.database.session import get_session
 from app.filter_params import SortParams
-from app.utilities import get_sorted_query
+from app.sorting import BaseSorter
 from app.models.item_retrieval_events import ItemRetrievalEvent
 from app.schemas.item_retrieval_events import (
     ItemRetrievalEventInput,
@@ -43,7 +43,9 @@ def get_item_retrieval_events(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(ItemRetrievalEvent, query, sort_params)
+        # Apply sorting using BaseSorter
+        sorter = BaseSorter(ItemRetrievalEvent)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

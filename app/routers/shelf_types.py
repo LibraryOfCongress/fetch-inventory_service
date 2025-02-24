@@ -25,7 +25,7 @@ from app.config.exceptions import (
     InternalServerError,
     BadRequest,
 )
-from app.utilities import get_sorted_query
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/shelf-types",
@@ -58,7 +58,8 @@ def get_shelf_type_list(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(ShelfType, query, sort_params)
+        sorter = BaseSorter(ShelfType)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

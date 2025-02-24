@@ -1,21 +1,23 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy import func
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams, SortParams
+from app.filter_params import SortParams, JobFilterParams
+from app.models.users import User
 from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
+from app.sorting import ShelvingJobSorter
 from app.utilities import (
-    process_containers_for_shelving, manage_transition,
-    get_sorted_query,
+    process_containers_for_shelving, manage_transition
 )
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
-from app.models.shelving_jobs import ShelvingJob, ShelvingJobStatus
+from app.models.shelving_jobs import ShelvingJob
 from app.models.shelves import Shelf
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_position_numbers import ShelfPositionNumber
@@ -43,10 +45,8 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[ShelvingJobListOutput])
 def get_shelving_job_list(
-    queue: bool = Query(default=False),
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
-    status: ShelvingJobStatus | None = None,
     sort_params: SortParams = Depends()
 ) -> list:
     """
@@ -54,39 +54,62 @@ def get_shelving_job_list(
     Default view filters out Completed jobs.
 
     **Parameters:**
-    - queue: Filters out cancelled jobs
+
     - params: The filter parameters.
-    - status: The status of the shelving job.
+        - queue: Filters out cancelled jobs
+        - workflow_id: The ID of the workflow.
+        - created_by_id: The ID of the user who created the shelving job list.
+        - building_name: The name of the building.
+        - user_id: The ID of the user.
+        - assigned_user: The name of the assigned user.
+        - status: The status of the shelving job.
+        - from_dt: The start date.
+        - to_dt: The end date.
     - sort_params: The sort parameters.
+        - sort_by: The field to sort by.
+        - sort_order: The order to sort by.
 
     **Returns:**
     - list: A paginated list of shelving jobs.
     """
     # Create a query to select all Shelving Job
-    query = select(ShelvingJob).distinct()
+    query = select(ShelvingJob)
 
     try:
-        if queue:
+        if params.queue:
             # used on job dashboard, not in search
             query = query.where(ShelvingJob.status != "Completed").where(
                 ShelvingJob.status != "Cancelled"
             )
+        if params.status and len(list(filter(None, params.status))) > 0:
+            query = query.where(ShelvingJob.status.in_(params.status))
         if params.workflow_id:
             query = query.where(ShelvingJob.id == params.workflow_id)
         if params.user_id:
-            query = query.where(ShelvingJob.user_id == params.user_id)
+            query = query.where(ShelvingJob.user_id.in_(params.user_id))
+        if params.assigned_user:
+            assigned_user_subquery = (
+                select(User.id)
+                .where(
+                    func.concat(User.first_name, ' ', User.last_name).in_(
+                        params.assigned_user
+                    )
+                )
+                .distinct()
+            )
+            query = query.where(ShelvingJob.user_id.in_(assigned_user_subquery))
         if params.created_by_id:
             query = query.where(ShelvingJob.created_by_id == params.created_by_id)
         if params.from_dt:
             query = query.where(ShelvingJob.create_dt >= params.from_dt)
         if params.to_dt:
             query = query.where(ShelvingJob.create_dt <= params.to_dt)
-        if status:
-            query = query.where(ShelvingJob.status == status.value)
 
         # Validate and Apply sorting based on sort_params
         if sort_params.sort_by:
-            query = get_sorted_query(ShelvingJob, query, sort_params)
+            # Apply sorting using RequestSorter
+            sorter = ShelvingJobSorter(ShelvingJob)
+            query = sorter.apply_sorting(query, sort_params)
 
         return paginate(session, query)
 

@@ -1,14 +1,17 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 
-from app.database.session import get_session, commit_record
-from app.filter_params import SortParams
+from app.database.session import get_session
+from app.filter_params import SortParams, ItemFilterParams
 from app.models.barcodes import Barcode
-from app.models.items import Item, ItemStatus
+from app.models.items import Item
+from app.models.media_types import MediaType
 from app.models.non_tray_items import NonTrayItem
+from app.models.owners import Owner
+from app.models.size_class import SizeClass
 from app.models.trays import Tray
 from app.models.verification_changes import VerificationChange
 from app.models.verification_jobs import VerificationJob
@@ -24,10 +27,9 @@ from app.config.exceptions import (
     NotFound,
     ValidationException,
     InternalServerError,
-    BadRequest,
 )
+from app.sorting import ItemSorter
 from app.tasks import process_tray_item_move
-from app.utilities import get_sorted_query
 
 router = APIRouter(
     prefix="/items",
@@ -38,12 +40,7 @@ router = APIRouter(
 @router.get("/", response_model=Page[ItemListOutput])
 def get_item_list(
     session: Session = Depends(get_session),
-    owner_id: int = Query(default=None),
-    size_class_id: int = Query(default=None),
-    media_type_id: int = Query(default=None),
-    from_dt: datetime = Query(default=None),
-    to_dt: datetime = Query(default=None),
-    status: ItemStatus | None = None,
+    params: ItemFilterParams = Depends(),
     sort_params: SortParams = Depends(),
 ) -> list:
     """
@@ -62,24 +59,50 @@ def get_item_list(
     - Item List Output: The paginated list of items.
     """
     # Create a query to select all items from the database
-    item_queryset = select(Item).distinct()
+    item_queryset = select(Item)
 
-    if status:
-        item_queryset = item_queryset.where(Item.status == status.value)
-    if owner_id:
-        item_queryset = item_queryset.where(Item.owner_id == owner_id)
-    if size_class_id:
-        item_queryset = item_queryset.where(Item.size_class_id == size_class_id)
-    if media_type_id:
-        item_queryset = item_queryset.where(Item.media_type_id == media_type_id)
-    if from_dt:
-        item_queryset = item_queryset.where(Item.accession_dt >= from_dt)
-    if to_dt:
-        item_queryset = item_queryset.where(Item.accession_dt <= to_dt)
+    if params.status:
+        item_queryset = item_queryset.where(Item.status.in_(params.status.value))
+    if params.owner_id:
+        item_queryset = item_queryset.where(Item.owner_id.in_(params.owner_id))
+    if params.owner:
+        owner_subquery = (
+            select(Owner.id)
+            .where(Owner.name.in_(params.owner)).distinct()
+        )
+        item_queryset = item_queryset.where(Item.owner_id.in_(owner_subquery))
+    if params.size_class_id:
+        item_queryset = item_queryset.where(Item.size_class_id.in_(params.size_class_id))
+    if params.size_class:
+        size_class_subquery = (
+            select(SizeClass.id)
+            .where(SizeClass.name.in_(params.size_class)).distinct()
+        )
+        item_queryset = item_queryset.where(Item.size_class_id.in_(size_class_subquery))
+    if params.media_type_id:
+        item_queryset = item_queryset.where(Item.media_type_id.in_(params.media_type_id))
+    if params.media_type:
+        media_type_subquery = (
+            select(MediaType.id)
+            .where(MediaType.name.in_(params.media_type)).distinct()
+        )
+        item_queryset = item_queryset.where(Item.media_type_id.in_(media_type_subquery))
+    if params.barcode_value:
+        barcode_value_subquery = (
+            select(Barcode.id)
+            .where(Barcode.value.in_(params.barcode_value)).distinct()
+        )
+        item_queryset = item_queryset.where(Item.barcode_id.in_(barcode_value_subquery))
+    if params.from_dt:
+        item_queryset = item_queryset.where(Item.accession_dt >= params.from_dt)
+    if params.to_dt:
+        item_queryset = item_queryset.where(Item.accession_dt <= params.to_dt)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        item_queryset = get_sorted_query(Item, item_queryset, sort_params)
+        # Apply sorting using BaseSorter
+        sorter = ItemSorter(Item)
+        item_queryset = sorter.apply_sorting(item_queryset, sort_params)
 
     return paginate(session, item_queryset)
 

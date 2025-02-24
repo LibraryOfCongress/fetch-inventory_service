@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from sqlalchemy import asc, desc
+from sqlalchemy import func, asc, desc
 from sqlalchemy.orm import aliased
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -13,7 +13,8 @@ from app.config.exceptions import (
     BadRequest,
     ValidationException,
 )
-from app.database.session import get_session, commit_record
+from app.database.session import get_session
+from app.filter_params import SortParams, JobFilterParams
 from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.filter_params import JobFilterParams, SortParams
 from app.logger import inventory_logger
@@ -27,13 +28,14 @@ from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
-from app.models.withdraw_jobs import WithdrawJob, WithdrawJobStatus
+from app.models.users import User
+from app.models.withdraw_jobs import WithdrawJob
 from app.models.pick_lists import PickList
 from app.models.requests import Request
+from app.sorting import WithdrawJobSorter
 from app.utilities import (
     validate_item_not_shelved,
     validate_non_tray_item_not_shelved,
-    get_sorted_query,
 )
 from starlette import status
 from app.schemas.withdraw_jobs import (
@@ -74,19 +76,25 @@ def validate_withdraw_item(items, job_id, status, session):
 @router.get("/", response_model=Page[WithdrawJobListOutput])
 def get_withdraw_job_list(
     session: Session = Depends(get_session),
-    queue: bool = Query(default=False),
     params: JobFilterParams = Depends(),
-    status: WithdrawJobStatus | None = None,
-    sort_params: SortParams = Depends(),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a paginated list of withdraw jobs.
 
     **Parameters:**
-    - queue: Filters out completed withdraw jobs.
     - params: The filter parameters.
-    - status: The status of the withdraw job.
+        - queue: Filters out completed withdraw jobs.
+        - workflow_id: The ID of the workflow.
+        - created_by_id: The ID of the user who created the withdraw job list.
+        - user_id: The ID of the user.
+        - assigned_user: The name of the assigned user.
+        - status: The status of the pick list.
+        - from_dt: The start date.
+        - to_dt: The end date.
     - sort_params: The sort parameters.
+        - sort_by: The field to sort by.
+        - sort_order: The order to sort by.
 
     **Returns:**
     - list: A paginated list of withdraw jobs.
@@ -94,25 +102,41 @@ def get_withdraw_job_list(
     # Create a query to select all Withdraw Job from the database
     query = select(WithdrawJob).distinct()
 
-    if queue:
+    if params.queue:
         # filter out completed.  maybe someday hide cancelled.
-        query = query.where(WithdrawJob.status != "Completed")
+        query = query.where(
+            WithdrawJob.status != "Completed"
+        )
+    if params.status and len(list(filter(None, params.status))) > 0:
+        query = query.where(WithdrawJob.status.in_(params.status))
     if params.workflow_id:
         query = query.where(WithdrawJob.id == params.workflow_id)
     if params.user_id:
-        query = query.where(WithdrawJob.assigned_user_id == params.user_id)
+        query = query.where(WithdrawJob.assigned_user_id.in_(params.user_id))
+    if params.assigned_user:
+        assigned_user_subquery = (
+            select(User.id)
+            .where(
+                func.concat(User.first_name, ' ', User.last_name).in_(
+                    params.assigned_user
+                )
+            )
+            .distinct()
+        )
+        query = query.where(WithdrawJob.user_id.in_(assigned_user_subquery))
     if params.created_by_id:
         query = query.where(WithdrawJob.created_by_id == params.created_by_id)
     if params.from_dt:
         query = query.where(WithdrawJob.create_dt >= params.from_dt)
     if params.to_dt:
         query = query.where(WithdrawJob.create_dt <= params.to_dt)
-    if status:
-        query = query.where(WithdrawJob.status == status.value)
+
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(WithdrawJob, query, sort_params)
+        # Apply sorting using RequestSorter
+        sorter = WithdrawJobSorter(WithdrawJob)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 

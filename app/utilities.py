@@ -7,8 +7,8 @@ import logging
 import pandas as pd
 import pytz
 from datetime import timezone
-from sqlalchemy import and_, text, asc, desc
-from sqlalchemy.orm import joinedload, aliased
+from sqlalchemy import and_, text, asc, desc, func
+from sqlalchemy.orm import joinedload, aliased, RelationshipProperty
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql import not_
 from sqlmodel import select, Session
@@ -315,7 +315,7 @@ def manage_transition(original_record, update_record):
     return original_record
 
 
-def get_refile_queue(building_id: int = None) -> list:
+def get_refile_queue(params):
     """
     Get refile queue
     """
@@ -323,9 +323,41 @@ def get_refile_queue(building_id: int = None) -> list:
     item_query_conditions = []
     non_tray_item_query_conditions = []
 
-    if building_id:
-        item_query_conditions.append(Building.id == building_id)
-        non_tray_item_query_conditions.append(Building.id == building_id)
+    if params.building_id:
+        item_query_conditions.append(Building.id == params.building_id)
+        non_tray_item_query_conditions.append(Building.id == params.building_id)
+    if params.media_type:
+        media_type_subquery = (
+            select(MediaType.id)
+            .where(MediaType.name.in_(params.media_type))
+        )
+        item_query_conditions.append(Item.media_type_id.in_(media_type_subquery))
+        non_tray_item_query_conditions.append(NonTrayItem.media_type_id.in_(media_type_subquery))
+    if params.owner:
+        owner_subquery = (
+            select(Owner.id)
+            .where(Owner.name.in_(params.owner))
+        )
+        item_query_conditions.append(Item.owner_id.in_(owner_subquery))
+        non_tray_item_query_conditions.append(NonTrayItem.owner_id.in_(owner_subquery))
+    if params.size_class:
+        size_class_subquery = (
+            select(SizeClass.id)
+            .where(SizeClass.name.in_(params.size_class))
+        )
+        item_query_conditions.append(Item.size_class_id.in_(size_class_subquery))
+        non_tray_item_query_conditions.append(NonTrayItem.size_class_id.in_(size_class_subquery))
+
+    if params.container_type:
+        container_type_subquery = (
+            select(ContainerType.id)
+            .where(ContainerType.type.in_(params.container_type))
+        )
+        inventory_logger.info(f"Container Type Subquery: {container_type_subquery}")
+        item_query_conditions.append(Tray.container_type_id.in_(container_type_subquery))
+        non_tray_item_query_conditions.append(NonTrayItem.container_type_id.in_(
+            container_type_subquery))
+
 
     # Get items scanned for refile queue
     item_query_conditions.append(Item.scanned_for_refile_queue == True)
@@ -334,7 +366,10 @@ def get_refile_queue(building_id: int = None) -> list:
     item_query = (
         select(
             Item.id.label("id"),
+            Barcode.value.label("barcode_value"),
             ShelfPosition.id.label("shelf_position_id"),
+            ShelfPosition.location.label("location"),
+            ShelfPosition.internal_location.label("internal_location"),
             ShelfPositionNumber.number.label("shelf_position_number"),
             ShelfPosition.shelf_id.label("shelf_id"),
             ShelfNumber.number.label("shelf_number"),
@@ -349,7 +384,6 @@ def get_refile_queue(building_id: int = None) -> list:
             Item.scanned_for_refile_queue.label("scanned_for_refile_queue"),
             ContainerType.type.label("container_type"),
             MediaType.name.label("media_type"),
-            Barcode.value.label("barcode_value"),
             Owner.name.label("owner"),
             SizeClass.name.label("size_class"),
             Item.scanned_for_refile_queue_dt.label("scanned_for_refile_queue_dt"),
@@ -383,7 +417,10 @@ def get_refile_queue(building_id: int = None) -> list:
     non_tray_item_query = (
         select(
             NonTrayItem.id.label("id"),
+            Barcode.value.label("barcode_value"),
             ShelfPosition.id.label("shelf_position_id"),
+            ShelfPosition.location.label("location"),
+            ShelfPosition.internal_location.label("internal_location"),
             ShelfPositionNumber.number.label("shelf_position_number"),
             ShelfPosition.shelf_id.label("shelf_id"),
             ShelfNumber.number.label("shelf_number"),
@@ -398,7 +435,6 @@ def get_refile_queue(building_id: int = None) -> list:
             NonTrayItem.scanned_for_refile_queue.label("scanned_for_refile_queue"),
             ContainerType.type.label("container_type"),
             MediaType.name.label("media_type"),
-            Barcode.value.label("barcode_value"),
             Owner.name.label("owner"),
             SizeClass.name.label("size_class"),
             NonTrayItem.scanned_for_refile_queue_dt.label(
@@ -429,7 +465,34 @@ def get_refile_queue(building_id: int = None) -> list:
         .filter(and_(*non_tray_item_query_conditions))
     )
 
-    return item_query.union_all(non_tray_item_query).subquery()
+    # ✅ Correctly alias the subquery
+    refile_queue = item_query.union_all(non_tray_item_query).alias("refile_queue")
+    refile_queue = select(
+        refile_queue.c.id,
+        refile_queue.c.barcode_value,
+        refile_queue.c.shelf_position_id,
+        refile_queue.c.location,
+        refile_queue.c.internal_location,
+        refile_queue.c.shelf_position_number,
+        refile_queue.c.shelf_id,
+        refile_queue.c.shelf_number,
+        refile_queue.c.ladder_id,
+        refile_queue.c.ladder_number,
+        refile_queue.c.side_id,
+        refile_queue.c.side_orientation,
+        refile_queue.c.aisle_id,
+        refile_queue.c.aisle_number,
+        refile_queue.c.module_id,
+        refile_queue.c.module_number,
+        refile_queue.c.scanned_for_refile_queue,
+        refile_queue.c.container_type,
+        refile_queue.c.media_type,
+        refile_queue.c.owner,
+        refile_queue.c.size_class,
+        refile_queue.c.scanned_for_refile_queue_dt
+        ).select_from(refile_queue)
+
+    return refile_queue
 
 
 # Request Batch Upload Helper Functions
@@ -1066,7 +1129,61 @@ def get_sorted_query(model, query, sort_params):
         )
 
     sortable_fields = get_sortable_fields(model)
-    if sort_params.sort_by in sortable_fields:
+    if sort_params.sort_by not in sortable_fields:
+        if sort_params.sort_order == "asc":
+            if sort_params.sort_by == "request_type":
+                query = query.join(RequestType).order_by(asc(RequestType.name))
+            if sort_params.sort_by == "barcode_value":
+                query = query.join(Barcode).order_by(asc(Barcode.value))
+            if sort_params.sort_by == "building_name":
+                query = query.join(Building).order_by(asc(Building.name))
+            if sort_params.sort_by == "priority":
+                query = query.join(Priority).order_by(asc(Priority.name))
+            if sort_params.sort_by == "media_type":
+                query = query.join(MediaType).order_by(asc(MediaType.name))
+            if sort_params.sort_by == "delivery_location":
+                query = query.join(DeliveryLocation).order_by(asc(DeliveryLocation.name))
+            if sort_params.sort_by == "owner":
+                query = query.join(Owner).order_by(asc(Owner.name))
+            if sort_params.sort_by == "size_class":
+                query = query.join(SizeClass).order_by(asc(SizeClass.name))
+            if sort_params.sort_by == "size_class_short_name":
+                query = query.join(SizeClass).order_by(asc(SizeClass.short_name))
+            if sort_params.sort_by == "shelf_type":
+                query = query.join(ShelfType).order_by(asc(ShelfType.type))
+            if sort_params.sort_by == "container_type":
+                query = query.join(ContainerType).order_by(asc(ContainerType.type))
+            if sort_params.sort_by == "request_count":
+                query = query.join(Request).order_by(asc(func.count(Request.id)))
+        else:
+            if sort_params.sort_by == "request_type":
+                query = query.join(RequestType).order_by(desc(RequestType.name))
+            if sort_params.sort_by == "barcode_value":
+                query = query.join(Barcode).order_by(desc(Barcode.value))
+            if sort_params.sort_by == "building_name":
+                query = query.join(Building).order_by(desc(Building.name))
+            if sort_params.sort_by == "priority":
+                query = query.join(Priority).order_by(desc(Priority.name))
+            if sort_params.sort_by == "media_type":
+                query = query.join(MediaType).order_by(desc(MediaType.name))
+            if sort_params.sort_by == "delivery_location":
+                query = query.join(DeliveryLocation).order_by(
+                    desc(DeliveryLocation.name)
+                    )
+            if sort_params.sort_by == "owner":
+                query = query.join(Owner).order_by(desc(Owner.name))
+            if sort_params.sort_by == "size_class":
+                query = query.join(SizeClass).order_by(desc(SizeClass.name))
+            if sort_params.sort_by == "size_class_short_name":
+                query = query.join(SizeClass).order_by(desc(SizeClass.short_name))
+            if sort_params.sort_by == "shelf_type":
+                query = query.join(ShelfType).order_by(desc(ShelfType.type))
+            if sort_params.sort_by == "container_type":
+                query = query.join(ContainerType).order_by(desc(ContainerType.type))
+            if sort_params.sort_by == "request_count":
+                query = query.join(Request).order_by(desc(func.count(Request.id)))
+
+    elif sort_params.sort_by in sortable_fields:
         sort_field = getattr(model, sort_params.sort_by, None)
         if sort_field:
             if sort_params.sort_order == "asc":

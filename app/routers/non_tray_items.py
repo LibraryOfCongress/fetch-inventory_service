@@ -1,23 +1,26 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 
-from app.database.session import get_session, commit_record
+from app.database.session import get_session
 from app.events import update_shelf_space_after_non_tray
 from app.filter_params import SortParams
 from app.logger import inventory_logger
-from app.models.non_tray_items import NonTrayItem, NonTrayItemStatus
+from app.models.media_types import MediaType
+from app.models.non_tray_items import NonTrayItem
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.models.items import Item
+from app.models.size_class import SizeClass
 from app.models.trays import Tray
 from app.models.verification_changes import VerificationChange
 from app.models.verification_jobs import VerificationJob
+from app.filter_params import ItemFilterParams
 from app.schemas.non_tray_items import (
     NonTrayItemInput,
     NonTrayItemMoveInput,
@@ -30,8 +33,7 @@ from app.config.exceptions import (
     NotFound,
     ValidationException
 )
-from app.utilities import get_sorted_query
-
+from app.sorting import ItemSorter
 
 router = APIRouter(
     prefix="/non_tray_items",
@@ -42,12 +44,7 @@ router = APIRouter(
 @router.get("/", response_model=Page[NonTrayItemListOutput])
 def get_non_tray_item_list(
     session: Session = Depends(get_session),
-    owner_id: int = Query(default=None),
-    size_class_id: int = Query(default=None),
-    media_type_id: int = Query(default=None),
-    from_dt: datetime = Query(default=None),
-    to_dt: datetime = Query(default=None),
-    status: NonTrayItemStatus | None = None,
+    params: ItemFilterParams = Depends(),
     sort_params: SortParams = Depends()
 ) -> list:
     """
@@ -66,24 +63,45 @@ def get_non_tray_item_list(
     - Non Tray Item List Output: The paginated list of non tray items.
     """
     # Create a query to select all non tray items from the database
-    query = select(NonTrayItem).distinct()
+    query = select(NonTrayItem)
 
-    if status:
-        query = query.where(NonTrayItem.status == status.value)
-    if owner_id:
-        query = query.where(NonTrayItem.owner_id == owner_id)
-    if size_class_id:
-        query = query.where(NonTrayItem.size_class_id == size_class_id)
-    if media_type_id:
-        query = query.where(NonTrayItem.media_type_id == media_type_id)
-    if from_dt:
-        query = query.where(NonTrayItem.accession_dt >= from_dt)
-    if to_dt:
-        query = query.where(NonTrayItem.accession_dt <= to_dt)
+    if params.barcode_value:
+        barcode_value_subquery = (
+            select(Barcode.id).where(Barcode.value.in_(params.barcode_value))
+        )
+        query = query.where(NonTrayItem.barcode_id.in_(barcode_value_subquery))
+    if params.status:
+        query = query.where(NonTrayItem.status.in_(params.status.value))
+    if params.owner_id:
+        query = query.where(NonTrayItem.owner_id.in_(params.owner_id))
+    if params.owner:
+        owner_subquery = (
+            select(Item.owner_id).where(Item.owner == params.owner)
+        )
+        query = query.where(NonTrayItem.owner_id.in_(owner_subquery))
+    if params.size_class_id:
+        query = query.where(NonTrayItem.size_class_id.in_(params.size_class_id))
+    if params.size_class:
+        size_class_subquery = (
+            select(SizeClass.id).where(SizeClass.name.in_(params.size_class))
+        )
+        query = query.where(NonTrayItem.size_class_id.in_(size_class_subquery))
+    if params.media_type_id:
+        query = query.where(NonTrayItem.media_type_id.in_(params.media_type_id))
+    if params.media_type:
+        media_type_subquery = (
+            select(MediaType.id).where(MediaType.name.in_(params.media_type))
+        )
+        query = query.where(NonTrayItem.media_type_id.in_(media_type_subquery))
+    if params.from_dt:
+        query = query.where(NonTrayItem.accession_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(NonTrayItem.accession_dt <= params.to_dt)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        query = get_sorted_query(NonTrayItem, query, sort_params)
+        sorter = ItemSorter(NonTrayItem)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 
