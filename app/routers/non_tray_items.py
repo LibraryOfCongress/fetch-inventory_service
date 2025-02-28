@@ -1,19 +1,26 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
-from sqlalchemy.exc import IntegrityError
+from datetime import datetime, timezone
 
 from app.database.session import get_session
-from app.models.non_tray_items import NonTrayItem, NonTrayItemStatus
+from app.events import update_shelf_space_after_non_tray
+from app.filter_params import SortParams
+from app.logger import inventory_logger
+from app.models.media_types import MediaType
+from app.models.non_tray_items import NonTrayItem
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.models.items import Item
+from app.models.size_class import SizeClass
 from app.models.trays import Tray
+from app.models.verification_changes import VerificationChange
+from app.models.verification_jobs import VerificationJob
+from app.filter_params import ItemFilterParams
 from app.schemas.non_tray_items import (
     NonTrayItemInput,
     NonTrayItemMoveInput,
@@ -24,11 +31,9 @@ from app.schemas.non_tray_items import (
 )
 from app.config.exceptions import (
     NotFound,
-    ValidationException,
-    InternalServerError,
-    BadRequest,
+    ValidationException
 )
-from app.tasks import manage_shelf_available_space
+from app.sorting import ItemSorter
 
 router = APIRouter(
     prefix="/non_tray_items",
@@ -39,31 +44,64 @@ router = APIRouter(
 @router.get("/", response_model=Page[NonTrayItemListOutput])
 def get_non_tray_item_list(
     session: Session = Depends(get_session),
-    owner_id: int = Query(default=None),
-    size_class_id: int = Query(default=None),
-    media_type_id: int = Query(default=None),
-    from_dt: datetime = Query(default=None),
-    to_dt: datetime = Query(default=None),
-    status: NonTrayItemStatus | None = None,
+    params: ItemFilterParams = Depends(),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a paginated list of non tray items from the database
+
+    **Parameters:**
+    - owner_id (int): The ID of the owner to filter by.
+    - size_class_id (int): The ID of the size class to filter by.
+    - media_type_id (int): The ID of the media type to filter by.
+    - from_dt (datetime): The start date to filter by.
+    - to_dt (datetime): The end date to filter by.
+    - status (NonTrayItemStatus): The status to filter by.
+    - sort_params (SortParams): The sorting parameters.
+
+    **Returns:**
+    - Non Tray Item List Output: The paginated list of non tray items.
     """
     # Create a query to select all non tray items from the database
-    query = select(NonTrayItem).distinct()
+    query = select(NonTrayItem)
 
-    if status:
-        query = query.where(NonTrayItem.status == status.value)
-    if owner_id:
-        query = query.where(NonTrayItem.owner_id == owner_id)
-    if size_class_id:
-        query = query.where(NonTrayItem.size_class_id == size_class_id)
-    if media_type_id:
-        query = query.where(NonTrayItem.media_type_id == media_type_id)
-    if from_dt:
-        query = query.where(NonTrayItem.accession_dt >= from_dt)
-    if to_dt:
-        query = query.where(NonTrayItem.accession_dt <= to_dt)
+    if params.barcode_value:
+        barcode_value_subquery = (
+            select(Barcode.id).where(Barcode.value.in_(params.barcode_value))
+        )
+        query = query.where(NonTrayItem.barcode_id.in_(barcode_value_subquery))
+    if params.status:
+        query = query.where(NonTrayItem.status.in_(params.status.value))
+    if params.owner_id:
+        query = query.where(NonTrayItem.owner_id.in_(params.owner_id))
+    if params.owner:
+        owner_subquery = (
+            select(Item.owner_id).where(Item.owner == params.owner)
+        )
+        query = query.where(NonTrayItem.owner_id.in_(owner_subquery))
+    if params.size_class_id:
+        query = query.where(NonTrayItem.size_class_id.in_(params.size_class_id))
+    if params.size_class:
+        size_class_subquery = (
+            select(SizeClass.id).where(SizeClass.name.in_(params.size_class))
+        )
+        query = query.where(NonTrayItem.size_class_id.in_(size_class_subquery))
+    if params.media_type_id:
+        query = query.where(NonTrayItem.media_type_id.in_(params.media_type_id))
+    if params.media_type:
+        media_type_subquery = (
+            select(MediaType.id).where(MediaType.name.in_(params.media_type))
+        )
+        query = query.where(NonTrayItem.media_type_id.in_(media_type_subquery))
+    if params.from_dt:
+        query = query.where(NonTrayItem.accession_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(NonTrayItem.accession_dt <= params.to_dt)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = ItemSorter(NonTrayItem)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 
@@ -92,8 +130,12 @@ def get_non_tray_by_barcode_value(value: str, session: Session = Depends(get_ses
     if not value:
         raise ValidationException(detail="Non Tray Item barcode value is required")
 
-    statement = select(NonTrayItem).join(Barcode).where(Barcode.value == value)
-    non_tray = session.exec(statement).first()
+    non_tray = (
+        session.query(NonTrayItem)
+        .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
+        .filter(Barcode.value == value)
+        .first()
+    )
     if not non_tray:
         raise NotFound(detail=f"Non Tray Item barcode value {value} Not Found")
     return non_tray
@@ -119,7 +161,7 @@ def create_non_tray_item(
             session.query(Barcode).where(Barcode.id == item_input.barcode_id).first()
         )
         raise ValidationException(
-            detail=f"Item " f"with barcode value" f" {barcode.value} already exists"
+            detail=f"Item with barcode value {barcode.value} already exists"
         )
 
     # Create a new non_tray_item
@@ -132,7 +174,7 @@ def create_non_tray_item(
     new_non_tray_item.container_type_id = container_type.id
     # non-trays are created in accession, set accession date
     if not new_non_tray_item.accession_dt:
-        new_non_tray_item.accession_dt = datetime.utcnow()
+        new_non_tray_item.accession_dt = datetime.now(timezone.utc)
     # check if existing withdrawn non-tray with this barcode
     previous_non_tray_item = session.exec(
         select(NonTrayItem).where(
@@ -155,6 +197,8 @@ def create_non_tray_item(
     session.commit()
     session.refresh(new_non_tray_item)
 
+    update_shelf_space_after_non_tray(new_non_tray_item, None, None)
+
     return new_non_tray_item
 
 
@@ -168,6 +212,7 @@ def update_non_tray_item(
     """
     Update a non_tray_item record in the database
     """
+    inventory_logger.info(f"Updating Non Tray Items: {non_tray_item}")
     # Get the existing non_tray_item record from the database
     existing_non_tray_item = session.get(NonTrayItem, id)
 
@@ -194,16 +239,6 @@ def update_non_tray_item(
         if not shelf:
             raise NotFound(detail=f"Shelf ID {new_shelf_position.shelf_id} Not Found")
 
-        if shelf.available_space == 0:
-            raise ValidationException(
-                detail=f"Shelf id {shelf.id} has no available space"
-            )
-
-        if existing_non_tray_item.shelf_position_id is None:
-            session.query(Shelf).filter(Shelf.id == shelf.id).update(
-                {"available_space": shelf.available_space - 1}
-            )
-
         if existing_non_tray_item.shelf_position_id and (
             non_tray_item.shelf_position_id != existing_non_tray_item.shelf_position_id
         ):
@@ -218,24 +253,40 @@ def update_non_tray_item(
                     detail=f"Shelf Position ID {existing_non_tray_item.shelf_position_id} Not Found"
                 )
 
-            background_tasks.add_task(
-                manage_shelf_available_space,
-                session,
-                existing_shelf_position,
-                new_shelf_position,
-            )
-
     # Update the non_tray_item record with the mutated data
     mutated_data = non_tray_item.model_dump(exclude_unset=True)
 
     for key, value in mutated_data.items():
+        if key in ["media_type_id", "size_class_id"] and existing_non_tray_item.__getattribute__(
+            key
+            ) != value and existing_non_tray_item.verification_job_id:
+            verification_job = session.query(VerificationJob).filter(
+                VerificationJob.id == existing_non_tray_item.verification_job_id
+                ).first()
+            non_tray_item_barcode = session.get(Barcode, existing_non_tray_item.barcode_id)
+
+            new_verification_change = VerificationChange(
+                workflow_id=verification_job.workflow_id,
+                item_barcode_value=non_tray_item_barcode.value,
+                change_type="MediaTypeEdit" if key == "media_type_id" else "SizeClassEdit",
+                completed_by_id=verification_job.user_id
+            )
+
+            session.add(new_verification_change)
+
         setattr(existing_non_tray_item, key, value)
-    setattr(existing_non_tray_item, "update_dt", datetime.utcnow())
+    setattr(existing_non_tray_item, "update_dt", datetime.now(timezone.utc))
 
     # Commit the changes to the database
     session.add(existing_non_tray_item)
     session.commit()
     session.refresh(existing_non_tray_item)
+
+    update_shelf_space_after_non_tray(
+        existing_non_tray_item,
+        existing_non_tray_item.shelf_position_id,
+        non_tray_item.shelf_position_id
+    )
 
     return existing_non_tray_item
 
@@ -248,24 +299,12 @@ def delete_non_tray_item(id: int, session: Session = Depends(get_session)):
     non_tray_item = session.get(NonTrayItem, id)
 
     if non_tray_item:
-        if non_tray_item.shelf_position_id:
-            shelf_position = session.query(ShelfPosition).get(
-                non_tray_item.shelf_position_id
-            )
-
-            if shelf_position:
-                shelf = session.query(Shelf).get(shelf_position.shelf_id)
-
-                if shelf:
-                    session.query(Shelf).filter(Shelf.id == shelf.id).update(
-                        {"available_space": shelf.available_space + 1}
-                    )
-
+        update_shelf_space_after_non_tray(None, None, non_tray_item.shelf_position_id)
         session.delete(non_tray_item)
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Non Tray Item ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Non Tray Item ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Non Tray Item ID {id} Not Found")
@@ -295,26 +334,25 @@ def move_item(
     )
     if not non_tray_item:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Non Tray Item with barcode "
-            "value not found"
+            detail=f"""Failed to transfer: {barcode_value} - Non Tray Item with
+            barcode value not found"""
         )
 
     source_shelf = (
         session.query(Shelf)
         .join(ShelfPosition, non_tray_item.shelf_position_id == ShelfPosition.id)
         .filter(ShelfPosition.shelf_id == Shelf.id)
+        .first()
     )
     if not source_shelf:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Shelf with barcode value "
-            f"not "
-            f"found"
+            detail=f"Failed to transfer: {barcode_value} - Shelf with barcode value not found"
         )
 
     if non_tray_item.shelf_position_id is None:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Non Tray Item has not been "
-            f"assigned to a shelf position."
+            detail=f"""Failed to transfer: {barcode_value} - Non Tray Item has not
+            been assigned to a shelf position"""
         )
 
     if (
@@ -322,7 +360,7 @@ def move_item(
         or not non_tray_item.scanned_for_verification
     ):
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} has not been verified."
+            detail=f"Failed to transfer: {barcode_value} has not been verified"
         )
 
     # Retrieve the destination shelf
@@ -334,8 +372,8 @@ def move_item(
     )
     if not destination_shelf:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Shelf with barcode value"
-            f" {non_tray_item_input.shelf_barcode_value} not found"
+            detail=f"""Failed to transfer: {barcode_value} - Shelf with barcode
+            value {non_tray_item_input.shelf_barcode_value} not found"""
         )
 
     # Check if the source and destination shelves are of the same size class
@@ -345,13 +383,7 @@ def move_item(
         or source_shelf.owner_id != destination_shelf.owner_id
     ):
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Shelf must be of the same size class and owner."""
-        )
-
-    # Check the available space in the destination shelf
-    if destination_shelf.available_space < 1:
-        raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Shelf id {destination_shelf.id} has no available space"""
+            detail=f"Failed to transfer: {barcode_value} - Shelf must be of the same size class and owner."
         )
 
     # Check if the shelf position at destination shelf is unoccupied
@@ -381,18 +413,18 @@ def move_item(
 
             if tray_shelf_position or non_tray_shelf_position:
                 raise ValidationException(
-                    detail=f"Failed to transfer: {barcode_value} - Shelf Position"
-                    f" {non_tray_item_input.shelf_position_number} is already occupied"
+                    detail=f"""Failed to transfer: {barcode_value} - Shelf Position
+                     {non_tray_item_input.shelf_position_number} is already occupied"""
                 )
             break
 
+    old_shelf_position_id = non_tray_item.shelf_position_id
+
     # Update the non_tray_item and shelves
     non_tray_item.shelf_position_id = destination_shelf_position_id
-    destination_shelf.available_space -= 1
-    source_shelf.available_space += 1
 
     # Update the update_dt field
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
     non_tray_item.update_dt = update_dt
     source_shelf.update_dt = update_dt
     destination_shelf.update_dt = update_dt
@@ -405,5 +437,11 @@ def move_item(
     session.refresh(non_tray_item)
     session.refresh(source_shelf)
     session.refresh(destination_shelf)
+
+    update_shelf_space_after_non_tray(
+        non_tray_item,
+        destination_shelf_position_id,
+        old_shelf_position_id
+    )
 
     return non_tray_item

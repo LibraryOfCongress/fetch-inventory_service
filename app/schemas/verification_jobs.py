@@ -1,7 +1,7 @@
 import uuid
 
 from pydantic import BaseModel, field_validator, computed_field
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
 from app.models.verification_jobs import VerificationJobStatus
@@ -83,6 +83,29 @@ class VerificationJobUpdateInput(BaseModel):
                 "container_type_id": 1,
                 "media_type_id": 1,
                 "size_class_id": 1
+            }
+        }
+
+
+class VerificationJobAddInput(BaseModel):
+    user_id: int
+    barcode_value: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": 1,
+                "barcode_value": "1234567890"
+            }
+        }
+
+
+class VerificationJobRemoveInput(VerificationJobAddInput):
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": 1,
+                "barcode_value": "1234567890"
             }
         }
 
@@ -259,7 +282,8 @@ class ItemDetailNestedForVerificationJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class TrayDetailNestedForVerificationJob(BaseModel):
@@ -284,7 +308,8 @@ class TrayDetailNestedForVerificationJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class NonTrayItemDetailNestedForVerificationJob(BaseModel):
@@ -307,7 +332,8 @@ class NonTrayItemDetailNestedForVerificationJob(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
@@ -397,7 +423,6 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,

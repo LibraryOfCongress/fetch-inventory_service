@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.delivery_locations import DeliveryLocation
 from app.schemas.delivery_locations import (
     DeliveryLocationInput,
@@ -15,12 +16,11 @@ from app.schemas.delivery_locations import (
     DeliveryLocationDetailReadOutput,
 )
 from app.config.exceptions import (
-    BadRequest,
     NotFound,
     ValidationException,
     InternalServerError,
 )
-
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/requests",
@@ -29,11 +29,30 @@ router = APIRouter(
 
 
 @router.get("/locations", response_model=Page[DeliveryLocationListOutput])
-def get_delivery_location_list(session: Session = Depends(get_session)) -> list:
+def get_delivery_location_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get a list of delivery locations
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+
+     **Returns:**
+    - Delivery Location List Output: A paginated list of Delivery Location.
     """
-    return paginate(session, select(DeliveryLocation))
+
+    # Create a query to retrieve all Delivery Location
+    query = select(DeliveryLocation).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using RequestSorter
+        sorter = BaseSorter(DeliveryLocation)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/locations/{id}", response_model=DeliveryLocationDetailReadOutput)
@@ -86,7 +105,7 @@ def update_delivery_location(
         for key, value in mutated_data.items():
             setattr(existing_delivery_location, key, value)
 
-        setattr(existing_delivery_location, "update_dt", datetime.utcnow())
+        setattr(existing_delivery_location, "update_dt", datetime.now(timezone.utc))
         session.add(existing_delivery_location)
         session.commit()
         session.refresh(existing_delivery_location)

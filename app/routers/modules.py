@@ -4,11 +4,14 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Optional
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.modules import Module
+from app.models.buildings import Building
 from app.schemas.modules import (
     ModuleInput,
     ModuleUpdateInput,
@@ -18,10 +21,9 @@ from app.schemas.modules import (
 )
 from app.config.exceptions import (
     NotFound,
-    ValidationException,
-    InternalServerError,
+    ValidationException
 )
-
+from app.sorting import BaseSorter
 
 LOGGER = logging.getLogger("router.modules")
 
@@ -32,14 +34,37 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ModuleListOutput])
-def get_module_list(session: Session = Depends(get_session)) -> list:
+def get_module_list(
+    session: Session = Depends(get_session),
+    building_name: Optional[str] = None,
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a paginated list of modules.
+
+    **Parameters:**
+    - building_name (str): The name of the building to filter by.
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Module List Output: The paginated list of modules.
     """
-    return paginate(session, select(Module))
+    # Create a query to select all Module
+    query = select(Module).distinct()
+
+    if building_name:
+        query = query.join(
+            Building, Module.building_id == Building.id
+        ).where(
+            Building.name == building_name
+        )
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = BaseSorter(Module)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=ModuleDetailReadOutput)
@@ -123,7 +148,7 @@ def update_module(
     for key, value in mutated_data.items():
         setattr(existing_module, key, value)
 
-    setattr(existing_module, "update_dt", datetime.utcnow())
+    setattr(existing_module, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_module)
     session.commit()

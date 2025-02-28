@@ -1,0 +1,17 @@
+{
+  "model": "app.models.request_types.RequestType",
+  "data": [
+    {
+      "type": "Regular"
+    },
+    {
+      "type": "Congressional Rush"
+    },
+    {
+      "type": "Inventory Project"
+    },
+    {
+      "type": "Special Project"
+    }
+  ]
+}

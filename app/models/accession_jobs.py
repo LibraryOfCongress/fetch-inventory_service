@@ -2,9 +2,9 @@ import sqlalchemy as sa
 
 from typing import Optional, List
 from enum import Enum
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import Column, DateTime
+
 
 from app.models.users import User
 from app.models.owners import Owner
@@ -36,10 +36,10 @@ class AccessionJob(SQLModel, table=True):
 
     __tablename__ = "accession_jobs"
 
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
     workflow_id: Optional[int] = Field(foreign_key="workflow.id", nullable=True)
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
-    trayed: bool = Field(sa_column=sa.Boolean, default=True, nullable=False)
+    trayed: bool = Field(sa_column=sa.Column(sa.Boolean, default=True, nullable=False))
     status: str = Field(
         sa_column=sa.Column(
             sa.Enum(
@@ -53,10 +53,10 @@ class AccessionJob(SQLModel, table=True):
     user_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     created_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
     run_time: Optional[timedelta] = Field(
-        sa_column=sa.Interval, nullable=False, default=timedelta()
+        sa_column=sa.Column(sa.Interval, nullable=False, default=timedelta())
     )
     last_transition: Optional[datetime] = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     size_class_id: Optional[int] = Field(
         foreign_key="size_class.id", nullable=True, default=None
@@ -66,10 +66,10 @@ class AccessionJob(SQLModel, table=True):
         foreign_key="container_types.id", nullable=True
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     container_type: Optional[ContainerType] = Relationship(
         back_populates="accession_jobs"

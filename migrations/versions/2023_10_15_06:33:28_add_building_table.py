@@ -25,7 +25,7 @@ def upgrade() -> None:
     op.create_table('buildings',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=25), nullable=True),
-    sa.Column('barcode', sqlmodel.sql.sqltypes.GUID(), nullable=True),
+    sa.Column('barcode', sa.dialects.postgresql.UUID(), nullable=True),
     sa.Column('create_dt', sa.DateTime(), nullable=False),
     sa.Column('update_dt', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')

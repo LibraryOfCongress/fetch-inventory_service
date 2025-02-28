@@ -25,7 +25,7 @@ def upgrade() -> None:
     op.create_table('aisles',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('number', sa.SmallInteger(), nullable=False),
-    sa.Column('barcode', sqlmodel.sql.sqltypes.GUID(), nullable=True),
+    sa.Column('barcode', sa.dialects.postgresql.UUID(), nullable=True),
     sa.Column('create_dt', sa.DateTime(), nullable=False),
     sa.Column('update_dt', sa.DateTime(), nullable=False),
     sa.Column('module_id', sa.Integer(), nullable=True),

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator, computed_field
 from sqlmodel import Field
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
 from app.schemas.users import UserDetailReadOutput
@@ -105,6 +105,11 @@ class ShelvingJobListOutput(ShelvingJobBaseOutput):
     def non_tray_item_count(self) -> int:
         return len(self.non_tray_items)
 
+    @computed_field(title='Container Count')
+    @property
+    def container_count(self) -> int:
+        return self.tray_count + self.non_tray_item_count
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -131,7 +136,8 @@ class ShelvingJobListOutput(ShelvingJobBaseOutput):
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398",
                 "tray_count": 10,
-                "non_tray_item_count": 5
+                "non_tray_item_count": 5,
+                "container_count": 15
             }
         }
 
@@ -152,7 +158,7 @@ class NestedBuildingForShelvingJob(BaseModel):
 
 class NestedShelfForShelvingJob(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class ShelfPositionNestedForShelvingJob(BaseModel):
@@ -181,7 +187,8 @@ class TrayNestedForShelvingJob(BaseModel):
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForShelvingJob] = None
     shelf_position_proposed_id: Optional[int] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 
@@ -193,7 +200,8 @@ class NonTrayNestedForShelvingJob(BaseModel):
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForShelvingJob] = None
     shelf_position_proposed_id: Optional[int] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 
@@ -380,6 +388,7 @@ class ReAssignmentInput(BaseModel):
     shelf_position_number: int
     shelf_id: Optional[int] = None
     shelf_barcode_value: Optional[str] = None
+    shelved_dt: Optional[datetime] = None
     scanned_for_shelving: Optional[bool] = None
 
     class Config:
@@ -390,6 +399,7 @@ class ReAssignmentInput(BaseModel):
             "shelf_position_number": 5,
             "shelf_id": 1,
             "shelf_barcode_value": "xy332bnl",
+            "shelved_dt": "2023-10-08T20:46:56.764426",
             "scanned_for_shelving": True
         }
 

@@ -34,6 +34,10 @@
         "description": "Can assign and reassign shelving job user."
     },
     {
+        "name":"can_move_trays_and_items",
+        "description": "Can move trays and items shelving."
+    },
+    {
         "name": "can_move_trays_and_items_shelving_locations",
         "description": "Can move trays and items shelving locations."
     },
@@ -48,6 +52,10 @@
     {
         "name": "can_create_and_submit_manual_requests",
         "description": "Can create and submit manual requests."
+    },
+    {
+        "name": "can_delete_request",
+        "description": "Can delete a request."
     },
     {
         "name": "can_create_picklist_job",
@@ -96,6 +104,10 @@
     {
         "name": "can_view_all_refile_jobs",
         "description": "Can view all refile jobs regardless of assignee."
+    },
+    {
+       "name": "can_manage_shelf_type",
+      "description": "Can manage shelf types."
     },
     {
         "name": "can_assign_and_reassign_refile_job",

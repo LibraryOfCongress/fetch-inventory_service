@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
@@ -20,6 +21,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/shelves/positions",
@@ -29,12 +31,18 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[ShelfPositionListOutput])
 def get_shelf_position_list(
+    session: Session = Depends(get_session),
     shelf_id: int | None = None,
     empty: bool | None = False,
-    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a list of shelf positions.
+
+    **Parameters:**
+    - shelf_id (int): The ID of the shelf to filter by.
+    - empty (bool): Whether to filter by empty shelf positions.
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Shelf Position List Output: The paginated list of shelf positions.
@@ -56,6 +64,12 @@ def get_shelf_position_list(
         )
     else:
         statement = select(ShelfPosition)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = BaseSorter(ShelfPosition)
+        statement = sorter.apply_sorting(statement, sort_params)
+
     return paginate(session, statement)
 
 
@@ -120,8 +134,6 @@ def create_shelf_position(
             f" {shelf.id} exceeds "
             f"max capacity of {shelf_type.max_capacity}"
         )
-    else:
-        shelf.available_space += 1
 
     new_shelf_position = ShelfPosition(**shelf_position_input.model_dump())
 
@@ -180,7 +192,7 @@ def update_shelf_position(
         for key, value in mutated_data.items():
             setattr(existing_shelf_position, key, value)
 
-        setattr(existing_shelf_position, "update_dt", datetime.utcnow())
+        setattr(existing_shelf_position, "update_dt", datetime.now(timezone.utc))
         session.add(existing_shelf_position)
         session.commit()
         session.refresh(existing_shelf_position)
@@ -214,13 +226,6 @@ def delete_shelf_position(id: int, session: Session = Depends(get_session)):
             raise ValidationException(
                 detail="Can not delete shelf position associated tray and non-tray items"
             )
-
-    shelf = session.query(Shelf).get(shelf_position.shelf_id)
-
-    if shelf:
-        session.query(Shelf).filter(Shelf.id == shelf.id).update(
-            {"available_space": shelf.available_space - 1}
-        )
 
     session.delete(shelf_position)
     session.commit()

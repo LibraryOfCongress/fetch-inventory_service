@@ -2,7 +2,7 @@ import uuid
 
 from typing import Optional, List
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.schemas.aisles import AisleBaseReadOutput
 from app.schemas.side_orientations import SideOrientationBaseReadOutput

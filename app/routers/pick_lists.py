@@ -1,23 +1,27 @@
-from app.logger import inventory_logger
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import func
 
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
-from app.database.session import get_session, commit_record
-from app.filter_params import JobFilterParams
+from app.database.session import get_session
+from app.logger import inventory_logger
+from app.filter_params import SortParams, JobFilterParams
 from app.models.buildings import Building
+from app.models.item_retrieval_events import ItemRetrievalEvent
 from app.models.items import Item
+from app.models.non_tray_item_retrieval_events import NonTrayItemRetrievalEvent
 from app.models.non_tray_items import NonTrayItem
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
-from app.models.pick_lists import PickList, PickListStatus
+from app.models.pick_lists import PickList
 from app.models.requests import Request
 from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
+from app.models.users import User
 from app.models.withdraw_jobs import WithdrawJob
 from app.schemas.pick_lists import (
     PickListInput,
@@ -31,6 +35,7 @@ from app.config.exceptions import (
     NotFound,
     InternalServerError,
 )
+from app.sorting import PickListSorter
 from app.utilities import get_location, manage_transition
 
 router = APIRouter(
@@ -41,36 +46,72 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[PickListListOutput])
 def get_pick_list_list(
-    queue: bool = Query(default=False),
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
-    status: PickListStatus | None = None,
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of pick lists.
 
+    **Parameters:**
+    - params: The filter parameters.
+        - queue: If true, only return pick lists that are not completed.
+        - workflow_id: The ID of the workflow.
+        - created_by_id: The ID of the user who created the pick list.
+        - building_name: The name of the building.
+        - user_id: The ID of the user.
+        - assigned_user: The name of the assigned user.
+        - status: The status of the pick list.
+        - from_dt: The start date.
+        - to_dt: The end date.
+    - sort_params: The sort parameters.
+        - sort_by: The field to sort by.
+        - sort_order: The order to sort by.
+
     **Returns:**
     - Pick List List Output: The paginated list of pick lists.
     """
-    query = select(PickList).distinct()
+    # Create a query to select all Pick List from the database
+    query = select(PickList)
 
     try:
-        if queue:
+        if params.queue:
             query = query.where(
                 PickList.status != "Completed"
             )
+        if params.building_name:
+            building_subquery = (
+                select(Building.id)
+                .where(Building.name.in_(params.building_name))
+            )
+            query = query.where(PickList.building_id.in_(building_subquery))
+        if params.status and len(list(filter(None, params.status))) > 0:
+            query = query.where(PickList.status.in_(params.status))
         if params.workflow_id:
             query = query.where(PickList.id == params.workflow_id)
         if params.user_id:
-            query = query.where(PickList.user_id == params.user_id)
+            query = query.where(PickList.user_id.in_(params.user_id))
+        if params.assigned_user:
+            assigned_user_subquery = (
+                select(User.id)
+                .where(
+                    func.concat(User.first_name, ' ', User.last_name).in_(
+                        params.assigned_user
+                        )
+                    )
+            )
+            query = query.where(PickList.user_id.in_(assigned_user_subquery))
         if params.created_by_id:
             query = query.where(PickList.created_by_id == params.created_by_id)
         if params.from_dt:
             query = query.where(PickList.create_dt >= params.from_dt)
         if params.to_dt:
             query = query.where(PickList.create_dt <= params.to_dt)
-        if status:
-            query = query.where(PickList.status == status.value)
+
+        # Validate and Apply sorting based on sort_params
+        if sort_params.sort_by:
+            sorter = PickListSorter(PickList)
+            query = sorter.apply_sorting(query, sort_params)
 
         return paginate(session, query)
 
@@ -99,6 +140,7 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
 
     requests = pick_list.requests
     request_data = []
+    sorted_requests = set()
 
     for request in requests:
         if request.item_id:
@@ -106,10 +148,10 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
             tray = session.get(Tray, item.tray_id)
 
             if not tray:
-                raise NotFound(detail=f"Tray ID {item.tray_id} Not Found")
+                continue
 
             if not tray.shelf_position:
-                raise NotFound(detail=f"Shelf Position Not Found")
+                continue
 
             shelf_position = tray.shelf_position
 
@@ -122,7 +164,7 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
                 )
 
             if not non_try_item.shelf_position:
-                raise NotFound(detail=f"Shelf Position Not Found")
+                continue
 
             shelf_position = non_try_item.shelf_position
 
@@ -150,7 +192,7 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
             }
         )
 
-        sorted_requests = sorted(
+        sorted_request_data = sorted(
             request_data,
             key=lambda x: (
                 x["aisle_priority"],
@@ -160,7 +202,11 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
         )
 
         # Extract the sorted request objects
-        pick_list.requests = [data["request"] for data in sorted_requests]
+        sorted_requests = [data["request"] for data in sorted_request_data]
+
+        # Append requests not present in sorted_requests due to withdrawn
+        remaining_requests = [req for req in requests if req not in sorted_requests]
+        pick_list.requests = sorted_requests + remaining_requests
 
     return pick_list
 
@@ -191,6 +237,17 @@ def create_pick_list(
 
     if len(requests) != len(pick_list_input.request_ids):
         errored_request_ids.append(set(requests) - set(pick_list_input.request_ids))
+
+    # Updating the items and non-tray items status to Pick List
+    item_ids = [request.item_id for request in requests]
+    session.query(Item).filter(Item.id.in_(item_ids)).update(
+        {"status": "PickList"}, synchronize_session=False
+    )
+
+    non_tray_item_ids = [request.non_tray_item_id for request in requests]
+    session.query(NonTrayItem).filter(NonTrayItem.id.in_(non_tray_item_ids)).update(
+        {"status": "PickList"}, synchronize_session=False
+    )
 
     building_id = requests[0].building_id
     new_pick_list = PickList(**pick_list_input.model_dump())
@@ -244,10 +301,6 @@ def update_pick_list(
         ]
 
         if request_ids:
-            session.query(Request).filter(Request.id.in_(request_ids)).update(
-                {"fulfilled": True}, synchronize_session=False
-            )
-
             # Get item ids and update their status
             item_ids = [
                 item.id
@@ -256,21 +309,28 @@ def update_pick_list(
                 .filter(Request.id.in_(request_ids))
                 .all()
             ]
-            session.query(Item).filter(Item.id.in_(item_ids)).update(
-                {"status": "Out"}, synchronize_session=False
-            )
-
-            # Get non-tray item ids and update their status
             non_tray_item_ids = [
-                nt_item.id
-                for nt_item in session.query(NonTrayItem.id)
+                non_tray_item.id
+                for non_tray_item in session.query(NonTrayItem.id)
                 .join(Request, NonTrayItem.id == Request.non_tray_item_id)
                 .filter(Request.id.in_(request_ids))
                 .all()
             ]
-            session.query(NonTrayItem).filter(
-                NonTrayItem.id.in_(non_tray_item_ids)
-            ).update({"status": "Out"}, synchronize_session=False)
+
+            if item_ids:
+                session.query(Item).filter(Item.id.in_(item_ids)).update(
+                    {"status": "Out"}, synchronize_session=False
+                )
+
+            if non_tray_item_ids:
+                # Get non-tray item ids and update their status
+                session.query(NonTrayItem).filter(
+                    NonTrayItem.id.in_(non_tray_item_ids)
+                ).update({"status": "Out"}, synchronize_session=False)
+
+            session.query(Request).filter(Request.id.in_(request_ids)).update(
+                {"fulfilled": True}, synchronize_session=False
+            )
 
             # Handle WithdrawJob and related entities
             existing_withdraw_job = (
@@ -279,31 +339,34 @@ def update_pick_list(
                 .first()
             )
 
-            if existing_withdraw_job:
-                # Get related item ids through the ItemWithdrawal relationship
-                withdraw_item_ids = [
-                    w.item_id
-                    for w in session.query(ItemWithdrawal.item_id)
-                    .filter(ItemWithdrawal.withdraw_job_id == existing_withdraw_job.id)
-                    .all()
-                ]  # Extract IDs from tuples
-                session.query(Item).filter(Item.id.in_(withdraw_item_ids)).update(
-                    {"status": "Out"}, synchronize_session=False
-                )
-
-                # Get related non-tray item ids through the NonTrayItemWithdrawal relationship
-                withdraw_non_tray_item_ids = [
-                    w.non_tray_item_id
-                    for w in session.query(NonTrayItemWithdrawal.non_tray_item_id)
-                    .filter(
-                        NonTrayItemWithdrawal.withdraw_job_id
-                        == existing_withdraw_job.id
+            # handle picklist retrieval for Request
+            if not existing_withdraw_job:
+                if item_ids:
+                    items = session.query(Item).filter(Item.id.in_(item_ids)).all()
+                    new_item_retrieval_event = []
+                    for item in items:
+                        new_item_retrieval_event.append(
+                            ItemRetrievalEvent(
+                                item_id=item.id, owner_id=item.owner_id, pick_list_id=id
+                            )
+                        )
+                    session.add_all(new_item_retrieval_event)
+                if non_tray_item_ids:
+                    non_tray_items = (
+                        session.query(NonTrayItem)
+                        .filter(NonTrayItem.id.in_(non_tray_item_ids))
+                        .all()
                     )
-                    .all()
-                ]  # Extract IDs from tuples
-                session.query(NonTrayItem).filter(
-                    NonTrayItem.id.in_(withdraw_non_tray_item_ids)
-                ).update({"status": "Out"}, synchronize_session=False)
+                    new_non_tray_item_retrieval_event = []
+                    for non_tray_items in non_tray_items:
+                        new_non_tray_item_retrieval_event.append(
+                            NonTrayItemRetrievalEvent(
+                                non_tray_item_id=non_tray_items.id,
+                                owner_id=non_tray_items.owner_id,
+                                pick_list_id=id,
+                            )
+                        )
+                    session.add_all(new_non_tray_item_retrieval_event)
 
     if pick_list.status and pick_list.run_timestamp:
         existing_pick_list = manage_transition(existing_pick_list, pick_list)
@@ -313,7 +376,7 @@ def update_pick_list(
     for key, value in mutated_data.items():
         setattr(existing_pick_list, key, value)
 
-    setattr(existing_pick_list, "update_dt", datetime.utcnow())
+    setattr(existing_pick_list, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_pick_list)
     session.commit()
@@ -345,11 +408,11 @@ def add_request_to_pick_list(
         raise BadRequest(detail="Pick List ID Not Found")
 
     pick_list = session.get(PickList, pick_list_id)
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
     errored_request_ids = []
 
-    if pick_list.status == "Completed":
-        raise BadRequest(detail="Pick List Already Completed")
+    if pick_list.status in ["Running", "Completed"]:
+        raise BadRequest(detail="Can not add request to 'Running' or 'Completed' Pick List")
 
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
@@ -370,12 +433,23 @@ def add_request_to_pick_list(
 
     session.query(Request).filter(Request.id.in_(pick_list_input.request_ids)).update(
         {"pick_list_id": pick_list_id, "update_dt": datetime.utcnow()},
-        synchronize_session="fetch",
+        synchronize_session=False,
     )
 
     # Updating the pick list, building_id, run_timestamp, and update_dt
     if not pick_list.building_id:
         pick_list.building_id = existing_requests[0].building_id
+
+    # Updating the items and non-tray items status to Pick List
+    item_ids = [request.item_id for request in existing_requests]
+    session.query(Item).filter(Item.id.in_(item_ids)).update(
+        {"status": "PickList"}, synchronize_session=False
+    )
+
+    non_tray_item_ids = [request.non_tray_item_id for request in existing_requests]
+    session.query(NonTrayItem).filter(NonTrayItem.id.in_(non_tray_item_ids)).update(
+        {"status": "PickList"}, synchronize_session=False
+    )
 
     pick_list.update_dt = update_dt
 
@@ -418,7 +492,7 @@ def update_request_for_pick_list(
         .filter(PickList.requests.any(Request.id == request_id))
         .first()
     )
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not existing_pick_list:
         raise NotFound(
@@ -440,7 +514,7 @@ def update_request_for_pick_list(
         if request.item:
             session.query(Item).filter(Item.id == request.item.id).update(
                 {"status": pick_list_request_input.status},
-                synchronize_session="fetch",
+                synchronize_session=False,
             )
 
         else:
@@ -448,7 +522,7 @@ def update_request_for_pick_list(
                 NonTrayItem.id == request.non_tray_item.id
             ).update(
                 {"status": pick_list_request_input.status},
-                synchronize_session="fetch",
+                synchronize_session=False,
             )
 
     session.commit()
@@ -478,7 +552,7 @@ def remove_request_from_pick_list(
     - HTTPException: If the request is not found in the pick list.
     """
     pick_list = session.query(PickList).get(pick_list_id)
-    update_dt = datetime.utcnow()
+    update_dt = datetime.now(timezone.utc)
 
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
@@ -495,8 +569,48 @@ def remove_request_from_pick_list(
 
     session.query(Request).filter(Request.id == request_id).update(
         {"update_dt": datetime.utcnow(), "pick_list_id": None},
-        synchronize_session="fetch",
+        synchronize_session=False,
     )
+
+    existing_withdraw_job = session.exec(select(WithdrawJob).where(
+        WithdrawJob.pick_list_id == pick_list_id
+    )).first()
+
+    if request.item:
+        session.query(Item).filter(Item.id == request.item.id).update(
+            {"status": "Requested", "update_dt": update_dt}, synchronize_session=False
+        )
+
+        if existing_withdraw_job:
+            session.query(ItemWithdrawal).filter(
+                ItemWithdrawal.item_id == request.item.id,
+                ItemWithdrawal.withdraw_job_id == existing_withdraw_job.id,
+            ).delete()
+
+            item_withdrawals = (
+                session.query(ItemWithdrawal)
+                .filter(ItemWithdrawal.withdraw_job_id == existing_withdraw_job.id)
+                .all()
+            )
+
+            if not item_withdrawals:
+                session.query(TrayWithdrawal).filter(
+                    TrayWithdrawal.withdraw_job_id == existing_withdraw_job.id,
+                    TrayWithdrawal.tray_id == request.item.tray_id,
+                ).delete()
+
+    else:
+        session.query(NonTrayItem).filter(
+            NonTrayItem.id == request.non_tray_item.id
+        ).update(
+            {"status": "Requested", "update_dt": update_dt}, synchronize_session=False
+        )
+
+        if existing_withdraw_job:
+            session.query(NonTrayItemWithdrawal).filter(
+                NonTrayItemWithdrawal.non_tray_item_id == request.non_tray_item.id,
+                NonTrayItemWithdrawal.withdraw_job_id == existing_withdraw_job.id,
+            ).delete()
 
     # Updating update_dt pick list
     setattr(pick_list, "update_dt", update_dt)
@@ -526,11 +640,31 @@ def delete_pick_list(id: int, session: Session = Depends(get_session)):
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {id} Not Found")
 
-    session.query(Request).filter(
-        Request.id.in_([r.id for r in pick_list.requests])
-    ).update(
+    requests = pick_list.requests
+
+    inventory_logger.info(f"Requests: {requests}")
+
+    item_ids = [request.item_id for request in requests]
+    non_tray_item_ids = [request.non_tray_item_id for request in requests]
+
+    session.query(Item).filter(Item.id.in_(item_ids)).update(
+        {"status": "Requested", "update_dt": datetime.utcnow()},
+        synchronize_session=False,
+    )
+
+    session.query(NonTrayItem).filter(NonTrayItem.id.in_(non_tray_item_ids)).update(
+        {"status": "Requested", "update_dt": datetime.utcnow()},
+        synchronize_session=False,
+    )
+
+    session.query(Request).filter(Request.id.in_([r.id for r in requests])).update(
         {"pick_list_id": None, "update_dt": datetime.utcnow()},
-        synchronize_session="fetch",
+        synchronize_session=False,
+    )
+
+    session.query(WithdrawJob).filter(WithdrawJob.pick_list_id == id).update(
+        {"pick_list_id": None, "update_dt": datetime.utcnow()},
+        synchronize_session=False,
     )
 
     session.delete(pick_list)

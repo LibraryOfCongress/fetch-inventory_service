@@ -1,7 +1,7 @@
 import uuid
 
 from pydantic import BaseModel, field_validator
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
 from app.models.accession_jobs import AccessionJobStatus
@@ -154,11 +154,13 @@ class ItemDetailNestedForAccessionJob(BaseModel):
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
     barcode_id: Optional[uuid.UUID] = None
+    withdrawn_barcode_id: Optional[uuid.UUID] = None
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class TrayDetailNestedForAccessionJob(BaseModel):
@@ -174,12 +176,14 @@ class TrayDetailNestedForAccessionJob(BaseModel):
     conveyance_bin_id: Optional[int] = None
     size_class_id: Optional[int] = None
     barcode_id: Optional[uuid.UUID] = None
+    withdrawn_barcode_id: Optional[uuid.UUID] = None
     accession_dt: Optional[datetime] = None
     shelved_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class NonTrayItemDetailNestedForAccessionJob(BaseModel):
@@ -194,11 +198,13 @@ class NonTrayItemDetailNestedForAccessionJob(BaseModel):
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
     barcode_id: Optional[uuid.UUID] = None
+    withdrawn_barcode_id: Optional[uuid.UUID] = None
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class AccessionJobDetailOutput(AccessionJobBaseOutput):
@@ -264,7 +270,6 @@ class AccessionJobDetailOutput(AccessionJobBaseOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
-                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,

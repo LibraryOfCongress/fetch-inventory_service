@@ -1,0 +1,177 @@
+{
+  "model": "app.models.permissions.Permission",
+  "data": [
+    {
+      "name": "can_access_accession",
+      "description": "Can view accession related pages."
+    },
+    {
+        "name": "can_cancel_accession",
+        "description": "Can cancel and accession job."
+    },
+    {
+        "name": "can_access_verification",
+        "description": "Can view verificaiton related pages."
+    },
+    {
+        "name": "can_access_shelving",
+        "description": "Can view shelving related pages."
+    },
+    {
+        "name": "can_create_and_execute_shelving_job",
+        "description": "Can create and execute shelving jobs."
+    },
+    {
+        "name": "can_create_and_execute_direct_shelving_job",
+        "description": "Can create and execute direct shelving jobs."
+    },
+    {
+        "name": "can_view_all_shelving_jobs",
+        "description": "Can view all shelving jobs regardless of assignee."
+    },
+    {
+        "name": "can_assign_and_reassign_shelving_job",
+        "description": "Can assign and reassign shelving job user."
+    },
+    {
+        "name":"can_move_trays_and_items",
+        "description": "Can move trays and items shelving."
+    },
+    {
+        "name": "can_move_trays_and_items_shelving_locations",
+        "description": "Can move trays and items shelving locations."
+    },
+    {
+        "name": "can_access_request",
+        "description": "Can view request related pages."
+    },
+    {
+        "name": "can_create_and_submit_batch_requests",
+        "description": "Can create and submit batch requests."
+    },
+    {
+        "name": "can_create_and_submit_manual_requests",
+        "description": "Can create and submit manual requests."
+    },
+    {
+        "name": "can_delete_request",
+        "description": "Can delete a request."
+    },
+    {
+        "name": "can_create_picklist_job",
+        "description": "Can create picklist jobs."
+    },
+    {
+        "name": "can_add_to_picklist_job",
+        "description": "Can add items to existing picklist jobs."
+    },
+    {
+        "name": "can_access_picklist",
+        "description": "Can view picklist related pages."
+    },
+    {
+        "name": "can_view_all_picklist_jobs",
+        "description": "Can view all picklist jobs regardless of assignee."
+    },
+    {
+        "name": "can_assign_and_reassign_picklist_job",
+        "description": "Can assign and reassign picklist job user."
+    },
+    {
+        "name": "can_edit_picklist_job",
+        "description": "Can edit or update picklist job status or remove items."
+    },
+    {
+        "name": "can_delete_picklist_job",
+        "description": "Can delete picklist jobs"
+    },
+    {
+        "name": "can_access_refile",
+        "description": "Can view refile related pages."
+    },
+    {
+        "name": "can_add_refile_item_to_queue",
+        "description": "Can add refile items to the queue."
+    },
+    {
+        "name": "can_create_refile_job",
+        "description": "Can create refile jobs."
+    },
+    {
+        "name": "can_add_to_refile_job",
+        "description": "Can add queue items to existing refile jobs."
+    },
+    {
+        "name": "can_view_all_refile_jobs",
+        "description": "Can view all refile jobs regardless of assignee."
+    },
+    {
+       "name": "can_manage_shelf_type",
+      "description": "Can manage shelf types."
+    },
+    {
+        "name": "can_assign_and_reassign_refile_job",
+        "description": "Can assign and reassign refile job user."
+    },
+    {
+        "name": "can_edit_refile_job",
+        "description": "Can edit refile job status or revert items back to queue."
+    },
+    {
+        "name": "can_execute_and_complete_refile_job",
+        "description": "Can execute and complete refile jobs."
+    },
+    {
+        "name": "can_delete_refile_job",
+        "description": "Can delete refile jobs."
+    },
+    {
+        "name": "can_access_withdraw",
+        "description": "Can view withdraw related pages."
+    },
+    {
+        "name": "can_access_reports",
+        "description": "Can view reports related pages."
+    },
+    {
+        "name": "can_access_search",
+        "description": "Can view and access the exact search and advanced search features."
+    },
+    {
+        "name": "can_access_item_detail",
+        "description": "Can view item detail page."
+    },
+    {
+        "name": "can_access_tray_detail",
+        "description": "Can view tray detail page."
+    },
+    {
+        "name": "can_access_shelf_detail",
+        "description": "Can view shelf detail page."
+    },
+    {
+        "name": "can_manage_owners",
+        "description": "Can add or modfiy owners."
+    },
+    {
+        "name": "can_manage_locations",
+        "description": "Can add or modify buildings, modules, aisles, ladders, shelves."
+    },
+    {
+        "name": "can_manage_groups_and_permissions",
+        "description": "Can add or modify groups and set permissions."
+    },
+    {
+        "name": "can_access_admin",
+        "description": "Can view and access admin dashboard."
+    },
+    {
+        "name": "can_manage_size_class",
+        "description": "Can add or modify size classes."
+    },
+    {
+        "name": "can_manage_media_type",
+        "description": "Can add or modify media types."
+    }
+  ]
+}

@@ -27,7 +27,7 @@ def upgrade() -> None:
     sa.Column('accession_job_id', sa.Integer(), nullable=True),
     sa.Column('verification_job_id', sa.Integer(), nullable=True),
     sa.Column('container_type_id', sa.Integer(), nullable=True),
-    sa.Column('barcode_id', sqlmodel.sql.sqltypes.GUID(), nullable=False),
+    sa.Column('barcode_id', sa.dialects.postgresql.UUID(), nullable=False),
     sa.Column('owner_id', sa.Integer(), nullable=True),
     sa.Column('shelf_position_id', sa.Integer(), nullable=True),
     sa.Column('accession_dt', sa.DateTime(), nullable=True),

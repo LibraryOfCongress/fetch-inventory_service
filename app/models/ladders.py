@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
 
@@ -25,20 +25,20 @@ class Ladder(SQLModel, table=True):
         ),
     )
 
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
     ladder_number_id: int = Field(
         foreign_key="ladder_numbers.id",
         nullable=False,
     )
     side_id: int = Field(foreign_key="sides.id", nullable=False)
     sort_priority: Optional[int] = Field(
-        sa_column=sa.SmallInteger, nullable=True, default=None
+        sa_column=sa.Column(sa.SmallInteger, nullable=True, default=None)
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     side: Side = Relationship(back_populates="ladders")

@@ -1,9 +1,9 @@
 import uuid
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -22,10 +22,10 @@ class ConveyanceBin(SQLModel, table=True):
         foreign_key="barcodes.id", nullable=False, unique=True, default=None
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     trays: List["Tray"] = Relationship(back_populates="conveyance_bin")

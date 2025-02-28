@@ -1,0 +1,50 @@
+{
+  "model": "app.models.owners.Owner",
+  "data": [
+    {
+      "name": "GICD",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 2
+        }
+      },
+      "!parent_owner_id": {
+        "model": "app.models.owners.Owner",
+        "filter": {
+          "name": "LC"
+        }
+      }
+    },
+    {
+      "name": "PRES",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 2
+        }
+      },
+      "!parent_owner_id": {
+        "model": "app.models.owners.Owner",
+        "filter": {
+          "name": "LC"
+        }
+      }
+    },
+    {
+      "name": "SCD",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 2
+        }
+      },
+      "!parent_owner_id": {
+        "model": "app.models.owners.Owner",
+        "filter": {
+          "name": "LC"
+        }
+      }
+    }
+  ]
+}

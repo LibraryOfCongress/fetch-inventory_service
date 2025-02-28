@@ -9,21 +9,21 @@ INTERNAL_PORT=8001
 HOST_PORT=80
 
 # stop the container if there is one running
-CONTAINER_IDS=$(docker ps -q --filter name="^${CONTAINER_NAME}$")
+CONTAINER_IDS=$(podman ps -q --filter name="^${CONTAINER_NAME}$")
 if [ "$CONTAINER_IDS" != "" ]; then
-    docker stop $CONTAINER_IDS
+    podman stop $CONTAINER_IDS
 fi
 
 # delete the container if there is one
-CONTAINER_IDS=$(docker container ls -aq --filter name="^${CONTAINER_NAME}$")
+CONTAINER_IDS=$(podman container ls -aq --filter name="^${CONTAINER_NAME}$")
 if [ "$CONTAINER_IDS" != "" ]; then
-    docker container rm -f $CONTAINER_IDS
+    podman container rm -f $CONTAINER_IDS
 fi
 
 # delete the image if there is one
-IMAGE_IDS=$(docker image ls -aq --filter "reference=${IMAGE_TAG}")
+IMAGE_IDS=$(podman image ls -aq --filter "reference=${IMAGE_TAG}")
 if [ "$IMAGE_IDS" != "" ]; then
-    docker image rm -f $IMAGE_IDS
+    podman image rm -f $IMAGE_IDS
 fi
 
 # Test if port is clear
@@ -32,16 +32,16 @@ fi
 #     echo "Port ${HOST_PORT} already in use"
 #     echo "${is_port_blocked}"
 #     echo "Kill process id and try again"
-#     echo "You may need to restart the docker machine"
+#     echo "You may need to restart the podman machine"
 #     exit 1
 # fi
 
 # build images
-docker build \
+podman build \
 --file ${IMAGE_LOCATION} --tag ${IMAGE_TAG} .
 
 # run the fetch-inventory-api container
-docker run --restart=always -it -d \
+podman run --restart=always -it -d \
     -p${HOST_PORT}:${INTERNAL_PORT} \
     --name ${CONTAINER_NAME} \
     ${IMAGE_TAG}

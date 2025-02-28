@@ -1,5 +1,6 @@
-import time, jwt
-from datetime import datetime, timedelta
+import time, jwt#, sqltap
+# from anyio import to_thread
+from datetime import datetime, timezone, timedelta
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -8,9 +9,11 @@ from app.logger import inventory_logger, data_activity_logger, security_log_rout
 from app.config.config import get_settings
 from app.database.session import get_session, session_manager
 from app.models.users import User
-from app.utilities import set_session_to_request
+from app.utilities import set_session_to_request, is_tz_naive
+from app.profiling import profiler, USE_PROFILER
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 
 class JWTMiddleware(BaseHTTPMiddleware):
     """
@@ -47,7 +50,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
         elif request.url.path.startswith("/status"):
             response = await call_next(request)
         elif not token:
-            if get_settings().APP_ENVIRONMENT not in ["local", "develop", "test"]:
+            if get_settings().APP_ENVIRONMENT not in ["debug", "local", "develop", "test"]:
                 response = JSONResponse(status_code=401, content={"detail": "Not Authorized"})
             else:
                 response = await call_next(request)
@@ -60,21 +63,23 @@ class JWTMiddleware(BaseHTTPMiddleware):
             with session_manager() as session:
                 user_object = session.query(User).filter(User.email == fetch_user).first()
                 token_exp_datetime = user_object.fetch_auth_expiration
-                if token_exp_datetime < datetime.utcnow():
+                if token_exp_datetime < datetime.now(timezone.utc):
                     if get_settings().APP_ENVIRONMENT not in ["local", "develop", "test"]:
                         response = JSONResponse(status_code=401, content={"detail": "Token Expired"})
                     else:
+                        # request = set_session_to_request(request, fetch_user)
                         request = await set_session_to_request(request, session, fetch_user)
                         response = await call_next(request)
                 else:
                     # Everything's good
                     # refresh exp and pass through
-                    user_object.fetch_auth_expiration = datetime.utcnow() + timedelta(minutes=15)
+                    user_object.fetch_auth_expiration = datetime.now(timezone.utc) + timedelta(minutes=15)
                     session.add(user_object)
                     # session.commit(user_object)
                     session.commit()
                     session.refresh(user_object)
                     request = await set_session_to_request(request, session, fetch_user)
+                    # request = set_session_to_request(request, fetch_user)
                     response = await call_next(request)
         request_log_dict = {
             'url': request.url.path,
@@ -104,3 +109,12 @@ class JWTMiddleware(BaseHTTPMiddleware):
                 data_activity_logger.info(security_log_dict)
 
         return response
+
+
+# # Middleware query profiling
+# class SQLProfilerMiddleware(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next):
+#         if USE_PROFILER:
+#             profiler = sqltap.start() # resets profiler per request
+#         response = await call_next(request)
+#         return response

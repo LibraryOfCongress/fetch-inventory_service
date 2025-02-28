@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.buildings import Building
 from app.schemas.buildings import (
     BuildingInput,
@@ -19,6 +20,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.sorting import BaseSorter
 
 # For future circular imports
 # https://sqlmodel.tiangolo.com/tutorial/code-structure/#import-only-while-editing-with-type_checking
@@ -30,14 +32,29 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[BuildingListOutput])
-def get_building_list(session: Session = Depends(get_session)) -> list:
+def get_building_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get a paginated list of buildings.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Building List Output: The paginated list of buildings.
     """
-    return paginate(session, select(Building))
+    # Create a query to retrieve all Building
+    query = select(Building).distinct()
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using RequestSorter
+        sorter = BaseSorter(Building)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=BuildingDetailReadOutput)
@@ -115,7 +132,7 @@ def update_building(
         for key, value in mutated_data.items():
             setattr(existing_building, key, value)
 
-        setattr(existing_building, "update_dt", datetime.utcnow())
+        setattr(existing_building, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_building)
         session.commit()
