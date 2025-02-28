@@ -177,7 +177,7 @@ build_image_prod:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/prod:latest
   script:
     - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
-    - cp -v images/api.stage.Containerfile Dockerfile
+    - cp -v images/api.prod.Containerfile Dockerfile
     - echo $PROD_APP_NAME > .env
     - echo $PROD_APP_ENVIRONMENT >> .env
     - echo $PROD_TIMEZONE >> .env
