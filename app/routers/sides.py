@@ -6,8 +6,11 @@ from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams
+from app.filter_params import SortParams, SideFilterParams
 from app.models.sides import Side
+from app.models.buildings import Building
+from app.models.aisles import Aisle
+from app.models.modules import Module
 from app.schemas.sides import (
     SideInput,
     SideUpdateInput,
@@ -31,6 +34,7 @@ router = APIRouter(
 @router.get("/", response_model=Page[SideListOutput])
 def get_side_list(
     session: Session = Depends(get_session),
+    params: SideFilterParams = Depends(),
     sort_params: SortParams = Depends()
 ) -> list:
     """
@@ -43,7 +47,20 @@ def get_side_list(
     - Side List Output: A paginated list of sides.
     """
     # Create a query to select all sides from the database
-    query = select(Side).distinct()
+    query = select(Side).join(
+        Aisle, Side.aisle_id == Aisle.id
+    ).join(
+        Module, Module.id == Aisle.module_id
+    ).join(
+        Building, Building.id == Module.building_id
+    )
+
+    if params.aisle_id:
+        query = query.where(Aisle.id == params.aisle_id)
+    if params.module_id:
+        query = query.where(Module.id == params.module_id)
+    if params.building_id:
+        query = query.where(Building.id == params.building_id)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

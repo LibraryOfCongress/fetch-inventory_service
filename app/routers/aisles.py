@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from app.database.session import get_session
-from app.filter_params import SortParams
+from app.filter_params import SortParams, AisleFilterParams
 from app.models.aisles import Aisle
 from app.models.aisle_numbers import AisleNumber
 from app.models.modules import Module
@@ -33,8 +33,7 @@ router = APIRouter(
 @router.get("/", response_model=Page[AisleListOutput])
 def get_aisle_list(
     session: Session = Depends(get_session),
-    module_number: Optional[str] = None,
-    building_id: Optional[int] = None,
+    params: AisleFilterParams = Depends(),
     sort_params: SortParams = Depends(),
 ) -> list:
     """
@@ -46,18 +45,22 @@ def get_aisle_list(
     **Returns**:
     - Aisle List Output: The paginated list of aisles.
     """
-    query = select(Aisle).distinct()
+    query = select(Aisle).join(
+        Module, Aisle.module_id == Module.id
+    )
 
-    if module_number:
-        query = query.join(Module, Aisle.module_id == Module.id).where(
-            Module.module_number == module_number
+    if params.module_number:
+        query = query.where(
+            Module.module_number == params.module_number
         )
-        if building_id:
-            query.filter(Module.building_id == building_id)
-    elif building_id:
-        query.join(Module, Aisle.module_id == Module.id).where(
-            Module.building_id == building_id
+
+    if params.building_id:
+        query.where(
+            Module.building_id == params.building_id
         )
+
+    if params.module_id:
+        query = query.where(Module.id == params.module_id)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

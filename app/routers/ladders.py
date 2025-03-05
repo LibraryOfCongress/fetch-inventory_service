@@ -8,7 +8,11 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams
+from app.filter_params import SortParams, LadderFilterParams
+from app.models.buildings import Building
+from app.models.modules import Module
+from app.models.aisles import Aisle
+from app.models.sides import Side
 from app.models.ladders import Ladder
 from app.models.ladder_numbers import LadderNumber
 from app.schemas.ladders import (
@@ -34,6 +38,7 @@ router = APIRouter(
 @router.get("/", response_model=Page[LadderListOutput])
 def get_ladder_list(
     session: Session = Depends(get_session),
+    params: LadderFilterParams = Depends(),
     sort_params: SortParams = Depends()
 ) -> list:
     """
@@ -47,7 +52,24 @@ def get_ladder_list(
     """
 
     # Create a query to retrieve all Ladder
-    query = select(Ladder).distinct()
+    query = select(Ladder).join(
+        Side, Ladder.side_id == Side.id
+    ).join(
+        Aisle, Side.aisle_id == Aisle.id
+    ).join(
+        Module, Aisle.module_id == Module.id
+    ).join(
+        Building, Module.building_id == Building.id
+    )
+
+    if params.building_id:
+        query = query.where(Building.id == params.building_id)
+    if params.module_id:
+        query = query.where(Module.id == params.module_id)
+    if params.aisle_id:
+        query = query.where(Aisle.id == params.aisle_id)
+    if params.side_id:
+        query = query.where(Side.id == params.side_id)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
