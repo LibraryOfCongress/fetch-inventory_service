@@ -35,7 +35,7 @@ from app.models.requests import Request
 from app.sorting import WithdrawJobSorter
 from app.utilities import (
     validate_item_not_shelved,
-    validate_non_tray_item_not_shelved,
+    validate_container_not_shelved,
 )
 from starlette import status
 from app.schemas.withdraw_jobs import (
@@ -708,7 +708,7 @@ def add_items_to_withdraw_job(
         session.add(item)
 
     elif non_tray_item:
-        if validate_non_tray_item_not_shelved(non_tray_item):
+        if validate_container_not_shelved(non_tray_item):
             raise ValidationException(detail="Non Tray Item is not shelved")
 
         if non_tray_item.status == "Requested" or non_tray_item.status == "Withdrawn":
@@ -744,8 +744,8 @@ def add_items_to_withdraw_job(
         if not tray.items:
             raise ValidationException(detail="Tray is empty")
 
-        if validate_non_tray_item_not_shelved(tray):
-            raise ValidationException(detail="Non Tray Item is not shelved")
+        if validate_container_not_shelved(tray):
+            raise ValidationException(detail="Tray is not shelved")
 
         for item in tray.items:
             item_barcode = item.barcode

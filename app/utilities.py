@@ -947,7 +947,7 @@ def validate_item_not_shelved(shelf_position):
     return False
 
 
-def validate_non_tray_item_not_shelved(item):
+def validate_container_not_shelved(item):
     if not item or not item.shelf_position_id or not item.scanned_for_shelving:
         return True
     return False
@@ -1067,7 +1067,7 @@ def process_withdraw_job_data(
                         "error": "Non Tray Item is in existing withdraw job",
                     }
                 )
-            elif validate_non_tray_item_not_shelved(non_tray_item):
+            elif validate_container_not_shelved(non_tray_item):
                 errors.append(
                     {"line": int(index) + 1, "error": "Non Tray Item is not shelved"}
                 )
