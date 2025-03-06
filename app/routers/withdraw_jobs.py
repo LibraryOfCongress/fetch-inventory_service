@@ -664,6 +664,7 @@ def add_items_to_withdraw_job(
     tray = session.query(Tray).filter(Tray.barcode_id == barcode.id).first()
 
     if item:
+        tray_id = item.tray_id
         if item.status == "Requested" or item.status == "Withdrawn":
             raise ValidationException(
                 detail="Item must be have status if ['In', 'Out']"
@@ -678,7 +679,7 @@ def add_items_to_withdraw_job(
         shelf_position = (
             session.query(ShelfPosition)
             .join(Tray)
-            .filter(Tray.id == item.tray_id)
+            .filter(Tray.id == tray_id)
             .first()
         )
 
@@ -690,7 +691,18 @@ def add_items_to_withdraw_job(
         ):
             raise ValidationException(detail="Item is in existing withdraw job")
 
-        session.add(ItemWithdrawal(item_id=item.id, withdraw_job_id=withdraw_job.id))
+        session.add(ItemWithdrawal(item_id=item.id, withdraw_job_id=job_id))
+
+        existing_tray_withdrawal = (
+            session.query(TrayWithdrawal)
+            .filter(TrayWithdrawal.tray_id == tray_id, TrayWithdrawal.withdraw_job_id == job_id)
+            .first()
+        )
+
+        if not existing_tray_withdrawal:
+            session.add(
+                TrayWithdrawal(tray_id=tray_id, withdraw_job_id=withdraw_job.id)
+            )
 
         item.update_dt = update_dt
         session.add(item)
@@ -731,6 +743,9 @@ def add_items_to_withdraw_job(
 
         if not tray.items:
             raise ValidationException(detail="Tray is empty")
+
+        if validate_non_tray_item_not_shelved(tray):
+            raise ValidationException(detail="Non Tray Item is not shelved")
 
         for item in tray.items:
             item_barcode = item.barcode

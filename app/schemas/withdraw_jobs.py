@@ -64,20 +64,6 @@ class PickBaseOutput(BaseModel):
     status: str
 
 
-class ItemBaseOutput(BaseModel):
-    id: int
-    status: str
-
-
-class NonTrayItemBaseOutput(BaseModel):
-    id: int
-    status: str
-
-
-class TrayItemBaseOutput(BaseModel):
-    id: int
-
-
 class NestedBarcodeTypeOutputForBarcode(BaseModel):
     id: int
     name: str
@@ -112,6 +98,22 @@ class ShelfPositionNestedForWithdrawJob(BaseModel):
     shelf: NestedShelfForWithdrawJob
     location: Optional[str] = None
     internal_location: Optional[str] = None
+
+
+class ItemBaseOutput(BaseModel):
+    id: int
+    status: str
+
+
+class NonTrayItemBaseOutput(BaseModel):
+    id: int
+    status: str
+    shelf_position: ShelfPositionNestedForWithdrawJob
+
+
+class TrayItemBaseOutput(BaseModel):
+    id: int
+    shelf_position: ShelfPositionNestedForWithdrawJob
 
 
 class NestedTrayForWithdrawJob(BaseModel):
@@ -249,7 +251,7 @@ class WithdrawJobListOutput(WithdrawJobBaseOutput):
         }
 
 
-class WithdrawJobWriteOutput(WithdrawJobBaseOutput):
+class WithdrawJobWriteOutput(WithdrawJobListOutput):
     items: Optional[list[ItemNestedForWithdrawJob]] = None
     non_tray_items: Optional[list[NonTrayNestedForWithdrawJob]] = None
     trays: Optional[list[TrayNestedForWithdrawJob]] = None
