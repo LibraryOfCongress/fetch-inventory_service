@@ -554,34 +554,15 @@ def reassign_container_location(
 
     # Checking and verifying Verification Job
     if container.verification_job_id:
-        verification_job_shelved = True
         verification_job = session.get(
             VerificationJob, container.verification_job_id
         )
 
-        if verification_job:
-            trays = verification_job.trays
-            non_tray_items = verification_job.non_tray_items
-
-            if trays:
-                for tray in trays:
-                    if (
-                        tray.id != container.id
-                        and not verification_job.shelving_job_id
-                    ):
-                        verification_job_shelved = False
-            if non_tray_items:
-                for non_tray_item in non_tray_items:
-                    if (
-                        non_tray_item.id != container.id
-                        and not verification_job.shelving_job_id
-                    ):
-                        verification_job_shelved = False
-            if verification_job_shelved:
-                verification_job.shelving_job_id = id
-                session.add(verification_job)
-                session.commit()
-                session.refresh(verification_job)
+        if verification_job.shelving_job_id is None:
+            verification_job.shelving_job_id = id
+            session.add(verification_job)
+            session.commit()
+            session.refresh(verification_job)
 
     # only reassign actual, not proposed
     container.shelving_job_id = id
