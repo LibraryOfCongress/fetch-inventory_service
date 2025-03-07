@@ -1,14 +1,15 @@
+
 import csv
 from io import StringIO
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy.sql import exists
-from sqlalchemy import func, union_all, literal, and_, or_, asc, distinct, desc, case
+from sqlalchemy import func, union_all, literal, and_, asc, distinct, desc
+from sqlalchemy.types import String
 from sqlmodel import Session, select
 
 from app.database.session import get_session
@@ -80,11 +81,14 @@ router = APIRouter(
 )
 
 
-def get_accessioned_items_count_query(params):
+def get_accessioned_items_count_query(params, sort_by=None, order_func=None):
     item_query_conditions = []
+    item_query_group_by = []
     non_tray_item_query_conditions = []
-    selection = []
-    group_by = []
+    non_tray_item_group_by = []
+    include_month = bool(
+        params.from_dt or params.to_dt
+        )  # Enable month aggregation if needed
 
     if params.owner_id:
         item_query_conditions.append(Item.owner_id.in_(params.owner_id))
@@ -108,9 +112,20 @@ def get_accessioned_items_count_query(params):
         item_query_conditions.append(Item.accession_dt <= params.to_dt)
         non_tray_item_query_conditions.append(NonTrayItem.accession_dt <= params.to_dt)
 
+    if include_month:
+        item_query_group_by.extend([Item.accession_dt, func.extract("year", Item.accession_dt)])
+        non_tray_item_group_by.extend([NonTrayItem.accession_dt, func.extract("year", NonTrayItem.accession_dt)])
+
+    # Base item query
     item_query = (
         select(
-            Item.id.label("item_id"),
+            func.count(Item.id).label("count"),
+            func.to_char(Item.accession_dt, 'Mon').label(
+                "month"
+                ) if include_month else literal(None).label("month"),
+            func.extract("year", Item.accession_dt).label(
+                "year"
+                ) if include_month else literal(None).label("year"),
             Owner.name.label("owner_name"),
             SizeClass.name.label("size_class_name"),
             MediaType.name.label("media_type_name"),
@@ -120,10 +135,24 @@ def get_accessioned_items_count_query(params):
         .join(SizeClass, SizeClass.id == Item.size_class_id)
         .join(MediaType, MediaType.id == Item.media_type_id)
         .filter(and_(*item_query_conditions))
+        .group_by(
+            Owner.name,
+            SizeClass.name,
+            MediaType.name,
+            *item_query_group_by
+        )
     )
+
+    # Base non-tray item query
     non_tray_item_query = (
         select(
-            NonTrayItem.id.label("item_id"),
+            func.count(NonTrayItem.id).label("count"),
+            func.to_char(NonTrayItem.accession_dt, 'Mon').label(
+                "month"
+                ) if include_month else literal(None).label("month"),
+            func.extract("year", NonTrayItem.accession_dt).label(
+                "year"
+                ) if include_month else literal(None).label("year"),
             Owner.name.label("owner_name"),
             SizeClass.name.label("size_class_name"),
             MediaType.name.label("media_type_name"),
@@ -133,10 +162,19 @@ def get_accessioned_items_count_query(params):
         .join(SizeClass, SizeClass.id == NonTrayItem.size_class_id)
         .join(MediaType, MediaType.id == NonTrayItem.media_type_id)
         .filter(and_(*non_tray_item_query_conditions))
+        .group_by(
+            Owner.name,
+            SizeClass.name,
+            MediaType.name,
+            *non_tray_item_group_by
+        )
     )
 
+    # Combine item and non-tray queries
     combined_query = union_all(item_query, non_tray_item_query).subquery()
-
+    selection = []
+    group_by = []
+    # Retain original selection and grouping
     if params.owner_id:
         selection.append(combined_query.c.owner_name)
         group_by.append(combined_query.c.owner_name)
@@ -153,13 +191,27 @@ def get_accessioned_items_count_query(params):
     else:
         selection.append(literal("All").label("media_type_name"))
 
-    final_query = select(
-        *selection,
-        func.count().label("count"),
-    ).select_from(combined_query)
+    # Add month breakdown if applicable
+    if include_month:
+        selection.extend([combined_query.c.month, func.cast(combined_query.c.year,
+                                                            String)])
+        group_by.extend([combined_query.c.month, combined_query.c.year])
+    else:
+        selection.append(literal("All").label("month"))
+        selection.append(literal("All").label("year"))
+
+    # Aggregate count
+    selection.append(func.sum(combined_query.c.count).label("count"))
+
+    final_query = select(*selection).select_from(combined_query)
 
     if group_by:
         final_query = final_query.group_by(*group_by)
+
+    if sort_by:
+        final_query = final_query.order_by(
+            order_func(getattr(combined_query.c, sort_by))
+        )
 
     return final_query
 
@@ -168,20 +220,46 @@ def get_accessioned_items_count_query(params):
 def get_accessioned_items_count(
     session: Session = Depends(get_session),
     params: AccessionedItemsParams = Depends(),
+    sort_params: SortParams = Depends()
 ):
+    """
+    The count of items that have been accessioned.
 
-    try:
-        return paginate(session, get_accessioned_items_count_query(params))
+    **Parameters**:
+    - params: Accessioned Items Params: The parameters for the request.
+        - owner_id: The list ID of the building.
+        - size_class_id: The list ID of the size class.
+        - media_type_id: The list ID of the media type.
+        - from_dt: Start Accession date to filter by.
+        - to_dt: End Accession date to filter by.
+    - sort_params (SortParams): The sorting parameters.
+        - sort_by (str): The field to sort by.
+        - sort_order (str): The order to sort by.
+    **Returns**:
+    - Page[AccessionItemsDetailOutput]: The total number of items that have been accessioned.
+    """
+    if sort_params.sort_order not in ["asc", "desc"]:
+        raise BadRequest(
+            detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
+        )
 
-    except Exception as e:
-        inventory_logger.error(e)
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+    order_func = asc if sort_params.sort_order == "asc" else desc
+
+    query = get_accessioned_items_count_query(params, sort_params.sort_by, order_func)
+
+    if sort_params.sort_order not in ["asc", "desc"]:
+        raise BadRequest(
+            detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
+        )
+
+    return paginate(session, query)
 
 
 @router.get("/accession-items/download", response_class=StreamingResponse)
 def get_accessioned_items_csv(
     session: Session = Depends(get_session),
     params: AccessionedItemsParams = Depends(),
+    sort_params: SortParams = Depends()
 ):
     """
     Translates list response of AccessionedItems objects to csv,
@@ -194,12 +272,22 @@ def get_accessioned_items_csv(
         - media_type_id: The list ID of the media type
         - from_dt: The starting date.
         - to_dt: The ending date.
+    - sort_params (SortParams): The sorting parameters.
+        - sort_by (str): The field to sort by.
+        - sort_order (str): The order to sort by.
 
     **Returns**:
     - Streaming Response: The response with the csv file
     """
+    if sort_params.sort_order not in ["asc", "desc"]:
+        raise BadRequest(
+            detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
+        )
+
+    order_func = asc if sort_params.sort_order == "asc" else desc
+
     # Get the query
-    accession_query = get_accessioned_items_count_query(params)
+    accession_query = get_accessioned_items_count_query(params, sort_params.sort_by, order_func)
 
     # Define the generator to stream data
     def generate_csv():
@@ -207,14 +295,16 @@ def get_accessioned_items_csv(
         writer = csv.writer(output)
 
         # Write header row
-        writer.writerow(["owner_name", "size_class_name", "media_type_name", "count"])
+        writer.writerow(["year", "month", "owner_name", "size_class_name",
+                         "media_type_name", "count"])
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
 
         # Write rows from query results
         for row in session.execute(accession_query):
-            writer.writerow(row)
+            writer.writerow([row.year, row.month, row.owner_name,
+                             row.size_class_name, row.media_type_name, row.count])
             yield output.getvalue()
             output.seek(0)
             output.truncate(0)
@@ -1589,7 +1679,6 @@ def get_verification_change_summary(
             raise NotFound(detail="User(s) not found")
 
     query = get_verification_change_query(params, sort_params)
-    inventory_logger.info(f"get_verification_change_summary: {query}")
     query = query.subquery()
 
     return paginate(session, select(query))
