@@ -42,15 +42,15 @@ def sort_order_priority(session, item_type, item):
         location = get_location(session, item.shelf_position)
 
     aisle_priority = (
-        location["aisle"].sort_priority or location["aisle"].aisle_number_id
+        location["aisle"].sort_priority or location["aisle_number"].number
     )
 
     ladder_priority = (
-        location["ladder"].sort_priority or location["ladder"].ladder_number_id
+        location["ladder"].sort_priority or location["ladder_number"].number
     )
 
     shelf_priority = (
-        location["shelf"].sort_priority or location["shelf"].shelf_number_id
+        location["shelf"].sort_priority or location["shelf_number"].number
     )
 
     return {

@@ -132,9 +132,7 @@ def get_location(session, shelf_position):
     )
 
     shelf = session.exec(shelf_query).first()
-
     ladder = session.exec(ladder_query).first()
-
     aisle = session.exec(aisle_query).first()
 
     if not shelf:
@@ -146,7 +144,28 @@ def get_location(session, shelf_position):
     if not aisle:
         raise NotFound(detail=f"Aisle ID {ladder.aisle_id} Not Found")
 
-    return {"aisle": aisle, "ladder": ladder, "shelf": shelf}
+    shelf_number_query = (
+        select(ShelfNumber)
+        .where(ShelfNumber.id == shelf.shelf_number_id)
+    )
+
+    ladder_number_query = (
+        select(LadderNumber)
+        .where(LadderNumber.id == ladder.ladder_number_id)
+    )
+
+    aisle_number_query = (
+        select(AisleNumber)
+        .where(AisleNumber.id == aisle.aisle_number_id)
+    )
+
+    shelf_number = session.exec(shelf_number_query).first()
+    ladder_number = session.exec(ladder_number_query).first()
+    aisle_number = session.exec(aisle_number_query).first()
+
+    return {"aisle": aisle, "ladder": ladder, "shelf": shelf,
+            "shelf_number": shelf_number_query,
+            "ladder_number": ladder_number, "aisle_number": aisle_number}
 
 
 def process_containers_for_shelving(
