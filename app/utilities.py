@@ -254,37 +254,42 @@ def process_containers_for_shelving(
         # searching in aisles belonging to a building's modules
         conditions.append(Module.building_id == building_id)
 
-    # process containers
-    for container_object in containers:
-        # assign container to shelving job
-        container_object.shelving_job_id = shelving_job_id
+    # Group containers by (size_class_id, owner_id)
+    containers_by_group = {}
+    for container in containers:
+        key = (container.size_class_id, container.owner_id)
+        containers_by_group.setdefault(key, []).append(container)
 
-        # If container already shelved (from previous job attempt), skip
-        if container_object.shelf_position_id:
-            continue
+    # Process each group individually.
+    for (size_class_id, owner_id), container_group in containers_by_group.items():
+        num_to_assign = len(container_group)
 
-        # Otherwise, further constrain by owner & size class
-        conditions.append(Shelf.owner_id == container_object.owner_id)
-        conditions.append(ShelfType.size_class_id == container_object.size_class_id)
-        # then pull results, retrieve only one from back of a shelf
-        available_shelf_position = session.exec(shelf_position_query.where(
-            and_(*conditions)
-        ).order_by(
-            desc(ShelfPositionNumber.number)
-        ).limit(1)).first()
+        # Build a query for available shelf positions that match the container's size class and owner.
+        available_positions_query = shelf_position_query.where(
+            and_(
+                ShelfType.size_class_id == size_class_id,
+                Shelf.owner_id == owner_id,
+                # ensure the shelf belongs to the same owner
+                *conditions
+            )
+        ).limit(num_to_assign)
 
-        if not available_shelf_position:
-            # this interrupts the rest... COME BACK TO THIS
+        # Execute the query.
+        available_positions = session.exec(available_positions_query).all()
+
+        if len(available_positions) < num_to_assign:
             raise NotFound(
-                detail=f"No empty shelf positions within job constraints for container {container_object.barcode.value}."
+                detail=f"Not enough empty shelf positions for containers with size_class_id {size_class_id} and owner_id {owner_id}."
             )
 
-        container_object.shelf_position_id = available_shelf_position.shelf_position_id
-        container_object.shelf_position_proposed_id = available_shelf_position.shelf_position_id
+        # Zip the container group with the available positions.
+        for container, position in zip(container_group, available_positions):
+            container.shelf_position_id = position.shelf_position_id
+            container.shelf_position_proposed_id = position.shelf_position_id
+            container.shelving_job_id = shelving_job_id
+            session.add(container)
 
-        session.add(container_object)
         session.commit()
-        session.refresh(container_object)
 
     return
 
