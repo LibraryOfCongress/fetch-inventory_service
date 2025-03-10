@@ -164,8 +164,8 @@ def get_location(session, shelf_position):
     aisle_number = session.exec(aisle_number_query).first()
 
     return {"aisle": aisle, "ladder": ladder, "shelf": shelf,
-            "shelf_number": shelf_number_query,
-            "ladder_number": ladder_number, "aisle_number": aisle_number}
+            "shelf_number": shelf_number, "ladder_number": ladder_number,
+            "aisle_number": aisle_number}
 
 
 def process_containers_for_shelving(
