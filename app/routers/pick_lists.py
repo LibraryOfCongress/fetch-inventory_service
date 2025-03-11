@@ -44,11 +44,86 @@ router = APIRouter(
 )
 
 
+def sort_order_priority(session, pick_list, requests):
+    request_data = []
+    sorted_requests = set()
+
+    if requests:
+        for request in requests:
+            if request.item_id:
+                item = session.get(Item, request.item_id)
+                tray = session.get(Tray, item.tray_id)
+
+                if not tray:
+                    continue
+
+                if not tray.shelf_position:
+                    continue
+
+                shelf_position = tray.shelf_position
+
+            elif request.non_tray_item_id:
+                non_try_item = session.get(NonTrayItem, request.non_tray_item_id)
+
+                if not non_try_item:
+                    raise NotFound(
+                        detail=f"Non Tray Item ID {request.non_tray_item_id} Not "
+                        f"Found"
+                    )
+
+                if not non_try_item.shelf_position:
+                    continue
+
+                shelf_position = non_try_item.shelf_position
+
+            else:
+                raise NotFound(detail="Item Not Found")
+
+            location = get_location(session, shelf_position)
+
+            aisle_priority = (
+                location["aisle"].sort_priority or location["aisle_number"].number
+            )
+            ladder_priority = (
+                location["ladder"].sort_priority or location["ladder_number"].number
+            )
+            shelf_priority = (
+                location["shelf"].sort_priority or location["shelf_number"].number
+            )
+
+            request_data.append(
+                {
+                    "request": request,
+                    "aisle_priority": aisle_priority,
+                    "ladder_priority": ladder_priority,
+                    "shelf_priority": shelf_priority,
+                }
+            )
+
+            sorted_request_data = sorted(
+                request_data,
+                key=lambda x: (
+                    x["aisle_priority"],
+                    x["ladder_priority"],
+                    x["shelf_priority"],
+                ),
+            )
+
+            # Extract the sorted request objects
+            sorted_requests = [data["request"] for data in sorted_request_data]
+
+            # Append requests not present in sorted_requests due to withdrawn
+            remaining_requests = [req for req in requests if req not in sorted_requests]
+            pick_list.requests = sorted_requests + remaining_requests
+
+    return pick_list
+
+
 @router.get("/", response_model=Page[PickListListOutput])
 def get_pick_list_list(
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Get a list of pick lists.
@@ -76,13 +151,10 @@ def get_pick_list_list(
 
     try:
         if params.queue:
-            query = query.where(
-                PickList.status != "Completed"
-            )
+            query = query.where(PickList.status != "Completed")
         if params.building_name:
-            building_subquery = (
-                select(Building.id)
-                .where(Building.name.in_(params.building_name))
+            building_subquery = select(Building.id).where(
+                Building.name.in_(params.building_name)
             )
             query = query.where(PickList.building_id.in_(building_subquery))
         if params.status and len(list(filter(None, params.status))) > 0:
@@ -92,13 +164,10 @@ def get_pick_list_list(
         if params.user_id:
             query = query.where(PickList.user_id.in_(params.user_id))
         if params.assigned_user:
-            assigned_user_subquery = (
-                select(User.id)
-                .where(
-                    func.concat(User.first_name, ' ', User.last_name).in_(
-                        params.assigned_user
-                        )
-                    )
+            assigned_user_subquery = select(User.id).where(
+                func.concat(User.first_name, " ", User.last_name).in_(
+                    params.assigned_user
+                )
             )
             query = query.where(PickList.user_id.in_(assigned_user_subquery))
         if params.created_by_id:
@@ -138,77 +207,7 @@ def get_pick_list_detail(id: int, session: Session = Depends(get_session)):
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {id} Not Found")
 
-    requests = pick_list.requests
-    request_data = []
-    sorted_requests = set()
-
-    for request in requests:
-        if request.item_id:
-            item = session.get(Item, request.item_id)
-            tray = session.get(Tray, item.tray_id)
-
-            if not tray:
-                continue
-
-            if not tray.shelf_position:
-                continue
-
-            shelf_position = tray.shelf_position
-
-        elif request.non_tray_item_id:
-            non_try_item = session.get(NonTrayItem, request.non_tray_item_id)
-
-            if not non_try_item:
-                raise NotFound(
-                    detail=f"Non Tray Item ID {request.non_tray_item_id} Not " f"Found"
-                )
-
-            if not non_try_item.shelf_position:
-                continue
-
-            shelf_position = non_try_item.shelf_position
-
-        else:
-            raise NotFound(detail="Item Not Found")
-
-        location = get_location(session, shelf_position)
-
-        aisle_priority = (
-            location["aisle"].sort_priority or location["aisle_number"].number
-        )
-        ladder_priority = (
-            location["ladder"].sort_priority or location["ladder_number"].number
-        )
-        shelf_priority = (
-            location["shelf"].sort_priority or location["shelf_number"].number
-        )
-
-        request_data.append(
-            {
-                "request": request,
-                "aisle_priority": aisle_priority,
-                "ladder_priority": ladder_priority,
-                "shelf_priority": shelf_priority,
-            }
-        )
-
-        sorted_request_data = sorted(
-            request_data,
-            key=lambda x: (
-                x["aisle_priority"],
-                x["ladder_priority"],
-                x["shelf_priority"],
-            ),
-        )
-
-        # Extract the sorted request objects
-        sorted_requests = [data["request"] for data in sorted_request_data]
-
-        # Append requests not present in sorted_requests due to withdrawn
-        remaining_requests = [req for req in requests if req not in sorted_requests]
-        pick_list.requests = sorted_requests + remaining_requests
-
-    return pick_list
+    return sort_order_priority(session, pick_list, pick_list.requests)
 
 
 @router.post("/", response_model=PickListDetailOutput, status_code=201)
@@ -266,7 +265,7 @@ def create_pick_list(
         new_pick_list = new_pick_list.__dict__
         new_pick_list["errored_request_ids"] = errored_request_ids
 
-    return new_pick_list
+    return sort_order_priority(session, new_pick_list, new_pick_list.requests)
 
 
 @router.patch("/{id}", response_model=PickListDetailOutput)
@@ -382,7 +381,7 @@ def update_pick_list(
     session.commit()
     session.refresh(existing_pick_list)
 
-    return existing_pick_list
+    return sort_order_priority(session, existing_pick_list, existing_pick_list.requests)
 
 
 @router.patch("/{pick_list_id}/add_request", response_model=PickListDetailOutput)
@@ -412,7 +411,9 @@ def add_request_to_pick_list(
     errored_request_ids = []
 
     if pick_list.status in ["Running", "Completed"]:
-        raise BadRequest(detail="Can not add request to 'Running' or 'Completed' Pick List")
+        raise BadRequest(
+            detail="Can not add request to 'Running' or 'Completed' Pick List"
+        )
 
     if not pick_list:
         raise NotFound(detail=f"Pick List ID {pick_list_id} Not Found")
@@ -460,7 +461,7 @@ def add_request_to_pick_list(
         pick_list = pick_list.__dict__
         pick_list["errored_request_ids"] = errored_request_ids
 
-    return pick_list
+    return sort_order_priority(session, pick_list, pick_list.requests)
 
 
 @router.patch(
@@ -528,7 +529,7 @@ def update_request_for_pick_list(
     session.commit()
     session.refresh(existing_pick_list)
 
-    return existing_pick_list
+    return sort_order_priority(session, existing_pick_list, existing_pick_list.requests)
 
 
 @router.delete(
@@ -572,9 +573,9 @@ def remove_request_from_pick_list(
         synchronize_session=False,
     )
 
-    existing_withdraw_job = session.exec(select(WithdrawJob).where(
-        WithdrawJob.pick_list_id == pick_list_id
-    )).first()
+    existing_withdraw_job = session.exec(
+        select(WithdrawJob).where(WithdrawJob.pick_list_id == pick_list_id)
+    ).first()
 
     if request.item:
         session.query(Item).filter(Item.id == request.item.id).update(
@@ -618,7 +619,7 @@ def remove_request_from_pick_list(
     session.commit()
     session.refresh(pick_list)
 
-    return pick_list
+    return sort_order_priority(session, pick_list, pick_list.requests)
 
 
 @router.delete("/{id}")
