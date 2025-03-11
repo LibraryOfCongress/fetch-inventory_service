@@ -50,7 +50,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
         elif request.url.path.startswith("/status"):
             response = await call_next(request)
         elif not token:
-            if get_settings().APP_ENVIRONMENT not in ["debug", "local", "develop", "test"]:
+            if get_settings().APP_ENVIRONMENT not in ["debug"]:
                 response = JSONResponse(status_code=401, content={"detail": "Not Authorized"})
             else:
                 response = await call_next(request)
@@ -64,7 +64,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
                 user_object = session.query(User).filter(User.email == fetch_user).first()
                 token_exp_datetime = user_object.fetch_auth_expiration
                 if token_exp_datetime < datetime.now(timezone.utc):
-                    if get_settings().APP_ENVIRONMENT not in ["local", "develop", "test"]:
+                    if get_settings().APP_ENVIRONMENT not in ["debug"]:
                         response = JSONResponse(status_code=401, content={"detail": "Token Expired"})
                     else:
                         # request = set_session_to_request(request, fetch_user)
@@ -102,7 +102,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
 
         if response.status_code == (401 or 403):
             # always log 401 & 403 regardless of route
-            data_activity_logger.warn(security_log_dict)
+            data_activity_logger.warning(security_log_dict)
         else:
             # else log on routes in filter
             if any(request.url.path.startswith(route) for route in security_log_route_filter):

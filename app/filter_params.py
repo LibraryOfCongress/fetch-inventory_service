@@ -63,6 +63,13 @@ class ItemFilterParams:
         self.status = status
 
 
+class AuthFilterParams(BaseModel):
+    """
+    SSO params
+    """
+    preserve_route: Optional[str] = None
+
+
 class ShelfFilterParams(BaseModel):
     """
     Reusable query params across Shelves.
