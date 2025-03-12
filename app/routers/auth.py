@@ -172,8 +172,10 @@ async def saml_login(
 
     relay_state = params.preserve_route if params.preserve_route else "/"
 
-    sso_built_url = auth.login(force_authn=True, return_to=relay_state)
-    # sso_built_url = auth.login()
+    # sso_built_url = auth.login(force_authn=True, return_to=relay_state)
+    # force flag disables smart cards, ignores existing sessions on idP
+    sso_built_url = auth.login(return_to=relay_state)
+
     return RedirectResponse(sso_built_url)
 
 @router.post("/sso/acs")
