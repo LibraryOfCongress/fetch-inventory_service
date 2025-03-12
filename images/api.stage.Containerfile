@@ -22,6 +22,9 @@ RUN apt-get update && \
         openjdk-17-jdk \
         graphviz \
         postgresql-client \
+        gcc \
+        g++ \
+        make \
         libxml2-dev \
         libxmlsec1-dev \
         libxmlsec1-openssl \
