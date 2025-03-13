@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,11 +15,21 @@ spec:
         app: inventory-service
     spec:
       containers:
-        image: git.loc.gov:4567/fetch/inventory_service:latest
-        imagePullPolicy: Always
-        name: inventory-service
-        ports:
-        - containerPort: 8001
-          protocol: TCP
+        - name: inventory-service
+          image: git.loc.gov:4567/fetch/inventory_service:latest
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 8001
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "750m"
+              memory: "1024Mi"
+            requests:
+              ephemeral-storage: "1Gi"
+            limits:
+              ephemeral-storage: "5Gi"
       imagePullSecrets:
       - name: gitlab-api-2023

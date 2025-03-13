@@ -6,7 +6,7 @@ stages:
   - controls
   - sonarqube
 
-build_image_dev_v02:
+build_image_dev:
   stage: build
   image:
     name: git.loc.gov:4567/fetch/build/utils/kaniko:kubectl
@@ -26,39 +26,6 @@ build_image_dev_v02:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
       allow_failure: true
-
-build_image_dev:
-  stage: build
-  image:
-    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
-    entrypoint: [""]
-  variables:
-    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:latest
-  script:
-    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
-    - cp -v images/api.dev.Containerfile Dockerfile
-    - echo $DEVELOP_APP_NAME > .env
-    - echo $DEVELOP_APP_ENVIRONMENT >> .env
-    - echo $DEVELOP_IDP_ENTITY_ID >> .env
-    - echo $DEVELOP_IDP_LOGIN_URL >> .env
-    - echo $DEVELOP_VUE_HOST >> .env
-    - echo $DEVELOP_TIMEZONE >> .env
-    - echo $DEVELOP_DATABASE_URL >> .env
-    - echo $DEVELOP_MIGRATION_URL >> .env
-    - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
-    - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
-    - echo $DEVELOP_ALLOWED_ORIGINS >> .env
-    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
-    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
-    - cat .env
-    - /kaniko/executor
-      --context $CI_PROJECT_DIR
-      --dockerfile $CI_PROJECT_DIR/Dockerfile
-      --destination $IMAGE_FULL_TAG
-  rules:
-    - if: '$ENV_BUILD_v01 =~ /^TRUE$/'
-      when: manual
-    - when: never
 
 build_demo:
   stage: build
