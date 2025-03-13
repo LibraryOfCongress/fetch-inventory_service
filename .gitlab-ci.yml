@@ -6,6 +6,27 @@ stages:
   - controls
   - sonarqube
 
+build_image_dev_v02:
+  stage: build
+  image:
+    name: git.loc.gov:4567/fetch/build/utils/kaniko:kubectl
+    entrypoint: [""]
+  variables:
+    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:latest
+  script:
+    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
+    - kubectl config use-context fetch/build:fetch -v=6
+    - kubectl -n fetch get secret fetch-inventory-service-env -o jsonpath='{.data.env}' | base64 -d > .env
+    - cp -v images/api.dev.Containerfile Dockerfile
+    - /kaniko/executor
+      --context $CI_PROJECT_DIR
+      --dockerfile $CI_PROJECT_DIR/Dockerfile
+      --destination $IMAGE_FULL_TAG
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop'
+      when: manual
+      allow_failure: true
+
 build_image_dev:
   stage: build
   image:
@@ -35,9 +56,9 @@ build_image_dev:
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop'
+    - if: '$ENV_BUILD_v01 =~ /^TRUE$/'
       when: manual
-      allow_failure: true
+    - when: never
 
 build_demo:
   stage: build
@@ -204,25 +225,13 @@ build_image_prod:
 deploy_dev:
   stage: deploy
   image:
-    name: git.loc.gov:4567/fetch/build/terraform:alt    # tf image w envsubst added
-    entrypoint: [""]
-  environment:
-    name: develop
-    url: https://inventory.dev.fetch.loctest.gov/status/
+    name: bitnami/kubectl:latest
+    entrypoint: ['']
   script:
-    - export TF_VAR_vault_deployer_password=$VAULT_DEPLOYER_PASSWORD_DEV
-    - export TF_VAR_vault_addr=$VAULT_ADDR_DEV
-    - export TF_VAR_app_name="inventory-service"
-    - export TF_VAR_image='git.loc.gov:4567/fetch/inventory_service:latest'
-    - export TF_VAR_timestamp=$CI_COMMIT_TIMESTAMP
-    - terraform --version
-    - cd terraform
     - kubectl config use-context fetch/build:fetch -v=6
-    - cp -v $KUBECONFIG kubeconfig
-    - export TF_STATE_NAME=develop
-    - envsubst < backend.hcl.tmpl > backend.hcl
-    - terraform init -backend-config=backend.hcl
-    - terraform apply -auto-approve
+    - kubectl apply -f k8s/deployment.yml
+    - sleep 5
+    - kubectl delete pod -l app=inventory-service
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual

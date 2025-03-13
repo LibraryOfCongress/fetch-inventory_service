@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: fetch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+    spec:
+      containers:
+        image: git.loc.gov:4567/fetch/inventory_service:latest
+        imagePullPolicy: Always
+        name: inventory-service
+        ports:
+        - containerPort: 8001
+          protocol: TCP
+      imagePullSecrets:
+      - name: gitlab-api-2023
