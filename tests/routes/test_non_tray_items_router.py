@@ -2,86 +2,86 @@ import logging
 from fastapi import status
 
 from tests.fixtures.configtest import client, session
-from tests.fixtures.items_fixture import (
-    ITEMS_SINGLE_RECORD_RESPONSE,
-    ITEMS_PAGE_DATA_RESPONSE,
-    ITEMS_SIZE_DATA_RESPONSE,
-    UPDATED_ITEMS_SINGLE_RECORD,
+from tests.fixtures.non_tray_items_fixture import (
+    NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE,
+    NON_TRAY_ITEMS_PAGE_DATA_RESPONSE,
+    NON_TRAY_ITEMS_SIZE_DATA_RESPONSE,
+    UPDATED_NON_TRAY_ITEMS_SINGLE_RECORD,
 )
 
 LOGGER = logging.getLogger("tests.routes.test_items_router")
 
 
-def test_get_all_items(client):
-    response = client.get("/items")
+def test_get_all_non_tray_items(client):
+    response = client.get("/non_tray_items")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json().get("accession_dt") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("accession_dt") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "accession_dt"
     )
-    assert response.json().get("accession_job_id") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("accession_job_id") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "accession_job_id"
     )
-    assert response.json().get("arbitrary_data") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("arbitrary_data") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "arbitrary_data"
     )
-    assert response.json().get("condition") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("condition") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "condition"
     )
-    assert response.json().get("container_type_id") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("container_type_id") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "container_type_id"
     )
-    assert response.json().get("media_type_id") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("media_type_id") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "media_type_id"
     )
-    assert response.json().get("subcollection_id") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("subcollection_id") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "subcollection_id"
     )
-    assert response.json().get("title") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("title") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "title"
     )
-    assert response.json().get("tray_id") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("tray_id") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "tray_id"
     )
     assert response.json().get(
         "size_class_id"
-        ) == ITEMS_SINGLE_RECORD_RESPONSE.get(
+        ) == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "size_class_id"
     )
     assert response.json().get(
         "verification_job_id"
-        ) == ITEMS_SINGLE_RECORD_RESPONSE.get(
+        ) == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "verification_job_id"
     )
-    assert response.json().get("volume") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("volume") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "volume"
     )
-    assert response.json().get("withdrawal_dt") == ITEMS_SINGLE_RECORD_RESPONSE.get(
+    assert response.json().get("withdrawal_dt") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get(
         "withdrawal_dt"
     )
 
 
-def test_get_items_by_page(client):
-    response = client.get("/items?page=1")
+def test_get_non_tray_items_by_page(client):
+    response = client.get("/non_tray_items?page=1")
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.json().get("items")) > 0
+    assert len(response.json().get("non_tray_items")) > 0
 
 
-def test_get_items_by_page_size(client):
-    response = client.get("/items?size=10")
+def test_get_non_tray_items_by_page_size(client):
+    response = client.get("/non_tray_items?size=10")
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.json().get("items")) > 0
+    assert len(response.json().get("non_tray_items")) > 0
 
 
-def test_get_all_items_not_found(client):
-    response = client.get("/items/999")
+def test_get_all_non_tray_items_not_found(client):
+    response = client.get("/non_tray_items/999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "Item ID 999 Not Found"}
 
 
 def test_get_item_by_id(client):
-    response = client.get("/items/1")
+    response = client.get("/non_tray_items/1")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json().get("id") == ITEMS_SINGLE_RECORD_RESPONSE.get("items")[
+    assert response.json().get("id") == NON_TRAY_ITEMS_SINGLE_RECORD_RESPONSE.get("non_tray_items")[
         0
     ].get("id")
 
@@ -93,7 +93,7 @@ def test_create_item_record(client):
 
 def test_update_item_record(client):
     response = client.patch(
-        "/items/1", json={
+        "/non_tray_items/1", json={
             "volume": "II", "condition": "Poor", "arbitrary_data":
                 "Unsigned copy"
         }
@@ -104,7 +104,7 @@ def test_update_item_record(client):
 
 
 def test_update_item_record_not_found(client):
-    response = client.patch("/items/999", json=UPDATED_ITEMS_SINGLE_RECORD)
+    response = client.patch("/non_tray_items/999", json=UPDATED_NON_TRAY_ITEMS_SINGLE_RECORD)
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json().get("detail") == "Item ID 999 Not Found"
 
@@ -114,7 +114,7 @@ def test_delete_item_record_success(client):
 
 
 def test_delete_item_record_not_found(client):
-    response = client.delete("/items/999")
+    response = client.delete("/non_tray_items/999")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json().get("detail") == "Item ID 999 Not Found"
