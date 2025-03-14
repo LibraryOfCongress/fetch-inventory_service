@@ -269,6 +269,12 @@ def process_tray_item_move(
 
         session.commit()
 
+    # update shelf available space on both source and destination tray
+    update_shelf_space_after_tray(
+        destination_tray, destination_tray.shelf_position_id,
+        source_tray.shelf_position_id
+        )
+
 
 def process_tray_move(session: Session, tray: Tray, source_shelf: Shelf,
                       destination_shelf: Shelf, destination_shelf_position_id: int):
