@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: fetch
+spec:
+  selector:
+    app: inventory-service
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 8001
+      nodePort: 30100

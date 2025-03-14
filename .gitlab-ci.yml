@@ -195,10 +195,11 @@ deploy_dev:
     name: bitnami/kubectl:latest
     entrypoint: ['']
   script:
-    - kubectl config use-context fetch/build:fetch -v=6
-    - kubectl apply -f k8s/deployment.yml
-    - sleep 5
-    - kubectl delete pod -l app=inventory-service
+    - kubectl config use-context fetch/build:fetch
+    - kubectl -n fetch apply -f k8s/deployment.yml
+    - kubectl -n fetch apply -f k8s/service.yml
+    - sleep 10
+    - kubectl -n fetch rollout restart deployment/inventory-service
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
