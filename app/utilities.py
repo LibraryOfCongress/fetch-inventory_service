@@ -1,3 +1,4 @@
+import math
 from datetime import timedelta, datetime
 from enum import Enum
 from typing import List, Dict, Tuple, Any
@@ -7,7 +8,7 @@ import logging
 import pandas as pd
 import pytz
 from datetime import timezone
-from sqlalchemy import and_, text, asc, desc, func
+from sqlalchemy import and_, text, asc, desc, func, column
 from sqlalchemy.orm import joinedload, aliased, RelationshipProperty
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql import not_
@@ -198,45 +199,45 @@ def process_containers_for_shelving(
         - Nothing
         - Commits transactions
     """
+
     # query is built without execution beforehand
-    shelf_position_query = select(
-        ShelfPosition.id.label("shelf_position_id"),
-        ShelfPosition.shelf_id,
-        ShelfPositionNumber.number,
-        Shelf.owner_id,
-        Shelf.ladder_id,
-        Ladder.side_id,
-        Side.aisle_id,
-        Aisle.module_id,
-        Module.building_id,
-        ShelfType.size_class_id
-    ).join(
-        ShelfPositionNumber, ShelfPositionNumber.id == ShelfPosition.shelf_position_number_id
-    ).join(
-        Shelf, Shelf.id == ShelfPosition.shelf_id
-    ).join(
-        ShelfType, ShelfType.id == Shelf.shelf_type_id
-    ).join(
-        Ladder, Ladder.id == Shelf.ladder_id
-    ).join(
-        Side, Side.id == Ladder.side_id
-    ).join(
-        Aisle, Aisle.id == Side.aisle_id
-    ).join(
-        Module, Module.id == Aisle.module_id
-    ).where(
-        not_(
-            select(Tray)
-            .where(Tray.shelf_position_id == ShelfPosition.id)
-            .exists()
+    shelf_query = (
+        select(
+            Shelf.id
         )
-    ).where(
-        not_(
-            select(NonTrayItem)
-            .where(NonTrayItem.shelf_position_id == ShelfPosition.id)
-            .exists()
+        .select_from(Shelf)
+        .join(
+            ShelfNumber, ShelfNumber.id == Shelf.shelf_number_id
+        ).join(
+            ShelfType, ShelfType.id == Shelf.shelf_type_id
+        ).join(
+            ShelfPosition, ShelfPosition.shelf_id == Shelf.id
         )
-    )
+        .join(
+            Ladder, Ladder.id == Shelf.ladder_id
+        ).join(
+            LadderNumber, Ladder.ladder_number_id == LadderNumber.id
+        ).join(
+            Side, Side.id == Ladder.side_id
+        ).join(
+            Aisle, Aisle.id == Side.aisle_id
+        ).join(
+            AisleNumber, Aisle.aisle_number_id == AisleNumber.id
+        ).join(
+            Module, Module.id == Aisle.module_id
+        ).where(
+            not_(
+                select(Tray)
+                .where(Tray.shelf_position_id == ShelfPosition.id)
+                .exists()
+            )
+        ).where(
+            not_(
+                select(NonTrayItem)
+                .where(NonTrayItem.shelf_position_id == ShelfPosition.id)
+                .exists()
+            )
+        ))
 
     # conditions are where clauses
     conditions = []
@@ -264,28 +265,56 @@ def process_containers_for_shelving(
     for (size_class_id, owner_id), container_group in containers_by_group.items():
         num_to_assign = len(container_group)
 
-        # Build a query for available shelf positions that match the container's size class and owner.
-        available_positions_query = shelf_position_query.where(
+        # Build a query for available shelves  matching the container's size class and
+        # owner.
+        # and then by group the shelves ASC order.
+        available_shelf_query = shelf_query.where(
             and_(
                 ShelfType.size_class_id == size_class_id,
                 Shelf.owner_id == owner_id,
-                # ensure the shelf belongs to the same owner
                 *conditions
             )
-        ).limit(num_to_assign)
+        ).order_by(
+            asc(ShelfPosition.location)
+        ).group_by(Shelf.id, ShelfPosition.location).limit(num_to_assign)
 
         # Execute the query.
-        available_positions = session.exec(available_positions_query).all()
+        fetched_available_shelf_query = session.exec(available_shelf_query).all()
 
-        if len(available_positions) < num_to_assign:
+        if len(fetched_available_shelf_query) < num_to_assign:
             raise NotFound(
                 detail=f"Not enough empty shelf positions for containers with size_class_id {size_class_id} and owner_id {owner_id}."
             )
 
+        shelf_ids = list(set(fetched_available_shelf_query))
+
+        # Build a query for available shelf positions matching the container's size class and owner.
+        available_positions_query = (
+            select(
+            ShelfPosition
+            )
+            .where(ShelfPosition.shelf_id.in_(shelf_ids))
+        )
+
+        # Execute the query.
+        shelf_positions = session.exec(available_positions_query).all()
+
+        if len(shelf_positions) < num_to_assign:
+            raise NotFound(
+                detail=f"Not enough empty shelf positions for containers with size_class_id {size_class_id} and owner_id {owner_id}."
+            )
+
+        available_positions = sorted(
+            shelf_positions,
+            key=lambda pos: (
+                pos.location.split('-')[:6],
+                -int(pos.location.split('-')[-1])
+            )
+        )
+
         # Zip the container group with the available positions.
         for container, position in zip(container_group, available_positions):
-            container.shelf_position_id = position.shelf_position_id
-            container.shelf_position_proposed_id = position.shelf_position_id
+            container.shelf_position_proposed_id = position.id
             container.shelving_job_id = shelving_job_id
             session.add(container)
 

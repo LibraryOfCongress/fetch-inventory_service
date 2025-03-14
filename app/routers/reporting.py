@@ -238,19 +238,18 @@ def get_accessioned_items_count(
     **Returns**:
     - Page[AccessionItemsDetailOutput]: The total number of items that have been accessioned.
     """
-    if sort_params.sort_order not in ["asc", "desc"]:
-        raise BadRequest(
-            detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
-        )
+    if sort_params.sort_by:
 
-    order_func = asc if sort_params.sort_order == "asc" else desc
+        if sort_params.sort_order not in ["asc", "desc"]:
+            raise BadRequest(
+                detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
+            )
 
-    query = get_accessioned_items_count_query(params, sort_params.sort_by, order_func)
+        order_func = asc if sort_params.sort_order == "asc" else desc
 
-    if sort_params.sort_order not in ["asc", "desc"]:
-        raise BadRequest(
-            detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
-        )
+        query = get_accessioned_items_count_query(params, sort_params.sort_by, order_func)
+    else:
+        query = get_accessioned_items_count_query(params)
 
     return paginate(session, query)
 
@@ -279,15 +278,18 @@ def get_accessioned_items_csv(
     **Returns**:
     - Streaming Response: The response with the csv file
     """
-    if sort_params.sort_order not in ["asc", "desc"]:
-        raise BadRequest(
-            detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
-        )
+    if sort_params.sort_by:
+        if sort_params.sort_order not in ["asc", "desc"]:
+            raise BadRequest(
+                detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
+            )
 
-    order_func = asc if sort_params.sort_order == "asc" else desc
-
-    # Get the query
-    accession_query = get_accessioned_items_count_query(params, sort_params.sort_by, order_func)
+        order_func = asc if sort_params.sort_order == "asc" else desc
+        # Get the query
+        accession_query = get_accessioned_items_count_query(params, sort_params.sort_by, order_func)
+    else:
+        # Get the query
+        accession_query = get_accessioned_items_count_query(params)
 
     # Define the generator to stream data
     def generate_csv():
@@ -476,7 +478,9 @@ def get_shelving_job_discrepancy_detail(
 # OPEN LOCATIONS REPORT
 @router.get("/open-locations/", response_model=Page[OpenLocationsOutput])
 def get_open_locations_list(
-    session: Session = Depends(get_session), params: OpenLocationParams = Depends()
+    session: Session = Depends(get_session),
+    params: OpenLocationParams = Depends(),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Returns a paginated list of shelf objects with
@@ -542,6 +546,16 @@ def get_open_locations_list(
                 .join(Building, Module.building_id == Building.id)
                 .filter(Building.id == params.building_id)
             )
+
+        if sort_params.sort_by:
+            if sort_params.sort_order not in ["asc", "desc"]:
+                raise BadRequest(
+                    detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
+                )
+
+            order_func = asc if sort_params.sort_order == "asc" else desc
+
+            shelf_query = shelf_query.order_by(order_func(sort_params.sort_by))
 
         return paginate(session, shelf_query)
     except Exception as e:
