@@ -223,65 +223,57 @@ def manage_verification_job_transition(
             verification_job.last_transition = datetime.now(timezone.utc)
         commit_record(session, verification_job)
 
+
 def process_tray_item_move(
     session: Session, item: Item, source_tray: Tray, destination_tray: Tray
 ):
     """
     Task processes a tray item move
     """
-    with session_manager() as session:
-        # Move the item to the destination tray and update the tray
-        item.tray_id = destination_tray.id
-        item.size_class_id = destination_tray.size_class_id
-        item.owner_id = destination_tray.owner_id
-        item.media_type_id = destination_tray.media_type_id
-        item.accession_job_id = destination_tray.accession_job_id
-        item.accession_dt = destination_tray.accession_dt
-        item.verification_job_id = destination_tray.verification_job_id
+    item.tray_id = destination_tray.id
+    item.size_class_id = destination_tray.size_class_id
+    item.owner_id = destination_tray.owner_id
+    item.media_type_id = destination_tray.media_type_id
+    item.accession_job_id = destination_tray.accession_job_id
+    item.accession_dt = destination_tray.accession_dt
+    item.verification_job_id = destination_tray.verification_job_id
 
-        # update update_dt fields
-        update_dt = datetime.now(timezone.utc)
-        item.update_dt = update_dt
-        destination_tray.update_dt = update_dt
+    # update update_dt fields
+    update_dt = datetime.now(timezone.utc)
+    item.update_dt = update_dt
+    destination_tray.update_dt = update_dt
 
-        session.add(item)
-        session.add(destination_tray)
+    session.commit()
+
+    session.refresh(source_tray)
+    session.refresh(destination_tray)
+
+    # check if tray is empty if it is empty, withdraw the tray
+    updated_source_tray = session.query(Tray).filter(Tray.id == source_tray.id).first()
+
+    if updated_source_tray and len(updated_source_tray.items) == 0:
+        session.query(Barcode).filter(Barcode.id == source_tray.barcode_id).update(
+            {"withdrawn": True, "update_dt": update_dt},
+            synchronize_session=False,
+        )
+        session.query(Tray).filter(Tray.id == source_tray.id).update(
+            {
+                "shelf_position_id": None,
+                "shelf_position_proposed_id": None,
+                "withdrawal_dt": update_dt,
+                "withdrawn_barcode_id": source_tray.barcode_id,
+                "barcode_id": None,
+                "update_dt": update_dt
+            }
+        )
+
         session.commit()
-        session.refresh(item)
-        session.refresh(source_tray)
 
-        # check if tray is empty if it is empty, withdraw the tray
-        updated_source_tray = session.query(Tray).filter(Tray.id == source_tray.id).first()
-
-        if updated_source_tray and len(updated_source_tray.items) == 0:
-            session.query(Barcode).filter(Barcode.id == source_tray.barcode_id).update(
-                {"Withdrawn": True, "update_dt": update_dt},
-                synchronize_session=False,
-            )
-            session.query(Tray).filter(Tray.id == source_tray.id).update(
-                {
-                    "shelf_position_id": None,
-                    "shelf_position_proposed_id": None,
-                    "withdrawal_dt": update_dt,
-                    "withdrawn_barcode_id": source_tray.barcode_id,
-                    "barcode_id": None,
-                    "update_dt": update_dt
-                }
-            )
-
-            source_shelf = (
-                session.query(Shelf)
-                .join(ShelfPosition, Shelf.id == ShelfPosition.shelf_id)
-                .filter(ShelfPosition.id == source_tray.shelf_position_id)
-                .first()
-            )
-
-            if source_shelf:
-                session.query(Shelf).filter(Shelf.id == source_shelf.id).update(
-                    {"available_space": source_shelf.available_space + 1}
-                )
-
-            session.commit()
+    # update shelf available space on both source and destination tray
+    update_shelf_space_after_tray(
+        destination_tray, destination_tray.shelf_position_id,
+        source_tray.shelf_position_id
+        )
 
 
 def process_tray_move(session: Session, tray: Tray, source_shelf: Shelf,

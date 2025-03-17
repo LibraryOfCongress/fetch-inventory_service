@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams, JobFilterParams
+from app.logger import inventory_logger
 from app.models.users import User
 from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.sorting import ShelvingJobSorter
@@ -34,7 +35,7 @@ from app.schemas.shelving_jobs import (
 from app.config.exceptions import (
     NotFound,
     ValidationException,
-    InternalServerError,
+    InternalServerError, BadRequest,
 )
 
 router = APIRouter(
@@ -42,6 +43,35 @@ router = APIRouter(
     tags=["shelving jobs"],
 )
 
+
+def get_shelving_position(session: Session, shelving_job: ShelvingJob):
+    trays = shelving_job.trays
+    non_tray_items = shelving_job.non_tray_items
+
+    if trays:
+        for index, tray in enumerate(trays):
+            if not tray.shelf_position_id and tray.shelf_position_proposed_id:
+                trays[index].shelf_position = session.query(ShelfPosition).where(
+                    tray.shelf_position_proposed_id == ShelfPosition.id
+                ).first()
+            else:
+                continue
+
+    if non_tray_items:
+        for index, non_tray_item in enumerate(non_tray_items):
+            if not non_tray_item.shelf_position_id and non_tray_item.shelf_position_proposed_id:
+                non_tray_items[index].shelf_position = session.query(
+                    ShelfPosition
+                    ).where(
+                    non_tray_item.shelf_position_proposed_id == ShelfPosition.id
+                ).first()
+            else:
+                continue
+
+    shelving_job.trays = trays
+    shelving_job.non_tray_items = non_tray_items
+
+    return shelving_job
 
 @router.get("/", response_model=Page[ShelvingJobListOutput])
 def get_shelving_job_list(
@@ -134,7 +164,7 @@ def get_shelving_job_detail(id: int, session: Session = Depends(get_session)):
     shelving_job = session.get(ShelvingJob, id)
 
     if shelving_job:
-        return shelving_job
+        return get_shelving_position(session, shelving_job)
 
     raise NotFound(detail=f"Shelving Job ID {id} Not Found")
 
@@ -232,9 +262,7 @@ def create_shelving_job(
                 session.commit()
 
         # else, shelving_job.origin == "Direct", return shelving_job
-        session.refresh(new_shelving_job)
-
-        return new_shelving_job
+        return get_shelving_position(session, new_shelving_job)
 
     except IntegrityError as e:
         session.delete(new_shelving_job)
@@ -293,7 +321,7 @@ def update_shelving_job(
         session.commit()
         session.refresh(existing_shelving_job)
 
-        return existing_shelving_job
+        return get_shelving_position(session, existing_shelving_job)
 
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
@@ -310,7 +338,69 @@ def delete_shelving_job(id: int, session: Session = Depends(get_session)):
     - HTTPException: An HTTP exception indicating the result of the deletion.
     """
     shelving_job = session.get(ShelvingJob, id)
+    if shelving_job.status in ["Running", "Completed"]:
+        raise ValidationException(detail=f"""Shelving Job ID {id} status is in "
+                                         'Running' or 'Completed'""")
+
     if shelving_job:
+        trays = shelving_job.trays
+        non_tray_items = shelving_job.non_tray_items
+        update_dt = datetime.now(timezone.utc)
+
+        if trays:
+            tray_ids = [tray.id for tray in trays]
+            if tray_ids:
+                session.query(Tray).filter(Tray.id.in_(tray_ids)).update(
+                    {
+                        "shelving_job_id": None,
+                        "shelf_position_id": None,
+                        "shelf_position_proposed_id": None,
+                        "shelved_dt": None,
+                        "update_dt": update_dt
+                    }
+                )
+
+        if non_tray_items:
+            non_tray_item_ids = [non_tray_item.id for non_tray_item in non_tray_items]
+            if non_tray_item_ids:
+                session.query(NonTrayItem).filter(NonTrayItem.id.in_(
+                    non_tray_item_ids)).update(
+                    {
+                        "shelving_job_id": None,
+                        "shelf_position_id": None,
+                        "shelf_position_proposed_id": None,
+                        "shelved_dt": None,
+                        "update_dt": update_dt
+                    }
+                )
+
+        # Updating Verifications Jobs
+        existing_verification_jobs = session.query(VerificationJob).where(
+            VerificationJob.shelving_job_id == id
+        ).all()
+
+        if existing_verification_jobs:
+            verification_job_ids = [verification_job.id for verification_job in existing_verification_jobs]
+            if verification_job_ids:
+                session.query(VerificationJob).filter(VerificationJob.id.in_(
+                    verification_job_ids)).update(
+                    {
+                        "shelving_job_id": None,
+                        "update_dt": update_dt
+                    }
+                )
+
+        # Removing Shelving Job Discrepancies
+        existing_shelving_job_discrepancies = session.query(ShelvingJobDiscrepancy).where(
+            ShelvingJobDiscrepancy.shelving_job_id == id
+        ).all()
+
+        if existing_shelving_job_discrepancies:
+            discrepancy_ids = [discrepancy.id for discrepancy in existing_shelving_job_discrepancies]
+            if discrepancy_ids:
+                session.query(ShelvingJobDiscrepancy).filter(ShelvingJobDiscrepancy.id.in_(
+                    discrepancy_ids)).delete()
+
         session.delete(shelving_job)
         session.commit()
 
@@ -554,34 +644,15 @@ def reassign_container_location(
 
     # Checking and verifying Verification Job
     if container.verification_job_id:
-        verification_job_shelved = True
         verification_job = session.get(
             VerificationJob, container.verification_job_id
         )
 
-        if verification_job:
-            trays = verification_job.trays
-            non_tray_items = verification_job.non_tray_items
-
-            if trays:
-                for tray in trays:
-                    if (
-                        tray.id != container.id
-                        and not verification_job.shelving_job_id
-                    ):
-                        verification_job_shelved = False
-            if non_tray_items:
-                for non_tray_item in non_tray_items:
-                    if (
-                        non_tray_item.id != container.id
-                        and not verification_job.shelving_job_id
-                    ):
-                        verification_job_shelved = False
-            if verification_job_shelved:
-                verification_job.shelving_job_id = id
-                session.add(verification_job)
-                session.commit()
-                session.refresh(verification_job)
+        if verification_job.shelving_job_id is None:
+            verification_job.shelving_job_id = id
+            session.add(verification_job)
+            session.commit()
+            session.refresh(verification_job)
 
     # only reassign actual, not proposed
     container.shelving_job_id = id

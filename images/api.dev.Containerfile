@@ -17,9 +17,18 @@ FROM python:3.11.4-slim
 # Install Java, Graphviz, pg tools
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y git && \
-    apt-get install -y openjdk-17-jdk graphviz && \
-    apt-get install -y postgresql-client && \
+    apt-get install -y \
+        git \
+        openjdk-17-jdk \
+        graphviz \
+        postgresql-client \
+        gcc \
+        g++ \
+        make \
+        libxml2-dev \
+        libxmlsec1-dev \
+        libxmlsec1-openssl \
+        pkg-config && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

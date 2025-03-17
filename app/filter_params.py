@@ -63,6 +63,13 @@ class ItemFilterParams:
         self.status = status
 
 
+class AuthFilterParams(BaseModel):
+    """
+    SSO params
+    """
+    preserve_route: Optional[str] = None
+
+
 class ShelfFilterParams(BaseModel):
     """
     Reusable query params across Shelves.
@@ -81,6 +88,42 @@ class ShelfFilterParams(BaseModel):
     owner: Optional[str] = None
     size_class: Optional[str] = None
     location: Optional[str] = None
+
+
+class ModuleFilterParams(BaseModel):
+    """
+    Params for Module List.
+    """
+    building_id: Optional[int] = None
+    building_name: Optional[str] = None
+
+
+class AisleFilterParams(BaseModel):
+    """
+    Params for Aisle List.
+    """
+    module_number: Optional[str] = None
+    building_id: Optional[int] = None
+    module_id: Optional[int] = None
+
+
+class SideFilterParams(BaseModel):
+    """
+    Params for Side List.
+    """
+    building_id: Optional[int] = None
+    module_id: Optional[int] = None
+    aisle_id: Optional[int] = None
+
+
+class LadderFilterParams(BaseModel):
+    """
+    Params for Ladder List.
+    """
+    building_id: Optional[int] = None
+    module_id: Optional[int] = None
+    aisle_id: Optional[int] = None
+    side_id: Optional[int] = None
 
 
 class JobFilterParams:

@@ -276,26 +276,28 @@ def update_barcode(
                 verification_job = session.query(VerificationJob).filter(
                     VerificationJob.id == item.verification_job_id
                 ).first()
-                tray_barcode = session.query(Barcode).join(Tray, Barcode.id == Tray.barcode_id).filter(Tray.id == item.tray_id).first()
-                new_verification_change = VerificationChange(
-                    workflow_id=verification_job.workflow_id,
-                    tray_barcode_value=tray_barcode.value,
-                    item_barcode_value=existing_barcode.value,
-                    change_type="BarcodeValueEdit",
-                    completed_by_id=verification_job.user_id
-                )
-                session.add(new_verification_change)
+                if verification_job:
+                    tray_barcode = session.query(Barcode).join(Tray, Barcode.id == Tray.barcode_id).filter(Tray.id == item.tray_id).first()
+                    new_verification_change = VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        tray_barcode_value=tray_barcode.value,
+                        item_barcode_value=existing_barcode.value,
+                        change_type="BarcodeValueEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                    session.add(new_verification_change)
             else:
                 verification_job = session.query(VerificationJob).filter(
                     VerificationJob.id == non_tray_item.verification_job_id
                 ).first()
-                new_verification_change = VerificationChange(
-                    workflow_id=verification_job.workflow_id,
-                    item_barcode_value=existing_barcode.value,
-                    change_type="BarcodeValueEdit",
-                    completed_by_id=verification_job.user_id
-                )
-                session.add(new_verification_change)
+                if verification_job:
+                    new_verification_change = VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        item_barcode_value=existing_barcode.value,
+                        change_type="BarcodeValueEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                    session.add(new_verification_change)
 
     mutated_data = barcode.model_dump(exclude={"type"}, exclude_unset=True)
 

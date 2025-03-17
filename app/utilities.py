@@ -1,3 +1,4 @@
+import math
 from datetime import timedelta, datetime
 from enum import Enum
 from typing import List, Dict, Tuple, Any
@@ -7,7 +8,7 @@ import logging
 import pandas as pd
 import pytz
 from datetime import timezone
-from sqlalchemy import and_, text, asc, desc, func
+from sqlalchemy import and_, text, asc, desc, func, column, or_
 from sqlalchemy.orm import joinedload, aliased, RelationshipProperty
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql import not_
@@ -132,9 +133,7 @@ def get_location(session, shelf_position):
     )
 
     shelf = session.exec(shelf_query).first()
-
     ladder = session.exec(ladder_query).first()
-
     aisle = session.exec(aisle_query).first()
 
     if not shelf:
@@ -146,7 +145,30 @@ def get_location(session, shelf_position):
     if not aisle:
         raise NotFound(detail=f"Aisle ID {ladder.aisle_id} Not Found")
 
-    return {"aisle": aisle, "ladder": ladder, "shelf": shelf}
+    shelf_number_query = select(ShelfNumber).where(
+        ShelfNumber.id == shelf.shelf_number_id
+    )
+
+    ladder_number_query = select(LadderNumber).where(
+        LadderNumber.id == ladder.ladder_number_id
+    )
+
+    aisle_number_query = select(AisleNumber).where(
+        AisleNumber.id == aisle.aisle_number_id
+    )
+
+    shelf_number = session.exec(shelf_number_query).first()
+    ladder_number = session.exec(ladder_number_query).first()
+    aisle_number = session.exec(aisle_number_query).first()
+
+    return {
+        "aisle": aisle,
+        "ladder": ladder,
+        "shelf": shelf,
+        "shelf_number": shelf_number,
+        "ladder_number": ladder_number,
+        "aisle_number": aisle_number,
+    }
 
 
 def process_containers_for_shelving(
@@ -179,45 +201,6 @@ def process_containers_for_shelving(
         - Nothing
         - Commits transactions
     """
-    # query is built without execution beforehand
-    shelf_position_query = select(
-        ShelfPosition.id.label("shelf_position_id"),
-        ShelfPosition.shelf_id,
-        ShelfPositionNumber.number,
-        Shelf.owner_id,
-        Shelf.ladder_id,
-        Ladder.side_id,
-        Side.aisle_id,
-        Aisle.module_id,
-        Module.building_id,
-        ShelfType.size_class_id
-    ).join(
-        ShelfPositionNumber, ShelfPositionNumber.id == ShelfPosition.shelf_position_number_id
-    ).join(
-        Shelf, Shelf.id == ShelfPosition.shelf_id
-    ).join(
-        ShelfType, ShelfType.id == Shelf.shelf_type_id
-    ).join(
-        Ladder, Ladder.id == Shelf.ladder_id
-    ).join(
-        Side, Side.id == Ladder.side_id
-    ).join(
-        Aisle, Aisle.id == Side.aisle_id
-    ).join(
-        Module, Module.id == Aisle.module_id
-    ).where(
-        not_(
-            select(Tray)
-            .where(Tray.shelf_position_id == ShelfPosition.id)
-            .exists()
-        )
-    ).where(
-        not_(
-            select(NonTrayItem)
-            .where(NonTrayItem.shelf_position_id == ShelfPosition.id)
-            .exists()
-        )
-    )
 
     # conditions are where clauses
     conditions = []
@@ -235,37 +218,148 @@ def process_containers_for_shelving(
         # searching in aisles belonging to a building's modules
         conditions.append(Module.building_id == building_id)
 
-    # process containers
-    for container_object in containers:
-        # assign container to shelving job
-        container_object.shelving_job_id = shelving_job_id
+    # query is built without execution beforehand
+    # query is built without execution beforehand
+    shelf_position_query = (
+        select(
+            ShelfPosition.id.label("shelf_position_id"),
+            ShelfPosition.shelf_id,
+            ShelfPosition.location,
+            ShelfPositionNumber.number,
+            Shelf.owner_id,
+            Shelf.ladder_id,
+            Ladder.side_id,
+            Side.aisle_id,
+            Aisle.module_id,
+            Module.building_id,
+            ShelfType.size_class_id,
+        )
+        .join(
+            ShelfPositionNumber,
+            ShelfPositionNumber.id == ShelfPosition.shelf_position_number_id,
+        )
+        .join(Shelf, Shelf.id == ShelfPosition.shelf_id)
+        .join(ShelfType, ShelfType.id == Shelf.shelf_type_id)
+        .join(Ladder, Ladder.id == Shelf.ladder_id)
+        .join(Side, Side.id == Ladder.side_id)
+        .join(Aisle, Aisle.id == Side.aisle_id)
+        .join(Module, Module.id == Aisle.module_id)
+        .where(
+            not_(
+                select(Tray)
+                .where(
+                    or_(
+                        Tray.shelf_position_id == ShelfPosition.id,
+                        Tray.shelf_position_proposed_id == ShelfPosition.id,
+                    )
+                )
+                .exists()
+            )
+        )
+        .where(
+            not_(
+                select(NonTrayItem)
+                .where(
+                    or_(
+                        NonTrayItem.shelf_position_id == ShelfPosition.id,
+                        NonTrayItem.shelf_position_proposed_id == ShelfPosition.id,
+                    )
+                )
+                .exists()
+            )
+        )
+    )
 
-        # If container already shelved (from previous job attempt), skip
-        if container_object.shelf_position_id:
-            continue
+    # Group containers by (size_class_id, owner_id)
+    containers_by_group = {}
+    for container in containers:
+        key = (container.size_class_id, container.owner_id)
+        containers_by_group.setdefault(key, []).append(container)
 
-        # Otherwise, further constrain by owner & size class
-        conditions.append(Shelf.owner_id == container_object.owner_id)
-        conditions.append(ShelfType.size_class_id == container_object.size_class_id)
-        # then pull results, retrieve only one from back of a shelf
-        available_shelf_position = session.exec(shelf_position_query.where(
-            and_(*conditions)
-        ).order_by(
-            desc(ShelfPositionNumber.number)
-        ).limit(1)).first()
+    # Process each group individually.
+    for (size_class_id, owner_id), container_group in containers_by_group.items():
+        num_to_assign = len(container_group)
 
-        if not available_shelf_position:
-            # this interrupts the rest... COME BACK TO THIS
+        # Build a query for available shelves  matching the container's size class and
+        # owner.
+        # and then by group the shelves ASC order.
+        available_shelf_query = (
+            shelf_position_query.where(
+                and_(
+                    ShelfType.size_class_id == size_class_id,
+                    Shelf.owner_id == owner_id,
+                    *conditions,
+                )
+            )
+            .order_by(asc(ShelfPosition.location))
+            .limit(num_to_assign)
+        )
+
+        # Execute the query.
+        fetched_available_shelf_query = session.exec(available_shelf_query).all()
+
+        if len(fetched_available_shelf_query) < num_to_assign:
             raise NotFound(
-                detail=f"No empty shelf positions within job constraints for container {container_object.barcode.value}."
+                detail="Not enough empty shelf positions for containers with "
+                "size class and owner."
             )
 
-        container_object.shelf_position_id = available_shelf_position.shelf_position_id
-        container_object.shelf_position_proposed_id = available_shelf_position.shelf_position_id
+        shelf_ids = list({item.shelf_id for item in fetched_available_shelf_query})
 
-        session.add(container_object)
+        # Build a query for available shelf positions matching the container's size class and owner.
+        available_positions_query = (
+            select(ShelfPosition)
+            .where(ShelfPosition.shelf_id.in_(shelf_ids))
+            .where(
+                not_(
+                    select(Tray)
+                    .where(
+                        or_(
+                            Tray.shelf_position_id == ShelfPosition.id,
+                            Tray.shelf_position_proposed_id == ShelfPosition.id,
+                        )
+                    )
+                    .exists()
+                )
+            )
+            .where(
+                not_(
+                    select(NonTrayItem)
+                    .where(
+                        or_(
+                            NonTrayItem.shelf_position_id == ShelfPosition.id,
+                            NonTrayItem.shelf_position_proposed_id == ShelfPosition.id,
+                        )
+                    )
+                    .exists()
+                )
+            )
+        )
+
+        # Execute the query.
+        shelf_positions = session.exec(available_positions_query).all()
+
+        if len(shelf_positions) < num_to_assign:
+            raise NotFound(
+                detail="Not enough empty shelf positions for containers with size "
+                "class and owner."
+            )
+
+        available_positions = sorted(
+            shelf_positions,
+            key=lambda pos: (
+                pos.location.split("-")[:6],
+                -int(pos.location.split("-")[-1]),
+            ),
+        )
+
+        # Zip the container group with the available positions.
+        for container, position in zip(container_group, available_positions):
+            container.shelf_position_proposed_id = position.id
+            container.shelving_job_id = shelving_job_id
+            session.add(container)
+
         session.commit()
-        session.refresh(container_object)
 
     return
 
@@ -327,37 +421,37 @@ def get_refile_queue(params):
         item_query_conditions.append(Building.id == params.building_id)
         non_tray_item_query_conditions.append(Building.id == params.building_id)
     if params.media_type:
-        media_type_subquery = (
-            select(MediaType.id)
-            .where(MediaType.name.in_(params.media_type))
+        media_type_subquery = select(MediaType.id).where(
+            MediaType.name.in_(params.media_type)
         )
         item_query_conditions.append(Item.media_type_id.in_(media_type_subquery))
-        non_tray_item_query_conditions.append(NonTrayItem.media_type_id.in_(media_type_subquery))
-    if params.owner:
-        owner_subquery = (
-            select(Owner.id)
-            .where(Owner.name.in_(params.owner))
+        non_tray_item_query_conditions.append(
+            NonTrayItem.media_type_id.in_(media_type_subquery)
         )
+    if params.owner:
+        owner_subquery = select(Owner.id).where(Owner.name.in_(params.owner))
         item_query_conditions.append(Item.owner_id.in_(owner_subquery))
         non_tray_item_query_conditions.append(NonTrayItem.owner_id.in_(owner_subquery))
     if params.size_class:
-        size_class_subquery = (
-            select(SizeClass.id)
-            .where(SizeClass.name.in_(params.size_class))
+        size_class_subquery = select(SizeClass.id).where(
+            SizeClass.name.in_(params.size_class)
         )
         item_query_conditions.append(Item.size_class_id.in_(size_class_subquery))
-        non_tray_item_query_conditions.append(NonTrayItem.size_class_id.in_(size_class_subquery))
+        non_tray_item_query_conditions.append(
+            NonTrayItem.size_class_id.in_(size_class_subquery)
+        )
 
     if params.container_type:
-        container_type_subquery = (
-            select(ContainerType.id)
-            .where(ContainerType.type.in_(params.container_type))
+        container_type_subquery = select(ContainerType.id).where(
+            ContainerType.type.in_(params.container_type)
         )
         inventory_logger.info(f"Container Type Subquery: {container_type_subquery}")
-        item_query_conditions.append(Tray.container_type_id.in_(container_type_subquery))
-        non_tray_item_query_conditions.append(NonTrayItem.container_type_id.in_(
-            container_type_subquery))
-
+        item_query_conditions.append(
+            Tray.container_type_id.in_(container_type_subquery)
+        )
+        non_tray_item_query_conditions.append(
+            NonTrayItem.container_type_id.in_(container_type_subquery)
+        )
 
     # Get items scanned for refile queue
     item_query_conditions.append(Item.scanned_for_refile_queue == True)
@@ -489,8 +583,8 @@ def get_refile_queue(params):
         refile_queue.c.media_type,
         refile_queue.c.owner,
         refile_queue.c.size_class,
-        refile_queue.c.scanned_for_refile_queue_dt
-        ).select_from(refile_queue)
+        refile_queue.c.scanned_for_refile_queue_dt,
+    ).select_from(refile_queue)
 
     return refile_queue
 
@@ -879,25 +973,33 @@ def process_request_data(session, request_df: pd.DataFrame, batch_upload_id):
     request_instances = []
     for index, row in request_df.iterrows():
         request_data = {
-            "request_type_id": row["request_type_id"]
-            if not pd.isnull(row["request_type_id"])
-            else None,
+            "request_type_id": (
+                row["request_type_id"]
+                if not pd.isnull(row["request_type_id"])
+                else None
+            ),
             "item_id": row["item_id"] if not pd.isnull(row["item_id"]) else None,
-            "non_tray_item_id": row["non_tray_item_id"]
-            if not pd.isnull(row["non_tray_item_id"])
-            else None,
-            "delivery_location_id": row["delivery_location_id"]
-            if not pd.isnull(row["delivery_location_id"])
-            else None,
-            "priority_id": row["priority_id"]
-            if not pd.isnull(row["priority_id"])
-            else None,
-            "external_request_id": row["External Request ID"]
-            if not pd.isnull(row["External Request ID"])
-            else None,
-            "requestor_name": row["Requestor Name"]
-            if not pd.isnull(row["Requestor Name"])
-            else None,
+            "non_tray_item_id": (
+                row["non_tray_item_id"]
+                if not pd.isnull(row["non_tray_item_id"])
+                else None
+            ),
+            "delivery_location_id": (
+                row["delivery_location_id"]
+                if not pd.isnull(row["delivery_location_id"])
+                else None
+            ),
+            "priority_id": (
+                row["priority_id"] if not pd.isnull(row["priority_id"]) else None
+            ),
+            "external_request_id": (
+                row["External Request ID"]
+                if not pd.isnull(row["External Request ID"])
+                else None
+            ),
+            "requestor_name": (
+                row["Requestor Name"] if not pd.isnull(row["Requestor Name"]) else None
+            ),
             "batch_upload_id": batch_upload_id,
         }
         if building_id is not None:
@@ -947,7 +1049,7 @@ def validate_item_not_shelved(shelf_position):
     return False
 
 
-def validate_non_tray_item_not_shelved(item):
+def validate_container_not_shelved(item):
     if not item or not item.shelf_position_id or not item.scanned_for_shelving:
         return True
     return False
@@ -1000,20 +1102,29 @@ def process_withdraw_job_data(
     barcode_ids = [barcode.id for barcode in barcodes]
 
     # Fetch all necessary data in batch
-    items = {item.barcode_id: item for item in session.query(Item).filter(Item.barcode_id.in_(barcode_ids)).all()}
+    items = {
+        item.barcode_id: item
+        for item in session.query(Item).filter(Item.barcode_id.in_(barcode_ids)).all()
+    }
     non_tray_items = {
-        non_tray_item.barcode_id: non_tray_item for non_tray_item in session.query(NonTrayItem).filter(NonTrayItem.barcode_id.in_(barcode_ids)).all()
+        non_tray_item.barcode_id: non_tray_item
+        for non_tray_item in session.query(NonTrayItem)
+        .filter(NonTrayItem.barcode_id.in_(barcode_ids))
+        .all()
     }
 
     # Fetch existing withdrawals in one batch query
     existing_withdrawals = {
         non_tray_item_id: withdraw_job_id
         for non_tray_item_id, withdraw_job_id in session.query(
-            NonTrayItemWithdrawal.non_tray_item_id, NonTrayItemWithdrawal.withdraw_job_id
+            NonTrayItemWithdrawal.non_tray_item_id,
+            NonTrayItemWithdrawal.withdraw_job_id,
         )
-        .filter(NonTrayItemWithdrawal.non_tray_item_id.in_(
-            [item.id for item in non_tray_items.values()]  # Extract `id` values
-        ))
+        .filter(
+            NonTrayItemWithdrawal.non_tray_item_id.in_(
+                [item.id for item in non_tray_items.values()]  # Extract `id` values
+            )
+        )
         .all()
     }
 
@@ -1021,7 +1132,9 @@ def process_withdraw_job_data(
     withdraw_tray_set = {(tw.tray_id, tw.withdraw_job_id) for tw in withdraw_trays}
 
     # Create a lookup dictionary for barcodes in the DataFrame for retrieval
-    barcode_to_index = {str(value): idx for idx, value in enumerate(df["Item Barcode"].astype(str))}
+    barcode_to_index = {
+        str(value): idx for idx, value in enumerate(df["Item Barcode"].astype(str))
+    }
 
     for barcode in barcodes:
         item = items.get(barcode.id)
@@ -1039,16 +1152,22 @@ def process_withdraw_job_data(
             )
             if item_withdrawal:
                 withdraw_items.append(item_withdrawal)
-                new_tray_withdrawal = TrayWithdrawal(tray_id=item.tray_id, withdraw_job_id=withdraw_job_id)
+                new_tray_withdrawal = TrayWithdrawal(
+                    tray_id=item.tray_id, withdraw_job_id=withdraw_job_id
+                )
 
                 # Check if the tray_id and withdraw_job_id already exist in withdraw_trays
                 # Use a set for faster lookup instead of `any()`
-                if (new_tray_withdrawal.tray_id,
-                    new_tray_withdrawal.withdraw_job_id) not in withdraw_tray_set:
+                if (
+                    new_tray_withdrawal.tray_id,
+                    new_tray_withdrawal.withdraw_job_id,
+                ) not in withdraw_tray_set:
                     withdraw_tray_set.add(
-                        (new_tray_withdrawal.tray_id,
-                         new_tray_withdrawal.withdraw_job_id)
+                        (
+                            new_tray_withdrawal.tray_id,
+                            new_tray_withdrawal.withdraw_job_id,
                         )
+                    )
                     withdraw_trays.append(new_tray_withdrawal)
 
                 item.update_dt = update_dt
@@ -1067,7 +1186,7 @@ def process_withdraw_job_data(
                         "error": "Non Tray Item is in existing withdraw job",
                     }
                 )
-            elif validate_non_tray_item_not_shelved(non_tray_item):
+            elif validate_container_not_shelved(non_tray_item):
                 errors.append(
                     {"line": int(index) + 1, "error": "Non Tray Item is not shelved"}
                 )
@@ -1142,7 +1261,9 @@ def get_sorted_query(model, query, sort_params):
             if sort_params.sort_by == "media_type":
                 query = query.join(MediaType).order_by(asc(MediaType.name))
             if sort_params.sort_by == "delivery_location":
-                query = query.join(DeliveryLocation).order_by(asc(DeliveryLocation.name))
+                query = query.join(DeliveryLocation).order_by(
+                    asc(DeliveryLocation.name)
+                )
             if sort_params.sort_by == "owner":
                 query = query.join(Owner).order_by(asc(Owner.name))
             if sort_params.sort_by == "size_class":
@@ -1169,7 +1290,7 @@ def get_sorted_query(model, query, sort_params):
             if sort_params.sort_by == "delivery_location":
                 query = query.join(DeliveryLocation).order_by(
                     desc(DeliveryLocation.name)
-                    )
+                )
             if sort_params.sort_by == "owner":
                 query = query.join(Owner).order_by(desc(Owner.name))
             if sort_params.sort_by == "size_class":

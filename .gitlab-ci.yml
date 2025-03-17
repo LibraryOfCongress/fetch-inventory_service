@@ -9,27 +9,15 @@ stages:
 build_image_dev:
   stage: build
   image:
-    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
+    name: git.loc.gov:4567/fetch/build/utils/kaniko:kubectl
     entrypoint: [""]
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:latest
   script:
     - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
+    - kubectl config use-context fetch/build:fetch -v=6
+    - kubectl -n fetch get secret fetch-inventory-service-env -o jsonpath='{.data.env}' | base64 -d > .env
     - cp -v images/api.dev.Containerfile Dockerfile
-    - echo $DEVELOP_APP_NAME > .env
-    - echo $DEVELOP_APP_ENVIRONMENT >> .env
-    - echo $DEVELOP_IDP_ENTITY_ID >> .env
-    - echo $DEVELOP_IDP_LOGIN_URL >> .env
-    - echo $DEVELOP_VUE_HOST >> .env
-    - echo $DEVELOP_TIMEZONE >> .env
-    - echo $DEVELOP_DATABASE_URL >> .env
-    - echo $DEVELOP_MIGRATION_URL >> .env
-    - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
-    - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
-    - echo $DEVELOP_ALLOWED_ORIGINS >> .env
-    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
-    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
-    - cat .env
     - /kaniko/executor
       --context $CI_PROJECT_DIR
       --dockerfile $CI_PROJECT_DIR/Dockerfile
@@ -204,25 +192,14 @@ build_image_prod:
 deploy_dev:
   stage: deploy
   image:
-    name: git.loc.gov:4567/fetch/build/terraform:alt    # tf image w envsubst added
-    entrypoint: [""]
-  environment:
-    name: develop
-    url: https://inventory.dev.fetch.loctest.gov/status/
+    name: bitnami/kubectl:latest
+    entrypoint: ['']
   script:
-    - export TF_VAR_vault_deployer_password=$VAULT_DEPLOYER_PASSWORD_DEV
-    - export TF_VAR_vault_addr=$VAULT_ADDR_DEV
-    - export TF_VAR_app_name="inventory-service"
-    - export TF_VAR_image='git.loc.gov:4567/fetch/inventory_service:latest'
-    - export TF_VAR_timestamp=$CI_COMMIT_TIMESTAMP
-    - terraform --version
-    - cd terraform
-    - kubectl config use-context fetch/build:fetch -v=6
-    - cp -v $KUBECONFIG kubeconfig
-    - export TF_STATE_NAME=develop
-    - envsubst < backend.hcl.tmpl > backend.hcl
-    - terraform init -backend-config=backend.hcl
-    - terraform apply -auto-approve
+    - kubectl config use-context fetch/build:fetch
+    - kubectl -n fetch apply -f k8s/deployment.yml
+    - kubectl -n fetch apply -f k8s/service.yml
+    - sleep 10
+    - kubectl -n fetch rollout restart deployment/inventory-service
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual

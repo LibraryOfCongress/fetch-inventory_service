@@ -34,6 +34,7 @@ class SideBaseOutput(BaseModel):
 
 
 class SideListOutput(SideBaseOutput):
+    side_orientation: Optional[SideOrientationBaseReadOutput]
     side_orientation_id: int
     aisle_id: int
 
@@ -46,6 +47,7 @@ class SideListOutput(SideBaseOutput):
 class SideDetailWriteOutput(SideBaseOutput):
     aisle_id: int
     side_orientation_id: int
+    side_orientation: Optional[SideOrientationBaseReadOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -74,7 +76,7 @@ class LadderNestedForSide(BaseModel):
 
 
 class SideDetailReadOutput(SideBaseOutput):
-    side_orientation: SideOrientationBaseReadOutput
+    side_orientation: Optional[SideOrientationBaseReadOutput] = None
     create_dt: datetime
     update_dt: datetime
     aisle: AisleBaseReadOutput

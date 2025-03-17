@@ -49,6 +49,7 @@ class LadderBaseOutput(BaseModel):
 class LadderListOutput(LadderBaseOutput):
     side_id: int
     ladder_number_id: int
+    ladder_number: Optional[LadderNumberDetailOutput] = None
     sort_priority: Optional[int] = None
 
     class Config:
@@ -65,6 +66,7 @@ class LadderListOutput(LadderBaseOutput):
 class LadderDetailWriteOutput(LadderBaseOutput):
     side_id: int
     ladder_number_id: int
+    ladder_number: Optional[LadderNumberDetailOutput] = None
     sort_priority: Optional[int] = None
     create_dt: datetime
     update_dt: datetime

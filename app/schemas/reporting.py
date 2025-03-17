@@ -7,6 +7,8 @@ from app.schemas.size_class import SizeClassDetailReadOutput
 
 
 class AccessionItemsDetailOutput(BaseModel):
+    year: Optional[str] = "All"
+    month: Optional[str] = "All"
     owner_name: Optional[str] = "All"
     size_class_name: Optional[str] = "All"
     media_type_name: Optional[str] = "All"
@@ -18,7 +20,9 @@ class AccessionItemsDetailOutput(BaseModel):
                 "owner_name": "All",
                 "size_class_name": "All",
                 "media_type_name": "All",
-                "count": 1
+                "year": 2025,
+                "month": "Jan",
+                "count": 100
             }
         }
 

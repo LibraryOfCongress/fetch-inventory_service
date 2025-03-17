@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 from datetime import datetime, timezone
 
 from app.database.session import get_session
+from app.events import update_shelf_space_after_tray
 from app.filter_params import SortParams, ItemFilterParams
 from app.models.barcodes import Barcode
 from app.models.items import Item

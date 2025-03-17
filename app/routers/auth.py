@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 from app.database.session import get_session
 from app.schemas.auth import LegacyUserInput
 from app.config.exceptions import NotFound
+from app.filter_params import AuthFilterParams
 
 from urllib.parse import urlparse
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -162,11 +163,19 @@ async def saml_metadata():
     return Response(content=metadata, media_type="text/xml")
 
 @router.get("/sso/login")
-async def saml_login(request: Request):
+async def saml_login(
+    request: Request,
+    params: AuthFilterParams = Depends()
+):
     req = await prepare_fastapi_request(request)
     auth = init_saml_auth(req)
-    sso_built_url = auth.login(force_authn=True)
-    # sso_built_url = auth.login()
+
+    relay_state = params.preserve_route if params.preserve_route else "/"
+
+    # sso_built_url = auth.login(force_authn=True, return_to=relay_state)
+    # force flag disables smart cards, ignores existing sessions on idP
+    sso_built_url = auth.login(return_to=relay_state)
+
     return RedirectResponse(sso_built_url)
 
 @router.post("/sso/acs")
@@ -209,7 +218,10 @@ async def saml_acs(request: Request, session: Session = Depends(get_session)):
     # Generate token for the user (e.g., JWT)
     token = generate_token(user, session)
 
-    return RedirectResponse(url=f"{get_settings().VUE_HOST}/?token={token}", status_code=status.HTTP_303_SEE_OTHER)
+    # Retrieve RelayState from 'preserve_route' pass through
+    relay_state = req.get('post_data').get('RelayState', "/")
+
+    return RedirectResponse(url=f"{get_settings().VUE_HOST}/?token={token}&preserve_route={relay_state}", status_code=status.HTTP_303_SEE_OTHER)
 
 if get_settings().APP_ENVIRONMENT in ['debug', 'local', 'develop', 'test']:
     # Route only available in non prod envs
