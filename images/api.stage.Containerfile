@@ -26,6 +26,7 @@ RUN apt-get update && \
         g++ \
         make \
         libxml2-dev \
+        libxslt-dev \
         libxmlsec1-dev \
         libxmlsec1-openssl \
         pkg-config && \
@@ -40,7 +41,8 @@ COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
 # COPY --from=requirements-stage /tmp/.env /code/.env
 
 # Install dependencies
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt && \
+    pip install --no-cache-dir --force-reinstall lxml xmlsec
 
 # Copy your application code
 COPY app /code/app
