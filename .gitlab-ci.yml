@@ -19,6 +19,7 @@ build_image_dev:
     - kubectl -n fetch get secret fetch-inventory-service-env -o jsonpath='{.data.env}' | base64 -d > .env
     - cp -v images/api.dev.Containerfile Dockerfile
     - /kaniko/executor
+      --cache=false
       --context $CI_PROJECT_DIR
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
@@ -52,6 +53,7 @@ build_demo:
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
     - /kaniko/executor
+      --cache=false
       --context $CI_PROJECT_DIR
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
@@ -86,6 +88,7 @@ build_mr:
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
     - /kaniko/executor
+      --cache=false
       --context $CI_PROJECT_DIR
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
@@ -118,6 +121,7 @@ build_image_test:
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
     - /kaniko/executor
+      --cache=false
       --context $CI_PROJECT_DIR
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
@@ -149,6 +153,7 @@ build_image_staging:
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
     - /kaniko/executor
+      --cache=false
       --context $CI_PROJECT_DIR
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
@@ -181,6 +186,7 @@ build_image_prod:
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - cat .env
     - /kaniko/executor
+      --cache=false
       --context $CI_PROJECT_DIR
       --dockerfile $CI_PROJECT_DIR/Dockerfile
       --destination $IMAGE_FULL_TAG
