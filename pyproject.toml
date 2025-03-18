@@ -5,6 +5,12 @@ description = "An API serving the Findings Environment for Collected Holdings ap
 authors = ["Gregory Wolfe <gwolfe@loc.gov>"]
 readme = "README.md"
 
+[tool.setuptools_scm]
+write_to = "api/_version.py"
+version_scheme = "guess-next-dev"
+local_scheme = "node-and-date"
+
+
 [tool.poetry.dependencies]
 python = "3.11.4"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
