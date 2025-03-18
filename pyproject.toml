@@ -28,6 +28,7 @@ fastapi-pagination = "0.12.34"
 sqlmodel = "0.0.22"
 fastapi = "0.115.8"
 debugpy = "1.8.12"
+lxml = ">=4.6.5,!=4.7.0,<=5.2.1"
 
 
 [build-system]
