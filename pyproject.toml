@@ -28,7 +28,7 @@ fastapi-pagination = "0.12.34"
 sqlmodel = "0.0.22"
 fastapi = "0.115.8"
 debugpy = "1.8.12"
-setuptools-scm = "8.2.0"
+setuptools-scm = "8.0.4"
 
 
 [build-system]
