@@ -1,6 +1,9 @@
 {
   "strict": true,
   "debug": true,
+  "security": {
+    "requestedAuthnContext": false
+  },
   "sp": {
     "entityId": "https://inventory.fetch.loc.gov/",
     "assertionConsumerService": {

@@ -19,14 +19,15 @@ RUN apt-get update && \
         git \
         openjdk-17-jdk \
         graphviz \
-        postgresql-client \
-        gcc \
-        g++ \
-        make \
-        libxml2-dev \
-        libxmlsec1-dev \
-        libxmlsec1-openssl \
-        pkg-config && \
+        postgresql-client && \
+        # gcc \
+        # g++ \
+        # make \
+        # libxml2-dev \
+        # libxslt-dev \
+        # libxmlsec1-dev \
+        # libxmlsec1-openssl \
+        # pkg-config && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -37,6 +38,7 @@ COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
 
 # Install dependencies
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+    # pip install --no-cache-dir --force-reinstall lxml xmlsec
 
 # Copy your application code
 COPY app /code/app
