@@ -1,4 +1,5 @@
 stages:
+  - prepare
   - build
   - build_deploy_prod
   - trigger
@@ -6,23 +7,37 @@ stages:
   - controls
   - sonarqube
 
-build_image_dev:
-  stage: build
+fetch_env_dev:
+  stage: prepare
   image:
-    name: git.loc.gov:4567/fetch/build/utils/kaniko:kubectl
+    name: bitnami/kubectl:latest
     entrypoint: [""]
-  variables:
-    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:latest
   script:
-    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
     - kubectl config use-context fetch/build:fetch -v=6
     - kubectl -n fetch get secret fetch-inventory-service-env -o jsonpath='{.data.env}' | base64 -d > .env
+  artifacts:
+    paths:
+      - .env
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop'
+      when: manual
+      allow_failure: true
+
+build_image_dev:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:latest
+  dependencies:
+    - fetch_env_dev
+  script:
+    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
     - cp -v images/api.dev.Containerfile Dockerfile
-    - /kaniko/executor
-      --cache=false
-      --context $CI_PROJECT_DIR
-      --dockerfile $CI_PROJECT_DIR/Dockerfile
-      --destination $IMAGE_FULL_TAG
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
@@ -30,9 +45,9 @@ build_image_dev:
 
 build_demo:
   stage: build
-  image:
-    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
-    entrypoint: [""]
+  image: docker:latest
+  services:
+    - docker:dind
   variables:
     IMAGE_FULL_TAG: git.loc.gov:4567/fetch/inventory_service:demo
   script:
@@ -51,12 +66,9 @@ build_demo:
     - echo $DEVELOP_ALLOWED_ORIGINS >> .env
     - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
-    - cat .env
-    - /kaniko/executor
-      --cache=false
-      --context $CI_PROJECT_DIR
-      --dockerfile $CI_PROJECT_DIR/Dockerfile
-      --destination $IMAGE_FULL_TAG
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
   rules:
     - if: '$DEMO_BUILD =~ /^TRUE$/'
       when: manual
@@ -64,9 +76,9 @@ build_demo:
 
 build_mr:
   stage: build
-  image:
-    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
-    entrypoint: [""]
+  image: docker:latest
+  services:
+    - docker:dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   script:
@@ -86,21 +98,18 @@ build_mr:
     - echo $DEVELOP_ALLOWED_ORIGINS >> .env
     - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
-    - cat .env
-    - /kaniko/executor
-      --cache=false
-      --context $CI_PROJECT_DIR
-      --dockerfile $CI_PROJECT_DIR/Dockerfile
-      --destination $IMAGE_FULL_TAG
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: manual
 
 build_image_test:
   stage: build
-  image:
-    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
-    entrypoint: [""]
+  image: docker:latest
+  services:
+    - docker:dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/test:latest
   script:
@@ -119,20 +128,17 @@ build_image_test:
     - echo $TEST_ALLOWED_ORIGINS >> .env
     - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
-    - cat .env
-    - /kaniko/executor
-      --cache=false
-      --context $CI_PROJECT_DIR
-      --dockerfile $CI_PROJECT_DIR/Dockerfile
-      --destination $IMAGE_FULL_TAG
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
   rules:
     - if: $CI_COMMIT_BRANCH == 'test' || $CI_COMMIT_BRANCH == 'develop'
 
 build_image_staging:
   stage: build
-  image:
-    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
-    entrypoint: [""]
+  image: docker:latest
+  services:
+    - docker:dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/stage:latest
   script:
@@ -151,21 +157,18 @@ build_image_staging:
     - echo $STAGING_ALLOWED_ORIGINS >> .env
     - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
-    - cat .env
-    - /kaniko/executor
-      --cache=false
-      --context $CI_PROJECT_DIR
-      --dockerfile $CI_PROJECT_DIR/Dockerfile
-      --destination $IMAGE_FULL_TAG
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
   rules:
     - if: '$CI_COMMIT_BRANCH == "staging"'
       when: manual
 
 build_image_prod:
-  stage: build_deploy_prod
-  image:
-    name: git.loc.gov:4567/fetch/build/kaniko-project/executor:1.0.0
-    entrypoint: [""]
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/prod:latest
   script:
@@ -184,12 +187,9 @@ build_image_prod:
     - echo $PROD_ALLOWED_ORIGINS >> .env
     - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
     - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
-    - cat .env
-    - /kaniko/executor
-      --cache=false
-      --context $CI_PROJECT_DIR
-      --dockerfile $CI_PROJECT_DIR/Dockerfile
-      --destination $IMAGE_FULL_TAG
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
   rules:
     - if: '$PROD_BUILD =~ /^TRUE$/'
       when: manual
