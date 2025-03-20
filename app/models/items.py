@@ -19,8 +19,8 @@ class ItemStatus(str, Enum):
     In = "In"
     Out = "Out"
     Requested = "Requested"
-    Withdrawn = "Withdrawn"
     PickList = "PickList"
+    Withdrawn = "Withdrawn"
 
 
 class Item(SQLModel, table=True):
@@ -128,15 +128,11 @@ class Item(SQLModel, table=True):
     def last_requested_dt(self):
         if not self.requests:
             return None
-        if len(self.requests) < 1:
-            return None
         return max(request.create_dt for request in self.requests)
 
     @property
     def last_refiled_dt(self):
         if not self.refile_jobs:
-            return None
-        if len(self.refile_jobs) < 1:
             return None
         return max(refile_job.update_dt for refile_job in self.refile_jobs)
 

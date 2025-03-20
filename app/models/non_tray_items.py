@@ -18,10 +18,10 @@ from app.models.withdraw_jobs import WithdrawJob
 
 class NonTrayItemStatus(str, Enum):
     In = "In"
-    Requested = "Requested"
-    Withdrawn = "Withdrawn"
     Out = "Out"
+    Requested = "Requested"
     PickList = "PickList"
+    Withdrawn = "Withdrawn"
 
 
 class NonTrayItem(SQLModel, table=True):
@@ -135,15 +135,11 @@ class NonTrayItem(SQLModel, table=True):
     def last_requested_dt(self):
         if not self.requests:
             return None
-        if len(self.requests) < 1:
-            return None
         return max(request.create_dt for request in self.requests)
 
     @property
     def last_refiled_dt(self):
         if not self.refile_jobs:
-            return None
-        if len(self.refile_jobs) < 1:
             return None
         return max(refile_job.update_dt for refile_job in self.refile_jobs)
 

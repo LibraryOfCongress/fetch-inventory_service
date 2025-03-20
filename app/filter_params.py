@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.models.accession_jobs import AccessionJobStatus
 from app.models.items import ItemStatus
+from app.models.requests import RequestStatus
 
 
 class ItemFilterParams:
@@ -17,40 +18,36 @@ class ItemFilterParams:
     def __init__(
         self,
         owner_id: List[int] = Query(
-            default=None, description="ID of the user to filter "
-                                      "items."
-            ),
+            default=None, description="ID of the user to filter " "items."
+        ),
         owner: List[str] = Query(
             default=None, description="Name of the owner to filter items."
-            ),
+        ),
         size_class_id: List[int] = Query(
-            default=None, description="ID of the size class "
-                                      "to filter items."
-            ),
+            default=None, description="ID of the size class " "to filter items."
+        ),
         size_class: str = Query(
             default=None, description="Name of the size class to filter items."
-            ),
+        ),
         media_type_id: List[int] = Query(
-            default=None, description="ID of the media type "
-                                      "to filter items."
-            ),
+            default=None, description="ID of the media type " "to filter items."
+        ),
         media_type: str = Query(
             default=None, description="Name of the media type to filter items."
-            ),
+        ),
         barcode_value: List[str] = Query(
-            default=None, description="Value of the barcode "
-                                      "to filter items."
-            ),
+            default=None, description="Value of the barcode " "to filter items."
+        ),
         from_dt: datetime = Query(
             default=None, description="Start created date to filter by."
-            ),
+        ),
         to_dt: datetime = Query(
             default=None, description="End created date to filter by."
-            ),
+        ),
         status: List[ItemStatus] = Query(
             default=None, description="Status to filter by."
-        )
-        ):
+        ),
+    ):
         self.owner_id = owner_id
         self.owner = owner
         self.size_class_id = size_class_id
@@ -67,6 +64,7 @@ class AuthFilterParams(BaseModel):
     """
     SSO params
     """
+
     preserve_route: Optional[str] = None
 
 
@@ -74,6 +72,7 @@ class ShelfFilterParams(BaseModel):
     """
     Reusable query params across Shelves.
     """
+
     building_id: Optional[int] = None
     module_id: Optional[int] = None
     aisle_id: Optional[int] = None
@@ -94,6 +93,7 @@ class ModuleFilterParams(BaseModel):
     """
     Params for Module List.
     """
+
     building_id: Optional[int] = None
     building_name: Optional[str] = None
 
@@ -102,6 +102,7 @@ class AisleFilterParams(BaseModel):
     """
     Params for Aisle List.
     """
+
     module_number: Optional[str] = None
     building_id: Optional[int] = None
     module_id: Optional[int] = None
@@ -111,6 +112,7 @@ class SideFilterParams(BaseModel):
     """
     Params for Side List.
     """
+
     building_id: Optional[int] = None
     module_id: Optional[int] = None
     aisle_id: Optional[int] = None
@@ -120,6 +122,7 @@ class LadderFilterParams(BaseModel):
     """
     Params for Ladder List.
     """
+
     building_id: Optional[int] = None
     module_id: Optional[int] = None
     aisle_id: Optional[int] = None
@@ -131,25 +134,26 @@ class JobFilterParams:
     Reusable query params across Jobs.
     Status is not included as the Enumerated options differ per job.
     """
-    def __init__(self,
-                 queue: Optional[bool] = False,
-                 workflow_id: Optional[int] = None,
-                 created_by_id: Optional[int] = None,
-                 container_type: Optional[str] = None,
-                 trayed: Optional[bool] = None,
-                 assigned_user_id: Optional[int] = None,
-                 building_name:  List[str] = Query(
-                     default=None, description="Building name to filter by."
-                     ),
-                 user_id: List[int] = Query(
-                     default=None, description="User ID to filter by."
-                     ),
-                 assigned_user: List[str] = Query(default=None, description="Assigned "
-                                                                         "user to filter by."),
-                 status: List[str] = Query(default=None,
-                                                          description="Status to filter by."),
-                 from_dt: Optional[datetime] = None,
-                 to_dt: Optional[datetime] = None):
+
+    def __init__(
+        self,
+        queue: Optional[bool] = False,
+        workflow_id: Optional[int] = None,
+        created_by_id: Optional[int] = None,
+        container_type: Optional[str] = None,
+        trayed: Optional[bool] = None,
+        assigned_user_id: Optional[int] = None,
+        building_name: List[str] = Query(
+            default=None, description="Building name to filter by."
+        ),
+        user_id: List[int] = Query(default=None, description="User ID to filter by."),
+        assigned_user: List[str] = Query(
+            default=None, description="Assigned " "user to filter by."
+        ),
+        status: List[str] = Query(default=None, description="Status to filter by."),
+        from_dt: Optional[datetime] = None,
+        to_dt: Optional[datetime] = None,
+    ):
         self.queue = queue
         self.workflow_id = workflow_id
         self.created_by_id = created_by_id
@@ -169,15 +173,23 @@ class RefileQueueParams:
     Reusable query params across Refile Queue.
     """
 
-    def __init__(self,
-                 building_id: Optional[int] = None,
-                 barcode_value: Optional[str] = None,
-                 media_type: list[str] = Query(default=None, description="Media type to filter by."),
-                 owner: list[str] = Query(default=None, description="Owner to filter by."),
-                 size_class: list[str] = Query(default=None, description="Size class to filter by."),
-                 container_type: list[str] = Query(default=None, description="Container type to filter by."),
-                 item_location: Optional[str] = None,
-                 non_tray_item_location: Optional[str] = None):
+    def __init__(
+        self,
+        building_id: Optional[int] = None,
+        barcode_value: Optional[str] = None,
+        media_type: list[str] = Query(
+            default=None, description="Media type to filter by."
+        ),
+        owner: list[str] = Query(default=None, description="Owner to filter by."),
+        size_class: list[str] = Query(
+            default=None, description="Size class to filter by."
+        ),
+        container_type: list[str] = Query(
+            default=None, description="Container type to filter by."
+        ),
+        item_location: Optional[str] = None,
+        non_tray_item_location: Optional[str] = None,
+    ):
         self.building_id = building_id
         self.barcode_value = barcode_value
         self.media_type = media_type
@@ -195,28 +207,39 @@ class RequestFilterParams:
 
     def __init__(
         self,
+        status: List[RequestStatus] = Query(
+            default=None, description="Status to filter by."
+        ),
         building_id: Optional[int] = None,
-        building_name: list[str] = Query(default=None, description="Building name to "
-                                                                   "filter by."),
+        building_name: list[str] = Query(
+            default=None, description="Building name to " "filter by."
+        ),
         queue: Optional[bool] = False,
         unassociated_pick_list: Optional[bool] = False,
         requestor_name: Optional[str] = None,
         item_barcode: Optional[str] = None,
         non_tray_item_barcode: Optional[str] = None,
         barcode_value: Optional[str] = None,
-        request_type: List[str] = Query(default=None, description="Request type to filter by."),
-        status: List[str] = Query(default=None, description="Status to filter by."),
+        request_type: List[str] = Query(
+            default=None, description="Request type to filter by."
+        ),
+        item_status: List[str] = Query(
+            default=None, description="Item Status to " "filter " "by."
+        ),
         priority: List[str] = Query(default=None, description="Priority to filter by."),
-        media_type: List[str] = Query(default=None, description="Media type to filter by."),
+        media_type: List[str] = Query(
+            default=None, description="Media type to filter by."
+        ),
         delivery_location: List[str] = Query(
             default=None, description="Delivery location to filter by."
-            ),
+        ),
         item_location: Optional[str] = None,
         non_tray_item_location: Optional[str] = None,
-
         from_dt: Optional[datetime] = None,
-        to_dt: Optional[datetime] = None
-        ):
+        to_dt: Optional[datetime] = None,
+    ):
+        self.status = status
+        self.item_status = item_status
         self.building_id = building_id
         self.building_name = building_name
         self.queue = queue
@@ -226,7 +249,6 @@ class RequestFilterParams:
         self.item_barcode = item_barcode
         self.non_tray_item_barcode = non_tray_item_barcode
         self.request_type = request_type
-        self.status = status
         self.priority = priority
         self.media_type = media_type
         self.item_location = item_location
@@ -240,6 +262,7 @@ class ShelvingJobDiscrepancyParams(BaseModel):
     """
     Query params for Shelving Job Discrepancies
     """
+
     shelving_job_id: Optional[int] = None
     assigned_user_id: Optional[int] = None
     owner_id: Optional[int] = None
@@ -268,7 +291,7 @@ class OpenLocationParams:
         depth: Optional[float] = None,
         show_partial: Optional[bool] = False,
         owner_id: list[int] = Query(default=None),
-        size_class_id: list[int] = Query(default=None)
+        size_class_id: list[int] = Query(default=None),
     ):
         self.building_id = building_id
         self.module_id = module_id
@@ -287,10 +310,11 @@ class SortParams(BaseModel):
     """
     Query params for sorting
     """
+
     sort_by: Optional[str] = Query(default=None, description="Field to sort by")
     sort_order: Optional[str] = Query(
         default="asc", description="Sort order: 'asc' or 'desc'"
-        )
+    )
 
 
 class AccessionedItemsParams:
@@ -304,15 +328,12 @@ class AccessionedItemsParams:
         size_class_id: list[int] = Query(default=None),
         media_type_id: list[int] = Query(default=None),
         from_dt: Optional[datetime] = Query(
-            default=None, description="Start accessioned date to "
-                                      "filter by."
-            ),
+            default=None, description="Start accessioned date to " "filter by."
+        ),
         to_dt: Optional[datetime] = Query(
-            default=None, description="End "
-                                      "accessioned date to "
-                                      "filter by."
-            ),
-        ):
+            default=None, description="End " "accessioned date to " "filter by."
+        ),
+    ):
         self.owner_id = owner_id
         self.size_class_id = size_class_id
         self.media_type_id = media_type_id
@@ -324,6 +345,7 @@ class AisleItemsCountParams(BaseModel):
     """
     Query params for Aisle Items Count Report.
     """
+
     building_id: int = Query(..., description="ID of the building to filter aisles.")
     aisle_num_from: Optional[int] = Query(None, description="Starting aisle number.")
     aisle_num_to: Optional[int] = Query(None, description="Ending aisle number.")
@@ -338,24 +360,20 @@ class NonTrayItemsCountParams:
         self,
         building_id: int = Query(..., description="ID of the building to filter."),
         module_id: int = Query(
-            default=None, description="ID of the module to "
-                                      "filter."
-            ),
+            default=None, description="ID of the module to " "filter."
+        ),
         owner_id: list[int] = Query(default=None),
         size_class_id: list[int] = Query(default=None),
         aisle_num_from: Optional[int] = Query(
-            None, description="Starting aisle "
-                              "number."
-            ),
+            None, description="Starting aisle " "number."
+        ),
         aisle_num_to: Optional[int] = Query(None, description="Ending aisle number."),
         from_dt: datetime = Query(
-            default=None, description="Start shelved date to "
-                                      "filter by."
-            ),
+            default=None, description="Start shelved date to " "filter by."
+        ),
         to_dt: datetime = Query(
-            default=None, description="End shelved date to "
-                                      "filter by."
-            )
+            default=None, description="End shelved date to " "filter by."
+        ),
     ):
         self.building_id = building_id
         self.module_id = module_id
@@ -369,33 +387,28 @@ class NonTrayItemsCountParams:
 
 class TrayItemCountParams:
     """
-        Query params for Non Tray Items Count Report.
-        """
+    Query params for Non Tray Items Count Report.
+    """
 
     def __init__(
         self,
         building_id: int = Query(
-            ..., description="ID of the building to filter "
-                             "aisles."
+            ..., description="ID of the building to filter " "aisles."
         ),
         module_id: int = Query(
-            default=None, description="ID of the module to "
-                                      "filter."
-            ),
+            default=None, description="ID of the module to " "filter."
+        ),
         owner_id: list[int] = Query(default=None),
         aisle_num_from: Optional[int] = Query(
-            None, description="Starting aisle "
-                              "number."
+            None, description="Starting aisle " "number."
         ),
         aisle_num_to: Optional[int] = Query(None, description="Ending aisle number."),
         from_dt: datetime = Query(
-            default=None, description="Start shelved date to "
-                                      "filter by."
+            default=None, description="Start shelved date to " "filter by."
         ),
         to_dt: datetime = Query(
-            default=None, description="End shelved date to "
-                                      "filter by."
-        )
+            default=None, description="End shelved date to " "filter by."
+        ),
     ):
         self.building_id = building_id
         self.module_id = module_id
@@ -415,15 +428,13 @@ class UserJobItemsCountParams:
         self,
         user_id: list[int] = Query(
             default=None, description="ID of the user to filter jobs."
-            ),
+        ),
         from_dt: datetime = Query(
-            default=None, description="Start created date to "
-                                      "filter by."
-            ),
+            default=None, description="Start created date to " "filter by."
+        ),
         to_dt: datetime = Query(
-            default=None, description="End created date to "
-                                      "filter by."
-            ),
+            default=None, description="End created date to " "filter by."
+        ),
     ):
         self.user_id = user_id
         self.from_dt = from_dt
@@ -435,19 +446,16 @@ class VerificationChangesParams:
         self,
         workflow_id: list[int] = Query(
             default=None, description="ID of the workflow to filter jobs."
-            ),
+        ),
         completed_by_id: list[int] = Query(
             default=None, description="ID of the user to filter jobs."
         ),
         from_dt: datetime = Query(
-            default=None, description="Start created date to "
-                                      "filter by."
-            ),
+            default=None, description="Start created date to " "filter by."
+        ),
         to_dt: datetime = Query(
-            default=None, description="End created date to "
-                                      "filter by."
-            ),
-
+            default=None, description="End created date to " "filter by."
+        ),
     ):
         self.workflow_id = workflow_id
         self.completed_by_id = completed_by_id
@@ -462,14 +470,11 @@ class RetrievalCountParams:
             default=None, description="ID of the user to filter jobs."
         ),
         from_dt: datetime = Query(
-            default=None, description="Start created date to "
-                                      "filter by."
-            ),
+            default=None, description="Start created date to " "filter by."
+        ),
         to_dt: datetime = Query(
-            default=None, description="End created date to "
-                                      "filter by."
-            ),
-
+            default=None, description="End created date to " "filter by."
+        ),
     ):
         self.owner_id = owner_id
         self.from_dt = from_dt

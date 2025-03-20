@@ -1,14 +1,16 @@
 import uuid
 
 from typing import Optional, List
-from pydantic import BaseModel, conint
+from pydantic import BaseModel, conint, field_validator
 from datetime import datetime, timezone
 
+from app.models.requests import RequestStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.buildings import BuildingDetailReadOutput
 
 
 class RequestInput(BaseModel):
+    status: Optional[str] = RequestStatus.New
     building_id: Optional[int] = None
     request_type_id: Optional[int] = None
     item_id: Optional[int] = None
@@ -19,9 +21,20 @@ class RequestInput(BaseModel):
     requestor_name: Optional[str] = None
     barcode_value: str  # pop this off in path operations
 
+    @field_validator('status', mode='before', check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in RequestStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of "
+                f"{list(RequestStatus._member_names_)}"
+            )
+        return value
+
     class Config:
         json_schema_extra = {
             "example": {
+                "status": "New",
                 "building_id": 1,
                 "barcode_value": "RS4321",
                 "request_type_id": 1,
@@ -36,6 +49,7 @@ class RequestInput(BaseModel):
 
 
 class RequestUpdateInput(BaseModel):
+    status: Optional[str] = None
     building_id: Optional[int] = None
     request_type_id: Optional[int] = None
     item_id: Optional[int] = None
@@ -47,6 +61,16 @@ class RequestUpdateInput(BaseModel):
     requestor_name: Optional[str] = None
     barcode_value: Optional[str] = None  # pop this off in path operations
     scanned_for_retrieval: Optional[bool] = None
+
+    @field_validator('status', mode='before', check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in RequestStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of "
+                f"{list(RequestStatus._member_names_)}"
+            )
+        return value
 
     class Config:
         json_schema_extra = {
@@ -69,6 +93,7 @@ class RequestUpdateInput(BaseModel):
 
 class RequestBaseOutput(BaseModel):
     id: int
+    status: Optional[str] = None
     building_id: Optional[int] = None
     request_type_id: Optional[int] = None
     item_id: Optional[int] = None
@@ -227,6 +252,7 @@ class RequestDetailWriteOutput(RequestBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "New",
                 "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,
@@ -371,6 +397,7 @@ class RequestListOutput(RequestBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "New",
                 "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,
@@ -471,6 +498,7 @@ class RequestDetailReadOutput(RequestDetailWriteOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "New",
                 "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,
@@ -578,6 +606,7 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "New",
                 "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,

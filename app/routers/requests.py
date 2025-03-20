@@ -15,8 +15,8 @@ from app.models.media_types import MediaType
 from app.models.priorities import Priority
 from app.models.request_types import RequestType
 from app.models.requests import Request
-from app.models.items import Item
-from app.models.non_tray_items import NonTrayItem
+from app.models.items import Item, ItemStatus
+from app.models.non_tray_items import NonTrayItem, NonTrayItemStatus
 from app.models.barcodes import Barcode
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
@@ -46,7 +46,7 @@ router = APIRouter(
 def get_request_list(
     session: Session = Depends(get_session),
     params: RequestFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Get a list of requests
@@ -71,10 +71,12 @@ def get_request_list(
     if params.requestor_name:
         query = query.where(Request.requestor_name.like(f"%{params.requestor_name}%"))
     if params.request_type:
-        request_type_subquery = (
-            select(RequestType.id).where(RequestType.type.in_(params.request_type))
+        request_type_subquery = select(RequestType.id).where(
+            RequestType.type.in_(params.request_type)
         )
         query = query.where(Request.request_type_id.in_(request_type_subquery))
+    if params.status:
+        query = query.where(Request.status.in_(params.status))
     if params.from_dt:
         query = query.where(Request.create_dt >= params.from_dt)
     if params.to_dt:
@@ -82,88 +84,89 @@ def get_request_list(
     if params.building_id:
         query = query.where(Request.building_id == params.building_id)
     if params.building_name:
-        building_subquery = (
-            select(Building.id)
-            .where(Building.name.in_(params.building_name))
+        building_subquery = select(Building.id).where(
+            Building.name.in_(params.building_name)
         )
         query = query.where(Request.building_id.in_(building_subquery))
     if params.unassociated_pick_list:
         query = query.where(Request.pick_list_id == None)
     if params.item_barcode:
         item_subquery = (
-            select(Item.id).join(
-                Barcode, Barcode.id == Item.barcode_id
-            ).where(
-                Barcode.value == params.item_barcode
-            ).distinct()
+            select(Item.id)
+            .join(Barcode, Barcode.id == Item.barcode_id)
+            .where(Barcode.value == params.item_barcode)
+            .distinct()
         )
         query = query.where(Request.item_id.in_(item_subquery))
     if params.non_tray_item_barcode:
         non_tray_item_subquery = (
-            select(NonTrayItem.id).join(
-                Barcode, Barcode.id == NonTrayItem.barcode_id
-            ).where(
-                Barcode.value == params.non_tray_item_barcode
-            ).distinct()
+            select(NonTrayItem.id)
+            .join(Barcode, Barcode.id == NonTrayItem.barcode_id)
+            .where(Barcode.value == params.non_tray_item_barcode)
+            .distinct()
         )
         query = query.where(Request.non_tray_item_id.in_(non_tray_item_subquery))
-    if params.status:
-        item_subquery = select(Item.id).where(Item.status.in_(params.status))
+    if params.item_status:
+        item_subquery = select(Item.id).where(Item.status.in_(params.item_status))
         non_tray_item_subquery = select(NonTrayItem.id).where(
-            NonTrayItem.status.in_(params.status)
-            )
+            NonTrayItem.status.in_(params.item_status)
+        )
 
         query = query.where(
             or_(
                 Request.item_id.in_(item_subquery),
-                Request.non_tray_item_id.in_(non_tray_item_subquery)
+                Request.non_tray_item_id.in_(non_tray_item_subquery),
             )
         )
     if params.media_type:
         item_subquery = (
-            select(Item.id).join(MediaType, MediaType.id == Item.media_type_id)
+            select(Item.id)
+            .join(MediaType, MediaType.id == Item.media_type_id)
             .where(MediaType.name.in_(params.media_type))
         )
         non_tray_item_subquery = (
-            select(NonTrayItem.id).join(
-                MediaType, MediaType.id == NonTrayItem.media_type_id
-                )
+            select(NonTrayItem.id)
+            .join(MediaType, MediaType.id == NonTrayItem.media_type_id)
             .where(MediaType.name.in_(params.media_type))
         )
         query = query.where(
             or_(
                 Request.item_id.in_(item_subquery),
-                Request.non_tray_item_id.in_(non_tray_item_subquery)
+                Request.non_tray_item_id.in_(non_tray_item_subquery),
             )
         )
     if params.priority:
-        priority_subquery = (
-            select(Priority.id)
-            .where(Priority.value.in_(params.priority))
+        priority_subquery = select(Priority.id).where(
+            Priority.value.in_(params.priority)
         )
         query = query.where(Request.priority_id.in_(priority_subquery))
     if params.delivery_location:
-        delivery_location_subquery = (
-            select(DeliveryLocation.id)
-            .where(DeliveryLocation.name.in_(params.delivery_location))
+        delivery_location_subquery = select(DeliveryLocation.id).where(
+            DeliveryLocation.name.in_(params.delivery_location)
         )
-        query = query.where(Request.delivery_location_id.in_(delivery_location_subquery))
+        query = query.where(
+            Request.delivery_location_id.in_(delivery_location_subquery)
+        )
     if params.item_location:
         tem_location_subquery = (
             select(Item.id)
             .join(Tray, Tray.id == Item.tray_id)
             .join(Shelf, Shelf.id == Tray.shelf_id)
             .join(ShelfPosition, ShelfPosition.id == Shelf.shelf_position_id)
-            .where(ShelfPosition.location == params.non_tray_item_location).distinct()
+            .where(ShelfPosition.location == params.non_tray_item_location)
+            .distinct()
         )
         query = query.where(Request.item_id.in_(tem_location_subquery))
     if params.non_tray_item_location:
         non_tray_item_location_subquery = (
             select(NonTrayItem.id)
             .join(ShelfPosition, ShelfPosition.id == NonTrayItem.shelf_position_id)
-            .where(ShelfPosition.location == params.non_tray_item_location).distinct()
+            .where(ShelfPosition.location == params.non_tray_item_location)
+            .distinct()
         )
-        query = query.where(Request.non_tray_item_id.in_(non_tray_item_location_subquery))
+        query = query.where(
+            Request.non_tray_item_id.in_(non_tray_item_location_subquery)
+        )
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -248,7 +251,10 @@ def create_request(
             raise BadRequest(detail="Item is not shelved")
 
         session.query(Item).filter(Item.id == item.id).update(
-            {"status": "Requested", "update_dt": datetime.now()},
+            {
+                "status": ItemStatus.Requested,
+                "update_dt": datetime.now(timezone.utc),
+            },
             synchronize_session=False,
         )
 
@@ -277,7 +283,10 @@ def create_request(
             raise BadRequest(detail="Non tray item is not shelved")
 
         session.query(NonTrayItem).filter(NonTrayItem.id == non_tray_item.id).update(
-            {"status": "Requested", "update_dt": datetime.now()},
+            {
+                "status": NonTrayItemStatus.Requested,
+                "update_dt": datetime.now(timezone.utc),
+            },
             synchronize_session=False,
         )
 
@@ -379,14 +388,25 @@ def delete_request(id: int, session: Session = Depends(get_session)):
     if request:
         # Delete request from pick_list_requests
         if request.item:
-            session.query(Item).filter(Item.id == request.item.id).update(
-                {"status": "In"}, synchronize_session=False
+            item = request.item
+            session.query(Item).filter(Item.id == item.id).update(
+                {"status": ItemStatus.In, "update_dt": datetime.now(timezone.utc)},
+                synchronize_session=False,
             )
 
         else:
+            #
+            non_tray_item = request.non_tray_item
+
             session.query(NonTrayItem).filter(
-                NonTrayItem.id == request.non_tray_item.id
-            ).update({"status": "In"}, synchronize_session=False)
+                NonTrayItem.id == non_tray_item.id
+            ).update(
+                {
+                    "status": NonTrayItemStatus.In,
+                    "update_dt": datetime.now(timezone.utc),
+                },
+                synchronize_session=False,
+            )
 
         # Deleting request
         session.delete(request)

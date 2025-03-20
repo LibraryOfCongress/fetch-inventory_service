@@ -12,7 +12,7 @@ class AccessionItemsDetailOutput(BaseModel):
     owner_name: Optional[str] = "All"
     size_class_name: Optional[str] = "All"
     media_type_name: Optional[str] = "All"
-    count: int
+    count: Optional[int] = None
 
     class Config:
         json_schema_extra = {
@@ -22,7 +22,7 @@ class AccessionItemsDetailOutput(BaseModel):
                 "media_type_name": "All",
                 "year": 2025,
                 "month": "Jan",
-                "count": 100
+                "count": 100,
             }
         }
 
@@ -91,18 +91,18 @@ class ShelvingJobDiscrepancyOutput(ShelvingJobDiscrepancyBaseOutput):
                 "assigned_user": {
                     "first_name": "Bilbo",
                     "last_name": "Baggins",
-                    "email": "bbaggins@bagend.hobbit"
+                    "email": "bbaggins@bagend.hobbit",
                 },
                 "tray": {
                     "id": 1,
                     "barcode": {
                         "id": "0031dbfb-28d3-496f-91d3-8e16d9bdbd16",
-                        "value": "12345"
-                    }
+                        "value": "12345",
+                    },
                 },
                 "non_tray_item": "",
                 "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398"
+                "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
 
@@ -156,7 +156,7 @@ class AisleDetailReportItemCountOutput(BaseModel):
                 "item_count": 1,
                 "non_tray_item_count": 1,
                 "tray_count": 1,
-                "total_item_count": 1
+                "total_item_count": 1,
             }
         }
 
@@ -173,7 +173,7 @@ class NonTrayItemCountReadOutput(BaseModel):
                 "size_class_id": 1,
                 "size_class_name": "C-Low",
                 "size_class_short_name": "CL",
-                "non_tray_item_count": 1
+                "non_tray_item_count": 1,
             }
         }
 
@@ -192,7 +192,7 @@ class TrayItemCountReadOutput(BaseModel):
                 "size_class_name": "C-Low",
                 "size_class_short_name": "CL",
                 "tray_count": 1,
-                "tray_item_count": 1
+                "tray_item_count": 1,
             }
         }
 
@@ -207,7 +207,7 @@ class UserJobItemCountReadOutput(BaseModel):
             "example": {
                 "user_name": "Bilbo Baggins",
                 "job_type": "Shelving",
-                "total_items_processed": 1
+                "total_items_processed": 1,
             }
         }
 
@@ -228,7 +228,7 @@ class VerificationChangesOutput(BaseModel):
                 "completed_by": "Bilbo Baggins",
                 "tray_barcode_value": "12345",
                 "item_barcode_value": "12345",
-                "action": "Added"
+                "action": "Added",
             }
         }
 
@@ -243,8 +243,6 @@ class RetrievalItemCountReadOutput(BaseModel):
             "example": {
                 "owner_name": "Bilbo Baggins",
                 "total_item_retrieved_count": 1,
-                "max_retrieved_count": 1
+                "max_retrieved_count": 1,
             }
         }
-
-

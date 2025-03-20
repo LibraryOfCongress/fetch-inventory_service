@@ -3,9 +3,16 @@ import sqlalchemy as sa
 
 from typing import Optional
 from datetime import datetime, timezone
+from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.pick_lists import PickList
+
+
+class RequestStatus(str, Enum):
+    New = "New"
+    InProgress = "InProgress"
+    Completed = "Completed"
 
 
 class Request(SQLModel, table=True):
@@ -28,6 +35,16 @@ class Request(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True))
+    status: Optional[str] = Field(
+        sa_column=sa.Column(
+            sa.Enum(
+                RequestStatus,
+                name="request_status",
+                nullable=False,
+            )
+        ),
+        default=RequestStatus.New,
+    )
     request_type_id: Optional[int] = Field(
         default=None, nullable=True, unique=False, foreign_key="request_types.id"
     )
@@ -62,10 +79,18 @@ class Request(SQLModel, table=True):
         sa_column=sa.Column(sa.VARCHAR(50), nullable=True, unique=False, default=None)
     )
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=sa.Column(
+            sa.TIMESTAMP(timezone=True),
+            default=lambda: datetime.now(timezone.utc),
+            nullable=False,
+        )
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=sa.Column(
+            sa.TIMESTAMP(timezone=True),
+            default=lambda: datetime.now(timezone.utc),
+            nullable=False,
+        )
     )
 
     item: Optional["Item"] = Relationship(back_populates="requests")

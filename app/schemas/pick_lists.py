@@ -57,7 +57,7 @@ class PickListUpdateInput(BaseModel):
         }
 
 
-class PickListUpdateRequestInput(RequestUpdateInput):
+class PickListUpdateRequestInput(BaseModel):
     run_timestamp: Optional[datetime] = None
     status: Optional[str] = None
 
