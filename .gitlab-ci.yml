@@ -1,27 +1,10 @@
 stages:
-  - prepare
   - build
   - build_deploy_prod
   - trigger
   - deploy
   - controls
   - sonarqube
-
-fetch_env_dev:
-  stage: prepare
-  image:
-    name: bitnami/kubectl:latest
-    entrypoint: [""]
-  script:
-    - kubectl config use-context fetch/build:fetch -v=6
-    - kubectl -n fetch get secret fetch-inventory-service-env -o jsonpath='{.data.env}' | base64 -d > .env
-  artifacts:
-    paths:
-      - .env
-  rules:
-    - if: $CI_COMMIT_BRANCH == 'develop'
-      when: manual
-      allow_failure: true
 
 build_image_dev:
   stage: build
@@ -30,11 +13,22 @@ build_image_dev:
     - docker:dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:latest
-  dependencies:
-    - fetch_env_dev
   script:
     - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
     - cp -v images/api.dev.Containerfile Dockerfile
+    - echo $DEVELOP_APP_NAME > .env
+    - echo $DEVELOP_APP_ENVIRONMENT >> .env
+    - echo $DEVELOP_IDP_ENTITY_ID >> .env
+    - echo $DEVELOP_IDP_LOGIN_URL >> .env
+    - echo $DEVELOP_VUE_HOST >> .env
+    - echo $DEVELOP_TIMEZONE >> .env
+    - echo $DEVELOP_DATABASE_URL >> .env
+    - echo $DEVELOP_MIGRATION_URL >> .env
+    - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
     - docker push $IMAGE_FULL_TAG
@@ -329,4 +323,5 @@ sonarqube_run:
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
       when: manual
+      allow_failure: true
     - when: never
