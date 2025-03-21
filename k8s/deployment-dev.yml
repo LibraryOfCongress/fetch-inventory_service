@@ -28,8 +28,8 @@ spec:
               cpu: "750m"
               memory: "1024Mi"
             requests:
-              ephemeral-storage: "1Gi"
+              ephemeral-storage: "200Mi"
             limits:
-              ephemeral-storage: "5Gi"
+              ephemeral-storage: "500Mi"
       imagePullSecrets:
       - name: gitlab-api-2023
