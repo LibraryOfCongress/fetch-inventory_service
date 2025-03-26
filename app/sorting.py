@@ -9,6 +9,7 @@ from fastapi.exceptions import HTTPException
 
 from app.config.exceptions import BadRequest
 from app.logger import inventory_logger
+from app.models.aisle_numbers import AisleNumber
 from app.models.barcodes import Barcode
 from app.models.buildings import Building
 from app.models.container_types import ContainerType
@@ -30,6 +31,8 @@ from app.models.shelf_types import ShelfType
 from app.models.shelving_jobs import ShelvingJob
 from app.models.size_class import SizeClass
 from app.models.trays import Tray
+from app.models.verification_changes import VerificationChange
+from app.models.verification_jobs import VerificationJob
 
 
 class BaseSorter:
@@ -54,7 +57,7 @@ class BaseSorter:
         if sort_params.sort_order not in ["asc", "desc"]:
             raise BadRequest(
                 detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
-                )
+            )
 
         order_func = asc if sort_params.sort_order == "asc" else desc
         # Custom sort logic can be defined in subclasses
@@ -82,6 +85,7 @@ class ShelvingJobSorter(BaseSorter):
     """
     Request Sort By with specific sorting logic for related models.
     """
+
     def custom_sort(self, query: Query, sort_params, order_func):
         """
         Overrides the default sort to allow custom sorting for specific fields.
@@ -91,9 +95,8 @@ class ShelvingJobSorter(BaseSorter):
             container_count_subquery = (
                 select(
                     ShelvingJob.id,
-                    func.coalesce(func.count(Tray.id), 0) + func.coalesce(
-                        func.count(NonTrayItem.id), 0
-                        )
+                    func.coalesce(func.count(Tray.id), 0)
+                    + func.coalesce(func.count(NonTrayItem.id), 0),
                 )
                 .outerjoin(Tray, Tray.shelving_job_id == ShelvingJob.id)
                 .outerjoin(NonTrayItem, NonTrayItem.shelving_job_id == ShelvingJob.id)
@@ -104,11 +107,10 @@ class ShelvingJobSorter(BaseSorter):
             # Join with ShelvingJob and order by container count
             query = query.outerjoin(
                 container_count_subquery,
-                ShelvingJob.id == container_count_subquery.c.id
-                ) \
-                .order_by(
+                ShelvingJob.id == container_count_subquery.c.id,
+            ).order_by(
                 order_func(container_count_subquery.c[1])
-                )  # Index 1 is the count column
+            )  # Index 1 is the count column
             return query
 
         # Fall back to base sorting if no custom sort logic applies
@@ -135,28 +137,28 @@ class RequestSorter(BaseSorter):
             barcode_non_tray_alias = aliased(Barcode)
 
             # Join Request -> Item -> Barcode (for Items)
-            query = query.outerjoin(item_alias, Request.item_id == item_alias.id) \
-                .outerjoin(
+            query = query.outerjoin(
+                item_alias, Request.item_id == item_alias.id
+            ).outerjoin(
                 barcode_item_alias, item_alias.barcode_id == barcode_item_alias.id
-                )
+            )
 
             # Join Request -> NonTrayItem -> Barcode (for Non-Tray Items)
             query = query.outerjoin(
                 non_tray_item_alias, Request.non_tray_item_id == non_tray_item_alias.id
-                ) \
-                .outerjoin(
+            ).outerjoin(
                 barcode_non_tray_alias,
-                non_tray_item_alias.barcode_id == barcode_non_tray_alias.id
-                )
+                non_tray_item_alias.barcode_id == barcode_non_tray_alias.id,
+            )
 
             # Ensure sorting by barcode value from both barcode tables
             query = query.order_by(
                 order_func(
                     func.coalesce(
                         barcode_item_alias.value, barcode_non_tray_alias.value
-                        )
                     )
                 )
+            )
             return query
         if sort_params.sort_by == "media_type":
             # Aliases to avoid conflicts
@@ -166,19 +168,19 @@ class RequestSorter(BaseSorter):
             media_type_non_tray_alias = aliased(MediaType)
 
             # Join Request -> Item -> MediaType
-            query = query.outerjoin(item_alias, Request.item_id == item_alias.id) \
-                .outerjoin(
+            query = query.outerjoin(
+                item_alias, Request.item_id == item_alias.id
+            ).outerjoin(
                 media_type_item_alias,
-                item_alias.media_type_id == media_type_item_alias.id
+                item_alias.media_type_id == media_type_item_alias.id,
             )
 
             # Join Request -> NonTrayItem -> MediaType
             query = query.outerjoin(
                 non_tray_item_alias, Request.non_tray_item_id == non_tray_item_alias.id
-            ) \
-                .outerjoin(
+            ).outerjoin(
                 media_type_non_tray_alias,
-                non_tray_item_alias.media_type_id == media_type_non_tray_alias.id
+                non_tray_item_alias.media_type_id == media_type_non_tray_alias.id,
             )
 
             # Select the correct media type name for sorting (prioritize Item media type first)
@@ -203,28 +205,28 @@ class RequestSorter(BaseSorter):
                 # Items: Request -> Item -> Tray -> ShelfPosition
                 select(
                     Request.id, tray_alias.shelf_position_id.label("shelf_position_id")
-                    )
+                )
                 .join(item_alias, Request.item_id == item_alias.id)
                 .join(tray_alias, item_alias.tray_id == tray_alias.id),
-
                 # NonTrayItems: Request -> NonTrayItem -> ShelfPosition
                 select(
                     Request.id,
-                    non_tray_item_alias.shelf_position_id.label("shelf_position_id")
-                    )
-                .join(
+                    non_tray_item_alias.shelf_position_id.label("shelf_position_id"),
+                ).join(
                     non_tray_item_alias,
-                    Request.non_tray_item_id == non_tray_item_alias.id
-                    )
+                    Request.non_tray_item_id == non_tray_item_alias.id,
+                ),
             ).alias("location_map")
 
             # Join the subquery with ShelfPosition and order by ShelfPosition.location
-            query = query.outerjoin(
-                location_subquery, Request.id == location_subquery.c.id
-            ).outerjoin(
-                shelf_position_alias,
-                location_subquery.c.shelf_position_id == shelf_position_alias.id
-            ).order_by(order_func(shelf_position_alias.location))
+            query = (
+                query.outerjoin(location_subquery, Request.id == location_subquery.c.id)
+                .outerjoin(
+                    shelf_position_alias,
+                    location_subquery.c.shelf_position_id == shelf_position_alias.id,
+                )
+                .order_by(order_func(shelf_position_alias.location))
+            )
 
             return query
         # if sort_params.sort_by == "status":
@@ -257,11 +259,15 @@ class RequestSorter(BaseSorter):
         if sort_params.sort_by == "priority":
             return query.join(Priority).order_by(order_func(Priority.value))
         if sort_params.sort_by == "delivery_location":
-            return query.join(DeliveryLocation).order_by(order_func(DeliveryLocation.name))
+            return query.join(DeliveryLocation).order_by(
+                order_func(DeliveryLocation.name)
+            )
         if sort_params.sort_by == "request_count":
-            query = query.join(Request).group_by(self.model.id).order_by(
-                order_func(func.count(Request.id))
-                )
+            query = (
+                query.join(Request)
+                .group_by(self.model.id)
+                .order_by(order_func(func.count(Request.id)))
+            )
             return query
 
         # Fall back to base sorting if no custom sort logic applies
@@ -272,6 +278,7 @@ class PickListSorter(BaseSorter):
     """
     Pick List Sort By with specific sorting logic for related models.
     """
+
     def custom_sort(self, query: Query, sort_params, order_func):
         """
         Overrides the default sort to allow custom sorting for specific fields.
@@ -282,7 +289,7 @@ class PickListSorter(BaseSorter):
             request_sort_subquery = (
                 select(
                     Request.pick_list_id,
-                    func.min(Request.create_dt).label("first_request_date")
+                    func.min(Request.create_dt).label("first_request_date"),
                 )
                 .group_by(Request.pick_list_id)
                 .alias("request_sort_map")
@@ -291,7 +298,7 @@ class PickListSorter(BaseSorter):
             # Join PickList with the request sorting subquery
             query = query.outerjoin(
                 request_sort_subquery,
-                PickList.id == request_sort_subquery.c.pick_list_id
+                PickList.id == request_sort_subquery.c.pick_list_id,
             ).order_by(order_func(request_sort_subquery.c.first_request_date))
 
             return query
@@ -306,6 +313,7 @@ class RefileQueueSorter(BaseSorter):
     """
     Refile Queue List Sort By with specific sorting logic for related models.
     """
+
     def custom_sort(self, query: Query, sort_params, order_func):
         """
         Overrides the default sort to allow custom sorting for specific fields.
@@ -320,6 +328,7 @@ class RefileJobSorter(BaseSorter):
     """
     Refile Job List Sort By with specific sorting logic for related models.
     """
+
     def custom_sort(self, query: Query, sort_params, order_func):
         """
         Overrides the default sort to allow custom sorting for specific fields.
@@ -328,22 +337,21 @@ class RefileJobSorter(BaseSorter):
             items_count_subquery = (
                 select(
                     RefileJob.id,
-                    func.coalesce(func.count(RefileItem.id), 0) + func.coalesce(
-                        func.count(RefileNonTrayItem.id), 0
-                    )
+                    func.coalesce(func.count(RefileItem.id), 0)
+                    + func.coalesce(func.count(RefileNonTrayItem.id), 0),
                 )
                 .outerjoin(RefileItem, RefileItem.refile_job_id == RefileJob.id)
-                .outerjoin(RefileNonTrayItem, RefileNonTrayItem.refile_job_id == RefileJob.id)
+                .outerjoin(
+                    RefileNonTrayItem, RefileNonTrayItem.refile_job_id == RefileJob.id
+                )
                 .group_by(RefileJob.id)
                 .alias("item_count_map")
             )
 
             # Join with ShelvingJob and order by container count
             query = query.outerjoin(
-                items_count_subquery,
-                RefileJob.id == items_count_subquery.c.id
-            ) \
-                .order_by(
+                items_count_subquery, RefileJob.id == items_count_subquery.c.id
+            ).order_by(
                 order_func(items_count_subquery.c[1])
             )  # Index 1 is the count column
             return query
@@ -375,8 +383,11 @@ class ShelvingSorter(BaseSorter):
         if sort_params.sort_by == "shelf_number":
             return query.join(ShelfNumber).order_by(order_func(ShelfNumber.number))
         if sort_params.sort_by == "size_class":
-            return query.join(ShelfType).join(SizeClass).order_by(order_func(
-                SizeClass.name))
+            return (
+                query.join(ShelfType)
+                .join(SizeClass)
+                .order_by(order_func(SizeClass.name))
+            )
         if sort_params.sort_by == "shelf_type":
             return query.join(ShelfType).order_by(order_func(ShelfType.type))
         if sort_params.sort_by == "container_type":
@@ -405,15 +416,127 @@ class ItemSorter(BaseSorter):
         if sort_params.sort_by == "media_type":
             return query.join(MediaType).order_by(order_func(MediaType.name))
         if sort_params.sort_by == "barcode_value":
-            return (
-                query
-                .outerjoin(
-                    Barcode, or_(
-                        self.model.barcode_id == Barcode.id,
-                        self.model.withdrawn_barcode_id == Barcode.id
-                    )
-                )
-                .order_by(order_func(Barcode.value))
-            )
+            return query.outerjoin(
+                Barcode,
+                or_(
+                    self.model.barcode_id == Barcode.id,
+                    self.model.withdrawn_barcode_id == Barcode.id,
+                ),
+            ).order_by(order_func(Barcode.value))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class OpenLocationsSorter(BaseSorter):
+    """
+    Open Location List Sort By with specific sorting logic for related models.
+    """
+
+    def custom_sort(self, query: Query, sort_params, order_func):
+        """
+        Overrides the default sort to allow custom sorting for specific fields.
+        """
+        if sort_params.sort_by == "owner":
+            return query.order_by(order_func(Owner.name))
+        if sort_params.sort_by == "size_class":
+            return query.order_by(order_func(SizeClass.short_name))
+        if sort_params.sort_by == "height":
+            return query.order_by(order_func(SizeClass.height))
+        if sort_params.sort_by == "width":
+            return query.order_by(order_func(SizeClass.width))
+        if sort_params.sort_by == "depth":
+            return query.order_by(order_func(SizeClass.depth))
+        if sort_params.sort_by == "media_type":
+            return query.order_by(order_func(MediaType.name))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class AisleItemsCountSorter(BaseSorter):
+    """
+    Aisle Items Count List Sort By with specific sorting logic for related models.
+    """
+
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by == "aisle_number":
+            return query.order_by(order_func("aisle_number"))
+        if sort_params.sort_by == "shelf_count":
+            return query.order_by(order_func("shelf_count"))
+        if sort_params.sort_by == "tray_count":
+            return query.order_by(order_func("tray_count"))
+        if sort_params.sort_by == "item_count":
+            return query.order_by(order_func("item_count"))
+        if sort_params.sort_by == "non_tray_item_count":
+            return query.order_by(order_func("non_tray_item_count"))
+        if sort_params.sort_by == "total_item_count":
+            return query.order_by(order_func("total_item_count"))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class NonTrayItemCountSorter(BaseSorter):
+    """
+    Non Tray Item Count List Sort By with specific sorting logic for related models.
+    """
+
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by == "size_class_short_name":
+            return query.order_by(order_func("size_class_short_name"))
+        if sort_params.sort_by == "non_tray_item_count":
+            return query.order_by(order_func("non_tray_item_count"))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class TrayItemCountSorter(BaseSorter):
+    """
+    Tray Item Count List Sort By with specific sorting logic for related models.
+    """
+
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by == "size_class_short_name":
+            return query.order_by(order_func("size_class_short_name"))
+        if sort_params.sort_by == "tray_count":
+            return query.order_by(order_func("tray_count"))
+        if sort_params.sort_by == "tray_item_count":
+            return query.order_by(order_func("tray_item_count"))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class VerificationChangeSorter(BaseSorter):
+    """
+    Verification Change List Sort By with specific sorting logic for related models.
+    """
+
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by == "workflow_id":
+            return query.order_by(order_func(VerificationChange.workflow_id))
+        if sort_params.sort_by == "completed_dt":
+            return query.order_by(order_func(VerificationJob.update_dt))
+        if sort_params.sort_by == "completed_by":
+            return query.order_by(order_func(VerificationChange.completed_by_id))
+        if sort_params.sort_by == "item_barcode":
+            return query.order_by(order_func(VerificationChange.item_barcode_value))
+        if sort_params.sort_by == "tray_barcode":
+            return query.order_by(order_func(VerificationChange.tray_barcode_value))
+        if sort_params.sort_by == "action":
+            return query.order_by(order_func(VerificationChange.change_type))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class RetrievalItemCountSorter(BaseSorter):
+    """
+    Retrieval Item Count List Sort By with specific sorting logic for related models.
+    """
+
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by == "owner_name":
+            return query.order_by(order_func("owner_name"))
+        if sort_params.sort_by == "total_item_retrieved_count":
+            return query.order_by(order_func("total_item_retrieved_count"))
+        if sort_params.sort_by == "max_retrieved_count":
+            return query.order_by(order_func("max_retrieved_count"))
 
         return super().custom_sort(query, sort_params, order_func)

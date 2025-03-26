@@ -1,8 +1,5 @@
-
 import csv
 from io import StringIO
-from datetime import datetime, timezone
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -24,7 +21,7 @@ from app.filter_params import (
     TrayItemCountParams,
     UserJobItemsCountParams,
     VerificationChangesParams,
-    RetrievalCountParams
+    RetrievalCountParams,
 )
 from app.models.accession_jobs import AccessionJob
 from app.models.aisle_numbers import AisleNumber
@@ -69,10 +66,15 @@ from app.schemas.reporting import (
     VerificationChangesOutput,
     RetrievalItemCountReadOutput,
 )
-from app.config.exceptions import (
-    NotFound,
-    BadRequest,
-    InternalServerError
+from app.config.exceptions import NotFound, BadRequest, InternalServerError
+from app.sorting import (
+    BaseSorter,
+    OpenLocationsSorter,
+    AisleItemsCountSorter,
+    NonTrayItemCountSorter,
+    TrayItemCountSorter,
+    VerificationChangeSorter,
+    RetrievalItemCountSorter,
 )
 
 router = APIRouter(
@@ -88,7 +90,7 @@ def get_accessioned_items_count_query(params, sort_by=None, order_func=None):
     non_tray_item_group_by = []
     include_month = bool(
         params.from_dt or params.to_dt
-        )  # Enable month aggregation if needed
+    )  # Enable month aggregation if needed
 
     if params.owner_id:
         item_query_conditions.append(Item.owner_id.in_(params.owner_id))
@@ -113,19 +115,27 @@ def get_accessioned_items_count_query(params, sort_by=None, order_func=None):
         non_tray_item_query_conditions.append(NonTrayItem.accession_dt <= params.to_dt)
 
     if include_month:
-        item_query_group_by.extend([Item.accession_dt, func.extract("year", Item.accession_dt)])
-        non_tray_item_group_by.extend([NonTrayItem.accession_dt, func.extract("year", NonTrayItem.accession_dt)])
+        item_query_group_by.extend(
+            [Item.accession_dt, func.extract("year", Item.accession_dt)]
+        )
+        non_tray_item_group_by.extend(
+            [NonTrayItem.accession_dt, func.extract("year", NonTrayItem.accession_dt)]
+        )
 
     # Base item query
     item_query = (
         select(
             func.count(Item.id).label("count"),
-            func.to_char(Item.accession_dt, 'Mon').label(
-                "month"
-                ) if include_month else literal(None).label("month"),
-            func.extract("year", Item.accession_dt).label(
-                "year"
-                ) if include_month else literal(None).label("year"),
+            (
+                func.to_char(Item.accession_dt, "Mon").label("month")
+                if include_month
+                else literal(None).label("month")
+            ),
+            (
+                func.extract("year", Item.accession_dt).label("year")
+                if include_month
+                else literal(None).label("year")
+            ),
             Owner.name.label("owner_name"),
             SizeClass.name.label("size_class_name"),
             MediaType.name.label("media_type_name"),
@@ -135,24 +145,23 @@ def get_accessioned_items_count_query(params, sort_by=None, order_func=None):
         .join(SizeClass, SizeClass.id == Item.size_class_id)
         .join(MediaType, MediaType.id == Item.media_type_id)
         .filter(and_(*item_query_conditions))
-        .group_by(
-            Owner.name,
-            SizeClass.name,
-            MediaType.name,
-            *item_query_group_by
-        )
+        .group_by(Owner.name, SizeClass.name, MediaType.name, *item_query_group_by)
     )
 
     # Base non-tray item query
     non_tray_item_query = (
         select(
             func.count(NonTrayItem.id).label("count"),
-            func.to_char(NonTrayItem.accession_dt, 'Mon').label(
-                "month"
-                ) if include_month else literal(None).label("month"),
-            func.extract("year", NonTrayItem.accession_dt).label(
-                "year"
-                ) if include_month else literal(None).label("year"),
+            (
+                func.to_char(NonTrayItem.accession_dt, "Mon").label("month")
+                if include_month
+                else literal(None).label("month")
+            ),
+            (
+                func.extract("year", NonTrayItem.accession_dt).label("year")
+                if include_month
+                else literal(None).label("year")
+            ),
             Owner.name.label("owner_name"),
             SizeClass.name.label("size_class_name"),
             MediaType.name.label("media_type_name"),
@@ -162,12 +171,7 @@ def get_accessioned_items_count_query(params, sort_by=None, order_func=None):
         .join(SizeClass, SizeClass.id == NonTrayItem.size_class_id)
         .join(MediaType, MediaType.id == NonTrayItem.media_type_id)
         .filter(and_(*non_tray_item_query_conditions))
-        .group_by(
-            Owner.name,
-            SizeClass.name,
-            MediaType.name,
-            *non_tray_item_group_by
-        )
+        .group_by(Owner.name, SizeClass.name, MediaType.name, *non_tray_item_group_by)
     )
 
     # Combine item and non-tray queries
@@ -193,15 +197,16 @@ def get_accessioned_items_count_query(params, sort_by=None, order_func=None):
 
     # Add month breakdown if applicable
     if include_month:
-        selection.extend([combined_query.c.month, func.cast(combined_query.c.year,
-                                                            String)])
+        selection.extend(
+            [combined_query.c.month, func.cast(combined_query.c.year, String)]
+        )
         group_by.extend([combined_query.c.month, combined_query.c.year])
     else:
         selection.append(literal("All").label("month"))
         selection.append(literal("All").label("year"))
 
     # Aggregate count
-    selection.append(func.sum(combined_query.c.count).label("count"))
+    selection.append(func.coalesce(func.sum(combined_query.c.count), 0).label("count"))
 
     final_query = select(*selection).select_from(combined_query)
 
@@ -220,7 +225,7 @@ def get_accessioned_items_count_query(params, sort_by=None, order_func=None):
 def get_accessioned_items_count(
     session: Session = Depends(get_session),
     params: AccessionedItemsParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ):
     """
     The count of items that have been accessioned.
@@ -247,7 +252,9 @@ def get_accessioned_items_count(
 
         order_func = asc if sort_params.sort_order == "asc" else desc
 
-        query = get_accessioned_items_count_query(params, sort_params.sort_by, order_func)
+        query = get_accessioned_items_count_query(
+            params, sort_params.sort_by, order_func
+        )
     else:
         query = get_accessioned_items_count_query(params)
 
@@ -258,7 +265,7 @@ def get_accessioned_items_count(
 def get_accessioned_items_csv(
     session: Session = Depends(get_session),
     params: AccessionedItemsParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ):
     """
     Translates list response of AccessionedItems objects to csv,
@@ -286,7 +293,9 @@ def get_accessioned_items_csv(
 
         order_func = asc if sort_params.sort_order == "asc" else desc
         # Get the query
-        accession_query = get_accessioned_items_count_query(params, sort_params.sort_by, order_func)
+        accession_query = get_accessioned_items_count_query(
+            params, sort_params.sort_by, order_func
+        )
     else:
         # Get the query
         accession_query = get_accessioned_items_count_query(params)
@@ -297,16 +306,32 @@ def get_accessioned_items_csv(
         writer = csv.writer(output)
 
         # Write header row
-        writer.writerow(["year", "month", "owner_name", "size_class_name",
-                         "media_type_name", "count"])
+        writer.writerow(
+            [
+                "year",
+                "month",
+                "owner_name",
+                "size_class_name",
+                "media_type_name",
+                "count",
+            ]
+        )
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
 
         # Write rows from query results
         for row in session.execute(accession_query):
-            writer.writerow([row.year, row.month, row.owner_name,
-                             row.size_class_name, row.media_type_name, row.count])
+            writer.writerow(
+                [
+                    row.year,
+                    row.month,
+                    row.owner_name,
+                    row.size_class_name,
+                    row.media_type_name,
+                    row.count,
+                ]
+            )
             yield output.getvalue()
             output.seek(0)
             output.truncate(0)
@@ -328,6 +353,7 @@ def get_accessioned_items_csv(
 def get_shelving_job_discrepancy_list(
     session: Session = Depends(get_session),
     params: ShelvingJobDiscrepancyParams = Depends(),
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Returns a list of ShelvingJobDiscrepancy objects.
@@ -351,6 +377,11 @@ def get_shelving_job_discrepancy_list(
         query = query.where(ShelvingJobDiscrepancy.create_dt >= params.from_dt)
     if params.to_dt:
         query = query.where(ShelvingJobDiscrepancy.create_dt <= params.to_dt)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = BaseSorter(ShelvingJobDiscrepancy)
+        query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)
 
@@ -480,7 +511,7 @@ def get_shelving_job_discrepancy_detail(
 def get_open_locations_list(
     session: Session = Depends(get_session),
     params: OpenLocationParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Returns a paginated list of shelf objects with
@@ -515,13 +546,15 @@ def get_open_locations_list(
 
         # Optimize location filtering
         if params.ladder_id:
-            shelf_query = shelf_query.join(
-                Ladder, Shelf.ladder_id == Ladder.id
-            ).filter(Shelf.ladder_id == params.ladder_id)
+            shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).filter(
+                Shelf.ladder_id == params.ladder_id
+            )
         elif params.side_id:
-            shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).join(
-                Side, Ladder.side_id == Side.id
-            ).filter(Side.id == params.side_id)
+            shelf_query = (
+                shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+                .join(Side, Ladder.side_id == Side.id)
+                .filter(Side.id == params.side_id)
+            )
         elif params.aisle_id:
             shelf_query = (
                 shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
@@ -547,15 +580,11 @@ def get_open_locations_list(
                 .filter(Building.id == params.building_id)
             )
 
+        # Validate and Apply sorting based on sort_params
         if sort_params.sort_by:
-            if sort_params.sort_order not in ["asc", "desc"]:
-                raise BadRequest(
-                    detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
-                )
-
-            order_func = asc if sort_params.sort_order == "asc" else desc
-
-            shelf_query = shelf_query.order_by(order_func(sort_params.sort_by))
+            # Apply sorting using BaseSorter
+            sorter = OpenLocationsSorter(Shelf)
+            shelf_query = sorter.apply_sorting(shelf_query, sort_params)
 
         return paginate(session, shelf_query)
     except Exception as e:
@@ -582,13 +611,9 @@ def get_open_locations_csv(
 
     # Optimize filtering
     if not params.show_partial:
-        shelf_query = shelf_query.where(
-            Shelf.available_space == ShelfType.max_capacity
-        )
+        shelf_query = shelf_query.where(Shelf.available_space == ShelfType.max_capacity)
     else:
-        shelf_query = shelf_query.where(
-            Shelf.available_space <= ShelfType.max_capacity
-        )
+        shelf_query = shelf_query.where(Shelf.available_space <= ShelfType.max_capacity)
 
     # Optimize owner filter with direct join
     if params.owner_id:
@@ -599,13 +624,15 @@ def get_open_locations_csv(
 
     # Optimize location filtering
     if params.ladder_id:
-        shelf_query = shelf_query.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).filter(Shelf.ladder_id == params.ladder_id)
+        shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).filter(
+            Shelf.ladder_id == params.ladder_id
+        )
     elif params.side_id:
-        shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).join(
-            Side, Ladder.side_id == Side.id
-        ).filter(Side.id == params.side_id)
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .filter(Side.id == params.side_id)
+        )
     elif params.aisle_id:
         shelf_query = (
             shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
@@ -678,9 +705,7 @@ def get_open_locations_csv(
     )
 
 
-def get_aisle_item_counts_query(
-    building_id: int, aisle_num_from: Optional[int], aisle_num_to: Optional[int]
-):
+def get_aisle_item_counts_query(params, sort_params=None):
     """
     Construct the query to fetch aisles with their associated counts.
     """
@@ -692,6 +717,9 @@ def get_aisle_item_counts_query(
             func.count(distinct(Tray.id)).label("tray_count"),
             func.count(distinct(Item.id)).label("item_count"),
             func.count(distinct(NonTrayItem.id)).label("non_tray_item_count"),
+            (
+                func.count(distinct(Item.id)) + func.count(distinct(NonTrayItem.id))
+            ).label("total_item_count"),
         )
         .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
         .join(Module, Aisle.module_id == Module.id)
@@ -704,15 +732,23 @@ def get_aisle_item_counts_query(
         .join(
             NonTrayItem, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True
         )
-        .filter(Module.building_id == building_id)
-        .order_by(asc(AisleNumber.number))
+        .filter(Module.building_id == params.building_id)
         .group_by(Aisle.id, AisleNumber.number)
     )
 
-    if aisle_num_from is not None:
-        query = query.filter(AisleNumber.number >= aisle_num_from)
-    if aisle_num_to is not None:
-        query = query.filter(AisleNumber.number <= aisle_num_to)
+    if params.aisle_num_from is not None:
+        query = query.filter(AisleNumber.number >= params.aisle_num_from)
+    if params.aisle_num_to is not None:
+        query = query.filter(AisleNumber.number <= params.aisle_num_to)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = AisleItemsCountSorter(Aisle)
+        query = sorter.apply_sorting(query, sort_params)
+    else:
+        # Apply default sorting
+        query = query.order_by(asc(AisleNumber.number))
 
     return query
 
@@ -723,7 +759,9 @@ def get_aisle_item_counts_query(
     response_description="List of item counts per aisle",
 )
 def get_aisle_items_count(
-    session: Session = Depends(get_session), params: AisleItemsCountParams = Depends()
+    session: Session = Depends(get_session),
+    params: AisleItemsCountParams = Depends(),
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Get the total number of items in an aisle.
@@ -742,9 +780,7 @@ def get_aisle_items_count(
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
 
-    aisles_query = get_aisle_item_counts_query(
-        params.building_id, params.aisle_num_from, params.aisle_num_to
-    )
+    aisles_query = get_aisle_item_counts_query(params, sort_params)
 
     # Paginate and transform results into the schema
     paginated_result = paginate(session, aisles_query)
@@ -758,7 +794,7 @@ def get_aisle_items_count(
             tray_count=row.tray_count,
             item_count=row.item_count,
             non_tray_item_count=row.non_tray_item_count,
-            total_item_count=row.item_count + row.non_tray_item_count,
+            total_item_count=row.total_item_count,
         )
         for row in paginated_result.items
     ]
@@ -842,7 +878,7 @@ def get_aisles_items_count_csv(
     )
 
 
-def get_non_tray_item_counts_query(params):
+def get_non_tray_item_counts_query(params, sort_params=None):
     """
     Construct the query to fetch non tray items with their associated counts as well
     as size class id, size class name, and size class short name.
@@ -864,7 +900,6 @@ def get_non_tray_item_counts_query(params):
         .join(SizeClass, NonTrayItem.size_class_id == SizeClass.id)
         .join(Module, Module.id == Aisle.module_id)
         .where(Module.building_id == params.building_id)
-        .order_by(asc(SizeClass.id))
         .group_by(SizeClass.id)
     )
 
@@ -887,13 +922,23 @@ def get_non_tray_item_counts_query(params):
     if not params.from_dt or not params.to_dt:
         query = query.where(NonTrayItem.shelved_dt != None)
 
+        # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = NonTrayItemCountSorter(NonTrayItem)
+        query = sorter.apply_sorting(query, sort_params)
+    else:
+        query = query.order_by(asc(SizeClass.id))
+
     # Execute the query and fetch the result
     return query
 
 
 @router.get("/non_tray_items/count/", response_model=Page[NonTrayItemCountReadOutput])
 def get_non_tray_item_count(
-    session: Session = Depends(get_session), params: NonTrayItemsCountParams = Depends()
+    session: Session = Depends(get_session),
+    params: NonTrayItemsCountParams = Depends(),
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Get the total number of non tray items in an aisle.
@@ -932,7 +977,7 @@ def get_non_tray_item_count(
         if not size_classes:
             raise NotFound(detail="Size class not found")
 
-    return paginate(session, get_non_tray_item_counts_query(params))
+    return paginate(session, get_non_tray_item_counts_query(params, sort_params))
 
 
 @router.get("/non_tray_items/count/download", response_class=StreamingResponse)
@@ -1020,7 +1065,7 @@ def get_non_tray_item_count_csv(
     )
 
 
-def get_tray_item_counts_query(params):
+def get_tray_item_counts_query(params, sort_params=None):
     """
     Construct the query to fetch non tray items with their associated counts as well
     as size class id, size class name, and size class short name.
@@ -1044,7 +1089,6 @@ def get_tray_item_counts_query(params):
         .join(SizeClass, Tray.size_class_id == SizeClass.id)
         .join(Module, Module.id == Aisle.module_id)
         .where(Module.building_id == params.building_id)
-        .order_by(asc(SizeClass.id))
         .group_by(SizeClass.id)
     )
 
@@ -1065,13 +1109,21 @@ def get_tray_item_counts_query(params):
     if not params.from_dt or not params.to_dt:
         query = query.where(Tray.shelved_dt != None)
 
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = TrayItemCountSorter(Tray)
+        query = sorter.apply_sorting(query, sort_params)
+    else:
+        query = query.order_by(asc(SizeClass.id))
     # Execute the query and fetch the result
     return query
 
 
 @router.get("/tray_items/count/", response_model=Page[TrayItemCountReadOutput])
 def get_tray_item_count(
-    session: Session = Depends(get_session), params: TrayItemCountParams = Depends()
+    session: Session = Depends(get_session),
+    params: TrayItemCountParams = Depends(),
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Get the total number of tray items in an aisle.
@@ -1105,7 +1157,7 @@ def get_tray_item_count(
         if not owners:
             raise NotFound(detail="Owners not found")
 
-    return paginate(session, get_tray_item_counts_query(params))
+    return paginate(session, get_tray_item_counts_query(params, sort_params))
 
 
 @router.get("/tray_items/count/download", response_class=StreamingResponse)
@@ -1510,23 +1562,23 @@ def get_user_job_summary_query(params, sort_params=None):
         combined_query.c.job_type,
         func.sum(combined_query.c.item_count).label("total_items_processed"),
     ]
-    group_by = []
-    order_by = []
 
+    # Apply filters
+    group_by = [combined_query.c.job_type]
+    if params.user_id:
+        selection.append(combined_query.c.user_name)
+        group_by.append(combined_query.c.user_name)
+    else:
+        selection.append(selection.append(literal("All").label("user_name")))
+
+    # Apply sorting
+    order_by = []
     if sort_params is not None and sort_params.sort_by:
         if sort_params.sort_order not in ["asc", "desc"]:
             raise BadRequest(
                 detail=f"Invalid value for ‘sort_order'. Allowed values are: ‘asc’, ‘desc’",
             )
 
-        if sort_params.sort_by == "user_name":
-            selection.append(combined_query.c.user_name)
-            group_by.append(combined_query.c.user_id)
-            group_by.append(combined_query.c.user_name)
-            if sort_params.sort_order == "asc":
-                order_by.append(asc(combined_query.c.user_name))
-            else:
-                order_by.append(desc(combined_query.c.user_name))
         if sort_params.sort_by == "job_type":
             if sort_params.sort_order == "asc":
                 order_by.append(asc(combined_query.c.job_type))
@@ -1534,19 +1586,9 @@ def get_user_job_summary_query(params, sort_params=None):
                 order_by.append(desc(combined_query.c.job_type))
         if sort_params.sort_by == "total_items_processed":
             if sort_params.sort_order == "asc":
-                order_by.append(asc(combined_query.c.total_items_processed))
+                order_by.append(asc(func.sum(combined_query.c.item_count)))
             else:
-                order_by.append(desc(combined_query.c.total_items_processed))
-
-    if params.user_id:
-        selection.append(combined_query.c.user_name)
-        group_by.append(combined_query.c.job_type)
-        group_by.append(combined_query.c.user_name)
-        order_by.append(combined_query.c.user_name)
-    else:
-        selection.append(selection.append(literal("All").label("user_name")))
-        group_by.append(combined_query.c.job_type)
-        order_by.append(combined_query.c.job_type)
+                order_by.append(desc(func.sum(combined_query.c.item_count)))
 
     final_query = select(*selection).group_by(*group_by).order_by(*order_by)
 
@@ -1609,48 +1651,13 @@ def get_verification_change_query(params, sort_params=None):
     if params.workflow_id:
         conditions.append(VerificationChange.workflow_id.in_(params.workflow_id))
     if params.completed_by_id:
-        conditions.append(VerificationChange.completed_by_id.in_(params.completed_by_id))
+        conditions.append(
+            VerificationChange.completed_by_id.in_(params.completed_by_id)
+        )
     if params.from_dt:
         conditions.append(VerificationJob.update_dt >= params.from_dt)
     if params.to_dt:
         conditions.append(VerificationJob.update_dt <= params.to_dt)
-
-    if sort_params is not None and sort_params.sort_by:
-        if sort_params.sort_order not in ["asc", "desc"]:
-            raise BadRequest(
-                detail=f"Invalid value for ‘sort_order'. Allowed values are: ‘asc’, ‘desc’",
-            )
-
-        if sort_params.sort_by == "workflow_id":
-            if sort_params.sort_order == "asc":
-                order_by.append(asc(VerificationChange.workflow_id))
-            else:
-                order_by.append(desc(VerificationChange.workflow_id))
-        if sort_params.sort_by == "completed_dt":
-            if sort_params.sort_order == "asc":
-                order_by.append(asc(VerificationJob.update_dt))
-            else:
-                order_by.append(desc(VerificationJob.update_dt))
-        if sort_params.sort_by == "completed_by":
-            if sort_params.sort_order == "asc":
-                order_by.append(asc(VerificationChange.completed_by_id))
-            else:
-                order_by.append(desc(VerificationChange.completed_by_id))
-        if (sort_params.sort_by == "item_barcode"):
-            if sort_params.sort_order == "asc":
-                order_by.append(asc(VerificationChange.item_barcode_value))
-            else:
-                order_by.append(desc(VerificationChange.item_barcode_value))
-        if sort_params.sort_by == "tray_barcode":
-            if sort_params.sort_order == "asc":
-                order_by.append(asc(VerificationChange.tray_barcode_value))
-            else:
-                order_by.append(desc(VerificationChange.tray_barcode_value))
-        if sort_params.sort_by == "action":
-            if sort_params.sort_order == "asc":
-                order_by.append(asc(VerificationChange.change_type))
-            else:
-                order_by.append(desc(VerificationChange.change_type))
 
     query = (
         select(
@@ -1664,16 +1671,25 @@ def get_verification_change_query(params, sort_params=None):
             VerificationChange.change_type.label("action"),
         )
         .select_from(VerificationChange)
-        .join(VerificationJob, VerificationJob.workflow_id == VerificationChange.workflow_id)
+        .join(
+            VerificationJob,
+            VerificationJob.workflow_id == VerificationChange.workflow_id,
+        )
         .join(User, User.id == VerificationChange.completed_by_id)
         .where(and_(*conditions))
-        .order_by(*order_by)
     )
+
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = VerificationChangeSorter(VerificationChange)
+        query = sorter.apply_sorting(query, sort_params)
 
     return query
 
 
-@router.get("/verification-changes/summary/", response_model=Page[VerificationChangesOutput])
+@router.get(
+    "/verification-changes/summary/", response_model=Page[VerificationChangesOutput]
+)
 def get_verification_change_summary(
     session: Session = Depends(get_session),
     params: VerificationChangesParams = Depends(),
@@ -1683,8 +1699,11 @@ def get_verification_change_summary(
     Returns a list of VerificationChanges objects.
     """
     if params.workflow_id:
-        job_workflow = session.query(VerificationJob).filter(
-            VerificationJob.workflow_id.in_(params.workflow_id)).all()
+        job_workflow = (
+            session.query(VerificationJob)
+            .filter(VerificationJob.workflow_id.in_(params.workflow_id))
+            .all()
+        )
         if not job_workflow:
             raise NotFound(detail="Verification Job(s) with workflow id(s) not found")
     if params.completed_by_id:
@@ -1700,7 +1719,8 @@ def get_verification_change_summary(
 
 @router.get("/verification-changes/summary/download", response_class=StreamingResponse)
 def get_verification_change_summary_csv(
-    session: Session = Depends(get_session), params: VerificationChangesParams = Depends()
+    session: Session = Depends(get_session),
+    params: VerificationChangesParams = Depends(),
 ):
     query = get_verification_change_query(params)
     query = query.subquery()
@@ -1731,8 +1751,14 @@ def get_verification_change_summary_csv(
             action = row.action
 
             writer.writerow(
-                [workflow_id, item_barcode, tray_barcode, completed_dt,
-                 completed_by, action]
+                [
+                    workflow_id,
+                    item_barcode,
+                    tray_barcode,
+                    completed_dt,
+                    completed_by,
+                    action,
+                ]
             )
             yield output.getvalue()
             output.seek(0)
@@ -1741,7 +1767,9 @@ def get_verification_change_summary_csv(
     return StreamingResponse(
         generate_csv(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=verification_change_summary.csv"},
+        headers={
+            "Content-Disposition": "attachment; filename=verification_change_summary.csv"
+        },
     )
 
 
@@ -1755,18 +1783,17 @@ def get_retrieval_item_count_query(params, sort_params=None):
         item_conditions.append(ItemRetrievalEvent.owner_id.in_(params.owner_id))
         non_tray_item_conditions.append(
             NonTrayItemRetrievalEvent.owner_id.in_(params.owner_id)
-            )
+        )
     if params.from_dt:
         item_conditions.append(ItemRetrievalEvent.create_dt >= params.from_dt)
         non_tray_item_conditions.append(
             NonTrayItemRetrievalEvent.create_dt >= params.from_dt
-            )
+        )
     if params.to_dt:
         item_conditions.append(ItemRetrievalEvent.create_dt <= params.to_dt)
         non_tray_item_conditions.append(
             NonTrayItemRetrievalEvent.create_dt <= params.to_dt
-            )
-
+        )
 
     # Query for ItemRetrievalEvent
     item_retrieved_query = (
@@ -1774,10 +1801,8 @@ def get_retrieval_item_count_query(params, sort_params=None):
             Owner.name.label("owner_name"),
             func.count(distinct(ItemRetrievalEvent.item_id)).label(
                 "total_item_retrieved_count"
-                ),
-            func.count(ItemRetrievalEvent.item_id).label(
-                "max_retrieved_count"
-                ),
+            ),
+            func.count(ItemRetrievalEvent.item_id).label("max_retrieved_count"),
         )
         .select_from(ItemRetrievalEvent)
         .join(Owner, Owner.id == ItemRetrievalEvent.owner_id)
@@ -1791,14 +1816,19 @@ def get_retrieval_item_count_query(params, sort_params=None):
             Owner.name.label("owner_name"),
             func.count(distinct(NonTrayItemRetrievalEvent.non_tray_item_id)).label(
                 "total_item_retrieved_count"
-                ),
-            func.count(NonTrayItemRetrievalEvent.non_tray_item_id).label("max_retrieved_count")
+            ),
+            func.count(NonTrayItemRetrievalEvent.non_tray_item_id).label(
+                "max_retrieved_count"
+            ),
         )
         .select_from(NonTrayItemRetrievalEvent)
         .join(Owner, Owner.id == NonTrayItemRetrievalEvent.owner_id)
         .where(and_(*non_tray_item_conditions))
-        .group_by(*group_by, NonTrayItemRetrievalEvent.owner_id,
-                  NonTrayItemRetrievalEvent.non_tray_item_id)
+        .group_by(
+            *group_by,
+            NonTrayItemRetrievalEvent.owner_id,
+            NonTrayItemRetrievalEvent.non_tray_item_id,
+        )
     )
 
     # Combine both queries using union_all
@@ -1806,45 +1836,22 @@ def get_retrieval_item_count_query(params, sort_params=None):
         item_retrieved_query, non_tray_item_retrieved_query
     ).subquery()
 
-    # Sorting logic
-    if sort_params:
-        if sort_params.sort_by == "owner_name":
-            order_by.append(
-                asc(
-                    combined_query.c.owner_name
-                    ) if sort_params.sort_order == "asc" else desc(
-                    combined_query.c.owner_name
-                    )
-            )
-        elif sort_params.sort_by == "total_item_retrieved_count":
-            order_by.append(
-                asc(
-                    func.sum(combined_query.c.total_item_retrieved_count)
-                    ) if sort_params.sort_order == "asc" else desc(
-                    func.sum(combined_query.c.total_item_retrieved_count)
-                    )
-            )
-        elif sort_params.sort_by == "max_retrieved_count":
-            order_by.append(
-                asc(
-                    func.max(combined_query.c.max_retrieved_count)
-                    ) if sort_params.sort_order == "asc" else desc(
-                    func.max(combined_query.c.max_retrieved_count)
-                    )
-            )
-
     # Aggregate results to sum up total retrievals and get the maximum retrieval count per owner
-    final_aggregation_query = (
-        select(
-            combined_query.c.owner_name,
-            func.sum(combined_query.c.total_item_retrieved_count).label(
-                "total_item_retrieved_count"
-                ),
-            func.max(combined_query.c.max_retrieved_count).label("max_retrieved_count"),
+    final_aggregation_query = select(
+        combined_query.c.owner_name,
+        func.sum(combined_query.c.total_item_retrieved_count).label(
+            "total_item_retrieved_count"
+        ),
+        func.max(combined_query.c.max_retrieved_count).label("max_retrieved_count"),
+    ).group_by(combined_query.c.owner_name)
+
+    # Sorting logic
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = RetrievalItemCountSorter(ItemRetrievalEvent)
+        final_aggregation_query = sorter.apply_sorting(
+            final_aggregation_query, sort_params
         )
-        .group_by(combined_query.c.owner_name)
-        .order_by(*order_by)
-    )
 
     return final_aggregation_query
 
@@ -1853,7 +1860,7 @@ def get_retrieval_item_count_query(params, sort_params=None):
 def get_retrieval_count(
     session: Session = Depends(get_session),
     params: RetrievalCountParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ):
     """
     The count of items retrieved.
@@ -1887,7 +1894,9 @@ def get_retrieval_count_csv(
         output = StringIO()
         writer = csv.writer(output)
         # Write header row
-        writer.writerow(["owner_name", "total_item_retrieved_count", "max_retrieved_count"])
+        writer.writerow(
+            ["owner_name", "total_item_retrieved_count", "max_retrieved_count"]
+        )
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
@@ -1896,7 +1905,9 @@ def get_retrieval_count_csv(
             total_item_retrieved_count = row.total_item_retrieved_count
             max_retrieved_count = row.max_retrieved_count
 
-            writer.writerow([owner_name, total_item_retrieved_count, max_retrieved_count])
+            writer.writerow(
+                [owner_name, total_item_retrieved_count, max_retrieved_count]
+            )
             yield output.getvalue()
             output.seek(0)
             output.truncate(0)
@@ -1905,4 +1916,4 @@ def get_retrieval_count_csv(
         generate_csv(),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=retrieval_count.csv"},
-        )
+    )
