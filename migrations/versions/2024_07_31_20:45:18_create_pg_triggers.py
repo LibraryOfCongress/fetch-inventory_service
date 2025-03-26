@@ -82,4 +82,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("DROP FUNCTION audit_log;")
+    op.execute("DROP FUNCTION audit_trigger;")
