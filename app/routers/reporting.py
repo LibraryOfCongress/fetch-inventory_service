@@ -83,7 +83,7 @@ router = APIRouter(
 )
 
 
-def get_accessioned_items_count_query(params, sort_by=None, order_func=None):
+def get_accessioned_items_count_query(params, sort_params=None):
     item_query_conditions = []
     item_query_group_by = []
     non_tray_item_query_conditions = []
@@ -210,13 +210,20 @@ def get_accessioned_items_count_query(params, sort_by=None, order_func=None):
 
     final_query = select(*selection).select_from(combined_query)
 
+    if sort_params.sort_by:
+        if sort_params.sort_order not in ["asc", "desc"]:
+            raise BadRequest(
+                detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
+            )
+
+        order_func = asc if sort_params.sort_order == "asc" else desc
+
+        if sort_params.sort_by == "owner":
+            final_query = final_query.order_by(order_func("owner_name"))
+            group_by.append("owner_name")
+
     if group_by:
         final_query = final_query.group_by(*group_by)
-
-    if sort_by:
-        final_query = final_query.order_by(
-            order_func(getattr(combined_query.c, sort_by))
-        )
 
     return final_query
 
@@ -243,20 +250,9 @@ def get_accessioned_items_count(
     **Returns**:
     - Page[AccessionItemsDetailOutput]: The total number of items that have been accessioned.
     """
-    if sort_params.sort_by:
-
-        if sort_params.sort_order not in ["asc", "desc"]:
-            raise BadRequest(
-                detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
-            )
-
-        order_func = asc if sort_params.sort_order == "asc" else desc
-
-        query = get_accessioned_items_count_query(
-            params, sort_params.sort_by, order_func
-        )
-    else:
-        query = get_accessioned_items_count_query(params)
+    query = get_accessioned_items_count_query(
+        params, sort_params
+    )
 
     return paginate(session, query)
 

@@ -2,7 +2,7 @@ from ctypes import cast
 from operator import or_
 from tokenize import String
 
-from sqlalchemy import asc, desc, func, inspect
+from sqlalchemy import asc, desc, func, inspect, case, and_
 from sqlalchemy.orm import Query, aliased
 from sqlalchemy.sql import union_all, select
 from fastapi.exceptions import HTTPException
@@ -14,8 +14,10 @@ from app.models.barcodes import Barcode
 from app.models.buildings import Building
 from app.models.container_types import ContainerType
 from app.models.delivery_locations import DeliveryLocation
+from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
 from app.models.media_types import MediaType
+from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
 from app.models.pick_lists import PickList
@@ -28,11 +30,13 @@ from app.models.requests import Request
 from app.models.shelf_numbers import ShelfNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_types import ShelfType
+from app.models.shelves import Shelf
 from app.models.shelving_jobs import ShelvingJob
 from app.models.size_class import SizeClass
 from app.models.trays import Tray
 from app.models.verification_changes import VerificationChange
 from app.models.verification_jobs import VerificationJob
+from app.models.withdraw_jobs import WithdrawJob
 
 
 class BaseSorter:
@@ -356,6 +360,33 @@ class RefileJobSorter(BaseSorter):
             )  # Index 1 is the count column
             return query
 
+        if sort_params.sort_by == "shelved_count":
+            # Join with RefileJob and order by shelved count
+            container_count_subquery = (
+                select(
+                    RefileJob.id,
+                    func.coalesce(func.count(RefileItem.id), 0)
+                    + func.coalesce(func.count(RefileNonTrayItem.id), 0),
+                )
+                .outerjoin(RefileItem, RefileItem.refile_job_id == RefileJob.id)
+                .outerjoin(
+                    RefileNonTrayItem,
+                    RefileNonTrayItem.refile_job_id == RefileJob.id
+                )
+                .outerjoin(Item, Item.id == RefileItem.item_id)
+                .outerjoin(NonTrayItem, NonTrayItem.id == RefileNonTrayItem.non_tray_item_id)
+                .where(Item.status == "In" or NonTrayItem.status == "In")
+                .group_by(RefileJob.id)
+                ).alias("container_count_map")
+
+            query = query.outerjoin(
+                container_count_subquery,
+                RefileJob.id == container_count_subquery.c.id
+            ).order_by(
+                order_func(container_count_subquery.c[1])
+            )
+            return query
+
         return super().custom_sort(query, sort_params, order_func)
 
 
@@ -366,7 +397,28 @@ class WithdrawJobSorter(BaseSorter):
         Overrides the default sort to allow custom sorting for specific fields.
         """
         if sort_params.sort_by == "item_count":
-            pass
+            items_count_subquery = (
+                select(
+                    WithdrawJob.id,
+                    func.coalesce(func.count(ItemWithdrawal.id), 0)
+                    + func.coalesce(func.count(NonTrayItemWithdrawal.id), 0),
+                )
+                .outerjoin(ItemWithdrawal, ItemWithdrawal.withdraw_job_id ==
+                           WithdrawJob.id)
+                .outerjoin(
+                    NonTrayItemWithdrawal, NonTrayItemWithdrawal.withdraw_job_id == WithdrawJob.id
+                )
+                .group_by(WithdrawJob.id)
+                .alias("item_count_map")
+            )
+
+            # Join with ShelvingJob and order by container count
+            query = query.outerjoin(
+                items_count_subquery, WithdrawJob.id == items_count_subquery.c.id
+            ).order_by(
+                order_func(items_count_subquery.c[1])
+            )  # Index 1 is the count column
+            return query
 
         return super().custom_sort(query, sort_params, order_func)
 
@@ -440,12 +492,6 @@ class OpenLocationsSorter(BaseSorter):
             return query.order_by(order_func(Owner.name))
         if sort_params.sort_by == "size_class":
             return query.order_by(order_func(SizeClass.short_name))
-        if sort_params.sort_by == "height":
-            return query.order_by(order_func(SizeClass.height))
-        if sort_params.sort_by == "width":
-            return query.order_by(order_func(SizeClass.width))
-        if sort_params.sort_by == "depth":
-            return query.order_by(order_func(SizeClass.depth))
         if sort_params.sort_by == "media_type":
             return query.order_by(order_func(MediaType.name))
 

@@ -108,12 +108,12 @@ class ItemBaseOutput(BaseModel):
 class NonTrayItemBaseOutput(BaseModel):
     id: int
     status: str
-    shelf_position: ShelfPositionNestedForWithdrawJob
+    shelf_position: Optional[ShelfPositionNestedForWithdrawJob] = None
 
 
 class TrayItemBaseOutput(BaseModel):
     id: int
-    shelf_position: ShelfPositionNestedForWithdrawJob
+    shelf_position: Optional[ShelfPositionNestedForWithdrawJob] = None
 
 
 class NestedTrayForWithdrawJob(BaseModel):

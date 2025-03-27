@@ -100,7 +100,7 @@ def get_withdraw_job_list(
     - list: A paginated list of withdraw jobs.
     """
     # Create a query to select all Withdraw Job from the database
-    query = select(WithdrawJob).distinct()
+    query = select(WithdrawJob)
 
     if params.queue:
         # filter out completed.  maybe someday hide cancelled.
