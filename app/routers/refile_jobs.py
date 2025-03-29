@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from sqlalchemy import func
+from sqlalchemy import func, distinct, case, literal_column
 
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams, JobFilterParams
@@ -20,7 +20,7 @@ from app.schemas.refile_jobs import (
     RefileJobInput,
     RefileJobUpdateInput,
     RefileJobListOutput,
-    RefileJobDetailOutput,
+    RefileJobDetailOutput
 )
 from app.schemas.items import ItemUpdateInput
 from app.schemas.non_tray_items import NonTrayItemUpdateInput

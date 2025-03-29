@@ -75,6 +75,7 @@ from app.sorting import (
     TrayItemCountSorter,
     VerificationChangeSorter,
     RetrievalItemCountSorter,
+    ShelvingJobDiscrepancySorter,
 )
 
 router = APIRouter(
@@ -221,6 +222,8 @@ def get_accessioned_items_count_query(params, sort_params=None):
         if sort_params.sort_by == "owner":
             final_query = final_query.order_by(order_func("owner_name"))
             group_by.append("owner_name")
+        if sort_params.sort_by == "total_count":
+            final_query = final_query.order_by(order_func("count"))
 
     if group_by:
         final_query = final_query.group_by(*group_by)
@@ -354,7 +357,8 @@ def get_shelving_job_discrepancy_list(
     """
     Returns a list of ShelvingJobDiscrepancy objects.
     """
-    query = select(ShelvingJobDiscrepancy).distinct()
+    query = select(ShelvingJobDiscrepancy)
+
     if params.shelving_job_id:
         query = query.where(
             ShelvingJobDiscrepancy.shelving_job_id == params.shelving_job_id
@@ -376,7 +380,7 @@ def get_shelving_job_discrepancy_list(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        sorter = BaseSorter(ShelvingJobDiscrepancy)
+        sorter = ShelvingJobDiscrepancySorter(ShelvingJobDiscrepancy)
         query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)

@@ -6,6 +6,7 @@ from sqlalchemy import asc, desc, func, inspect, case, and_
 from sqlalchemy.orm import Query, aliased
 from sqlalchemy.sql import union_all, select
 from fastapi.exceptions import HTTPException
+from sqlalchemy.sql.functions import coalesce
 
 from app.config.exceptions import BadRequest
 from app.logger import inventory_logger
@@ -31,9 +32,11 @@ from app.models.shelf_numbers import ShelfNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
+from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
 from app.models.shelving_jobs import ShelvingJob
 from app.models.size_class import SizeClass
 from app.models.trays import Tray
+from app.models.users import User
 from app.models.verification_changes import VerificationChange
 from app.models.verification_jobs import VerificationJob
 from app.models.withdraw_jobs import WithdrawJob
@@ -365,26 +368,37 @@ class RefileJobSorter(BaseSorter):
             container_count_subquery = (
                 select(
                     RefileJob.id,
-                    func.coalesce(func.count(RefileItem.id), 0)
-                    + func.coalesce(func.count(RefileNonTrayItem.id), 0),
+                    (
+                        func.coalesce(
+                            func.sum(case((Item.status == "In", 1), else_=0)),
+                            0
+                        )
+                        +
+                        func.coalesce(
+                            func.sum(case((NonTrayItem.status == "In", 1), else_=0)),
+                            0
+                        )
+                    ).label("shelved_count")
                 )
+                .select_from(RefileJob)
                 .outerjoin(RefileItem, RefileItem.refile_job_id == RefileJob.id)
-                .outerjoin(
-                    RefileNonTrayItem,
-                    RefileNonTrayItem.refile_job_id == RefileJob.id
-                )
                 .outerjoin(Item, Item.id == RefileItem.item_id)
-                .outerjoin(NonTrayItem, NonTrayItem.id == RefileNonTrayItem.non_tray_item_id)
-                .where(Item.status == "In" or NonTrayItem.status == "In")
+                .outerjoin(
+                    RefileNonTrayItem, RefileNonTrayItem.refile_job_id == RefileJob.id
+                    )
+                .outerjoin(
+                    NonTrayItem, NonTrayItem.id == RefileNonTrayItem.non_tray_item_id
+                    )
                 .group_by(RefileJob.id)
-                ).alias("container_count_map")
+            ).alias("container_count_map")
 
             query = query.outerjoin(
                 container_count_subquery,
                 RefileJob.id == container_count_subquery.c.id
             ).order_by(
-                order_func(container_count_subquery.c[1])
+                order_func(container_count_subquery.c.shelved_count)
             )
+
             return query
 
         return super().custom_sort(query, sort_params, order_func)
@@ -584,5 +598,35 @@ class RetrievalItemCountSorter(BaseSorter):
             return query.order_by(order_func("total_item_retrieved_count"))
         if sort_params.sort_by == "max_retrieved_count":
             return query.order_by(order_func("max_retrieved_count"))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class ShelvingJobDiscrepancySorter(BaseSorter):
+    """
+    Shelving Job Discrepancy List Sort By with specific sorting logic for related models.
+    """
+
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by == "owner":
+            query = query.join(Owner, ShelvingJobDiscrepancy.owner_id == Owner.id)
+            return query.order_by(order_func(Owner.name))
+        if sort_params.sort_by == "assigned_user":
+            query = query.join(User, ShelvingJobDiscrepancy.assigned_user_id == User.id)
+        if sort_params.sort_by == "barcode_value":
+            # Outer join to Tray and NonTrayItem so that if one is missing, the row is not dropped.
+            query = query.outerjoin(Tray, ShelvingJobDiscrepancy.tray_id == Tray.id)
+            query = query.outerjoin(
+                NonTrayItem, ShelvingJobDiscrepancy.non_tray_item_id == NonTrayItem.id
+                )
+            # Outer join Barcode by checking both possibilities
+            query = query.outerjoin(
+                Barcode,
+                or_(Tray.barcode_id == Barcode.id, NonTrayItem.barcode_id == Barcode.id)
+            )
+            return query.order_by(order_func(Barcode.value))
+        if sort_params.sort_by == "size_class":
+            query = query.join(SizeClass, ShelvingJobDiscrepancy.size_class_id == SizeClass.id)
+            return query.order_by(order_func(SizeClass.short_name))
 
         return super().custom_sort(query, sort_params, order_func)
