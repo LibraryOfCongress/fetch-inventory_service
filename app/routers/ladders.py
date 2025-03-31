@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from fastapi_pagination import Page
@@ -39,28 +39,34 @@ router = APIRouter(
 def get_ladder_list(
     session: Session = Depends(get_session),
     params: LadderFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[int] = Query(None, description="Search by Ladder Number"),
 ) -> list:
     """
     Retrieve a paginated list of ladders.
 
     **Parameters:**
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Number: Search for ladders by their number.
 
     **Returns:**
     - Ladder List Output: A list of ladders.
     """
 
     # Create a query to retrieve all Ladder
-    query = select(Ladder).join(
-        Side, Ladder.side_id == Side.id
-    ).join(
-        Aisle, Side.aisle_id == Aisle.id
-    ).join(
-        Module, Aisle.module_id == Module.id
-    ).join(
-        Building, Module.building_id == Building.id
+    query = (
+        select(Ladder)
+        .join(Side, Ladder.side_id == Side.id)
+        .join(Aisle, Side.aisle_id == Aisle.id)
+        .join(Module, Aisle.module_id == Module.id)
+        .join(Building, Module.building_id == Building.id)
     )
+
+    if search:
+        query = query.join(
+            LadderNumber, Ladder.ladder_number_id == LadderNumber.id
+        ).where(LadderNumber.number == search)
 
     if params.building_id:
         query = query.where(Building.id == params.building_id)
@@ -226,7 +232,7 @@ def delete_ladder(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Ladder ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Ladder ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Ladder ID {id} Not Found")

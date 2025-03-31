@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -19,10 +19,7 @@ from app.schemas.modules import (
     ModuleDetailWriteOutput,
     ModuleDetailReadOutput,
 )
-from app.config.exceptions import (
-    NotFound,
-    ValidationException
-)
+from app.config.exceptions import NotFound, ValidationException
 from app.sorting import BaseSorter
 
 LOGGER = logging.getLogger("router.modules")
@@ -37,7 +34,8 @@ router = APIRouter(
 def get_module_list(
     session: Session = Depends(get_session),
     params: ModuleFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Module Number"),
 ) -> list:
     """
     Retrieve a paginated list of modules.
@@ -45,6 +43,8 @@ def get_module_list(
     **Parameters:**
     - building_name (str): The name of the building to filter by.
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Number: The number of the module to search for.
 
     **Returns:**
     - Module List Output: The paginated list of modules.
@@ -52,15 +52,13 @@ def get_module_list(
     # Create a query to select all Module
     query = select(Module).join(Building, Module.building_id == Building.id)
 
+    if search:
+        query = query.where(Module.module_number.contains(search))
     if params.building_name:
-        query = query.where(
-            Building.name == params.building_name
-        )
-    
+        query = query.where(Building.name == params.building_name)
+
     if params.building_id:
-        query = query.where(
-            Building.id == params.building_id
-        )
+        query = query.where(Building.id == params.building_id)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -180,7 +178,7 @@ def delete_module(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Module ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Module ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Module ID {id} Not Found")

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from fastapi_pagination import Page
@@ -31,19 +33,25 @@ router = APIRouter(
 @router.get("/priorities", response_model=Page[PriorityListOutput])
 def get_priority_list(
     session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Priority Value"),
 ) -> list:
     """
     Get a list of priorities
 
     **Parameters:**
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Value: The value of the priority to search for.
 
     **Returns:**
     - Priority List Output: The paginated list of priorities
     """
     # Create a query to select all Priority
-    query = select(Priority).distinct()
+    query = select(Priority)
+
+    if search:
+        query = query.where(Priority.value.contains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -126,8 +134,7 @@ def delete_priority(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Priority ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Priority ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Priority ID {id} Not Found")

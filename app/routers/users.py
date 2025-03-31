@@ -1,7 +1,10 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
 from datetime import datetime, timezone
@@ -36,19 +39,25 @@ router = APIRouter(
 @router.get("/", response_model=Page[UserListOutput])
 def get_user_list(
     session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by User Name"),
 ) -> list:
     """
     Get a paginated list of users.
 
     **Parameters:**
     - sort_params (SortParams): The sorting parameters.
+    - search: (Optional[str]): The search query.
+        - Name: The name of the user to search for.
 
     **Returns**:
     - User List Output: The paginated list of users.
     """
     # Create a query to select all User from the database
-    query = select(User).distinct()
+    query = select(User)
+
+    if search:
+        query = query.where(func.concat(User.first_name, " ", User.last_name).contains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -191,11 +200,15 @@ def get_user_permissions(user_id: int, session: Session = Depends(get_session)):
         raise NotFound(status_code=404, detail="User not found")
 
     # Retrieve the user from the database using the provided ID
-    user_groups = session.exec(
-        select(Group)
-        .where(Group.users.any(id=user_id))
-        .options(joinedload(Group.permissions))
-    ).unique().all()  # Use unique().all() instead of all()
+    user_groups = (
+        session.exec(
+            select(Group)
+            .where(Group.users.any(id=user_id))
+            .options(joinedload(Group.permissions))
+        )
+        .unique()
+        .all()
+    )  # Use unique().all() instead of all()
 
     # Aggregate all unique permissions from the user's groups
     permissions_set = {

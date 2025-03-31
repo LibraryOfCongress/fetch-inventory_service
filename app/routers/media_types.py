@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from fastapi_pagination import Page
@@ -31,19 +33,25 @@ router = APIRouter(
 @router.get("/", response_model=Page[MediaTypeListOutput])
 def get_media_type_list(
     session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Media Type Name"),
 ) -> list:
     """
     Retrieve a list of media types
 
     **Parameters:**
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Name: The type of the media type to search for.
 
     **Returns:**
     - Media Type List Output: A list of media types.
     """
     # Create a query to retrieve all Media Type
-    query = select(MediaType).distinct()
+    query = select(MediaType)
+
+    if search:
+        query = query.where(MediaType.name.contains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -64,7 +72,6 @@ def get_media_type_detail(id: int, session: Session = Depends(get_session)):
         return media_type
 
     raise NotFound(detail=f"Media Type ID {id} Not Found")
-
 
 
 @router.post("/", response_model=MediaTypeDetailWriteOutput, status_code=201)
@@ -131,8 +138,7 @@ def delete_media_type(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Media Type ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Media Type ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Media Type ID {id} Not Found")

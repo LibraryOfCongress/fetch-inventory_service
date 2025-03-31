@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -35,29 +35,30 @@ def get_aisle_list(
     session: Session = Depends(get_session),
     params: AisleFilterParams = Depends(),
     sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Aisle Number"),
 ) -> list:
     """
     Get a paginated list of aisles.
 
     **Parameters:**
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Number: Search for aisles by their number.
 
     **Returns**:
     - Aisle List Output: The paginated list of aisles.
     """
-    query = select(Aisle).join(
-        Module, Aisle.module_id == Module.id
-    )
+    query = select(Aisle).join(Module, Aisle.module_id == Module.id)
+
+    if search:
+        query = query.join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id).where(
+            AisleNumber.number == search)
 
     if params.module_number:
-        query = query.where(
-            Module.module_number == params.module_number
-        )
+        query = query.where(Module.module_number == params.module_number)
 
     if params.building_id:
-        query.where(
-            Module.building_id == params.building_id
-        )
+        query.where(Module.building_id == params.building_id)
 
     if params.module_id:
         query = query.where(Module.id == params.module_id)

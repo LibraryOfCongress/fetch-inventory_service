@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -28,7 +30,8 @@ router = APIRouter(
 def get_size_class_list(
     session: Session = Depends(get_session),
     short_name: str | None = None,
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None),
 ) -> list:
     """
     Get a paginated list of size classes
@@ -36,12 +39,17 @@ def get_size_class_list(
     **Parameters:**
     - short_name (str): The short name of the size class to filter by.
     - sort_params (SortParams): The sorting parameters.
+    - search (str): The search term to filter by.
+        - Name: The name of the size class.
 
     **Returns:**
     - Size Class List Output: The paginated list of size classes
     """
     # Create a query to select all sides from the database
-    query = select(SizeClass).distinct()
+    query = select(SizeClass)
+
+    if search:
+        query = query.where(SizeClass.name.contains(search))
 
     if short_name:
         query = query.where(SizeClass.short_name == short_name)
@@ -102,9 +110,7 @@ def update_size_class(
         raise HTTPException(status_code=404, detail="Not Found")
 
     # Update the size_class record with the mutated data
-    mutated_data = size_class_input.model_dump(
-        exclude_unset=True
-    )
+    mutated_data = size_class_input.model_dump(exclude_unset=True)
 
     for key, value in mutated_data.items():
         setattr(existing_size_class, key, value)

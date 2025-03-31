@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -8,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database.session import get_session
 from app.filter_params import SortParams, SideFilterParams
 from app.models.sides import Side
+from app.models.side_orientations import SideOrientation
 from app.models.buildings import Building
 from app.models.aisles import Aisle
 from app.models.modules import Module
@@ -35,25 +38,34 @@ router = APIRouter(
 def get_side_list(
     session: Session = Depends(get_session),
     params: SideFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None),
 ) -> list:
     """
     Get a paginated list of sides from the database.
 
     **Parameters:**
+    - params: The filter parameters.
     - sort_params: The sorting parameters.
+    - search: The search query.
+        - Orientation: The orientation of the side.
+
 
     **Returns**:
     - Side List Output: A paginated list of sides.
     """
     # Create a query to select all sides from the database
-    query = select(Side).join(
-        Aisle, Side.aisle_id == Aisle.id
-    ).join(
-        Module, Module.id == Aisle.module_id
-    ).join(
-        Building, Building.id == Module.building_id
+    query = (
+        select(Side)
+        .join(Aisle, Side.aisle_id == Aisle.id)
+        .join(Module, Module.id == Aisle.module_id)
+        .join(Building, Building.id == Module.building_id)
     )
+
+    if search:
+        query = query.join(
+            SideOrientation, Side.side_orientation_id == SideOrientation.id
+        ).where(SideOrientation.name.contains(search))
 
     if params.aisle_id:
         query = query.where(Aisle.id == params.aisle_id)

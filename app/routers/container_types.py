@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Response, Query
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from fastapi_pagination import Page
@@ -31,20 +33,26 @@ router = APIRouter(
 @router.get("/", response_model=Page[ContainerTypeListOutput])
 def get_container_type_list(
     session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Container Type Type"),
 ) -> list:
     """
     Retrieve a list of container types.
 
     **Parameters:**
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Type: The type of the container type.
 
     **Returns:**
     - Container Type List Output: A list of container types.
     """
 
     # Create a query to retrieve all Container Type
-    query = select(ContainerType).distinct()
+    query = select(ContainerType)
+
+    if search:
+        query = query.where(ContainerType.type.contains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -74,7 +82,6 @@ def get_container_type_detail(id: int, session: Session = Depends(get_session)):
         return container_type
 
     raise NotFound(detail=f"Container Type ID {id} Not Found")
-
 
 
 @router.post("/", response_model=ContainerTypeDetailWriteOutput, status_code=201)
@@ -160,8 +167,7 @@ def delete_container_type(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Container Type ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Container Type ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Container Type ID {id} Not Found")

@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
@@ -34,19 +36,25 @@ router = APIRouter(
 @router.get("/", response_model=Page[BuildingListOutput])
 def get_building_list(
     session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Building name"),
 ) -> list:
     """
     Get a paginated list of buildings.
 
     **Parameters:**
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Name: The name of the building to search for.
 
     **Returns:**
     - Building List Output: The paginated list of buildings.
     """
     # Create a query to retrieve all Building
-    query = select(Building).distinct()
+    query = select(Building)
+
+    if search:
+        query = query.where(Building.name.contains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -166,8 +174,7 @@ def delete_building(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Building ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Building ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Building ID {id} Not Found")

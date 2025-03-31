@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from fastapi_pagination import Page
@@ -34,7 +36,8 @@ def get_shelf_position_list(
     session: Session = Depends(get_session),
     shelf_id: int | None = None,
     empty: bool | None = False,
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Shelf position number"),
 ) -> list:
     """
     Retrieve a list of shelf positions.
@@ -43,10 +46,13 @@ def get_shelf_position_list(
     - shelf_id (int): The ID of the shelf to filter by.
     - empty (bool): Whether to filter by empty shelf positions.
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Number: The number of the shelf position to search for.
 
     **Returns:**
     - Shelf Position List Output: The paginated list of shelf positions.
     """
+
     if shelf_id and empty:
         statement = (
             select(ShelfPosition)
@@ -64,6 +70,10 @@ def get_shelf_position_list(
         )
     else:
         statement = select(ShelfPosition)
+
+    if search:
+        statement = statement.join(ShelfPositionNumber).where(
+            ShelfPositionNumber.number == search)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

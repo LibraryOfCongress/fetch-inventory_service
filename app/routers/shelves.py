@@ -1,7 +1,7 @@
 import logging
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from fastapi_pagination import Page
@@ -33,11 +33,7 @@ from app.schemas.shelves import (
     ShelfDetailWriteOutput,
     ShelfDetailReadOutput,
 )
-from app.config.exceptions import (
-    NotFound,
-    ValidationException,
-    InternalServerError
-)
+from app.config.exceptions import NotFound, ValidationException, InternalServerError
 from app.sorting import ShelvingSorter
 from app.utilities import get_sorted_query
 
@@ -53,7 +49,8 @@ LOGGER = logging.getLogger("app.routers.shelves")
 def get_shelf_list(
     session: Session = Depends(get_session),
     params: ShelfFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Shelf location"),
 ) -> list:
     """
     Get a list of shelves.
@@ -73,11 +70,16 @@ def get_shelf_list(
     - sort_params (SortParams): The sorting parameters.
         - sort_by (str): The field to sort by.
         - sort_order (str): The order to sort by.
+    - search (Optional[str]): The search query.
+        - location: The location to search for.
 
     **Returns:**
     - Shelf List Output: The paginated list of shelves.
     """
     shelf_queryset = select(Shelf)
+
+    if search:
+        shelf_queryset = shelf_queryset.where(Shelf.location.contains(search))
 
     if params.owner_id:
         shelf_queryset = shelf_queryset.where(Shelf.owner_id == params.owner_id)
@@ -85,9 +87,7 @@ def get_shelf_list(
     if params.size_class_id:
         shelf_queryset = shelf_queryset.join(
             ShelfType, Shelf.shelf_type_id == ShelfType.id
-        ).where(
-            ShelfType.size_class_id == params.size_class_id
-        )
+        ).where(ShelfType.size_class_id == params.size_class_id)
 
     # location from most to least constrained
     if params.shelf_id:
@@ -95,78 +95,57 @@ def get_shelf_list(
     elif params.ladder_id:
         shelf_queryset = shelf_queryset.join(
             Ladder, Shelf.ladder_id == Ladder.id
-        ).where(
-            Ladder.id == params.ladder_id
-        )
+        ).where(Ladder.id == params.ladder_id)
     elif params.side_id:
-        shelf_queryset = shelf_queryset.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).where(
-            Side.id == params.side_id
+        shelf_queryset = (
+            shelf_queryset.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .where(Side.id == params.side_id)
         )
     elif params.aisle_id:
-        shelf_queryset = shelf_queryset.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).join(
-            Aisle, Side.aisle_id == Aisle.id
-        ).where(
-            Aisle.id == params.aisle_id
+        shelf_queryset = (
+            shelf_queryset.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .where(Aisle.id == params.aisle_id)
         )
     elif params.module_id:
-        shelf_queryset = shelf_queryset.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).join(
-            Aisle, Side.aisle_id == Aisle.id
-        ).join(
-            Module, Aisle.module_id == Module.id
-        ).where(
-            Module.id == params.module_id
+        shelf_queryset = (
+            shelf_queryset.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .join(Module, Aisle.module_id == Module.id)
+            .where(Module.id == params.module_id)
         )
     elif params.building_id:
-        shelf_queryset = shelf_queryset.join(
-            Ladder, Shelf.ladder_id == Ladder.id
-        ).join(
-            Side, Ladder.side_id == Side.id
-        ).join(
-            Aisle, Side.aisle_id == Aisle.id
-        ).join(
-            Module, Aisle.module_id == Module.id
-        ).join(
-            Building, Module.building_id == Building.id
-        ).where(
-            Building.id == params.building_id
+        shelf_queryset = (
+            shelf_queryset.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .join(Module, Aisle.module_id == Module.id)
+            .join(Building, Module.building_id == Building.id)
+            .where(Building.id == params.building_id)
         )
 
     if params.unassigned:
         shelf_queryset = shelf_queryset.where(Shelf.barcode_id == None)
     if params.barcode_value:
-        barcode_value_subquery = (
-            select(Barcode.id)
-            .where(Barcode.value == params.barcode_value)
+        barcode_value_subquery = select(Barcode.id).where(
+            Barcode.value == params.barcode_value
         )
-        shelf_queryset = shelf_queryset.where(Shelf.barcode_id == barcode_value_subquery)
+        shelf_queryset = shelf_queryset.where(
+            Shelf.barcode_id == barcode_value_subquery
+        )
     if params.owner:
-        owner_subquery = (
-            select(Owner.id)
-            .where(Owner.name == params.owner)
-        )
+        owner_subquery = select(Owner.id).where(Owner.name == params.owner)
         shelf_queryset = shelf_queryset.where(Shelf.owner_id == owner_subquery)
     if params.size_class:
-        size_class_subquery = (
-            select(SizeClass.id)
-            .where(SizeClass.name == params.size_class)
+        size_class_subquery = select(SizeClass.id).where(
+            SizeClass.name == params.size_class
         )
         shelf_queryset = shelf_queryset.join(
             ShelfType, Shelf.shelf_type_id == ShelfType.id
-        ).where(
-            ShelfType.size_class_id == size_class_subquery
-        )
+        ).where(ShelfType.size_class_id == size_class_subquery)
     if params.location:
         shelf_queryset = shelf_queryset.where(Shelf.location == params.location)
 
@@ -216,7 +195,9 @@ def get_shelf_by_barcode_value(value: str, session: Session = Depends(get_sessio
 
 
 @router.get("/barcode/{value}/shelved", response_model=Page[dict])
-def get_shelved_entities_by_shelf_barcode_value(value: str, session: Session = Depends(get_session)):
+def get_shelved_entities_by_shelf_barcode_value(
+    value: str, session: Session = Depends(get_session)
+):
     """
     Retrieve tray and non_tray barcode list from things on a shelf
     using a shelf barcode value
@@ -229,30 +210,49 @@ def get_shelved_entities_by_shelf_barcode_value(value: str, session: Session = D
     if not shelf:
         raise NotFound(detail=f"Shelf with barcode value {value} not found")
 
-    shelf_positions = list(session.exec(
-        select(ShelfPosition).where(ShelfPosition.shelf_id == shelf.id)
-    ).all())
+    shelf_positions = list(
+        session.exec(
+            select(ShelfPosition).where(ShelfPosition.shelf_id == shelf.id)
+        ).all()
+    )
 
-    trays = {t.shelf_position_id: t for t in session.exec(
-        select(Tray).join(
-            Barcode, Tray.barcode_id == Barcode.id
-        ).where(Tray.shelf_position_id.in_([p.id for p in shelf_positions]))
-    ).all()}
+    trays = {
+        t.shelf_position_id: t
+        for t in session.exec(
+            select(Tray)
+            .join(Barcode, Tray.barcode_id == Barcode.id)
+            .where(Tray.shelf_position_id.in_([p.id for p in shelf_positions]))
+        ).all()
+    }
 
-    non_trays = {nt.shelf_position_id: nt for nt in session.exec(
-        select(NonTrayItem).join(
-            Barcode, NonTrayItem.barcode_id == Barcode.id
-        ).where(NonTrayItem.shelf_position_id.in_([p.id for p in shelf_positions]))
-    ).all()}
+    non_trays = {
+        nt.shelf_position_id: nt
+        for nt in session.exec(
+            select(NonTrayItem)
+            .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
+            .where(NonTrayItem.shelf_position_id.in_([p.id for p in shelf_positions]))
+        ).all()
+    }
 
     results = []
     for shelf_position in shelf_positions:
         if shelf_position.id in trays:
-            results.append({"type": "tray", "barcode_value": trays[shelf_position.id].barcode.value})
+            results.append(
+                {
+                    "type": "tray",
+                    "barcode_value": trays[shelf_position.id].barcode.value,
+                }
+            )
         elif shelf_position.id in non_trays:
-            results.append({"type": "non_tray", "barcode_value": non_trays[shelf_position.id].barcode.value})
+            results.append(
+                {
+                    "type": "non_tray",
+                    "barcode_value": non_trays[shelf_position.id].barcode.value,
+                }
+            )
 
     return paginate_list(results)
+
 
 @router.post("/", response_model=ShelfDetailWriteOutput, status_code=201)
 def create_shelf(
@@ -283,7 +283,9 @@ def create_shelf(
         mutated_data = shelf_input.model_dump(exclude="shelf_number")
 
         if not shelf_number_id and not shelf_number:
-            raise ValidationException(detail=f"shelf_number_id OR shelf_number required")
+            raise ValidationException(
+                detail=f"shelf_number_id OR shelf_number required"
+            )
         elif shelf_number and not shelf_number_id:
             # get shelf_number_id from shelf number
             shelf_num_object = (
@@ -303,20 +305,28 @@ def create_shelf(
         session.commit()
         session.refresh(new_shelf)
 
-        shelf_type = (session.query(ShelfType).filter(ShelfType.id == new_shelf.shelf_type_id).first())
+        shelf_type = (
+            session.query(ShelfType)
+            .filter(ShelfType.id == new_shelf.shelf_type_id)
+            .first()
+        )
         shelf_position_list = []
         for position in range(shelf_type.max_capacity):
-            shelf_position_number = (session.query(ShelfPositionNumber).filter(
-                ShelfPositionNumber.number == (position + 1)
-            ).first())
+            shelf_position_number = (
+                session.query(ShelfPositionNumber)
+                .filter(ShelfPositionNumber.number == (position + 1))
+                .first()
+            )
             new_shelf_position = {
                 "shelf_id": new_shelf.id,
-                "shelf_position_number_id": shelf_position_number.id
+                "shelf_position_number_id": shelf_position_number.id,
             }
             shelf_position_list.append(new_shelf_position)
 
         # Convert dictionaries to ORM instances
-        shelf_positions_to_create: List[ShelfPosition] = [ShelfPosition(**data) for data in shelf_position_list]
+        shelf_positions_to_create: List[ShelfPosition] = [
+            ShelfPosition(**data) for data in shelf_position_list
+        ]
 
         session.add_all(shelf_positions_to_create)
         session.commit()
@@ -329,7 +339,6 @@ def create_shelf(
         return new_shelf
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
-
 
 
 @router.patch("/{id}", response_model=ShelfDetailWriteOutput)
@@ -389,7 +398,7 @@ def delete_shelf(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Shelf ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Shelf ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Shelf ID {id} Not Found")

@@ -38,7 +38,8 @@ def get_owner_list(
     owner_tier_id: Optional[int] = Query(None),
     parent_owner_id: Optional[Union[int, str]] = Query(None),
     parent_owner: Optional[str] = Query(None),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Owner name"),
 ) -> list:
     """
     Get a list of owners.
@@ -47,12 +48,17 @@ def get_owner_list(
     - owner_tier_id (int): The ID of the owner tier to filter by.
     - parent_owner_id (int): The ID of the parent owner to filter by.
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Name: Filter by owner name.
 
     **Returns:**
     - Owner List Output: The paginated list of owners.
     """
     # Create a query to select all Owner
     query = select(Owner)
+
+    if search:
+        query = query.where(Owner.name.contains(search))
 
     if owner_tier_id:
         query = query.where(Owner.owner_tier_id == owner_tier_id)
@@ -63,9 +69,7 @@ def get_owner_list(
     elif parent_owner_id is not None:
         query = query.where(Owner.parent_owner_id == int(parent_owner_id))
     if parent_owner is not None:
-        parent_owner_subquery = (
-            select(Owner.id).where(Owner.name == parent_owner)
-        )
+        parent_owner_subquery = select(Owner.id).where(Owner.name == parent_owner)
         query = query.where(Owner.parent_owner_id == parent_owner_subquery)
 
     # Validate and Apply sorting based on sort_params

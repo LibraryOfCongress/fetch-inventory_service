@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from fastapi_pagination import Page
@@ -32,20 +34,26 @@ router = APIRouter(
 @router.get("/types", response_model=Page[RequestTypeListOutput])
 def get_request_type_list(
     session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Request Type Type"),
 ) -> list:
     """
     Get a list of request types
 
     **Parameters:**
     - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Type: The type of the request type
 
     **Returns:**
     - Request Type List Output: The paginated list of request types
     """
 
     # Create a query to select all Request Type
-    query = select(RequestType).distinct()
+    query = select(RequestType)
+
+    if search:
+        query = query.where(RequestType.type.contains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -89,7 +97,9 @@ def create_request_type(
 
 @router.patch("/types/{id}", response_model=RequestTypeDetailWriteOutput)
 def update_request_type(
-    id: int, request_type: RequestTypeUpdateInput, session: Session = Depends(get_session)
+    id: int,
+    request_type: RequestTypeUpdateInput,
+    session: Session = Depends(get_session),
 ):
     """
     Update an existing Request Type
@@ -128,8 +138,7 @@ def delete_request_type(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Request Type ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Request Type ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Request Type ID {id} Not Found")
