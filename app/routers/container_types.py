@@ -52,7 +52,7 @@ def get_container_type_list(
     query = select(ContainerType)
 
     if search:
-        query = query.where(ContainerType.type.contains(search))
+        query = query.where(ContainerType.type.icontains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

@@ -53,7 +53,7 @@ def get_module_list(
     query = select(Module).join(Building, Module.building_id == Building.id)
 
     if search:
-        query = query.where(Module.module_number.contains(search))
+        query = query.where(Module.module_number.icontains(search))
     if params.building_name:
         query = query.where(Building.name == params.building_name)
 

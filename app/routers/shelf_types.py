@@ -58,7 +58,7 @@ def get_shelf_type_list(
     query = select(ShelfType)
 
     if search:
-        query = query.where(ShelfType.type.contains(search))
+        query = query.where(ShelfType.type.icontains(search))
 
     if size_class_id:
         query = query.where(ShelfType.size_class_id == size_class_id)

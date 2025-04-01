@@ -65,7 +65,7 @@ def get_side_list(
     if search:
         query = query.join(
             SideOrientation, Side.side_orientation_id == SideOrientation.id
-        ).where(SideOrientation.name.contains(search))
+        ).where(SideOrientation.name.icontains(search))
 
     if params.aisle_id:
         query = query.where(Aisle.id == params.aisle_id)

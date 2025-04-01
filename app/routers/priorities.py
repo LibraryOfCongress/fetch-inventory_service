@@ -51,7 +51,7 @@ def get_priority_list(
     query = select(Priority)
 
     if search:
-        query = query.where(Priority.value.contains(search))
+        query = query.where(Priority.value.icontains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

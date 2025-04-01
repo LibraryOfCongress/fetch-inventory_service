@@ -54,7 +54,7 @@ def get_delivery_location_list(
     query = select(DeliveryLocation)
 
     if search:
-        query = query.where(DeliveryLocation.name.contains(search))
+        query = query.where(DeliveryLocation.name.icontains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

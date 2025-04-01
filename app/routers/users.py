@@ -57,7 +57,7 @@ def get_user_list(
     query = select(User)
 
     if search:
-        query = query.where(func.concat(User.first_name, " ", User.last_name).contains(search))
+        query = query.where(func.concat(User.first_name, " ", User.last_name).icontains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

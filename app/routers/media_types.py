@@ -51,7 +51,7 @@ def get_media_type_list(
     query = select(MediaType)
 
     if search:
-        query = query.where(MediaType.name.contains(search))
+        query = query.where(MediaType.name.icontains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

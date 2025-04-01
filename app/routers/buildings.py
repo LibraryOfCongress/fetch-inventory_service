@@ -54,7 +54,7 @@ def get_building_list(
     query = select(Building)
 
     if search:
-        query = query.where(Building.name.contains(search))
+        query = query.where(Building.name.icontains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

@@ -40,7 +40,7 @@ def get_ladder_list(
     session: Session = Depends(get_session),
     params: LadderFilterParams = Depends(),
     sort_params: SortParams = Depends(),
-    search: Optional[int] = Query(None, description="Search by Ladder Number"),
+    search: Optional[str] = Query(None, description="Search by Ladder Number"),
 ) -> list:
     """
     Retrieve a paginated list of ladders.

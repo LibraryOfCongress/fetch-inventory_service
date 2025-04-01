@@ -53,7 +53,7 @@ def get_request_type_list(
     query = select(RequestType)
 
     if search:
-        query = query.where(RequestType.type.contains(search))
+        query = query.where(RequestType.type.icontains(search))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

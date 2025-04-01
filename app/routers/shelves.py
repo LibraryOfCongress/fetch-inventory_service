@@ -79,7 +79,7 @@ def get_shelf_list(
     shelf_queryset = select(Shelf)
 
     if search:
-        shelf_queryset = shelf_queryset.where(Shelf.location.contains(search))
+        shelf_queryset = shelf_queryset.where(Shelf.location.icontains(search))
 
     if params.owner_id:
         shelf_queryset = shelf_queryset.where(Shelf.owner_id == params.owner_id)

@@ -58,7 +58,7 @@ def get_owner_list(
     query = select(Owner)
 
     if search:
-        query = query.where(Owner.name.contains(search))
+        query = query.where(Owner.name.icontains(search))
 
     if owner_tier_id:
         query = query.where(Owner.owner_tier_id == owner_tier_id)

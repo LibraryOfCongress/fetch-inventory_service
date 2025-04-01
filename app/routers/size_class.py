@@ -49,7 +49,8 @@ def get_size_class_list(
     query = select(SizeClass)
 
     if search:
-        query = query.where(SizeClass.name.contains(search))
+        query = query.where(SizeClass.name.icontains(search))
+        inventory_logger.info(f"Search Query: {query}")
 
     if short_name:
         query = query.where(SizeClass.short_name == short_name)
