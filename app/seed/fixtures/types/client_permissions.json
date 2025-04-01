@@ -14,6 +14,10 @@
         "description": "Can view verificaiton related pages."
     },
     {
+      "name": "can_cancel_verification_job",
+      "description": "Can cancel verification jobs."
+    },
+    {
         "name": "can_access_shelving",
         "description": "Can view shelving related pages."
     },

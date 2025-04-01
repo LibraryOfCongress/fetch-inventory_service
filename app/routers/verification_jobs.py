@@ -21,6 +21,7 @@ from app.tasks import (
     manage_verification_job_transition, manage_verification_job_change_action,
 )
 from app.models.verification_jobs import VerificationJob
+from app.models.accession_jobs import AccessionJob
 from app.schemas.verification_jobs import (
     VerificationJobInput,
     VerificationJobUpdateInput,
@@ -280,6 +281,49 @@ def delete_verification_job(id: int, session: Session = Depends(get_session)):
     verification_job = session.get(VerificationJob, id)
 
     if verification_job:
+        # do not allow deletion of completed jobs
+        if verification_job.status == 'Completed':
+            return HTTPException(
+                status_code=400,
+                detail=f"Verification Job id {id} is complete. Can't delete or cancel completed jobs.",
+            )
+
+        # find and reset underlying accession job
+        acc_job = session.get(AccessionJob, verification_job.accession_job_id)
+        acc_job.status = 'Paused'
+        session.add(acc_job)
+
+        if verification_job.container_type_id == 1:
+            trays_in_ver_job_query = select(Tray).where(Tray.verification_job_id == id)
+            trays = session.exec(trays_in_ver_job_query)
+            for tray in trays:
+                tray.scanned_for_verification = False
+                tray.verification_job_id = None
+                tray.collection_verified = False
+                session.add(tray)
+                # sanitize items in tray
+                for item in session.exec(select(Item).where(Item.verification_job_id == id)):
+                    item.scanned_for_verification = False
+                    item.verification_job_id = None
+                    session.add(item)
+        else:
+            non_trays_in_ver_job_query = select(NonTrayItem).where(
+                NonTrayItem.verification_job_id == id
+            )
+            non_tray_items = session.exec(non_trays_in_ver_job_query)
+            for non_tray_item in non_tray_items:
+                non_tray_item.scanned_for_verification = False
+                non_tray_item.verification_job_id = None
+                session.add(non_tray_item)
+
+        try:
+            session.commit()
+        except Exception as e:
+            return HTTPException(
+                status_code=500,
+                detail=f"{e}",
+            )
+
         session.delete(verification_job)
         session.commit()
 
