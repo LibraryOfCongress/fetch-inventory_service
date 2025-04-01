@@ -613,6 +613,9 @@ class ShelvingJobDiscrepancySorter(BaseSorter):
             return query.order_by(order_func(Owner.name))
         if sort_params.sort_by == "assigned_user":
             query = query.join(User, ShelvingJobDiscrepancy.assigned_user_id == User.id)
+            return query.order_by(
+                order_func(func.concat(User.first_name, " ", User.last_name))
+                )
         if sort_params.sort_by == "barcode_value":
             # Outer join to Tray and NonTrayItem so that if one is missing, the row is not dropped.
             query = query.outerjoin(Tray, ShelvingJobDiscrepancy.tray_id == Tray.id)
