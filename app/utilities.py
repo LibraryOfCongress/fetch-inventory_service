@@ -649,7 +649,7 @@ def _validate_field(
     if errored_values:
         indices = request_data[request_data[field_name].isin(errored_values)].index
         for index in indices:
-            errors.append({"line:": int(index) + 1, "error": error_message})
+            errors.append({"line": int(index) + 2, "error": error_message})
         return indices
 
     return set()
@@ -667,7 +667,8 @@ def _validate_items(session, items, request_data, errors):
                 request_data["Item Barcode"].astype(str) == barcode
             ].index[0]
             errors.append(
-                {"line": int(index) + 1, "error": f"Barcode {barcode} not found"}
+                {"line": int(index) + 2, "error": f"""Item with Barcode {barcode}
+                not found"""}
             )
             errored_indices.add(index)
 
@@ -822,7 +823,7 @@ def validate_request_data(session, request_data: pd.DataFrame):
         ].index
         for index in missing_indices:
             errors.append(
-                {"line": int(index) + 1, "error": "External Request ID is required"}
+                {"line": int(index) + 2, "error": "External Request ID is required"}
             )
             barcodes_errored_indices.update(missing_indices)
             errored_indices.update(missing_indices)
@@ -1182,13 +1183,13 @@ def process_withdraw_job_data(
             if existing_withdrawals.get(non_tray_item.id) == withdraw_job_id:
                 errors.append(
                     {
-                        "line": int(index) + 1,
+                        "line": int(index) + 2,
                         "error": "Non Tray Item is in existing withdraw job",
                     }
                 )
             elif validate_container_not_shelved(non_tray_item):
                 errors.append(
-                    {"line": int(index) + 1, "error": "Non Tray Item is not shelved"}
+                    {"line": int(index) + 2, "error": "Non Tray Item is not shelved"}
                 )
             else:
                 withdraw_non_tray_items.append(
@@ -1200,7 +1201,7 @@ def process_withdraw_job_data(
                 non_tray_item.update_dt = update_dt
                 session.add(non_tray_item)
         else:
-            errors.append({"line": int(index) + 1, "error": "Barcode not found"})
+            errors.append({"line": int(index) + 2, "error": "Barcode not found"})
 
     return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
 

@@ -1,3 +1,4 @@
+import csv
 import re
 from datetime import datetime, timezone
 from typing import List
@@ -10,10 +11,10 @@ from sqlmodel import Session, select
 from io import StringIO
 import pandas as pd
 from starlette import status
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, StreamingResponse
 
 from app.database.session import get_session, commit_record
-from app.filter_params import SortParams
+from app.filter_params import SortParams, BatchUploadParams
 
 from app.logger import inventory_logger
 from app.models.barcode_types import BarcodeType
@@ -46,7 +47,8 @@ from app.utilities import (
 )
 from app.config.exceptions import (
     BadRequest,
-    NotFound, InternalServerError,
+    NotFound,
+    InternalServerError,
 )
 
 router = APIRouter(
@@ -60,7 +62,8 @@ async def get_batch_upload(
     session: Session = Depends(get_session),
     batch_upload_type: str | None = None,
     uploaded_by: str | None = None,
-    sort_params: SortParams = Depends()
+    params: BatchUploadParams = Depends(),
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Batch upload endpoint to process barcodes for different operations.
@@ -76,16 +79,23 @@ async def get_batch_upload(
 
     if batch_upload_type:
         if batch_upload_type == "request":
-            query = query.filter(BatchUpload.withdraw_job_id.is_(None))
-            query = query.join(Request)
+            query = query.where(BatchUpload.withdraw_job_id.is_(None))
         elif batch_upload_type == "withdraw":
             query = query.filter(BatchUpload.withdraw_job_id.isnot(None))
     if uploaded_by:
-        uploaded_by_subquery = (
-            select(User.id)
-            .where(User.email == uploaded_by)
-        )
+        uploaded_by_subquery = select(User.id).where(User.email == uploaded_by)
         query = query.filter(BatchUpload.user_id == uploaded_by_subquery)
+
+    if params.status:
+        query = query.where(BatchUpload.status.in_(params.status))
+    if params.user_id:
+        query = query.where(BatchUpload.user_id.in_(params.user_id))
+    if params.withdraw_job_id:
+        query = query.where(BatchUpload.withdraw_job_id == params.withdraw_job_id)
+    if params.file_name:
+        query = query.where(BatchUpload.file_name == params.file_name)
+    if params.file_type:
+        query = query.where(BatchUpload.file_type.in_(params.file_type))
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -253,10 +263,12 @@ async def batch_upload_request(
     session.commit()
     session.refresh(new_batch_upload)
 
+    update_dt = datetime.now(timezone.utc)
+
     # Check if the necessary column exists
     if "Item Barcode" not in df.columns:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
+            {"status": "Failed", "update_dt": update_dt},
             synchronize_session=False,
         )
         raise BadRequest(detail="Excel file must contain a 'Item Barcode' column.")
@@ -264,33 +276,62 @@ async def batch_upload_request(
     df["Item Barcode"] = df["Item Barcode"].astype(str)
 
     session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-        {"status": "Processing", "update_dt": datetime.now(timezone.utc)},
+        {"status": "Processing", "update_dt": update_dt},
         synchronize_session=False,
     )
 
     validated_df, errored_df, errors = validate_request_data(session, df)
     # Process the request data
-    if validated_df.empty:
+    if validated_df.empty or errors.get("errors"):
+
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
+            {"status": "Failed", "update_dt": update_dt},
             synchronize_session=False,
         )
         session.commit()
-        return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=errors)
-    else:
-        request_df, request_instances = process_request_data(
-            session, validated_df, new_batch_upload.id
+
+        if errors.get("errors"):
+            error_list = errors.get("errors")
+            # Create an in-memory CSV
+            output = StringIO()
+            writer = csv.writer(output)
+            # Write headers (optional: use column names dynamically)
+            writer.writerow(["Line Item", "Item Barcode", "Error"])
+
+            # Write rows
+            for row in error_list:
+                writer.writerow(
+                    [
+                        row.get("line"),
+                        errored_df.at[row.get("line") - 2, "Item Barcode"],
+                        row.get("error"),
+                    ]
+                )
+
+            # Reset the buffer position
+            output.seek(0)
+            content = f"attachment; filename=error_request_batch_upload_{new_batch_upload.id}_{update_dt}.csv"
+
+            # Create a StreamingResponse
+            return StreamingResponse(
+                output,
+                status_code=status.HTTP_400_BAD_REQUEST,
+                media_type="text/csv",
+                headers={"Content-Disposition": content},
+            )
+
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content=f"""Unable to process Request batch upload ID:
+             {new_batch_upload.id}""",
         )
+
+    # Process the request data
+    request_df, request_instances = process_request_data(
+        session, validated_df, new_batch_upload.id
+    )
 
     session.bulk_save_objects(request_instances)
-
-    if errors.get("errors"):
-        session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Completed", "update_dt": datetime.now(timezone.utc)},
-            synchronize_session=False,
-        )
-        session.commit()
-        return JSONResponse(status_code=status.HTTP_200_OK, content=errors)
 
     session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
         {"status": "Completed", "update_dt": datetime.now(timezone.utc)},
@@ -351,6 +392,7 @@ async def batch_upload_withdraw_job(
             file_name=file_name,
             file_size=file_size,
             file_type=file_content_type,
+            type="Withdraw",
             withdraw_job_id=withdraw_job.id,
         )
 
@@ -362,16 +404,20 @@ async def batch_upload_withdraw_job(
         df = df.dropna(subset=["Item Barcode", "Tray Barcode"], how="all")
 
         if not withdraw_job:
-            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-                {"status": "Failed", "update_dt": datetime.utcnow()},
+            session.query(BatchUpload).filter(
+                BatchUpload.id == new_batch_upload.id
+            ).update(
+                {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
                 synchronize_session=False,
             )
             session.commit()
             raise NotFound(detail=f"Withdraw job id {job_id} not found")
 
         if "Item Barcode" not in df.columns and "Tray Barcode" not in df.columns:
-            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-                {"status": "Failed", "update_dt": datetime.utcnow()},
+            session.query(BatchUpload).filter(
+                BatchUpload.id == new_batch_upload.id
+            ).update(
+                {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
                 synchronize_session=False,
             )
             session.commit()
@@ -388,7 +434,7 @@ async def batch_upload_withdraw_job(
 
         # Create DataFrame
         item_df = pd.DataFrame(item_df)
-        #rename columns
+        # rename columns
         item_df.rename(columns={"Item Barcode": "Barcode"}, inplace=True)
 
         lookup_barcode_values = []
@@ -396,8 +442,10 @@ async def batch_upload_withdraw_job(
             lookup_barcode_values.extend(item_df["Barcode"].astype(str).tolist())
 
         if not lookup_barcode_values:
-            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-                {"status": "Failed", "update_dt": datetime.utcnow()},
+            session.query(BatchUpload).filter(
+                BatchUpload.id == new_batch_upload.id
+            ).update(
+                {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
                 synchronize_session=False,
             )
             raise NotFound(
@@ -405,14 +453,16 @@ async def batch_upload_withdraw_job(
             )
 
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Processing", "update_dt": datetime.utcnow()},
+            {"status": "Processing", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
         session.commit()
 
         lookup_barcode_values = list(set(lookup_barcode_values))
         barcodes = (
-            session.query(Barcode).filter(Barcode.value.in_(lookup_barcode_values)).all()
+            session.query(Barcode)
+            .filter(Barcode.value.in_(lookup_barcode_values))
+            .all()
         )
 
         found_barcodes = set(barcode.value for barcode in barcodes)
@@ -424,12 +474,17 @@ async def batch_upload_withdraw_job(
             index = item_df.index[item_df["Barcode"] == barcode].tolist()
             if index:
                 errored_barcodes["errors"].append(
-                    {"line": index[0] + 1, "error": f"Barcode value {barcode} not found"}
+                    {
+                        "line": index[0] + 1,
+                        "error": f"Barcode value {barcode} not found",
+                    }
                 )
 
         if not barcodes:
-            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-                {"status": "Failed", "update_dt": datetime.utcnow()},
+            session.query(BatchUpload).filter(
+                BatchUpload.id == new_batch_upload.id
+            ).update(
+                {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
                 synchronize_session=False,
             )
             session.commit()
@@ -453,7 +508,7 @@ async def batch_upload_withdraw_job(
                 session.query(BatchUpload).filter(
                     BatchUpload.id == new_batch_upload.id
                 ).update(
-                    {"status": "Failed", "update_dt": datetime.utcnow()},
+                    {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
                     synchronize_session=False,
                 )
                 session.commit()
@@ -464,7 +519,7 @@ async def batch_upload_withdraw_job(
                 session.query(BatchUpload).filter(
                     BatchUpload.id == new_batch_upload.id
                 ).update(
-                    {"status": "Failed", "update_dt": datetime.utcnow()},
+                    {"status": "Failed", "update_dt": datetime.now(timezone.utc)},
                     synchronize_session=False,
                 )
                 session.commit()
@@ -473,7 +528,7 @@ async def batch_upload_withdraw_job(
                 )
 
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Completed", "update_dt": datetime.utcnow()},
+            {"status": "Completed", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
 
@@ -488,7 +543,9 @@ async def batch_upload_withdraw_job(
         session.refresh(withdraw_job)
 
         if errored_barcodes.get("errors"):
-            return JSONResponse(status_code=status.HTTP_200_OK, content=errored_barcodes)
+            return JSONResponse(
+                status_code=status.HTTP_200_OK, content=errored_barcodes
+            )
 
         return JSONResponse(
             status_code=status.HTTP_200_OK, content="Batch Upload Successful"
@@ -496,8 +553,6 @@ async def batch_upload_withdraw_job(
     except Exception as e:
         inventory_logger.error(f"Batch Upload Internal Server Error: {e}")
         raise InternalServerError(detail=f"Internal Server Error: {e}")
-
-
 
 
 @router.post("/location-management")
@@ -742,8 +797,8 @@ async def batch_upload_location_management(
                             {
                                 "line": int(index) + 1,
                                 "error": f"Shelf number {row['shelf_number']} at "
-                                         "ladder number "
-                                         f"{row['ladder_number']} already exists",
+                                "ladder number "
+                                f"{row['ladder_number']} already exists",
                             }
                         )
                         continue
@@ -768,7 +823,7 @@ async def batch_upload_location_management(
                             {
                                 "line": int(index) + 1,
                                 "error": f"Shelf Barcode value {row['shelf_barcode']} "
-                                         "already exists",
+                                "already exists",
                             }
                         )
                         continue

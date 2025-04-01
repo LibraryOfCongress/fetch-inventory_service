@@ -479,3 +479,32 @@ class RetrievalCountParams:
         self.owner_id = owner_id
         self.from_dt = from_dt
         self.to_dt = to_dt
+
+
+class BatchUploadParams:
+    """
+    Query params for Batch Upload Report.
+    """
+    def __init__(
+        self,
+        status: list[str] = Query(
+            default=None, description="Status of the batch upload."
+        ),
+        user_id: list[int] = Query(
+            default=None, description="ID of the user to filter batch uploads."
+        ),
+        withdraw_job_id: int = Query(
+            default=None, description="ID of the withdraw job to filter batch uploads."
+        ),
+        file_name: str = Query(
+            default=None, description="Name of the file to filter batch uploads."
+        ),
+        file_type: list[str] = Query(
+            default=None, description="Type of the file to filter batch uploads."
+        )
+    ):
+        self.status = status
+        self.user_id = user_id
+        self.withdraw_job_id = withdraw_job_id
+        self.file_name = file_name
+        self.file_type = file_type
