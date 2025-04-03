@@ -112,6 +112,14 @@ def complete_verification_job(session, verification_job: VerificationJob):
     This task allows us to support job ownership change efficiently.
     """
     with session_manager() as session:
+        # update verification job last_transition
+        session.query(VerificationJob).where(
+            VerificationJob.id == verification_job.id).update(
+                {
+                    "last_transition": datetime.now(timezone.utc)
+                },
+            synchronize_session=False,
+            )
         # Update Tray Records
         tray_query = select(Tray).where(Tray.verification_job_id == verification_job.id)
         trays = session.exec(tray_query)
@@ -139,7 +147,6 @@ def complete_verification_job(session, verification_job: VerificationJob):
                 session.add(item)
 
         session.commit()
-        # session.refresh()
 
 
 def manage_accession_job_transition(
@@ -162,6 +169,7 @@ def manage_accession_job_transition(
         # update last_transition
         if original_status != accession_job.status:
             accession_job.last_transition = datetime.now(timezone.utc)
+
         commit_record(session, accession_job)
 
         if accession_job.status == "Cancelled":

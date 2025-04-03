@@ -251,6 +251,7 @@ def update_verification_job(
             background_tasks.add_task(
                 complete_verification_job, session, existing_verification_job
             )
+            session.refresh(existing_verification_job)
         else:
             background_tasks.add_task(
                 manage_verification_job_transition,
