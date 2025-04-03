@@ -62,13 +62,14 @@ class JWTMiddleware(BaseHTTPMiddleware):
             # with get_session() as session:
             with session_manager() as session:
                 user_object = session.query(User).filter(User.email == fetch_user).first()
+                audit_name = f"{user_object.first_name} {user_object.last_name}"
                 token_exp_datetime = user_object.fetch_auth_expiration
                 if token_exp_datetime < datetime.now(timezone.utc):
                     if get_settings().APP_ENVIRONMENT not in ["debug", "local", "test"]:
                         response = JSONResponse(status_code=401, content={"detail": "Token Expired"})
                     else:
                         # request = set_session_to_request(request, fetch_user)
-                        request = await set_session_to_request(request, session, fetch_user)
+                        request = await set_session_to_request(request, session, audit_name)
                         response = await call_next(request)
                 else:
                     # Everything's good
@@ -78,7 +79,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
                     # session.commit(user_object)
                     session.commit()
                     session.refresh(user_object)
-                    request = await set_session_to_request(request, session, fetch_user)
+                    request = await set_session_to_request(request, session, audit_name)
                     # request = set_session_to_request(request, fetch_user)
                     response = await call_next(request)
         request_log_dict = {
