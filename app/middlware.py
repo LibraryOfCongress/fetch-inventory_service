@@ -50,7 +50,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
         elif request.url.path.startswith("/status"):
             response = await call_next(request)
         elif not token:
-            if get_settings().APP_ENVIRONMENT not in ["debug", "local", "test"]:
+            if get_settings().APP_ENVIRONMENT not in ["debug", "local", "develop", "test"]:
                 response = JSONResponse(status_code=401, content={"detail": "Not Authorized"})
             else:
                 response = await call_next(request)

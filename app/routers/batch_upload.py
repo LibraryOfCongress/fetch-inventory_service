@@ -205,142 +205,146 @@ async def batch_upload_request(
     **Returns:**
     - BatchUploadOutput: The result of the batch processing including any errors.
     """
-    file_name = file.filename
-    file_size = file.size
-    file_content_type = file.content_type
-    contents = await file.read()
+    try:
+        file_name = file.filename
+        file_size = file.size
+        file_content_type = file.content_type
+        contents = await file.read()
 
-    if (
-        file_name.endswith(".xlsx")
-        or file_content_type
-        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    ):
-        df = pd.read_excel(
-            contents,
-            dtype={
-                "Item Barcode": str,
-                "External Request ID": str,
-                "Requestor Name": str,
-                "Request Type": str,
-                "Priority": str,
-                "Delivery Location": str,
+        if (
+            file_name.endswith(".xlsx")
+            or file_content_type
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ):
+            df = pd.read_excel(
+                contents,
+                dtype={
+                    "Item Barcode": str,
+                    "External Request ID": str,
+                    "Requestor Name": str,
+                    "Request Type": str,
+                    "Priority": str,
+                    "Delivery Location": str,
+                },
+            )
+        if file_name.endswith(".csv") or file_content_type == "text/csv":
+            df = pd.read_csv(
+                StringIO(contents.decode("utf-8")),
+                dtype={
+                    "Item Barcode": str,
+                    "External Request ID": str,
+                    "Requestor Name": str,
+                    "Request Type": str,
+                    "Priority": str,
+                    "Delivery Location": str,
+                },
+            )
+
+        df = df.dropna(subset=["Item Barcode"])
+
+        df.fillna(
+            {
+                "External Request ID": "",
+                "Priority": "",
+                "Requestor Name": "",
+                "Request Type": "",
+                "Delivery Location": "",
             },
-        )
-    if file_name.endswith(".csv") or file_content_type == "text/csv":
-        df = pd.read_csv(
-            StringIO(contents.decode("utf-8")),
-            dtype={
-                "Item Barcode": str,
-                "External Request ID": str,
-                "Requestor Name": str,
-                "Request Type": str,
-                "Priority": str,
-                "Delivery Location": str,
-            },
+            inplace=True,
         )
 
-    df = df.dropna(subset=["Item Barcode"])
+        new_batch_upload = BatchUpload(
+            file_name=file_name,
+            file_size=file_size,
+            file_type=file_content_type,
+            user_id=user_id,
+        )
 
-    df.fillna(
-        {
-            "External Request ID": "",
-            "Priority": "",
-            "Requestor Name": "",
-            "Request Type": "",
-            "Delivery Location": "",
-        },
-        inplace=True,
-    )
+        session.add(new_batch_upload)
+        session.commit()
+        session.refresh(new_batch_upload)
 
-    new_batch_upload = BatchUpload(
-        file_name=file_name,
-        file_size=file_size,
-        file_type=file_content_type,
-        user_id=user_id,
-    )
+        update_dt = datetime.now(timezone.utc)
 
-    session.add(new_batch_upload)
-    session.commit()
-    session.refresh(new_batch_upload)
+        # Check if the necessary column exists
+        if "Item Barcode" not in df.columns:
+            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
+                {"status": "Failed", "update_dt": update_dt},
+                synchronize_session=False,
+            )
+            raise BadRequest(detail="Excel file must contain a 'Item Barcode' column.")
 
-    update_dt = datetime.now(timezone.utc)
+        df["Item Barcode"] = df["Item Barcode"].astype(str)
 
-    # Check if the necessary column exists
-    if "Item Barcode" not in df.columns:
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": update_dt},
+            {"status": "Processing", "update_dt": update_dt},
             synchronize_session=False,
         )
-        raise BadRequest(detail="Excel file must contain a 'Item Barcode' column.")
 
-    df["Item Barcode"] = df["Item Barcode"].astype(str)
+        validated_df, errored_df, errors = validate_request_data(session, df)
+        # Process the request data
+        if validated_df.empty or errors.get("errors"):
 
-    session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-        {"status": "Processing", "update_dt": update_dt},
-        synchronize_session=False,
-    )
+            session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
+                {"status": "Failed", "update_dt": update_dt},
+                synchronize_session=False,
+            )
+            session.commit()
 
-    validated_df, errored_df, errors = validate_request_data(session, df)
-    # Process the request data
-    if validated_df.empty or errors.get("errors"):
+            if errors.get("errors"):
+                error_list = errors.get("errors")
+                # Create an in-memory CSV
+                output = StringIO()
+                writer = csv.writer(output)
+                # Write headers (optional: use column names dynamically)
+                writer.writerow(["Line Item", "Item Barcode", "Error"])
+
+                # Write rows
+                for row in error_list:
+                    writer.writerow(
+                        [
+                            row.get("line"),
+                            row.get("barcode_value"),
+                            row.get("error"),
+                        ]
+                    )
+
+                # Reset the buffer position
+                output.seek(0)
+                content = f"attachment; filename=error_request_batch_upload_{new_batch_upload.id}_{update_dt}.csv"
+
+                # Create a StreamingResponse
+                return StreamingResponse(
+                    output,
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    media_type="text/csv",
+                    headers={"Content-Disposition": content},
+                )
+
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=f"""Unable to process Request batch upload ID:
+                 {new_batch_upload.id}""",
+            )
+
+        # Process the request data
+        request_df, request_instances = process_request_data(
+            session, validated_df, new_batch_upload.id
+        )
+
+        session.bulk_save_objects(request_instances)
 
         session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-            {"status": "Failed", "update_dt": update_dt},
+            {"status": "Completed", "update_dt": datetime.now(timezone.utc)},
             synchronize_session=False,
         )
         session.commit()
-
-        if errors.get("errors"):
-            error_list = errors.get("errors")
-            # Create an in-memory CSV
-            output = StringIO()
-            writer = csv.writer(output)
-            # Write headers (optional: use column names dynamically)
-            writer.writerow(["Line Item", "Item Barcode", "Error"])
-
-            # Write rows
-            for row in error_list:
-                writer.writerow(
-                    [
-                        row.get("line"),
-                        errored_df.at[row.get("line") - 2, "Item Barcode"],
-                        row.get("error"),
-                    ]
-                )
-
-            # Reset the buffer position
-            output.seek(0)
-            content = f"attachment; filename=error_request_batch_upload_{new_batch_upload.id}_{update_dt}.csv"
-
-            # Create a StreamingResponse
-            return StreamingResponse(
-                output,
-                status_code=status.HTTP_400_BAD_REQUEST,
-                media_type="text/csv",
-                headers={"Content-Disposition": content},
-            )
-
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content=f"""Unable to process Request batch upload ID:
-             {new_batch_upload.id}""",
+            status_code=status.HTTP_200_OK, content="Batch upload successful"
         )
 
-    # Process the request data
-    request_df, request_instances = process_request_data(
-        session, validated_df, new_batch_upload.id
-    )
-
-    session.bulk_save_objects(request_instances)
-
-    session.query(BatchUpload).filter(BatchUpload.id == new_batch_upload.id).update(
-        {"status": "Completed", "update_dt": datetime.now(timezone.utc)},
-        synchronize_session=False,
-    )
-    session.commit()
-    return JSONResponse(
-        status_code=status.HTTP_200_OK, content="Batch upload successful"
-    )
+    except Exception as e:
+        raise InternalServerError(detail=str(f"Request BatchUpload Error: {e}"))
 
 
 @router.post("/withdraw-jobs/{job_id}")

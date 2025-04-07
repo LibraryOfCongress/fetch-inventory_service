@@ -649,7 +649,14 @@ def _validate_field(
     if errored_values:
         indices = request_data[request_data[field_name].isin(errored_values)].index
         for index in indices:
-            errors.append({"line": int(index) + 2, "error": error_message})
+            barcode_value = request_data.at[index, "Item Barcode"]
+            errors.append(
+                {
+                    "line": int(index) + 2,
+                    "barcode_value": barcode_value,
+                    "error": error_message
+                }
+            )
         return indices
 
     return set()
@@ -667,8 +674,11 @@ def _validate_items(session, items, request_data, errors):
                 request_data["Item Barcode"].astype(str) == barcode
             ].index[0]
             errors.append(
-                {"line": int(index) + 2, "error": f"""Item with Barcode {barcode}
-                not found"""}
+                {
+                    "line": int(index) + 2,
+                    "barcode_value": barcode,
+                    "error": f"""Item with Barcode {barcode} not found"""
+                }
             )
             errored_indices.add(index)
 
@@ -706,7 +716,8 @@ def _validate_items(session, items, request_data, errors):
         else:
             errors.append(
                 {
-                    "line": int(row_index) + 1,
+                    "line": int(row_index) + 2,
+                    "barcode_value": barcode_value,
                     "error": f"No items or non_trays found with barcode.",
                 }
             )
@@ -721,7 +732,8 @@ def _validate_item(
     if item.status == "Out":
         errors.append(
             {
-                "line": int(row_index) + 1,
+                "line": int(row_index) + 2,
+                "barcode_value": barcode_value,
                 "error": f"{item_type} {barcode_value} status is not shelved",
             }
         )
@@ -730,7 +742,8 @@ def _validate_item(
     if item.status == "PickList":
         errors.append(
             {
-                "line": int(row_index) + 1,
+                "line": int(row_index) + 2,
+                "barcode_value": barcode_value,
                 "error": f"{item_type} {barcode_value} is already in pick list and cannot be requested",
             }
         )
@@ -739,7 +752,8 @@ def _validate_item(
     if item.status == "Withdrawn":
         errors.append(
             {
-                "line": int(row_index) + 1,
+                "line": int(row_index) + 2,
+                "barcode_value": barcode_value,
                 "error": f"{item_type} {barcode_value} has already been withdrawn",
             }
         )
@@ -762,7 +776,8 @@ def _validate_item(
     if existing_request or item.status == "Requested":
         errors.append(
             {
-                "line": int(row_index) + 1,
+                "line": int(row_index) + 2,
+                "barcode_value": barcode_value,
                 "error": f"{item_type} {barcode_value} is already requested",
             }
         )
@@ -780,7 +795,8 @@ def _validate_item(
         ):
             errors.append(
                 {
-                    "line": int(row_index) + 1,
+                    "line": int(row_index) + 2,
+                    "barcode_value": barcode_value,
                     "error": f"{item_type} {barcode_value} is not shelved",
                 }
             )
@@ -789,7 +805,8 @@ def _validate_item(
         if not item.scanned_for_shelving or not item.shelf_position_id:
             errors.append(
                 {
-                    "line": int(row_index) + 1,
+                    "line": int(row_index) + 2,
+                    "barcode_value": barcode_value,
                     "error": f"{item_type} {barcode_value} is not shelved",
                 }
             )
@@ -822,8 +839,13 @@ def validate_request_data(session, request_data: pd.DataFrame):
             request_data["External Request ID"].replace("", pd.NA).isnull()
         ].index
         for index in missing_indices:
+            barcode_value = request_data.at[index, "Item Barcode"]
             errors.append(
-                {"line": int(index) + 2, "error": "External Request ID is required"}
+                {
+                    "line": int(index) + 2,
+                    "barcode_value": barcode_value,
+                    "error": "External Request ID is required"
+                }
             )
             barcodes_errored_indices.update(missing_indices)
             errored_indices.update(missing_indices)
@@ -878,6 +900,22 @@ def validate_request_data(session, request_data: pd.DataFrame):
                 "Delivery Location",
             )
         )
+
+    # Checking for duplicated "Item Barcode" rows as errors instead of dropping them
+    duplicated_mask = request_data.duplicated(subset="Item Barcode")
+    duplicate_indices = request_data[duplicated_mask].index
+
+    for index in duplicate_indices:
+        barcode_value = request_data.at[index, "Item Barcode"]
+        errors.append(
+            {
+                "line": int(index) + 2,
+                "barcode_value": str(barcode_value),
+                "error": "Duplicate Item Barcode found"
+            }
+        )
+        barcodes_errored_indices.add(index)
+        errored_indices.add(index)
 
     barcodes = _fetch_existing_data(
         session,

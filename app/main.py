@@ -145,7 +145,10 @@ async def lifespan(app: FastAPI):
     print("Shutting down...")
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    debug=True if get_settings().APP_ENVIRONMENT == "debug" else False
+)
 
 # add log and auth check middleware
 app.add_middleware(JWTMiddleware)
