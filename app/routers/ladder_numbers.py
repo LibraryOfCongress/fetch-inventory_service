@@ -42,7 +42,7 @@ def get_ladder_number_list(
     """
 
     # Create a query to retrieve all Ladder Number
-    query = select(LadderNumber).distinct()
+    query = select(LadderNumber)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

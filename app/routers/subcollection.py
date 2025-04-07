@@ -43,7 +43,7 @@ def get_subcollection_list(
     - Subcollection List Output: The paginated list of subcollections
     """
     # Create a query to select all sides from the database
-    query = select(Subcollection).distinct()
+    query = select(Subcollection)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

@@ -44,7 +44,7 @@ def get_conveyance_bin_list(
     """
 
     # Create a query to retrieve all Conveyance Bin
-    query = select(ConveyanceBin).distinct()
+    query = select(ConveyanceBin)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

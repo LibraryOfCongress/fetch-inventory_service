@@ -523,10 +523,20 @@ def update_withdraw_job(
                 update_shelf_space_after_non_tray(non_tray_item, non_tray_item.shelf_position_id, None)
 
     # Manage transitions and calculate run time if needed
-    if withdraw_job_input.status and withdraw_job_input.run_timestamp:
-        existing_withdraw_job = manage_transition(
-            existing_withdraw_job, withdraw_job_input
-        )
+    if withdraw_job_input.status:
+        if withdraw_job_input.run_timestamp:
+            existing_withdraw_job = manage_transition(
+                existing_withdraw_job, withdraw_job_input
+            )
+        else:
+            session.query(WithdrawJob).filter(
+                WithdrawJob.id == id
+            ).update(
+                {
+                    "last_transition": updated_dt,
+                },
+                synchronize_session=False,
+            )
 
     mutated_data = withdraw_job_input.model_dump(
         exclude_unset=True,

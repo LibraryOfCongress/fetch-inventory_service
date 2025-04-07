@@ -15,7 +15,7 @@ from app.schemas.verification_changes import (
     VerificationChangeListOutput,
     VerificationChangeDetailOutput,
 )
-from app.sorting import BaseSorter
+from app.sorting import BaseSorter, VerificationChangeSorter
 
 router = APIRouter(
     prefix="/verification-changes",
@@ -37,7 +37,7 @@ def get_verification_change_list(
     query = select(VerificationChange)
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        sorter = BaseSorter(VerificationChange)
+        sorter = VerificationChangeSorter(VerificationChange)
         query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)

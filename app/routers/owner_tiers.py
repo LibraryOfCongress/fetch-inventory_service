@@ -42,7 +42,7 @@ def get_owner_tier_list(
     - Owner Tier List Output: The paginated list of owner tiers.
     """
     # Create a query to select all Owner Tier
-    query = select(OwnerTier).distinct()
+    query = select(OwnerTier)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

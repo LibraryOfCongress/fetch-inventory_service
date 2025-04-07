@@ -72,7 +72,7 @@ def get_verification_job_list(
     - Verification Job List Output: The paginated list of verification jobs.
     """
     # Create a query to select all Verification Job from the database
-    query = select(VerificationJob).distinct()
+    query = select(VerificationJob)
 
     if unshelved:
         # retrieve completed verification jobs that haven't been shelved

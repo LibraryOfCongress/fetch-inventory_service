@@ -39,7 +39,7 @@ def get_non_tray_item_retrieval_events(
     - Item Retrieval Event List Output: A paginated list of Item Retrieval Events.
     """
     # Create a query to retrieve all Groups
-    query = select(NonTrayItemRetrievalEvent).distinct()
+    query = select(NonTrayItemRetrievalEvent)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -161,7 +161,7 @@ def delete_non_tray_item_retrieval_event(
         session.commit()
         return HTTPException(
             status_code=204,
-            detail=f"Non Tray Item Retrieval Event ID {id} Deleted " f"Successfully",
+            detail=f"Non Tray Item Retrieval Event ID {id} Deleted Successfully",
         )
 
     raise NotFound(detail=f"Non Tray Item Retrieval Event ID {id} Not Found")

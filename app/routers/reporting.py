@@ -517,79 +517,79 @@ def get_open_locations_list(
     Returns a paginated list of shelf objects with
     unoccupied nested shelf positions based on search criteria
     """
-    try:
-        shelf_query = (
-            select(Shelf)
-            .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
-            .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
-            .join(Barcode, Shelf.barcode_id == Barcode.id)
-            .join(Owner, Shelf.owner_id == Owner.id)
-            .filter(Shelf.available_space > 0)
+    # try:
+    shelf_query = (
+        select(Shelf)
+        .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
+        .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
+        .join(Barcode, Shelf.barcode_id == Barcode.id)
+        .join(Owner, Shelf.owner_id == Owner.id)
+        .filter(Shelf.available_space > 0)
+    )
+
+    # Optimize filtering
+    if not params.show_partial:
+        shelf_query = shelf_query.where(
+            Shelf.available_space == ShelfType.max_capacity
+        )
+    else:
+        shelf_query = shelf_query.where(
+            Shelf.available_space <= ShelfType.max_capacity
         )
 
-        # Optimize filtering
-        if not params.show_partial:
-            shelf_query = shelf_query.where(
-                Shelf.available_space == ShelfType.max_capacity
-            )
-        else:
-            shelf_query = shelf_query.where(
-                Shelf.available_space <= ShelfType.max_capacity
-            )
+    # Optimize owner filter with direct join
+    if params.owner_id:
+        shelf_query = shelf_query.filter(Owner.id.in_(params.owner_id))
 
-        # Optimize owner filter with direct join
-        if params.owner_id:
-            shelf_query = shelf_query.filter(Owner.id.in_(params.owner_id))
+    if params.size_class_id:
+        shelf_query = shelf_query.filter(SizeClass.id.in_(params.size_class_id))
 
-        if params.size_class_id:
-            shelf_query = shelf_query.filter(SizeClass.id.in_(params.size_class_id))
+    # Optimize location filtering
+    if params.ladder_id:
+        shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).filter(
+            Shelf.ladder_id == params.ladder_id
+        )
+    elif params.side_id:
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .filter(Side.id == params.side_id)
+        )
+    elif params.aisle_id:
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .filter(Aisle.id == params.aisle_id)
+        )
+    elif params.module_id:
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .join(Module, Aisle.module_id == Module.id)
+            .filter(Module.id == params.module_id)
+        )
+    elif params.building_id:
+        shelf_query = (
+            shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .join(Module, Aisle.module_id == Module.id)
+            .join(Building, Module.building_id == Building.id)
+            .filter(Building.id == params.building_id)
+        )
 
-        # Optimize location filtering
-        if params.ladder_id:
-            shelf_query = shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id).filter(
-                Shelf.ladder_id == params.ladder_id
-            )
-        elif params.side_id:
-            shelf_query = (
-                shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
-                .join(Side, Ladder.side_id == Side.id)
-                .filter(Side.id == params.side_id)
-            )
-        elif params.aisle_id:
-            shelf_query = (
-                shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
-                .join(Side, Ladder.side_id == Side.id)
-                .join(Aisle, Side.aisle_id == Aisle.id)
-                .filter(Aisle.id == params.aisle_id)
-            )
-        elif params.module_id:
-            shelf_query = (
-                shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
-                .join(Side, Ladder.side_id == Side.id)
-                .join(Aisle, Side.aisle_id == Aisle.id)
-                .join(Module, Aisle.module_id == Module.id)
-                .filter(Module.id == params.module_id)
-            )
-        elif params.building_id:
-            shelf_query = (
-                shelf_query.join(Ladder, Shelf.ladder_id == Ladder.id)
-                .join(Side, Ladder.side_id == Side.id)
-                .join(Aisle, Side.aisle_id == Aisle.id)
-                .join(Module, Aisle.module_id == Module.id)
-                .join(Building, Module.building_id == Building.id)
-                .filter(Building.id == params.building_id)
-            )
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = OpenLocationsSorter(Shelf)
+        shelf_query = sorter.apply_sorting(shelf_query, sort_params)
 
-        # Validate and Apply sorting based on sort_params
-        if sort_params.sort_by:
-            # Apply sorting using BaseSorter
-            sorter = OpenLocationsSorter(Shelf)
-            shelf_query = sorter.apply_sorting(shelf_query, sort_params)
-
-        return paginate(session, shelf_query)
-    except Exception as e:
-        inventory_logger.error(e)
-        raise InternalServerError(detail=f"{e}")
+    return paginate(session, shelf_query)
+    # except Exception as e:
+    #     inventory_logger.error(e)
+    #     raise InternalServerError(detail=f"{e}")
 
 
 @router.get("/open-locations/download", response_class=StreamingResponse)

@@ -42,7 +42,7 @@ def get_shelf_number_list(
     """
 
     # Create a query to select all Shelf Number
-    query = select(ShelfNumber).distinct()
+    query = select(ShelfNumber)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

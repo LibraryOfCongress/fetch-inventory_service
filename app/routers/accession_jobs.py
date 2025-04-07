@@ -62,7 +62,7 @@ def get_accession_job_list(
     - list: A paginated list of accession jobs.
     """
     try:
-        query = select(AccessionJob).distinct()
+        query = select(AccessionJob)
 
         if params.queue:
             # queue is the default view on the accession job screen

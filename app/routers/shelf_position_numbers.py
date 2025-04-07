@@ -41,7 +41,7 @@ def get_shelf_position_number_list(
     - Shelf Position Number List Output: The paginated list of shelf position numbers.
     """
     # Create a query to select all SShelf Position Number
-    query = select(ShelfPositionNumber).distinct()
+    query = select(ShelfPositionNumber)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

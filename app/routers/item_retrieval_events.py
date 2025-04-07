@@ -39,7 +39,7 @@ def get_item_retrieval_events(
     - Item Retrieval Event List Output: A paginated list of Item Retrieval Events.
     """
     # Create a query to retrieve all Groups
-    query = select(ItemRetrievalEvent).distinct()
+    query = select(ItemRetrievalEvent)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

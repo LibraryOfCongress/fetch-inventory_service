@@ -1,16 +1,12 @@
-from ctypes import cast
 from operator import or_
-from tokenize import String
 
-from sqlalchemy import asc, desc, func, inspect, case, and_
+from sqlalchemy import asc, desc, func, inspect, case, Text, Integer
+from sqlalchemy.types import Enum as enum
 from sqlalchemy.orm import Query, aliased
 from sqlalchemy.sql import union_all, select
-from fastapi.exceptions import HTTPException
-from sqlalchemy.sql.functions import coalesce
 
 from app.config.exceptions import BadRequest
-from app.logger import inventory_logger
-from app.models.aisle_numbers import AisleNumber
+
 from app.models.barcodes import Barcode
 from app.models.buildings import Building
 from app.models.container_types import ContainerType
@@ -78,11 +74,13 @@ class BaseSorter:
         Custom sorting can be implemented in subclasses.
         """
         sort_field = getattr(self.model, sort_params.sort_by, None)
+
         if sort_field:
-            if order_func == asc:
-                return query.order_by(asc(sort_field))
-            else:
-                return query.order_by(desc(sort_field))
+            if hasattr(sort_field, 'type') and isinstance(sort_field.type, enum):
+                query = query.order_by(order_func(func.cast(sort_field, Text)))
+                return query
+
+            return query.order_by(order_func(sort_field))
 
         raise BadRequest(detail=f"Invalid sort parameter: {sort_params.sort_by}")
 
@@ -508,6 +506,18 @@ class OpenLocationsSorter(BaseSorter):
             return query.order_by(order_func(SizeClass.short_name))
         if sort_params.sort_by == "media_type":
             return query.order_by(order_func(MediaType.name))
+        if sort_params.sort_by == "location":
+            # Join ShelfPosition if not already joined
+            query = query.order_by(
+                order_func(func.split_part(Shelf.location, "-", 1)),
+                order_func(func.cast(func.split_part(Shelf.location, "-", 2), Integer)),
+                order_func(func.cast(func.split_part(Shelf.location, "-", 3), Integer)),
+                order_func(func.split_part(Shelf.location, "-", 4)),
+                order_func(func.cast(func.split_part(Shelf.location, "-", 5), Integer)),
+                order_func(func.cast(func.split_part(Shelf.location, "-", 6), Integer)),
+            )
+
+            return query
 
         return super().custom_sort(query, sort_params, order_func)
 
@@ -570,18 +580,16 @@ class VerificationChangeSorter(BaseSorter):
     """
 
     def custom_sort(self, query: Query, sort_params, order_func):
-        if sort_params.sort_by == "workflow_id":
-            return query.order_by(order_func(VerificationChange.workflow_id))
         if sort_params.sort_by == "completed_dt":
-            return query.order_by(order_func(VerificationJob.update_dt))
+            return query.order_by(order_func("update_dt"))
         if sort_params.sort_by == "completed_by":
-            return query.order_by(order_func(VerificationChange.completed_by_id))
+            return query.order_by(order_func("completed_by_id"))
         if sort_params.sort_by == "item_barcode":
-            return query.order_by(order_func(VerificationChange.item_barcode_value))
+            return query.order_by(order_func("item_barcode_value"))
         if sort_params.sort_by == "tray_barcode":
-            return query.order_by(order_func(VerificationChange.tray_barcode_value))
+            return query.order_by(order_func("tray_barcode_value"))
         if sort_params.sort_by == "action":
-            return query.order_by(order_func(VerificationChange.change_type))
+            return query.order_by(order_func(func.cast(VerificationChange.change_type, Text)))
 
         return super().custom_sort(query, sort_params, order_func)
 

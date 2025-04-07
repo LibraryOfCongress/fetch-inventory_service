@@ -44,7 +44,7 @@ def get_side_orientation_list(
     - Side Orientation List Output: A paginated list of side orientations.
     """
     # Create a query to select all Side Orientation
-    query = select(SideOrientation).distinct()
+    query = select(SideOrientation)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

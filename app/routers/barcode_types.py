@@ -42,7 +42,7 @@ def get_barcode_types_list(
     -Barcode Types List Output: The paginated list of barcode types.
     """
     # Create a query to select all barcode types
-    query = select(BarcodeType).distinct()
+    query = select(BarcodeType)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

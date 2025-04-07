@@ -47,7 +47,7 @@ def get_group_list(
     """
 
     # Create a query to retrieve all Groups
-    query = select(Group).distinct()
+    query = select(Group)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

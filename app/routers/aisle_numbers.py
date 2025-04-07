@@ -40,7 +40,7 @@ def get_aisle_number_list(
     **Returns**:
     - Aisle Number List Output: The paginated list of aisle numbers.
     """
-    query = select(AisleNumber).distinct()
+    query = select(AisleNumber)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

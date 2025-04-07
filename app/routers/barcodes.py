@@ -50,7 +50,7 @@ def get_barcode_list(
     - list: A list of barcodes.
     """
     # Create a query to retrieve all barcodes
-    query = select(Barcode).distinct()
+    query = select(Barcode)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:

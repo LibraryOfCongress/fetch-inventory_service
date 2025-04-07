@@ -42,7 +42,7 @@ def get_permission_list(
     - Permission List Output: The paginated list of permissions.
     """
     # Create a query to select all Permission
-    query = select(Permission).distinct()
+    query = select(Permission)
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
