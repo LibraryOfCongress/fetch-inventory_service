@@ -235,7 +235,7 @@ deploy_test:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
 
-deploy_test:
+deploy_stage:
   stage: deploy
   image:
     name: bitnami/kubectl:latest
