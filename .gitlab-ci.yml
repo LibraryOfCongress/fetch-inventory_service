@@ -235,31 +235,22 @@ deploy_test:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
 
-deploy_stage:
+deploy_test:
   stage: deploy
-  tags:
-    - stage
   image:
-    name: git.loc.gov:4567/fetch/build/terraform:alt
-    entrypoint: [""]
+    name: bitnami/kubectl:latest
+    entrypoint: ['']
   environment:
     name: staging
     url: https://inventory.stage.fetch.loc.gov/status/
   script:
-    - export TF_VAR_vault_deployer_password=$VAULT_DEPLOYER_PASSWORD_STAGE
-    - export TF_VAR_vault_addr=$VAULT_ADDR_STAGE
-    - export TF_VAR_app_name="inventory-service"
-    - export TF_VAR_image='git.loc.gov:4567/fetch/inventory_service/stage:latest'
-    - export TF_VAR_timestamp=$CI_COMMIT_TIMESTAMP
-    - terraform --version
-    - cd terraform
-    - cp -v $FETCH_DEPLOYER_K8S_CONFIG_STAGE kubeconfig
-    - export TF_STATE_NAME=stage
-    - envsubst < backend.hcl.tmpl > backend.hcl
-    - terraform init -backend-config=backend.hcl
-    - terraform apply -auto-approve
+    - kubectl config use-context fetch/build:fetch-stage -v=6
+    - kubectl -n fetch apply -f k8s/deployment-stage.yml
+    - kubectl -n fetch apply -f k8s/service.yml
+    - sleep 10
+    - kubectl -n fetch rollout restart deployment/inventory-service
   rules:
-    - if: '$CI_COMMIT_BRANCH == "staging"'
+    - if: $CI_COMMIT_BRANCH == 'staging'
       when: manual
 
 deploy_prod:
