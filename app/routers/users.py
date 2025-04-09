@@ -28,7 +28,7 @@ from app.schemas.users import (
 
 import traceback
 
-from app.sorting import BaseSorter
+from app.sorting import BaseSorter, UserSorter
 
 router = APIRouter(
     prefix="/users",
@@ -61,7 +61,7 @@ def get_user_list(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        sorter = BaseSorter(User)
+        sorter = UserSorter(User)
         query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)

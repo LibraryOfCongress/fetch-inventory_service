@@ -641,3 +641,15 @@ class ShelvingJobDiscrepancySorter(BaseSorter):
             return query.order_by(order_func(SizeClass.short_name))
 
         return super().custom_sort(query, sort_params, order_func)
+
+
+class UserSorter(BaseSorter):
+    """
+    User List Sort By with specific sorting logic for related models.
+    """
+
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by == "name":
+            return query.order_by(func.concat(User.first_name, " ", User.last_name))
+
+        return super().custom_sort(query, sort_params, order_func)

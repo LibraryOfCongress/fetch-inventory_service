@@ -84,7 +84,7 @@ router = APIRouter(
 )
 
 
-def get_accessioned_items_count_query(params, sort_params=None):
+def get_accessioned_items_count_query(params, sort_params):
     item_query_conditions = []
     item_query_group_by = []
     non_tray_item_query_conditions = []
@@ -211,7 +211,7 @@ def get_accessioned_items_count_query(params, sort_params=None):
 
     final_query = select(*selection).select_from(combined_query)
 
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         if sort_params.sort_order not in ["asc", "desc"]:
             raise BadRequest(
                 detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
@@ -285,19 +285,10 @@ def get_accessioned_items_csv(
     - Streaming Response: The response with the csv file
     """
     if sort_params.sort_by:
-        if sort_params.sort_order not in ["asc", "desc"]:
-            raise BadRequest(
-                detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
-            )
-
-        order_func = asc if sort_params.sort_order == "asc" else desc
         # Get the query
         accession_query = get_accessioned_items_count_query(
-            params, sort_params.sort_by, order_func
+            params, sort_params
         )
-    else:
-        # Get the query
-        accession_query = get_accessioned_items_count_query(params)
 
     # Define the generator to stream data
     def generate_csv():
@@ -742,7 +733,7 @@ def get_aisle_item_counts_query(params, sort_params=None):
         query = query.filter(AisleNumber.number <= params.aisle_num_to)
 
     # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = AisleItemsCountSorter(Aisle)
         query = sorter.apply_sorting(query, sort_params)
@@ -825,7 +816,7 @@ def get_aisles_items_count_csv(
         raise HTTPException(status_code=404, detail="Building not found")
 
     aisles_query = get_aisle_item_counts_query(
-        params.building_id, params.aisle_num_from, params.aisle_num_to
+        params
     )
 
     # Define the generator to stream data
@@ -923,7 +914,7 @@ def get_non_tray_item_counts_query(params, sort_params=None):
         query = query.where(NonTrayItem.shelved_dt != None)
 
         # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = NonTrayItemCountSorter(NonTrayItem)
         query = sorter.apply_sorting(query, sort_params)
@@ -1109,7 +1100,7 @@ def get_tray_item_counts_query(params, sort_params=None):
     if not params.from_dt or not params.to_dt:
         query = query.where(Tray.shelved_dt != None)
 
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = TrayItemCountSorter(Tray)
         query = sorter.apply_sorting(query, sort_params)
@@ -1679,7 +1670,7 @@ def get_verification_change_query(params, sort_params=None):
         .where(and_(*conditions))
     )
 
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = VerificationChangeSorter(VerificationChange)
         query = sorter.apply_sorting(query, sort_params)
@@ -1846,7 +1837,7 @@ def get_retrieval_item_count_query(params, sort_params=None):
     ).group_by(combined_query.c.owner_name)
 
     # Sorting logic
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = RetrievalItemCountSorter(ItemRetrievalEvent)
         final_aggregation_query = sorter.apply_sorting(
