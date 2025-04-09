@@ -84,7 +84,7 @@ router = APIRouter(
 )
 
 
-def get_accessioned_items_count_query(params, sort_params):
+def get_accessioned_items_count_query(params, sort_params=None):
     item_query_conditions = []
     item_query_group_by = []
     non_tray_item_query_conditions = []
@@ -284,11 +284,8 @@ def get_accessioned_items_csv(
     **Returns**:
     - Streaming Response: The response with the csv file
     """
-    if sort_params.sort_by:
-        # Get the query
-        accession_query = get_accessioned_items_count_query(
-            params, sort_params
-        )
+
+    accession_query = get_accessioned_items_count_query(params)
 
     # Define the generator to stream data
     def generate_csv():
@@ -386,7 +383,7 @@ def get_shelving_job_report_csv(
     Translates list response of ShelvingJobDiscrepancy objects to csv,
     returns binary for download
     """
-    query = select(ShelvingJobDiscrepancy).distinct()
+    query = select(ShelvingJobDiscrepancy)
 
     if params.shelving_job_id:
         query = query.where(
