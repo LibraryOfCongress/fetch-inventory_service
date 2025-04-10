@@ -4,7 +4,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 
-from app.database.session import get_session
+from app.database.session import get_session, commit_record
 from app.events import update_shelf_space_after_tray
 from app.filter_params import SortParams, ItemFilterParams
 from app.models.barcodes import Barcode
@@ -12,6 +12,9 @@ from app.models.items import Item
 from app.models.media_types import MediaType
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
+from app.models.shelving_jobs import ShelvingJob
 from app.models.size_class import SizeClass
 from app.models.trays import Tray
 from app.models.verification_changes import VerificationChange
@@ -67,31 +70,29 @@ def get_item_list(
     if params.owner_id:
         item_queryset = item_queryset.where(Item.owner_id.in_(params.owner_id))
     if params.owner:
-        owner_subquery = (
-            select(Owner.id)
-            .where(Owner.name.in_(params.owner)).distinct()
-        )
+        owner_subquery = select(Owner.id).where(Owner.name.in_(params.owner)).distinct()
         item_queryset = item_queryset.where(Item.owner_id.in_(owner_subquery))
     if params.size_class_id:
-        item_queryset = item_queryset.where(Item.size_class_id.in_(params.size_class_id))
+        item_queryset = item_queryset.where(
+            Item.size_class_id.in_(params.size_class_id)
+        )
     if params.size_class:
         size_class_subquery = (
-            select(SizeClass.id)
-            .where(SizeClass.name.in_(params.size_class)).distinct()
+            select(SizeClass.id).where(SizeClass.name.in_(params.size_class)).distinct()
         )
         item_queryset = item_queryset.where(Item.size_class_id.in_(size_class_subquery))
     if params.media_type_id:
-        item_queryset = item_queryset.where(Item.media_type_id.in_(params.media_type_id))
+        item_queryset = item_queryset.where(
+            Item.media_type_id.in_(params.media_type_id)
+        )
     if params.media_type:
         media_type_subquery = (
-            select(MediaType.id)
-            .where(MediaType.name.in_(params.media_type)).distinct()
+            select(MediaType.id).where(MediaType.name.in_(params.media_type)).distinct()
         )
         item_queryset = item_queryset.where(Item.media_type_id.in_(media_type_subquery))
     if params.barcode_value:
         barcode_value_subquery = (
-            select(Barcode.id)
-            .where(Barcode.value.in_(params.barcode_value)).distinct()
+            select(Barcode.id).where(Barcode.value.in_(params.barcode_value)).distinct()
         )
         item_queryset = item_queryset.where(Item.barcode_id.in_(barcode_value_subquery))
     if params.from_dt:
@@ -231,23 +232,32 @@ def update_item(
         mutated_data = item.model_dump(exclude_unset=True)
 
         for key, value in mutated_data.items():
-            if key in ["media_type_id", "size_class_id"] and existing_item.__getattribute__(key) != value\
-                and existing_item.verification_job_id:
-                verification_job = session.query(VerificationJob).filter(
-                    VerificationJob.id == existing_item.verification_job_id).first()
-                tray_barcode = session.query(Barcode).join(
-                    Tray, Barcode.id == Tray.barcode_id
-                    ).filter(
-                    Tray.id == item.tray_id
-                    ).first()
+            if (
+                key in ["media_type_id", "size_class_id"]
+                and existing_item.__getattribute__(key) != value
+                and existing_item.verification_job_id
+            ):
+                verification_job = (
+                    session.query(VerificationJob)
+                    .filter(VerificationJob.id == existing_item.verification_job_id)
+                    .first()
+                )
+                tray_barcode = (
+                    session.query(Barcode)
+                    .join(Tray, Barcode.id == Tray.barcode_id)
+                    .filter(Tray.id == item.tray_id)
+                    .first()
+                )
                 item_barcode = session.get(Barcode, existing_item.barcode_id)
 
                 new_verification_change = VerificationChange(
                     workflow_id=verification_job.workflow_id,
                     tray_barcode_value=tray_barcode.value,
                     item_barcode_value=item_barcode.value,
-                    change_type="MediaTypeEdit" if key == "media_type_id" else "SizeClassEdit",
-                    completed_by_id=verification_job.user_id
+                    change_type=(
+                        "MediaTypeEdit" if key == "media_type_id" else "SizeClassEdit"
+                    ),
+                    completed_by_id=verification_job.user_id,
                 )
 
                 session.add(new_verification_change)
@@ -322,8 +332,7 @@ def move_item(
     )
     if not tray_look_barcode_value:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value
-            {item_input.tray_barcode_value} not found"""
+            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value {item_input.tray_barcode_value} not found"""
         )
 
     item = (
@@ -332,14 +341,59 @@ def move_item(
         .first()
     )
 
+    if not item:
+        raise ValidationException(
+            detail=f"""Failed to transfer: {barcode_value} - Item barcode value {item_lookup_barcode_value.value} not found"""
+        )
+
+    if (
+        item.status != "In"
+        or item.withdrawn_barcode_id is not None
+        or item.tray_id is None
+    ):
+        shelving_job_id = None
+        assigned_user_id = None
+        assigned_location = None
+
+        tray = session.query(Tray).where(Tray.id == item.tray_id).first()
+
+        if item.shelving_job_id:
+            # grab shelving job for user_id
+            shelving_job = (
+                session.query(ShelvingJob)
+                .where(ShelvingJob.id == tray.shelving_job_id)
+                .first()
+            )
+            shelving_job_id = shelving_job.id
+            assigned_user_id = shelving_job.user_id
+
+        pre_assigned_location = None
+        if tray.shelf_position_proposed_id:
+            pre_assigned_location = (
+                session.query(ShelfPosition)
+                .where(ShelfPosition.id == tray.shelf_position_proposed_id)
+                .first()
+            ).location
+
+        new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
+            shelving_job_id=shelving_job_id,
+            tray_id=tray.id,
+            assigned_user_id=assigned_user_id,
+            owner_id=tray.owner_id,
+            size_class_id=tray.size_class_id,
+            pre_assigned_location=pre_assigned_location,
+            assigned_location=assigned_location,
+            error=f"""Not Shelved Discrepancy - Container barcode {barcode_value} is not in a Shelf""",
+        )
+        commit_record(session, new_shelving_job_discrepancy)
+
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} is not in the tray"
+        )
+
     if not item.scanned_for_accession or not item.scanned_for_verification:
         raise ValidationException(
             detail=f"Failed to transfer: {barcode_value} has not been verified"
-        )
-
-    if item.status != "In":
-        raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} is not in the tray"
         )
 
     source_tray = session.query(Tray).filter(Tray.id == item.tray_id).first()
@@ -349,20 +403,13 @@ def move_item(
             detail=f"Failed to transfer: {barcode_value} - Tray ID {item.tray_id} not found"
         )
 
-    if not item:
-        raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Item barcode value
-             {item_lookup_barcode_value.value} not found"""
-        )
-
     destination_tray = (
         session.query(Tray).where(Tray.barcode_id == tray_look_barcode_value.id).first()
     )
 
     if not destination_tray:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value
-             {item_input.tray_barcode_value} not found"""
+            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value {item_input.tray_barcode_value} not found"""
         )
 
     background_tasks.add_task(
