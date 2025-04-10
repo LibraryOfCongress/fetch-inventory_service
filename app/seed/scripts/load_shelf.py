@@ -330,8 +330,14 @@ def load_shelf(
         return [success, failure, error, is_new_shelf_created, processed_shelf_id, processed_shelf_type_id]
     else:
         # fix missing prefix zero's
-        if len(shelf_barcode_value) < 6:
-            missing_zeros = 6 - len(shelf_barcode_value)
+        # if len(shelf_barcode_value) < 6:
+        #     missing_zeros = 6 - len(shelf_barcode_value)
+        #     for _ in range(missing_zeros):
+        #         shelf_barcode_value = f"0{shelf_barcode_value}"
+        
+        # shelf barcodes can now be 5 or 6 digits (valid)
+        if len(shelf_barcode_value) < 5:
+            missing_zeros = 5 - len(shelf_barcode_value)
             for _ in range(missing_zeros):
                 shelf_barcode_value = f"0{shelf_barcode_value}"
 
@@ -387,13 +393,21 @@ def load_shelf(
                 session.expire_all()
                 return [success, failure, error, is_new_shelf_created, processed_shelf_id, processed_shelf_type_id]
 
+    # everything has a legacy type
+    # so find new way to determine container type
     # satisfy container_type_id
-    if not shelf_legacy_type:
-        container_type = "Non-Tray"
-    elif shelf_legacy_type == "0":
+    if "NT" in shelf_legacy_type:
         container_type = "Non-Tray"
     else:
         container_type = "Tray"
+
+    # if not shelf_legacy_type:
+    #     container_type = "Non-Tray"
+    # elif shelf_legacy_type == "0":
+    #     container_type = "Non-Tray"
+    # else:
+    #     container_type = "Tray"
+
     container_type_id = (
         session.query(ContainerType.id)
         .filter(ContainerType.type == container_type).scalar()
@@ -429,26 +443,26 @@ def load_shelf(
     shelf_type_type = shelf_new_type
 
     # satisfy shelf_type_id
-    if not shelf_legacy_type:
-        # change when you know full vs short driver
-        shelf_type_result = (
-            session.query(ShelfType.id)
-            .join(SizeClass, SizeClass.id == ShelfType.size_class_id)
-            .filter(SizeClass.short_name == "NT").where(
-                ShelfType.type == shelf_type_type
-            ).first()
-        )
-        shelf_type_id = shelf_type_result[0] if shelf_type_result else None
-    elif shelf_legacy_type == "0":
-        shelf_type_result = (
-            session.query(ShelfType.id)
-            .join(SizeClass, SizeClass.id == ShelfType.size_class_id)
-            .filter(SizeClass.short_name == "NT").where(
-                ShelfType.type == shelf_type_type
-            ).first()
-        )
-        shelf_type_id = shelf_type_result[0] if shelf_type_result else None
-    elif not shelf_legacy_type.isalpha():
+    # if not shelf_legacy_type:
+    #     # change when you know full vs short driver
+    #     shelf_type_result = (
+    #         session.query(ShelfType.id)
+    #         .join(SizeClass, SizeClass.id == ShelfType.size_class_id)
+    #         .filter(SizeClass.short_name == "NT").where(
+    #             ShelfType.type == shelf_type_type
+    #         ).first()
+    #     )
+    #     shelf_type_id = shelf_type_result[0] if shelf_type_result else None
+    # elif shelf_legacy_type == "0":
+    #     shelf_type_result = (
+    #         session.query(ShelfType.id)
+    #         .join(SizeClass, SizeClass.id == ShelfType.size_class_id)
+    #         .filter(SizeClass.short_name == "NT").where(
+    #             ShelfType.type == shelf_type_type
+    #         ).first()
+    #     )
+    #     shelf_type_id = shelf_type_result[0] if shelf_type_result else None
+    if not shelf_legacy_type.isalpha():
         success = 0
         failure = 1
         is_new_shelf_created = 0
@@ -463,11 +477,13 @@ def load_shelf(
         session.expire_all()
         return [success, failure, error, is_new_shelf_created, processed_shelf_id, processed_shelf_type_id]
     else:
-        s_l_t_uppercase = shelf_legacy_type.upper() #convert before eval, else nullifies index benefits
+        if shelf_legacy_type == "Unassigned":
+            shelf_legacy_type = "UNA"
+        # s_l_t_uppercase = shelf_legacy_type.upper() #convert before eval, else nullifies index benefits
         shelf_type_result = (
             session.query(ShelfType.id)
             .join(SizeClass, SizeClass.id == ShelfType.size_class_id)
-            .filter(SizeClass.short_name == s_l_t_uppercase).where(
+            .filter(SizeClass.short_name == shelf_legacy_type).where(
                 ShelfType.type == shelf_type_type
             ).first()
         )
