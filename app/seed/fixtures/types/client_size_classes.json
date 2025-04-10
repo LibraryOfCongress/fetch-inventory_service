@@ -2,13 +2,6 @@
   "model": "app.models.size_class.SizeClass",
   "data": [
     {
-      "name": "NON-TRAY",
-      "short_name": "NT",
-      "height": 0,
-      "width": 0,
-      "depth": 0
-    },
-    {
       "name": "DOCUMENT STORAGE BOXES (LEGAL) - DS1",
       "short_name": "DS1",
       "height": 0,
@@ -732,6 +725,272 @@
     {
       "name": "Flat41",
       "short_name": "Flat41",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Unassigned",
+      "short_name": "UNA",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 1 per Shelf",
+      "short_name": "NT1",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 10 per Shelf",
+      "short_name": "NT10",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 11 per Shelf",
+      "short_name": "NT11",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 12 per Shelf",
+      "short_name": "NT12",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 13 per Shelf",
+      "short_name": "NT13",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 14 per Shelf",
+      "short_name": "NT14",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 15 per Shelf",
+      "short_name": "NT15",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 16 per Shelf",
+      "short_name": "NT16",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 17 per Shelf",
+      "short_name": "NT17",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 18 per Shelf",
+      "short_name": "NT18",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 19 per Shelf",
+      "short_name": "NT19",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 2 per Shelf",
+      "short_name": "NT2",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 21 per Shelf",
+      "short_name": "NT21",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 22 per Shelf",
+      "short_name": "NT22",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 23 per Shelf",
+      "short_name": "NT23",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 24 per Shelf",
+      "short_name": "NT24",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 25 per Shelf",
+      "short_name": "NT25",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 26 per Shelf",
+      "short_name": "NT26",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 27 per Shelf",
+      "short_name": "NT27",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 28 per Shelf",
+      "short_name": "NT28",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 29 per Shelf",
+      "short_name": "NT29",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 3 per Shelf",
+      "short_name": "NT3",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 30 per Shelf",
+      "short_name": "NT30",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 32 per Shelf",
+      "short_name": "NT32",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 33 per Shelf",
+      "short_name": "NT33",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 34 per Shelf",
+      "short_name": "NT34",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 36 per Shelf",
+      "short_name": "NT36",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 39 per Shelf",
+      "short_name": "NT39",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 4 per Shelf",
+      "short_name": "NT4",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 40 per Shelf",
+      "short_name": "NT40",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 42 per Shelf",
+      "short_name": "NT42",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 48 per Shelf",
+      "short_name": "NT48",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 5 per Shelf",
+      "short_name": "NT5",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 6 per Shelf",
+      "short_name": "NT6",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 7 per Shelf",
+      "short_name": "NT7",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 8 per Shelf",
+      "short_name": "NT8",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 9 per Shelf",
+      "short_name": "NT9",
       "height": 0,
       "width": 0,
       "depth": 0
