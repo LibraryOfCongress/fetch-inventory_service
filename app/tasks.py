@@ -18,6 +18,7 @@ from app.models.barcodes import Barcode
 from app.models.workflows import Workflow
 from app.database.session import commit_record, session_manager
 from app.schemas.verification_jobs import VerificationJobInput
+from app.utilities import start_session_with_audit_info
 
 
 def complete_accession_job(session, accession_job: AccessionJob, original_status):
@@ -31,8 +32,10 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
     This task allows us to auto-create verification jobs in queue,
     and to support job ownership change efficiently.
     """
+    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
         # update accession job run_time and last_transition
+        start_session_with_audit_info(audit_info, session)
         if original_status == "Running":
             time_difference = datetime.now(timezone.utc) - accession_job.last_transition
             accession_job.run_time += time_difference
@@ -111,7 +114,9 @@ def complete_verification_job(session, verification_job: VerificationJob):
 
     This task allows us to support job ownership change efficiently.
     """
+    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
+        start_session_with_audit_info(audit_info, session)
         # update verification job last_transition
         session.query(VerificationJob).where(
             VerificationJob.id == verification_job.id).update(
@@ -159,7 +164,9 @@ def manage_accession_job_transition(
         - If job cancelled, rolls back accessioned entities
         - Rolls back barcodes used by deleted entities
     """
+    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
+        start_session_with_audit_info(audit_info, session)
         # Compute time delta before changing last_transition
         if original_status == "Running":
             if accession_job.status != "Running":
@@ -219,7 +226,9 @@ def manage_verification_job_transition(
 
     Verification jobs do not get cancelled, so no item rollback needed.
     """
+    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
+        start_session_with_audit_info(audit_info, session)
         # Compute time delta before changing last_transition
         if original_status == "Running":
             if verification_job.status != "Running":
@@ -314,7 +323,9 @@ def process_non_tray_item_move(session: Session, non_tray_item: NonTrayItem, sou
 
 
 def manage_verification_job_change_action(session: Session, verification_job: VerificationJob, update_input: str, value: int):
+    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
+        start_session_with_audit_info(audit_info, session)
         new_verification_changes = []
 
         trays = verification_job.trays

@@ -42,3 +42,6 @@ class AuditTrail(SQLModel, table=True):
     new_values: Optional[dict] = Field(
         sa_column=sa.Column(JSON, nullable=True, default=None)
     )
+    updated_by_user_id: Optional[int] = Field(
+        sa_column=sa.Column(sa.VARCHAR(50), nullable=False, default=None)
+    )

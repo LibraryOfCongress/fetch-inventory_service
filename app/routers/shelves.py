@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
+from sqlalchemy import text
 from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination import paginate as paginate_list
@@ -35,7 +36,7 @@ from app.schemas.shelves import (
 )
 from app.config.exceptions import NotFound, ValidationException, InternalServerError
 from app.sorting import ShelvingSorter
-from app.utilities import get_sorted_query
+from app.utilities import get_sorted_query, start_session_with_audit_info
 
 router = APIRouter(
     prefix="/shelves",
@@ -281,6 +282,7 @@ def create_shelf(
         shelf_number = shelf_input.shelf_number
         shelf_number_id = shelf_input.shelf_number_id
         mutated_data = shelf_input.model_dump(exclude="shelf_number")
+        audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
 
         if not shelf_number_id and not shelf_number:
             raise ValidationException(
@@ -329,6 +331,7 @@ def create_shelf(
         ]
 
         session.add_all(shelf_positions_to_create)
+        start_session_with_audit_info(audit_info, session)
         session.commit()
         # re-calc space. This is blocking, for now
         new_shelf.calc_available_space(session=session)

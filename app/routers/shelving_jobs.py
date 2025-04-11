@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
@@ -13,7 +13,7 @@ from app.models.users import User
 from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.sorting import ShelvingJobSorter
 from app.utilities import (
-    process_containers_for_shelving, manage_transition
+    process_containers_for_shelving, manage_transition, start_session_with_audit_info
 )
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
@@ -197,6 +197,7 @@ def create_shelving_job(
         new_shelving_job = ShelvingJob(
             **shelving_job_input.model_dump(exclude={"verification_jobs"})
         )
+        audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
         session.add(new_shelving_job)
         session.commit()
         session.refresh(new_shelving_job)
@@ -259,6 +260,7 @@ def create_shelving_job(
                 # set verification shelving job last, in case container errors
                 verification_job.shelving_job_id = new_shelving_job.id
                 session.add(verification_job)
+                start_session_with_audit_info(audit_info, session)
                 session.commit()
 
         # else, shelving_job.origin == "Direct", return shelving_job
@@ -439,6 +441,7 @@ def reassign_container_location(
 
     Returns a Tray or NonTrayItem
     """
+    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     # get container
     if reassignment_input.container_id:
         if reassignment_input.trayed is not None:
@@ -667,6 +670,7 @@ def reassign_container_location(
         container.scanned_for_shelving = reassignment_input.scanned_for_shelving
 
     session.add(container)
+    start_session_with_audit_info(audit_info, session)
     session.commit()
     session.refresh(container)
 

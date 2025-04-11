@@ -1,5 +1,6 @@
 from sqlmodel import create_engine, Session
 from sqlalchemy.orm import sessionmaker
+from sqlmodel import text
 from fastapi import Request
 
 from contextlib import contextmanager
@@ -25,7 +26,7 @@ def get_session(request: Request = None):
     """
     with Session(engine, autoflush=False) as session:
         existing_session = None if not request else getattr(request.state, 'db_session', None)
-        
+
         # Use no_autoflush context for more control over session flush
         with session.no_autoflush:
             try:
@@ -76,16 +77,22 @@ def session_manager():
 
 
 def commit_record(session, record):
+    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     session.add(record)
     session.commit()
     session.refresh(record)
+    from app.utilities import start_session_with_audit_info
+    start_session_with_audit_info(audit_info, session)
     return record
 
 
 def bulk_commit_records(session, records):
+    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     session.bulk_save_objects(records)
     session.commit()
     session.refresh(records)
+    from app.utilities import start_session_with_audit_info
+    start_session_with_audit_info(audit_info, session)
     return records
 
 
