@@ -12,12 +12,12 @@ from app.models.barcode_types import BarcodeType
 from app.models.container_types import ContainerType
 from app.models.owners import Owner
 from app.models.size_class import SizeClass
-from app.models.sides import Side
-from app.models.side_orientations import SideOrientation
-from app.models.aisles import Aisle
-from app.models.aisle_numbers import AisleNumber
-from app.models.ladder_numbers import LadderNumber
-from app.models.ladders import Ladder
+# from app.models.sides import Side
+# from app.models.side_orientations import SideOrientation
+# from app.models.aisles import Aisle
+# from app.models.aisle_numbers import AisleNumber
+# from app.models.ladder_numbers import LadderNumber
+# from app.models.ladders import Ladder
 
 
 def is_shelf_number_valid(value):
@@ -27,199 +27,6 @@ def is_shelf_number_valid(value):
         return True
     else:
         return False
-
-
-# def determine_full_or_short(ladder_id, session):
-#     """
-#     Business logic to map certain ladder's shelves
-#     to 'Short' type.  If not 'Short', return 'Long'
-#     """
-#     ladder_id = int(ladder_id)
-#     side_id = None
-#     ladder_number_id = None
-#     aisle_id = None
-#     side_orientation_id = None
-
-#     ladder_result = session.query(
-#         Ladder.side_id,
-#         Ladder.ladder_number_id
-#     ).filter(
-#         Ladder.id == ladder_id
-#     ).first()
-
-#     if ladder_result:
-#         side_id, ladder_number_id = ladder_result
-
-#     side_result = session.query(
-#         Side.aisle_id,
-#         Side.side_orientation_id
-#     ).filter(
-#         Side.id == side_id
-#     ).first()
-
-#     if side_result:
-#         aisle_id, side_orientation_id = side_result
-
-#     side_orientation = (
-#         session.query(SideOrientation.name)
-#         .filter(SideOrientation.id == side_orientation_id).scalar()
-#     )
-
-#     aisle_number_id = (
-#         session.query(Aisle.aisle_number_id)
-#         .filter(Aisle.id == aisle_id).scalar()
-#     )
-
-#     aisle_number = (
-#         session.query(AisleNumber.number)
-#         .filter(AisleNumber.id == aisle_number_id).scalar()
-#     )
-
-#     ladder_number = (
-#         session.query(LadderNumber.number)
-#         .filter(LadderNumber.id == ladder_number_id).scalar()
-#     )
-
-#     aisle_num_side_face_ladder_num = f"{aisle_number}|{side_orientation[0]}|{ladder_number}"
-
-#     short_types = [
-#         "1|L|4",
-#         "1|L|14",
-#         "1|L|24",
-#         "2|L|4",
-#         "2|L|14",
-#         "2|L|24",
-#         "3|L|4",
-#         "3|L|14",
-#         "3|L|24",
-#         "4|L|4",
-#         "4|L|14",
-#         "4|L|24",
-#         "5|L|4",
-#         "5|L|14",
-#         "5|L|24",
-#         "6|L|4",
-#         "6|L|13",
-#         "6|L|22",
-#         "6|L|31",
-#         "7|L|4",
-#         "7|L|13",
-#         "7|L|22",
-#         "7|L|31",
-#         "8|L|4",
-#         "8|L|13",
-#         "8|L|22",
-#         "8|L|31",
-#         "9|L|4",
-#         "9|L|13",
-#         "9|L|22",
-#         "9|L|31",
-#         "10|L|4",
-#         "10|L|13",
-#         "10|L|22",
-#         "10|L|31",
-#         "11|L|4",
-#         "11|L|13",
-#         "11|L|22",
-#         "11|L|31",
-#         "12|L|4",
-#         "12|L|13",
-#         "12|L|22",
-#         "12|L|31",
-#         "13|L|4",
-#         "13|L|13",
-#         "13|L|22",
-#         "13|L|31",
-#         "14|L|4",
-#         "14|L|13",
-#         "14|L|22",
-#         "14|L|31",
-#         "15|L|4",
-#         "15|L|13",
-#         "15|L|22",
-#         "15|L|31",
-#         "16|L|4",
-#         "16|L|13",
-#         "16|L|22",
-#         "16|L|31",
-#         "17|L|4",
-#         "17|L|13",
-#         "17|L|22",
-#         "17|L|31",
-#         "18|L|4",
-#         "18|L|13",
-#         "18|L|22",
-#         "18|L|31",
-#         "19|L|4",
-#         "19|L|13",
-#         "19|L|22",
-#         "19|L|31",
-#         "20|L|4",
-#         "20|L|13",
-#         "20|L|22",
-#         "20|L|31",
-#         "52|L|4",
-#         "52|L|13",
-#         "52|L|22",
-#         "52|L|31",
-#         "53|L|4",
-#         "53|L|13",
-#         "53|L|22",
-#         "53|L|31",
-#         "54|L|4",
-#         "54|L|13",
-#         "54|L|22",
-#         "54|L|31",
-#         "55|L|4",
-#         "55|L|13",
-#         "55|L|22",
-#         "55|L|31",
-#         "56|L|4",
-#         "56|L|13",
-#         "56|L|22",
-#         "56|L|31",
-#         "57|R|4",
-#         "57|R|13",
-#         "57|R|22",
-#         "57|R|31",
-#         "58|R|4",
-#         "58|R|13",
-#         "58|R|22",
-#         "58|R|31",
-#         "59|R|4",
-#         "59|R|13",
-#         "59|R|22",
-#         "59|R|31",
-#         "60|R|4",
-#         "60|R|13",
-#         "60|R|22",
-#         "60|R|31",
-#         "61|R|4",
-#         "61|R|13",
-#         "61|R|22",
-#         "61|R|31",
-#         "62|L|4",
-#         "62|L|13",
-#         "62|L|22",
-#         "62|L|31",
-#         "63|L|4",
-#         "63|L|13",
-#         "63|L|22",
-#         "63|L|31",
-#         "64|L|4",
-#         "64|L|13",
-#         "64|L|22",
-#         "64|L|31",
-#         "65|L|4",
-#         "65|L|13",
-#         "65|L|22",
-#         "65|L|31"
-#     ]
-
-#     if aisle_num_side_face_ladder_num in short_types:
-#         return "Short"
-
-#     return "Full"
 
 
 def load_shelf(
@@ -232,6 +39,7 @@ def load_shelf(
     shelf_legacy_type,
     shelf_barcode_value,
     shelf_new_type,
+    shelf_container_type,
     row_num,
     session
 ):
@@ -393,24 +201,9 @@ def load_shelf(
                 session.expire_all()
                 return [success, failure, error, is_new_shelf_created, processed_shelf_id, processed_shelf_type_id]
 
-    # everything has a legacy type
-    # so find new way to determine container type
-    # satisfy container_type_id
-    if "NT" in shelf_legacy_type:
-        container_type = "Non-Tray"
-    else:
-        container_type = "Tray"
-
-    # if not shelf_legacy_type:
-    #     container_type = "Non-Tray"
-    # elif shelf_legacy_type == "0":
-    #     container_type = "Non-Tray"
-    # else:
-    #     container_type = "Tray"
-
     container_type_id = (
         session.query(ContainerType.id)
-        .filter(ContainerType.type == container_type).scalar()
+        .filter(ContainerType.type == shelf_container_type).scalar()
     )
 
     # satisfy owner_id

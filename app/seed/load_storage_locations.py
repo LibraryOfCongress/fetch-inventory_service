@@ -199,6 +199,7 @@ def process_loc_row(row_num, row):
     shelf_legacy_type = row[6]
     shelf_barcode_value = row[10]
     shelf_new_type = row[24]
+    shelf_container_type = row[25]
 
     shelf_result = load_shelf(
         shelf_number,
@@ -210,6 +211,7 @@ def process_loc_row(row_num, row):
         shelf_legacy_type,
         shelf_barcode_value,
         shelf_new_type,
+        shelf_container_type,
         row_num,
         session
     )

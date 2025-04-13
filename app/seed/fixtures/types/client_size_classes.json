@@ -821,6 +821,13 @@
       "depth": 0
     },
     {
+      "name": "Non-Tray- 20 per Shelf",
+      "short_name": "NT20",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
       "name": "Non-Tray- 21 per Shelf",
       "short_name": "NT21",
       "height": 0,
@@ -914,6 +921,13 @@
     {
       "name": "Non-Tray- 34 per Shelf",
       "short_name": "NT34",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 35 per Shelf",
+      "short_name": "NT35",
       "height": 0,
       "width": 0,
       "depth": 0
