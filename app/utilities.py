@@ -202,10 +202,10 @@ def process_containers_for_shelving(
         - Commits transactions
     """
 
-    # conditions are where clauses
+    # Initial filter conditions
     conditions = []
 
-    # perform joins from most constrained to least, for efficiency
+    # Perform joins from most constrained to least, for efficiency
     if ladder_id:
         conditions.append(Shelf.ladder_id == ladder_id)
     elif side_id:
@@ -215,11 +215,9 @@ def process_containers_for_shelving(
     elif module_id:
         conditions.append(Aisle.module_id == module_id)
     else:
-        # searching in aisles belonging to a building's modules
         conditions.append(Module.building_id == building_id)
 
-    # query is built without execution beforehand
-    # query is built without execution beforehand
+    # Base query
     shelf_position_query = (
         select(
             ShelfPosition.id.label("shelf_position_id"),
@@ -246,26 +244,22 @@ def process_containers_for_shelving(
         .join(Module, Module.id == Aisle.module_id)
         .where(
             not_(
-                select(Tray)
-                .where(
-                    or_(
-                        Tray.shelf_position_id == ShelfPosition.id,
-                        Tray.shelf_position_proposed_id == ShelfPosition.id,
-                    )
-                )
-                .exists()
+                select(1).where(Tray.shelf_position_id == ShelfPosition.id).exists()
             )
         )
         .where(
             not_(
-                select(NonTrayItem)
-                .where(
-                    or_(
-                        NonTrayItem.shelf_position_id == ShelfPosition.id,
-                        NonTrayItem.shelf_position_proposed_id == ShelfPosition.id,
-                    )
-                )
-                .exists()
+                select(1).where(Tray.shelf_position_proposed_id == ShelfPosition.id).exists()
+            )
+        )
+        .where(
+            not_(
+                select(1).where(NonTrayItem.shelf_position_id == ShelfPosition.id).exists()
+            )
+        )
+        .where(
+            not_(
+                select(1).where(NonTrayItem.shelf_position_proposed_id == ShelfPosition.id).exists()
             )
         )
     )
