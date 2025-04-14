@@ -204,7 +204,19 @@ def load_containers():
     session.close()
 
     with ThreadPoolExecutor(max_workers=16) as executor:
-        for chunk_start, chunk in enumerate(chunked_reader(legacy_tray_path, chunk_size=1000), start=1):
+        for chunk_start, chunk in enumerate(chunked_reader(legacy_tray_path, chunk_size=100000), start=1):
+
+            # DO NOT REMOVE (until this is handled by params)
+            # 619k rows in 100k chunks,  7 chunks
+            # (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7)
+            # each run will overwrite previous error file
+            # so extract it between runs. also rebuild app between runs
+            # in order to capture chunk selection changes
+            if chunk_start < 1:
+                continue
+            if chunk_start > 1:
+                break
+
             futures = [
                 executor.submit(
                     process_container_row,
