@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: fetch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+    spec:
+      containers:
+        - name: inventory-service
+          image: git.loc.gov:4567/fetch/inventory_service/stage:latest
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 8001
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "750m"
+              memory: "1024Mi"
+            requests:
+              ephemeral-storage: "200Mi"
+            limits:
+              ephemeral-storage: "500Mi"
+      imagePullSecrets:
+      - name: gitlab-api-2023
