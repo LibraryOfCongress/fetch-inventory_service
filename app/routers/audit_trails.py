@@ -11,13 +11,13 @@ from app.config.exceptions import (
     ValidationException,
 )
 from app.filter_params import SortParams
-from app.models.accession_jobs import AccessionJob
-from app.models.pick_lists import PickList
-from app.models.refile_jobs import RefileJob
+from app.models.accession_jobs import AccessionJob, AccessionJobStatus
+from app.models.pick_lists import PickList, PickListStatus
+from app.models.refile_jobs import RefileJob, RefileJobStatus
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelving_jobs import ShelvingJob, ShelvingJobStatus
-from app.models.verification_jobs import VerificationJob
-from app.models.withdraw_jobs import WithdrawJob
+from app.models.verification_jobs import VerificationJob, VerificationJobStatus
+from app.models.withdraw_jobs import WithdrawJob, WithdrawJobStatus
 from app.schemas.audit_trails import AuditTrailListOutput, AuditTrailDetailOutput
 from app.sorting import BaseSorter
 from app.models.audit_trails import AuditTrail
@@ -136,7 +136,15 @@ def get_audit_trails_detail_list(
             AuditTrail.record_id == str(audit_table_item_id)).where(
             AuditTrail.updated_at >= since_date
         )
-        if table_name == "shelving_jobs" and main_table.status == ShelvingJobStatus.Completed:
+        completed_dict = {
+            "shelving_jobs": ShelvingJobStatus.Completed,
+            "accession_jobs": AccessionJobStatus.Completed,
+            "verification_jobs": VerificationJobStatus.Completed,
+            "refile_jobs": RefileJobStatus.Completed,
+            "withdraw_jobs": WithdrawJobStatus.Completed,
+            "pick_lists": PickListStatus.Completed,
+        }
+        if table_name in completed_dict and completed_dict[table_name] == main_table.status:
             log_query = log_query.where(AuditTrail.updated_at <= main_table.update_dt)
         return log_query
 
@@ -147,7 +155,7 @@ def get_audit_trails_detail_list(
             operation_type="INSERT",
             record_id=str(main_table.id),
             updated_by=f"{main_table.created_by.first_name} {main_table.created_by.last_name}",
-            updated_at=main_table.create_dt.replace(tzinfo=None),
+            updated_at=audit_item.accession_dt.replace(tzinfo=None),
             last_action=f"Accessioned {audit_item.barcode.value}",
             original_values=None,
             new_values={"scanned_for_accession": "true"}
