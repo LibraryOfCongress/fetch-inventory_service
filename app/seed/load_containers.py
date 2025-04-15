@@ -212,10 +212,10 @@ def load_containers():
             # each run will overwrite previous error file
             # so extract it between runs. also rebuild app between runs
             # in order to capture chunk selection changes
-            if chunk_start < 1:
-                continue
-            if chunk_start > 1:
-                break
+            # if chunk_start < 1:
+            #     continue
+            # if chunk_start > 1:
+            #     break
 
             futures = [
                 executor.submit(
