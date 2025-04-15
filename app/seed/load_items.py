@@ -175,6 +175,7 @@ def process_item_row(
     item_accession_dt = row[3]
     shelf_position_number = row[10]
     create_dt = row[8] #legacy arrival date
+    status = row[16]
 
     if item_type == 'item':
         item_result = load_item(
@@ -184,6 +185,7 @@ def process_item_row(
             item_barcode_value,
             container_barcode_value,
             item_accession_dt,
+            status,
             session,
             owners_dict,
             barcode_types_dict,
@@ -222,6 +224,7 @@ def process_item_row(
             # shelved_dt,
             "NT",#size_class_short_name
             shelf_position_number,
+            status,
             session,
             container_types_dict,
             shelf_position_dict,
@@ -323,7 +326,7 @@ def load_items():
     session.close()
 
     with ThreadPoolExecutor(max_workers=32) as executor:
-        for chunk_start, chunk in enumerate(chunked_reader(legacy_item_path, chunk_size=1000), start=1):
+        for chunk_start, chunk in enumerate(chunked_reader(legacy_item_path, chunk_size=10000), start=1):
             futures = [
                 executor.submit(
                     process_item_row,

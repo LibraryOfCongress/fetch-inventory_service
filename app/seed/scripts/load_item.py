@@ -13,6 +13,7 @@ def load_item(
     item_barcode_value,
     container_barcode_value,
     item_accession_dt,
+    status,
     session,
     owners_dict,
     barcode_types_dict,
@@ -59,20 +60,20 @@ def load_item(
         If your system has something from 1968 or earlier, modify ingested dates to always be 4 digit
         and use pattern "%m/%d/%Y" instead
         """
-        if item_accession_dt == '?':
+        if item_accession_dt in ['?', '', None]:
             item_accession_dt = None
         else:
-            item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%y")
-        if create_dt == '?':
-            create_dt = datetime.utcnow
+            item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
+        if create_dt in ['?', '', None]:
+            create_dt = datetime.now(datetime.timezone.utc)
         else:
-            create_dt=datetime.strptime(create_dt, "%m/%d/%y")
+            create_dt=datetime.strptime(create_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
 
         item_instance = Item(
             owner_id=owners_dict.get(owner_name),
             size_class_id=current_container[0].get('size_class_id'),
             barcode_id=item_barcode_instance.id,
-            status="In",
+            status=status,
             container_type_id=container_types_dict.get("Tray"),
             tray_id=current_container[0].get('id'),
             media_type_id=current_container[0].get('media_type_id'),

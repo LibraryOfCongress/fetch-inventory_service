@@ -18,6 +18,7 @@ def load_non_tray(
     # shelved_dt,#foreign unsatisfied
     size_class_short_name,#satisfied
     shelf_position_number,#satisfied
+    status,
     session,#satisfied
     container_types_dict,#satisfied
     shelf_position_dict,#satisfied
@@ -103,18 +104,18 @@ def load_non_tray(
         and use pattern "%m/%d/%Y" instead
         """
         shelved_dt = non_tray_missing_data.get('shelved_dt')
-        if shelved_dt == '?':
+        if shelved_dt in ['?', '', None]:
             shelved_dt = None
         else:
-            shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%y")
-        if item_accession_dt == '?':
+            shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
+        if item_accession_dt in ['?', '', None]:
             item_accession_dt = None
         else:
-            item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%y")
-        if create_dt == '?':
+            item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
+        if create_dt in ['?', '', None]:
             create_dt = None
         else:
-            create_dt=datetime.strptime(create_dt, "%m/%d/%y")
+            create_dt=datetime.strptime(create_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
 
         # create the non-tray
         non_tray_instance = NonTrayItem(
@@ -130,7 +131,7 @@ def load_non_tray(
             scanned_for_accession=True,
             scanned_for_verification=True,
             scanned_for_shelving=True,
-            status="In",
+            status=status,
             create_dt=create_dt
         )
 
