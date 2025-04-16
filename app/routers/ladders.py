@@ -27,7 +27,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.sorting import BaseSorter
+from app.sorting import BaseSorter, LadderSorter
 
 router = APIRouter(
     prefix="/ladders",
@@ -80,7 +80,7 @@ def get_ladder_list(
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
         # Apply sorting using BaseSorter
-        sorter = BaseSorter(Ladder)
+        sorter = LadderSorter(Ladder)
         query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)

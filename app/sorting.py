@@ -6,6 +6,7 @@ from sqlalchemy.orm import Query, aliased
 from sqlalchemy.sql import union_all, select
 
 from app.config.exceptions import BadRequest
+from app.models.aisle_numbers import AisleNumber
 
 from app.models.barcodes import Barcode
 from app.models.buildings import Building
@@ -13,6 +14,7 @@ from app.models.container_types import ContainerType
 from app.models.delivery_locations import DeliveryLocation
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
+from app.models.ladder_numbers import LadderNumber
 from app.models.media_types import MediaType
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.non_tray_items import NonTrayItem
@@ -25,6 +27,7 @@ from app.models.refile_non_tray_items import RefileNonTrayItem
 from app.models.request_types import RequestType
 from app.models.requests import Request
 from app.models.shelf_numbers import ShelfNumber
+from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
@@ -651,5 +654,29 @@ class UserSorter(BaseSorter):
     def custom_sort(self, query: Query, sort_params, order_func):
         if sort_params.sort_by == "name":
             return query.order_by(func.concat(User.first_name, " ", User.last_name))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class AisleSorter(BaseSorter):
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by.lower() == 'aisle_number':
+            return query.join(AisleNumber).order_by(order_func(AisleNumber.number))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class LadderSorter(BaseSorter):
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by.lower() == 'ladder_number':
+            return query.join(LadderNumber).order_by(order_func(LadderNumber.number))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class ShelvesSorter(BaseSorter):
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by.lower() == 'shelf_position_number':
+            return query.join(ShelfPositionNumber).order_by(order_func(ShelfPositionNumber.number))
 
         return super().custom_sort(query, sort_params, order_func)
