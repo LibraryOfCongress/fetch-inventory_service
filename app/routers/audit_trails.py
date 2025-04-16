@@ -91,6 +91,8 @@ def get_audit_trails_detail_list(
 
     def add_last_action(logs, audit_item, audit_table_name):
         return_logs = []
+        picklist = {}
+        refile = {}
         for log in logs:
             if audit_table_name == "accession_jobs" and "scanned_for_accession" in log.new_values:
                 log.last_action = f"Accessioned {audit_item.barcode.value}"
@@ -112,23 +114,28 @@ def get_audit_trails_detail_list(
             if audit_table_name == "withdraw_jobs" and "status" in log.new_values:
                 log.last_action = f"Withdrew {audit_item.withdrawn_barcode.value}"
                 return [log]
-            if audit_table_name == "refile_jobs" and "scanned_for_refile_queue" in log.new_values:
+            if audit_table_name == "refile_jobs" and "scanned_for_refile_queue" in log.new_values and log.new_values["scanned_for_refile_queue"]:
                 log.last_action = f"Added to refile queue {audit_item.barcode.value}"
-                return_logs.append(log)
-            if audit_table_name == "refile_jobs" and "status" in log.new_values:
+                refile["scanned_for_refile"] = log
+            if audit_table_name == "refile_jobs" and "status" in log.new_values and log.new_values["status"] == "In":
                 log.last_action = f"Refiled {audit_item.barcode.value}"
-                return_logs.append(log)
-                return return_logs
+                refile["refiled"] = log
             if audit_table_name == "pick_lists" and "status" in log.new_values:
-                if "Requested" == log.original_values["status"]:
-                    log.last_action = f"Requested {audit_item.barcode.value}"
-                    return_logs.append(log)
-                elif "PickList" == log.original_values["status"]:
+                if "PickList" == log.new_values["status"]:
+                    log.last_action = f"Added to Picklist {audit_item.barcode.value}"
+                    picklist["picklist"] = log
+                elif "Out" == log.new_values["status"]:
                     log.last_action = f"Picked {audit_item.barcode.value}"
-                    return_logs.append(log)
-                elif "Withdrawn" == log.original_values["status"]:
+                    picklist['picked'] = log
+                elif "Withdrawn" == log.new_values["status"]:
                     log.last_action = f"Withdrew {audit_item.barcode_value}"
-                    return_logs.append(log)
+                    picklist['withdrawn'] = log
+        for action_type in ["requested", "picklist", "picked", "withdrawn"]:
+            if action_type in picklist:
+                return_logs.append(picklist[action_type])
+        for action_type in ["scanned_for_refile", "refiled"]:
+            if action_type in refile:
+                return_logs.append(refile[action_type])
         return return_logs
 
     def get_audit_query(audit_table_name, audit_table_item_id, since_date):
