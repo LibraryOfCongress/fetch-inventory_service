@@ -57,6 +57,11 @@ def get_sqlalchemy_session():
         db.close()
 
 
+def get_sqlalchemy_session_for_item_migration():
+    """ Thread safe version """
+    return sa_hybrid_session_local()
+
+
 def get_sqlalchemy_session_for_storage_migration():
     """ Thread safe version """
     return sa_hybrid_session_local()

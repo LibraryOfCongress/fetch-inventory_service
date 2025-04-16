@@ -19,7 +19,7 @@ def load_non_tray(
     size_class_short_name,#satisfied
     shelf_position_number,#satisfied
     status,
-    session,#satisfied
+    # session,#satisfied
     container_types_dict,#satisfied
     shelf_position_dict,#satisfied
     size_class_dict,#satisfied
@@ -36,6 +36,8 @@ def load_non_tray(
     success = None
     failure = None
     error = None
+    barcode_object = None
+    non_tray_item_object = None
 
     try:
         # fix owner_name casing
@@ -54,8 +56,10 @@ def load_non_tray(
             value=item_barcode_value,
             type_id=barcode_types_dict.get("Item")
         )
-        session.add(non_tray_barcode_instance)
-        session.commit()
+        # session.add(non_tray_barcode_instance)
+        # session.commit()
+        # session.flush()  # assigns the `id`, but doesn't commit
+        barcode_object = non_tray_barcode_instance
 
         # grab missing data for item.txt (satisfied from tray.txt)
         non_tray_missing_data = non_tray_missing_data_dict.get(shelf_barcode_value) #returns a list of dictionaries
@@ -135,20 +139,24 @@ def load_non_tray(
             create_dt=create_dt
         )
 
-        session.add(non_tray_instance)
+        # session.add(non_tray_instance)
 
-        session.commit()
+        # session.commit()
+
+        non_tray_item_object = non_tray_instance
 
         success = 1
         failure = 0
     except Exception as e:
-        session.rollback()
+        # session.rollback()
         success = 0
         failure = 1
+        barcode_object = None
+        non_tray_item_object = None
         error = {
             "row": row_num,
             "non_tray_item_barcode": f":: {item_barcode_value}",
             "reason": f"{e}"
         }
     finally:
-        return [success, failure, error]
+        return [success, failure, error, barcode_object, non_tray_item_object]

@@ -14,7 +14,7 @@ def load_item(
     container_barcode_value,
     item_accession_dt,
     status,
-    session,
+    # session,
     owners_dict,
     barcode_types_dict,
     container_types_dict,
@@ -30,6 +30,9 @@ def load_item(
     success = None
     failure = None
     error = None
+    barcode_object = None
+    item_object = None
+
 
     try:
         # fix owner_name casing
@@ -48,8 +51,10 @@ def load_item(
             value=item_barcode_value,
             type_id=barcode_types_dict.get("Item")
         )
-        session.add(item_barcode_instance)
-        session.commit()
+        # session.add(item_barcode_instance)
+        # session.commit()
+        # session.flush()  # assigns the `id`, but doesn't commit
+        barcode_object = item_barcode_instance
 
         # sanitize unknown dates
         """
@@ -88,21 +93,24 @@ def load_item(
             create_dt=create_dt
         )
 
-        session.add(item_instance)
+        # session.add(item_instance)
 
-        session.commit()
+        # session.commit()
+        item_object = item_instance
 
         success = 1
         failure = 0
 
     except Exception as e:
-        session.rollback()
+        # session.rollback()
         success = 0
         failure = 1
+        barcode_object = None
+        item_object = None
         error = {
             "row": row_num,
             "item_barcode": f":: {item_barcode_value}",
             "reason": f"{e}"
         }
     finally:
-        return [success, failure, error]
+        return [success, failure, error, barcode_object, item_object]
