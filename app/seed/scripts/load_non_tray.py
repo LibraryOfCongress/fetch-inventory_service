@@ -111,11 +111,19 @@ def load_non_tray(
         if shelved_dt in ['?', '', None]:
             shelved_dt = None
         else:
-            shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
+            # 11/12/2004 (tray.txt format)
+            # 11/12/04 (item.txt format)
+            if len(shelved_dt) < 10:
+                shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
+            else:
+                shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%Y").replace(tzinfo=timezone.utc)
         if item_accession_dt in ['?', '', None]:
             item_accession_dt = None
         else:
-            item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
+            if len(item_accession_dt) < 10:
+                item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
+            else:
+                item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%Y").replace(tzinfo=timezone.utc)
         if create_dt in ['?', '', None]:
             create_dt = None
         else:
