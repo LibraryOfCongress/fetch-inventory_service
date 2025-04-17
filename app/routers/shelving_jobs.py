@@ -13,7 +13,9 @@ from app.models.users import User
 from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.sorting import ShelvingJobSorter
 from app.utilities import (
-    process_containers_for_shelving, manage_transition, start_session_with_audit_info
+    process_containers_for_shelving,
+    manage_transition,
+    start_session_with_audit_info,
 )
 from app.models.verification_jobs import VerificationJob
 from app.models.trays import Tray
@@ -35,7 +37,8 @@ from app.schemas.shelving_jobs import (
 from app.config.exceptions import (
     NotFound,
     ValidationException,
-    InternalServerError, BadRequest,
+    InternalServerError,
+    BadRequest,
 )
 
 router = APIRouter(
@@ -51,20 +54,25 @@ def get_shelving_position(session: Session, shelving_job: ShelvingJob):
     if trays:
         for index, tray in enumerate(trays):
             if not tray.shelf_position_id and tray.shelf_position_proposed_id:
-                trays[index].shelf_position = session.query(ShelfPosition).where(
-                    tray.shelf_position_proposed_id == ShelfPosition.id
-                ).first()
+                trays[index].shelf_position = (
+                    session.query(ShelfPosition)
+                    .where(tray.shelf_position_proposed_id == ShelfPosition.id)
+                    .first()
+                )
             else:
                 continue
 
     if non_tray_items:
         for index, non_tray_item in enumerate(non_tray_items):
-            if not non_tray_item.shelf_position_id and non_tray_item.shelf_position_proposed_id:
-                non_tray_items[index].shelf_position = session.query(
-                    ShelfPosition
-                    ).where(
-                    non_tray_item.shelf_position_proposed_id == ShelfPosition.id
-                ).first()
+            if (
+                not non_tray_item.shelf_position_id
+                and non_tray_item.shelf_position_proposed_id
+            ):
+                non_tray_items[index].shelf_position = (
+                    session.query(ShelfPosition)
+                    .where(non_tray_item.shelf_position_proposed_id == ShelfPosition.id)
+                    .first()
+                )
             else:
                 continue
 
@@ -73,11 +81,12 @@ def get_shelving_position(session: Session, shelving_job: ShelvingJob):
 
     return shelving_job
 
+
 @router.get("/", response_model=Page[ShelvingJobListOutput])
 def get_shelving_job_list(
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Retrieve a paginated list of shelving jobs.
@@ -121,7 +130,7 @@ def get_shelving_job_list(
             assigned_user_subquery = (
                 select(User.id)
                 .where(
-                    func.concat(User.first_name, ' ', User.last_name).in_(
+                    func.concat(User.first_name, " ", User.last_name).in_(
                         params.assigned_user
                     )
                 )
@@ -341,8 +350,10 @@ def delete_shelving_job(id: int, session: Session = Depends(get_session)):
     """
     shelving_job = session.get(ShelvingJob, id)
     if shelving_job.status in ["Running", "Completed"]:
-        raise ValidationException(detail=f"""Shelving Job ID {id} status is in "
-                                         'Running' or 'Completed'""")
+        raise ValidationException(
+            detail=f"""Shelving Job ID {id} status is in "
+                                         'Running' or 'Completed'"""
+        )
 
     if shelving_job:
         trays = shelving_job.trays
@@ -358,50 +369,56 @@ def delete_shelving_job(id: int, session: Session = Depends(get_session)):
                         "shelf_position_id": None,
                         "shelf_position_proposed_id": None,
                         "shelved_dt": None,
-                        "update_dt": update_dt
+                        "update_dt": update_dt,
                     }
                 )
 
         if non_tray_items:
             non_tray_item_ids = [non_tray_item.id for non_tray_item in non_tray_items]
             if non_tray_item_ids:
-                session.query(NonTrayItem).filter(NonTrayItem.id.in_(
-                    non_tray_item_ids)).update(
+                session.query(NonTrayItem).filter(
+                    NonTrayItem.id.in_(non_tray_item_ids)
+                ).update(
                     {
                         "shelving_job_id": None,
                         "shelf_position_id": None,
                         "shelf_position_proposed_id": None,
                         "shelved_dt": None,
-                        "update_dt": update_dt
+                        "update_dt": update_dt,
                     }
                 )
 
         # Updating Verifications Jobs
-        existing_verification_jobs = session.query(VerificationJob).where(
-            VerificationJob.shelving_job_id == id
-        ).all()
+        existing_verification_jobs = (
+            session.query(VerificationJob)
+            .where(VerificationJob.shelving_job_id == id)
+            .all()
+        )
 
         if existing_verification_jobs:
-            verification_job_ids = [verification_job.id for verification_job in existing_verification_jobs]
+            verification_job_ids = [
+                verification_job.id for verification_job in existing_verification_jobs
+            ]
             if verification_job_ids:
-                session.query(VerificationJob).filter(VerificationJob.id.in_(
-                    verification_job_ids)).update(
-                    {
-                        "shelving_job_id": None,
-                        "update_dt": update_dt
-                    }
-                )
+                session.query(VerificationJob).filter(
+                    VerificationJob.id.in_(verification_job_ids)
+                ).update({"shelving_job_id": None, "update_dt": update_dt})
 
         # Removing Shelving Job Discrepancies
-        existing_shelving_job_discrepancies = session.query(ShelvingJobDiscrepancy).where(
-            ShelvingJobDiscrepancy.shelving_job_id == id
-        ).all()
+        existing_shelving_job_discrepancies = (
+            session.query(ShelvingJobDiscrepancy)
+            .where(ShelvingJobDiscrepancy.shelving_job_id == id)
+            .all()
+        )
 
         if existing_shelving_job_discrepancies:
-            discrepancy_ids = [discrepancy.id for discrepancy in existing_shelving_job_discrepancies]
+            discrepancy_ids = [
+                discrepancy.id for discrepancy in existing_shelving_job_discrepancies
+            ]
             if discrepancy_ids:
-                session.query(ShelvingJobDiscrepancy).filter(ShelvingJobDiscrepancy.id.in_(
-                    discrepancy_ids)).delete()
+                session.query(ShelvingJobDiscrepancy).filter(
+                    ShelvingJobDiscrepancy.id.in_(discrepancy_ids)
+                ).delete()
 
         session.delete(shelving_job)
         session.commit()
@@ -505,7 +522,6 @@ def reassign_container_location(
         raise ValidationException(
             detail="Either shelf_id or shelf_barcode_value must be provided."
         )
-
     # get shelf position
     shelf_position_position_number_join = (
         select(ShelfPosition, ShelfPositionNumber)
@@ -515,21 +531,22 @@ def reassign_container_location(
     )
     shelf_position_position_number_join = session.exec(
         shelf_position_position_number_join
-    ).all()
+    ).first()
 
     if not shelf_position_position_number_join:
         raise ValidationException(
             detail=f"""Shelf Position Number {reassignment_input.shelf_position_number} does not exist on shelf {reassignment_input.shelf_id}"""
         )
 
+    # Check for Availability
+    shelf = shelf_position_position_number_join.ShelfPosition.shelf
+    shelf_position = shelf_position_position_number_join.ShelfPosition
+
     # check if tray or non-tray
     if reassignment_input.trayed:
         tray_exists = (
             session.query(Tray)
-            .filter(
-                Tray.shelf_position_id
-                == shelf_position_position_number_join.ShelfPosition.id
-            )
+            .filter(Tray.shelf_position_id == shelf_position.id)
             .where(Tray.id != container.id)
             .first()
         )
@@ -537,49 +554,26 @@ def reassign_container_location(
         non_tray_exists = (
             session.query(NonTrayItem)
             .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
-            .filter(
-                NonTrayItem.shelf_position_id
-                == shelf_position_position_number_join.ShelfPosition.id
-            )
+            .filter(NonTrayItem.shelf_position_id == shelf_position.id)
             .first()
         )
     else:
         tray_exists = (
             session.query(Tray)
-            .filter(
-                Tray.shelf_position_id
-                == shelf_position_position_number_join.ShelfPosition.id
-            )
+            .filter(Tray.shelf_position_id == shelf_position.id)
             .first()
         )
 
         non_tray_exists = (
             session.query(NonTrayItem)
             .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
-            .filter(
-                NonTrayItem.shelf_position_id
-                == shelf_position_position_number_join.ShelfPosition.id
-            )
+            .filter(NonTrayItem.shelf_position_id == shelf_position.id)
             .where(NonTrayItem.id != container.id)
             .first()
         )
-
-    updated_shelf_position_id = shelf_position_position_number_join.ShelfPosition.id
-    shelf_position = (
-        session.query(ShelfPosition)
-        .where(ShelfPosition.id == updated_shelf_position_id)
-        .first()
-    )
-    updated_shelf = (
-        session.query(Shelf).where(Shelf.id == shelf_position.shelf_id).first()
-    )
     # grab shelving job for user_id
-    shelving_job = (
-        session.query(ShelvingJob)
-        .where(ShelvingJob.id == id)
-        .first()
-    )
-    shelf_type = updated_shelf.shelf_type
+    shelving_job = session.query(ShelvingJob).where(ShelvingJob.id == id).first()
+    shelf_type = shelf.shelf_type
     pre_assigned_location = None
     if container.container_type_id == 1:
         discrepancy_tray_id = container.id
@@ -595,73 +589,47 @@ def reassign_container_location(
             .first()
         ).location
 
-    shelf_position_position_number_join = shelf_position_position_number_join[0]
-
-    # Check for Availability
-    shelf = shelf_position_position_number_join.ShelfPosition.shelf
     if shelf.available_space <= 0:
         new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
             shelving_job_id=id,
             tray_id=discrepancy_tray_id,
             non_tray_item_id=discrepancy_non_tray_id,
             assigned_user_id=shelving_job.user_id,
-            owner_id=updated_shelf.owner_id,
+            owner_id=shelf.owner_id,
             size_class_id=shelf_type.size_class_id,
-            assigned_location=shelf_position.location,
+            assigned_location=shelf.location,
             pre_assigned_location=pre_assigned_location,
             error=f"""Available Space Discrepancy - Shelf location {shelf.location}
-                    has no available space"""
+                    has no available space""",
         )
-        commit_record(
-            session, new_shelving_job_discrepancy
-        )
+        commit_record(session, new_shelving_job_discrepancy)
         raise ValidationException(detail=f"Shelf ID {shelf.id} has no available space")
 
     if tray_exists or non_tray_exists:
-        shelf_position_location = updated_shelf.location + "-" + reassignment_input.shelf_position_number
+        shelf_position_location = (
+            shelf.location + "-" + reassignment_input.shelf_position_number
+        )
         new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
             shelving_job_id=id,
             tray_id=discrepancy_tray_id,
             non_tray_item_id=discrepancy_non_tray_id,
             assigned_user_id=shelving_job.user_id,
-            owner_id=updated_shelf.owner_id,
+            owner_id=shelf.owner_id,
             size_class_id=shelf_type.size_class_id,
             assigned_location=shelf_position.location,
             pre_assigned_location=pre_assigned_location,
             error=f"""Shelf Position Discrepancy - Shelf Position {shelf_position_location}
-                    is already occupied"""
+                    is already occupied""",
         )
-        commit_record(
-            session, new_shelving_job_discrepancy
-        )
+        commit_record(session, new_shelving_job_discrepancy)
         raise ValidationException(
             detail=f"""Shelf Position {shelf_position_location} is already occupied"""
-        )
-
-    if updated_shelf.available_space <= 0:
-        new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
-            shelving_job_id=id,
-            tray_id=discrepancy_tray_id,
-            non_tray_item_id=discrepancy_non_tray_id,
-            assigned_user_id=shelving_job.user_id,
-            owner_id=updated_shelf.owner_id,
-            size_class_id=shelf_type.size_class_id,
-            assigned_location=shelf_position.location,
-            pre_assigned_location=pre_assigned_location,
-            error=f"""Available Space Discrepancy - Shelf location {updated_shelf.location}
-            has no available space"""
-        )
-        commit_record(
-            session, new_shelving_job_discrepancy
-        )
-        raise ValidationException(
-            detail=f"Shelf location {updated_shelf.location} has no available space."
         )
 
     # Check if the container owner and size class match to shelf
     if (
         container.size_class_id != shelf_type.size_class_id
-        or container.owner_id != updated_shelf.owner_id
+        or container.owner_id != shelf.owner_id
     ):
         # Create a Discrepancy
         discrepancy_error = "Unknown"
@@ -672,20 +640,20 @@ def reassign_container_location(
             discrepancy_tray_id = None
             discrepancy_non_tray_id = container.id
         if container.size_class_id != shelf_type.size_class_id:
-            discrepancy_error = f"""Size Discrepancy - Container size_id: {container.size_class_id} - Shelf size_id: {shelf_type.size_class_id}"""
-        if container.owner_id != updated_shelf.owner_id:
-            discrepancy_error = f"""Owner Discrepancy - Container owner_id: {container.owner_id} - Shelf owner_id: {updated_shelf.owner_id}"""
+            discrepancy_error = f"""Size Discrepancy - Container size_id: {container.size_class_id} does not match Shelf size_id: {shelf_type.size_class_id}"""
+        if container.owner_id != shelf.owner_id:
+            discrepancy_error = f"""Owner Discrepancy does not match Container owner_id: {container.owner_id} - Shelf owner_id: {shelf.owner_id}"""
 
         new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
             shelving_job_id=id,
             tray_id=discrepancy_tray_id,
             non_tray_item_id=discrepancy_non_tray_id,
             assigned_user_id=shelving_job.user_id,
-            owner_id=updated_shelf.owner_id,
+            owner_id=shelf.owner_id,
             size_class_id=shelf_type.size_class_id,
             assigned_location=shelf_position.location,
             pre_assigned_location=pre_assigned_location,
-            error=f"{discrepancy_error}"
+            error=f"{discrepancy_error}",
         )
         commit_record(session, new_shelving_job_discrepancy)
 
@@ -696,9 +664,7 @@ def reassign_container_location(
 
     # Checking and verifying Verification Job
     if container.verification_job_id:
-        verification_job = session.get(
-            VerificationJob, container.verification_job_id
-        )
+        verification_job = session.get(VerificationJob, container.verification_job_id)
 
         if verification_job.shelving_job_id is None:
             verification_job.shelving_job_id = id
@@ -709,7 +675,7 @@ def reassign_container_location(
     # only reassign actual, not proposed
     container.shelving_job_id = id
     old_shelf_position_id = container.shelf_position_id
-    container.shelf_position_id = shelf_position_position_number_join.ShelfPosition.id
+    container.shelf_position_id = shelf_position.id
 
     if reassignment_input.shelved_dt is not None:
         container.shelved_dt = reassignment_input.shelved_dt
@@ -724,8 +690,12 @@ def reassign_container_location(
     session.refresh(container)
 
     if container.container_type_id == 1:
-        update_shelf_space_after_tray(container, container.shelf_position_id, old_shelf_position_id)
+        update_shelf_space_after_tray(
+            container, container.shelf_position_id, old_shelf_position_id
+        )
     else:
-        update_shelf_space_after_non_tray(container, container.shelf_position_id, old_shelf_position_id)
+        update_shelf_space_after_non_tray(
+            container, container.shelf_position_id, old_shelf_position_id
+        )
 
     return container
