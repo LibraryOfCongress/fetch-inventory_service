@@ -182,7 +182,7 @@ class NonTrayItem(SQLModel, table=True):
     subcollection: Optional["Subcollection"] = Relationship(
         back_populates="non_tray_items"
     )
-    refile_jobs: Optional[RefileJob] = Relationship(
+    refile_jobs: List[RefileJob] = Relationship(
         back_populates="non_tray_items", link_model=RefileNonTrayItem
     )
     requests: List["Request"] = Relationship(back_populates="non_tray_item")
