@@ -229,7 +229,7 @@ def get_audit_trails_detail_list(
     results = session.exec(query).all() + logs
 
     if not results:
-        raise NotFound(detail="No audit trail found for the record.")
+        return []
 
     for result in results:
         if result.updated_by in ["", "postgres"]:
