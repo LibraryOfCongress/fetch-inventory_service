@@ -1,4 +1,4 @@
-import os, csv, re
+import os, csv, re, gc
 
 from collections import defaultdict
 from concurrent.futures import as_completed, ThreadPoolExecutor
@@ -332,6 +332,8 @@ def load_items():
 
             # session = get_sqlalchemy_session_for_item_migration()
 
+            session = next(get_sqlalchemy_session())
+
             futures = [
                 executor.submit(
                     process_item_row,
@@ -357,6 +359,11 @@ def load_items():
 
             # Collect and unpack results
             for future in as_completed(futures):
+                item_barcode_objects = []
+                item_objects = []
+                nt_barcode_objects = []
+                nt_objects = []
+
                 p_skipped_row_count, p_item_result, p_non_tray_item_result = future.result()
                 skipped_row_count += p_skipped_row_count
                 if p_item_result:
@@ -366,10 +373,12 @@ def load_items():
                         results["items"]["errors"].append(p_item_result[2])
                     # p_item_result[3] are barcode objects
                     if p_item_result[3]:
-                        session.add(p_item_result[3])
+                        # session.add(p_item_result[3])
+                        item_barcode_objects.append(p_item_result[3])
                     # p_item_result[4] are item objects
                     if p_item_result[4]:
-                        session.add(p_item_result[4])
+                        # session.add(p_item_result[4])
+                        item_objects.append(p_item_result[4])
                 if p_non_tray_item_result:
                     results["non_tray_items"]["successful_rows"] += p_non_tray_item_result[0]
                     results["non_tray_items"]["failed_rows"] += p_non_tray_item_result[1]
@@ -377,18 +386,25 @@ def load_items():
                         results["non_tray_items"]["errors"].append(p_non_tray_item_result[2])
                     # p_non_tray_item_result[3] are barcode objects
                     if p_non_tray_item_result[3]:
-                        session.add(p_non_tray_item_result[3])
+                        # session.add(p_non_tray_item_result[3])
+                        nt_barcode_objects.append(p_non_tray_item_result[3])
                     # p_non_tray_item_result[4] are non_tray_items
                     if p_non_tray_item_result[4]:
-                        session.add(p_non_tray_item_result[4])
+                        # session.add(p_non_tray_item_result[4])
+                        nt_objects.append(p_non_tray_item_result[4])
 
             # Database ops here
             # Flush to get barcode id's before commit
             session.flush()
             # Save all
+            session.bulk_save_objects(item_barcode_objects)
+            session.bulk_save_objects(nt_barcode_objects)
+            session.bulk_save_objects(item_objects)
+            session.bulk_save_objects(nt_objects)
             session.commit()
-            # Clear the identity map
-            session.expunge_all()
+            # Clear resources
+            session.close()
+            gc.collect()
 
     # Gen error files
     generate_seed_error_report("item_errors.csv", results["items"]["errors"])
