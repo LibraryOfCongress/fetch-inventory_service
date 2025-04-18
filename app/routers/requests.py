@@ -135,6 +135,8 @@ def get_request_list(
                 Request.non_tray_item_id.in_(non_tray_item_subquery),
             )
         )
+    if params.external_request_id:
+        query = query.where(Request.external_request_id.in_(params.external_request_id))
     if params.priority:
         priority_subquery = select(Priority.id).where(
             Priority.value.in_(params.priority)
