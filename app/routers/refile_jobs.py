@@ -20,7 +20,7 @@ from app.schemas.refile_jobs import (
     RefileJobInput,
     RefileJobUpdateInput,
     RefileJobListOutput,
-    RefileJobDetailOutput
+    RefileJobDetailOutput,
 )
 from app.schemas.items import ItemUpdateInput
 from app.schemas.non_tray_items import NonTrayItemUpdateInput
@@ -41,17 +41,13 @@ def sort_order_priority(session, item_type, item):
     else:
         location = get_location(session, item.shelf_position)
 
-    aisle_priority = (
-        location["aisle"].sort_priority or location["aisle_number"].number
-    )
+    aisle_priority = location["aisle"].sort_priority or location["aisle_number"].number
 
     ladder_priority = (
         location["ladder"].sort_priority or location["ladder_number"].number
     )
 
-    shelf_priority = (
-        location["shelf"].sort_priority or location["shelf_number"].number
-    )
+    shelf_priority = location["shelf"].sort_priority or location["shelf_number"].number
 
     return {
         item_type: item,
@@ -110,6 +106,12 @@ def sorted_requests(session, refile_job):
         elif item.get("non_tray_item"):
             sorted_list.append(item["non_tray_item"])
 
+    # Final sort of already location-prioritized items by update_dt
+    sorted_list = sorted(
+        sorted_list,
+        key=lambda obj: obj.update_dt
+    )
+
     # Append withdrawn items without shelf positions to the end
     sorted_list.extend(withdrawn_items)
     sorted_list.extend(withdrawn_non_tray_items)
@@ -127,7 +129,7 @@ def sorted_requests(session, refile_job):
 def get_refile_job_list(
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Get a list of refile jobs
@@ -164,13 +166,8 @@ def get_refile_job_list(
     if params.assigned_user_id:
         query = query.where(RefileJob.assigned_user_id.in_(params.user_id))
     if params.assigned_user:
-        assigned_user_subquery = (
-            select(User.id)
-            .where(
-                func.concat(User.first_name, ' ', User.last_name).in_(
-                    params.assigned_user
-                )
-            )
+        assigned_user_subquery = select(User.id).where(
+            func.concat(User.first_name, " ", User.last_name).in_(params.assigned_user)
         )
         query = query.where(RefileJob.assigned_user_id.in_(assigned_user_subquery))
     if params.created_by_id:
@@ -485,7 +482,9 @@ def add_items_to_refile_job(
         raise NotFound(detail=f"Refile Job ID {job_id} Not Found")
 
     if refile_job.status in ["Running", "Completed"]:
-        raise BadRequest(detail=f"""Can not add to Refile Job ID {job_id} in '{refile_job.status}' status""")
+        raise BadRequest(
+            detail=f"""Can not add to Refile Job ID {job_id} in '{refile_job.status}' status"""
+        )
 
     refile_items = []
     refile_non_tray_items = []
