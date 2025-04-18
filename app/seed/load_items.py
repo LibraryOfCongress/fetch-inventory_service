@@ -352,18 +352,13 @@ def load_items():
                 for row_num, row in enumerate(chunk, start=(chunk_start - 1) * 1000 + 1)
             ]
 
-            # # Commit
-            # session.commit()
-            # # session.expunge_all()
-            # session.close()
+            item_barcode_objects = []
+            item_objects = []
+            nt_barcode_objects = []
+            nt_objects = []
 
             # Collect and unpack results
             for future in as_completed(futures):
-                item_barcode_objects = []
-                item_objects = []
-                nt_barcode_objects = []
-                nt_objects = []
-
                 p_skipped_row_count, p_item_result, p_non_tray_item_result = future.result()
                 skipped_row_count += p_skipped_row_count
                 if p_item_result:
@@ -397,10 +392,10 @@ def load_items():
             # Flush to get barcode id's before commit
             session.flush()
             # Save all
-            session.bulk_save_objects(item_barcode_objects)
-            session.bulk_save_objects(nt_barcode_objects)
-            session.bulk_save_objects(item_objects)
-            session.bulk_save_objects(nt_objects)
+            session.bulk_save_objects(item_barcode_objects, return_defaults=True)
+            session.bulk_save_objects(nt_barcode_objects, return_defaults=True)
+            session.bulk_save_objects(item_objects, return_defaults=True)
+            session.bulk_save_objects(nt_objects, return_defaults=True)
             session.commit()
             # Clear resources
             session.close()
