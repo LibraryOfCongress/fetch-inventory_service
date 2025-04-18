@@ -92,7 +92,7 @@ def get_audit_trails_detail_list(
     def add_last_action(logs, audit_item, audit_table_name):
         return_logs = []
         picklist = {}
-        refile = {}
+        refile = None
         for log in logs:
             if audit_table_name == "accession_jobs" and "scanned_for_accession" in log.new_values:
                 log.last_action = f"Accessioned {audit_item.barcode.value}"
@@ -116,7 +116,7 @@ def get_audit_trails_detail_list(
                 return [log]
             if audit_table_name == "refile_jobs" and "status" in log.new_values and log.new_values["status"] == "In":
                 log.last_action = f"Refiled {audit_item.barcode.value}"
-                refile["refiled"] = log
+                refile = log
             if audit_table_name == "pick_lists" and "status" in log.new_values:
                 if "PickList" == log.new_values["status"]:
                     log.last_action = f"Added to Picklist {audit_item.barcode.value}"
@@ -130,8 +130,8 @@ def get_audit_trails_detail_list(
         for action_type in ["requested", "picklist", "picked", "withdrawn"]:
             if action_type in picklist:
                 return_logs.append(picklist[action_type])
-        if "refiled" in refile:
-            return_logs.append(refile[action_type])
+        if refile:
+            return_logs.append(refile)
         return return_logs
 
     def get_audit_query(audit_table_name, audit_table_item_id, since_date):
