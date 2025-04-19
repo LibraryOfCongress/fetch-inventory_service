@@ -1,7 +1,7 @@
 import os, csv
 
 from collections import defaultdict
-from app.database.session import get_sqlalchemy_session
+from app.database.session import get_sqlalchemy_session, get_sqlalchemy_session_thread_safe
 from app.logger import migration_logger
 from concurrent.futures import as_completed, ThreadPoolExecutor
 
@@ -49,7 +49,8 @@ def generate_seed_error_report(output_file, errors):
 
 def worker_calc_shelf_space(shelf_id, index, total_shelves):
     """Execution worker for parallel shelf space calc"""
-    session = next(get_sqlalchemy_session())
+    # session = next(get_sqlalchemy_session())
+    session = get_sqlalchemy_session_thread_safe()
     migration_logger.info(f"Calculating space: {index + 1}/{total_shelves}")
 
     try:
