@@ -20,7 +20,8 @@ def load_ladder(
     ladder_number,
     current_side_id,
     row_num,
-    session
+    session,
+    ladder_number_dict
 ):
     """
     Loads and creates a unique ladder if it doesn't exist.
@@ -104,14 +105,16 @@ def load_ladder(
             "side_id": current_side_id,
             "reason": "ladder_number invalid"
         }
-        session.expire_all()
+        # session.expire_all()
         return [success, failure, error, is_new_ladder_created, processed_ladder_id]
 
     # lookup ladder_number_id
-    ladder_number_id = (
-        session.query(LadderNumber.id)
-        .filter(LadderNumber.number == ladder_number).scalar()
-    )
+    ladder_number_id = ladder_number_dict.get(ladder_number)
+    # ladder_number_id = (
+    #     session.query(LadderNumber.id)
+    #     .filter(LadderNumber.number == ladder_number).scalar()
+    # )
+
     if ladder_number_id and current_side_id:
         # valid location to attempt ladder creation
         success = 1
@@ -152,6 +155,6 @@ def load_ladder(
             "reason": "Invalid ladder_number or missing side association"
         }
         # Clear session when commit() doesn't
-        session.expire_all()
+        # session.expire_all()
 
     return [success, failure, error, is_new_ladder_created, processed_ladder_id]

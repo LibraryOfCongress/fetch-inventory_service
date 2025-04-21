@@ -1,8 +1,8 @@
-import os, csv
+import os, csv, gc
 
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
-from app.database.session import get_sqlalchemy_session
+from app.database.session import get_sqlalchemy_session, get_sqlalchemy_session_for_storage_migration
 from app.logger import migration_logger
 from app.seed.scripts.load_side import load_side
 from app.seed.scripts.load_ladder import load_ladder
@@ -73,7 +73,20 @@ def chunked_reader(legacy_location_path, chunk_size=1000):
             yield chunk
 
 
-def process_loc_row(row_num, row):
+def process_loc_row(
+        row_num,
+        row,
+        side_orientations_dict,
+        ladder_number_dict,
+        shelf_number_dict,
+        container_type_dict,
+        owners_dict,
+        shelf_position_number_dict,
+        shelf_type_max_cap_dict,
+        barcode_types_dict,
+        shelf_type_lookup_dict,
+        aisle_dict
+):
     """
     Worker processor for individual rows
     Returns a collection of results for main thread.
@@ -86,7 +99,8 @@ def process_loc_row(row_num, row):
         list: shelf_position_result
     )
     """
-    session = next(get_sqlalchemy_session())
+    # session = next(get_sqlalchemy_session())
+    session = get_sqlalchemy_session_for_storage_migration()
     migration_logger.info(f"PROCESSING loc.txt ROW: {row_num}")
     skipped_row_count = 0
 
@@ -95,27 +109,7 @@ def process_loc_row(row_num, row):
     aisle_number = row[11]
 
     # business logic
-    if aisle_number == "99":
-        skipped_row_count += 1
-        session.close()
-        return (
-            skipped_row_count,
-            None,
-            None,
-            None,
-            None
-        )
-    if aisle_number == "370":
-        skipped_row_count += 1
-        session.close()
-        return (
-            skipped_row_count,
-            None,
-            None,
-            None,
-            None
-        )
-    if int(aisle_number) > 499 and int(aisle_number) < 600:
+    if aisle_number in {"99", "370"} or (499 < int(aisle_number) < 600):
         skipped_row_count += 1
         session.close()
         return (
@@ -130,7 +124,9 @@ def process_loc_row(row_num, row):
         side_orientation,
         aisle_number,
         row_num,
-        session
+        session,
+        side_orientations_dict,
+        aisle_dict
     )
 
     if not side_result[4]:
@@ -150,16 +146,7 @@ def process_loc_row(row_num, row):
     current_side_id = side_result[4]
 
     # business logic
-    if ladder_number == "96":
-        session.close()
-        return (
-            skipped_row_count,
-            side_result,
-            None,
-            None,
-            None
-        )
-    if ladder_number == "81":
+    if ladder_number in {"96", "81"}:
         session.close()
         return (
             skipped_row_count,
@@ -173,7 +160,8 @@ def process_loc_row(row_num, row):
         ladder_number,
         current_side_id,
         row_num,
-        session
+        session,
+        ladder_number_dict
     )
 
     if not ladder_result[4]:
@@ -199,6 +187,7 @@ def process_loc_row(row_num, row):
     shelf_legacy_type = row[6]
     shelf_barcode_value = row[10]
     shelf_new_type = row[24]
+    shelf_container_type = row[25]
 
     shelf_result = load_shelf(
         shelf_number,
@@ -210,8 +199,14 @@ def process_loc_row(row_num, row):
         shelf_legacy_type,
         shelf_barcode_value,
         shelf_new_type,
+        shelf_container_type,
         row_num,
-        session
+        session,
+        shelf_number_dict,
+        container_type_dict,
+        owners_dict,
+        barcode_types_dict,
+        shelf_type_lookup_dict
     )
 
     if not shelf_result[4]:
@@ -235,7 +230,9 @@ def process_loc_row(row_num, row):
         current_shelf_id,
         current_shelf_type_id,
         row_num,
-        session
+        session,
+        shelf_position_number_dict,
+        shelf_type_max_cap_dict
     )
 
     session.close()
@@ -292,10 +289,114 @@ def load_storage_locations():
         }
     }
 
-    with ProcessPoolExecutor(max_workers=16) as executor:
-        for chunk_start, chunk in enumerate(chunked_reader(legacy_location_path, chunk_size=1000), start=1):
+    # reusable memory dicts
+    from app.models.side_orientations import SideOrientation
+    from app.models.ladder_numbers import LadderNumber
+    from app.models.shelf_numbers import ShelfNumber
+    from app.models.container_types import ContainerType
+    from app.models.owners import Owner
+    from app.models.shelf_position_numbers import ShelfPositionNumber
+    from app.models.shelf_types import ShelfType
+    from app.models.barcode_types import BarcodeType
+    from app.models.size_class import SizeClass
+    from app.models.aisles import Aisle
+    from app.models.aisle_numbers import AisleNumber
+    session = next(get_sqlalchemy_session())
+
+    aisle_dict = {
+        str(aisle_number): int(aisle_id)
+        for aisle_id, aisle_number in session.query(
+            Aisle.id, AisleNumber.number
+        )
+        .join(AisleNumber, AisleNumber.id == Aisle.aisle_number_id)
+        .all()
+    }
+
+    side_orientations_dict = {
+        str(so_name): int(so_id)
+        for so_name, so_id in session.query(SideOrientation.name, SideOrientation.id).all()
+    }
+
+    ladder_number_dict = {
+        int(ln_number): int(ln_id)
+        for ln_number, ln_id in session.query(LadderNumber.number, LadderNumber.id).all()
+    }
+
+    shelf_number_dict = {
+        int(sn_number): int(sn_id)
+        for sn_number, sn_id in session.query(ShelfNumber.number, ShelfNumber.id).all()
+    }
+
+    container_type_dict = {
+        str(ct_type): int(ct_id)
+        for ct_type, ct_id in session.query(ContainerType.type, ContainerType.id).all()
+    }
+
+    owners_dict = {
+        str(owner_name): int(owner_id)
+        for owner_name, owner_id in session.query(Owner.name, Owner.id).all()
+    }
+
+    shelf_position_number_dict = {
+        int(spn_number): int(spn_id)
+        for spn_number, spn_id in session.query(ShelfPositionNumber.number, ShelfPositionNumber.id).all()
+    }
+
+    shelf_type_max_cap_dict = {
+        int(st_id): int(max_cap)
+        for st_id, max_cap in session.query(ShelfType.id, ShelfType.max_capacity).all()
+    }
+
+    barcode_types_dict = {
+        str(name): [int(bct_id), str(allowed_pattern)]
+        for name, bct_id, allowed_pattern in session.query(
+            BarcodeType.name, BarcodeType.id, BarcodeType.allowed_pattern
+        ).all()
+    }
+
+    shelf_type_lookup_query = session.query(
+        ShelfType.id, SizeClass.short_name, ShelfType.type
+    ).join(SizeClass, SizeClass.id == ShelfType.size_class_id).all()
+
+    shelf_type_lookup_dict = {
+        (str(short_name), str(shelf_type)): int(shelf_type_id)
+        for shelf_type_id, short_name, shelf_type in shelf_type_lookup_query
+    }
+
+    session.close()
+
+    with ThreadPoolExecutor(max_workers=24) as executor:
+    # with ProcessPoolExecutor(max_workers=8) as executor:
+        for chunk_start, chunk in enumerate(chunked_reader(legacy_location_path, chunk_size=5000), start=1):
+            
+            # DO NOT REMOVE
+            # 102k rows in 5k chunks,  21 chunks
+            # (1, 6), (7, 12), (13, 18), (19, 24)
+            # couple this with commenting out fixtures on second run and up
+            # if chunk_start < 19:
+            #     continue
+            # if chunk_start > 24:
+            #     break
+
+            # garbage cleanup every chunk
+            gc.collect()
+
             futures = [
-                executor.submit(process_loc_row, row_num, row)
+                executor.submit(
+                    process_loc_row,
+                    row_num, 
+                    row,
+                    side_orientations_dict,
+                    ladder_number_dict,
+                    shelf_number_dict,
+                    container_type_dict,
+                    owners_dict,
+                    shelf_position_number_dict,
+                    shelf_type_max_cap_dict,
+                    barcode_types_dict,
+                    shelf_type_lookup_dict,
+                    aisle_dict
+                )
                 for row_num, row in enumerate(chunk, start=(chunk_start - 1) * 1000 + 1)
             ]
 

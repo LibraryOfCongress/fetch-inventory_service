@@ -11,7 +11,9 @@ def load_side(
     side_orientation,
     aisle_number,
     row_num,
-    session
+    session,
+    side_orientations_dict,
+    aisle_dict
 ):
     """
     Loads and creates a unique Side object
@@ -35,16 +37,23 @@ def load_side(
         side_orientation = "R"
 
 
-    side_orientation_id = (
-        session.query(SideOrientation.id)
-        .filter(SideOrientation.name.like(f"{side_orientation}%")).scalar()
-    )
+    #side_orientations_dict
+    if side_orientation == "L":
+        side_orientation_id=side_orientations_dict.get("Left")
+    else:
+        side_orientation_id=side_orientations_dict.get("Right")
 
-    aisle_id = (
-        session.query(Aisle.id, AisleNumber.id)
-        .join(AisleNumber, AisleNumber.id == Aisle.aisle_number_id)
-        .filter(AisleNumber.number == aisle_number).scalar()
-    )
+    # side_orientation_id = (
+    #     session.query(SideOrientation.id)
+    #     .filter(SideOrientation.name.like(f"{side_orientation}%")).scalar()
+    # )
+
+    aisle_id = aisle_dict.get(str(aisle_number))
+    # aisle_id = (
+    #     session.query(Aisle.id, AisleNumber.id)
+    #     .join(AisleNumber, AisleNumber.id == Aisle.aisle_number_id)
+    #     .filter(AisleNumber.number == aisle_number).scalar()
+    # )
 
     if aisle_id and side_orientation_id:
         # valid location to attempt side creation
@@ -62,17 +71,31 @@ def load_side(
 
         # fetch side if record not created
         if not processed_side:
-            is_new_side_created = 0 # new side not created
-            processed_side = session.execute(
+            is_new_side_created = 0  # new side not created
+            result = session.execute(
                 select(Side.id).where(
                     (Side.aisle_id == aisle_id) &
                     (Side.side_orientation_id == side_orientation_id)
                 )
-            ).fetchone()
+            )
+            row = result.fetchone()
+            processed_side_id = row[0] if row else None
         else:
-            is_new_side_created = 1 # new side created
+            is_new_side_created = 1  # new side created
+            processed_side_id = processed_side[0]
 
-        processed_side_id = processed_side[0]
+        # if not processed_side:
+        #     is_new_side_created = 0 # new side not created
+        #     processed_side = session.execute(
+        #         select(Side.id).where(
+        #             (Side.aisle_id == aisle_id) &
+        #             (Side.side_orientation_id == side_orientation_id)
+        #         )
+        #     ).fetchone()
+        # else:
+        #     is_new_side_created = 1 # new side created
+
+        # processed_side_id = processed_side[0]
 
     else:
         success = 0
@@ -85,6 +108,6 @@ def load_side(
             "reason": "aisle_number or side_orientation doesn't exist"
         }
         # Clear session when commit() doesn't
-        session.expire_all()
+        # session.expire_all()
 
     return [success, failure, error, is_new_side_created, processed_side_id]

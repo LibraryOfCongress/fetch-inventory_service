@@ -1,9 +1,9 @@
-import os, csv, re
+import os, csv, re, gc
 
 from collections import defaultdict
 from concurrent.futures import as_completed, ThreadPoolExecutor
 
-from app.database.session import get_sqlalchemy_session
+from app.database.session import get_sqlalchemy_session, get_sqlalchemy_session_for_item_migration
 from app.logger import migration_logger
 from app.seed.scripts.load_item import load_item
 from app.seed.scripts.load_non_tray import load_non_tray
@@ -141,6 +141,7 @@ def chunked_reader(legacy_item_path, chunk_size=1000):
 def process_item_row(
     row_num,
     row,
+    # session,
     owners_dict,
     barcode_types_dict,
     container_types_dict,
@@ -159,7 +160,8 @@ def process_item_row(
         list: item_result
     )
     """
-    session = next(get_sqlalchemy_session())
+    # session = next(get_sqlalchemy_session())
+    # session = get_sqlalchemy_session_for_item_migration()
     migration_logger.info(f"PROCESSING item.txt ROW: {row_num}")
     skipped_row_count = 0
 
@@ -175,6 +177,7 @@ def process_item_row(
     item_accession_dt = row[3]
     shelf_position_number = row[10]
     create_dt = row[8] #legacy arrival date
+    status = row[16]
 
     if item_type == 'item':
         item_result = load_item(
@@ -184,26 +187,27 @@ def process_item_row(
             item_barcode_value,
             container_barcode_value,
             item_accession_dt,
-            session,
+            status,
+            # session,
             owners_dict,
             barcode_types_dict,
             container_types_dict,
             container_dict
         )
 
-        session.close()
+        # session.close()
 
         return (
             skipped_row_count,
             item_result,
-            None
+            None,
         )
 
     else:
         # skip "T0000000", is a fake NT designation
         if container_barcode_value == "T0000000":
             skipped_row_count += 1
-            session.close()
+            # session.close()
             return (
                 skipped_row_count,
                 None,
@@ -222,7 +226,8 @@ def process_item_row(
             # shelved_dt,
             "NT",#size_class_short_name
             shelf_position_number,
-            session,
+            status,
+            # session,
             container_types_dict,
             shelf_position_dict,
             size_class_dict,
@@ -231,7 +236,7 @@ def process_item_row(
             barcode_types_dict
         )
 
-        session.close()
+        # session.close()
 
         return (
             skipped_row_count,
@@ -323,12 +328,18 @@ def load_items():
     session.close()
 
     with ThreadPoolExecutor(max_workers=32) as executor:
-        for chunk_start, chunk in enumerate(chunked_reader(legacy_item_path, chunk_size=1000), start=1):
+        for chunk_start, chunk in enumerate(chunked_reader(legacy_item_path, chunk_size=100000), start=1):
+
+            # session = get_sqlalchemy_session_for_item_migration()
+
+            session = next(get_sqlalchemy_session())
+
             futures = [
                 executor.submit(
                     process_item_row,
                     row_num,
                     row,
+                    # session,
                     owners_dict,
                     barcode_types_dict,
                     container_types_dict,
@@ -341,6 +352,11 @@ def load_items():
                 for row_num, row in enumerate(chunk, start=(chunk_start - 1) * 1000 + 1)
             ]
 
+            item_barcode_objects = []
+            item_objects = []
+            nt_barcode_objects = []
+            nt_objects = []
+
             # Collect and unpack results
             for future in as_completed(futures):
                 p_skipped_row_count, p_item_result, p_non_tray_item_result = future.result()
@@ -350,11 +366,40 @@ def load_items():
                     results["items"]["failed_rows"] += p_item_result[1]
                     if p_item_result[2]:
                         results["items"]["errors"].append(p_item_result[2])
+                    # p_item_result[3] are barcode objects
+                    if p_item_result[3]:
+                        # session.add(p_item_result[3])
+                        item_barcode_objects.append(p_item_result[3])
+                    # p_item_result[4] are item objects
+                    if p_item_result[4]:
+                        # session.add(p_item_result[4])
+                        item_objects.append(p_item_result[4])
                 if p_non_tray_item_result:
                     results["non_tray_items"]["successful_rows"] += p_non_tray_item_result[0]
                     results["non_tray_items"]["failed_rows"] += p_non_tray_item_result[1]
                     if p_non_tray_item_result[2]:
                         results["non_tray_items"]["errors"].append(p_non_tray_item_result[2])
+                    # p_non_tray_item_result[3] are barcode objects
+                    if p_non_tray_item_result[3]:
+                        # session.add(p_non_tray_item_result[3])
+                        nt_barcode_objects.append(p_non_tray_item_result[3])
+                    # p_non_tray_item_result[4] are non_tray_items
+                    if p_non_tray_item_result[4]:
+                        # session.add(p_non_tray_item_result[4])
+                        nt_objects.append(p_non_tray_item_result[4])
+
+            # Database ops here
+            # Flush to get barcode id's before commit
+            session.flush()
+            # Save all
+            session.bulk_save_objects(item_barcode_objects, return_defaults=True)
+            session.bulk_save_objects(nt_barcode_objects, return_defaults=True)
+            session.bulk_save_objects(item_objects, return_defaults=True)
+            session.bulk_save_objects(nt_objects, return_defaults=True)
+            session.commit()
+            # Clear resources
+            session.close()
+            gc.collect()
 
     # Gen error files
     generate_seed_error_report("item_errors.csv", results["items"]["errors"])

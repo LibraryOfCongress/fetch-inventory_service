@@ -28,6 +28,7 @@ class Barcode(SQLModel, table=True):
             primary_key=True,
             unique=True,
             index=True,
+            server_default=sa.text("gen_random_uuid()")
         )
     )
     value: str = Field(

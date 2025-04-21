@@ -13,6 +13,8 @@ from app.seed.load_storage_locations import load_storage_locations
 from app.seed.load_containers import load_containers
 from app.seed.load_items import load_items
 from app.seed.load_available_space_calc import load_available_space_calc
+from app.seed.load_addressing import load_addressing
+
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -68,7 +70,7 @@ fixture_data = [
     ("types", "client_request_types.json"),#good
     ("types", "client_priorities.json"),#good
     ("entities", "client_delivery_locations.json"),#good
-    # don't client_shelf_numbers.json, too many, gen instead
+    ("types", "client_shelf_numbers.json"),#good
 ]
 
 def seed_data():
@@ -81,6 +83,8 @@ def seed_data():
     session = get_seeder_session()
     seeder = HybridSeeder(session)
 
+    # if breaking out storage processing in chunks, comment out fixture load
+    #  during subsequent runs
     for data in fixture_data:
         elements = list(data)
 
@@ -123,3 +127,15 @@ def seed_initial_available_space_calc():
     migration_logger.disabled = False
     migration_logger.info("Calculating available space for all shelves...")
     load_available_space_calc()
+
+
+def seed_location_address_values():
+    """
+    Loops over all shelves in the system, generates their location address.
+    Then loops over shelf positions belonging to the shelf and assigns their
+    address as well.
+    This is the last migration script to run.
+    """
+    migration_logger.disabled = False
+    migration_logger.info("Generating location strings for shelves and shelf positions...")
+    load_addressing()

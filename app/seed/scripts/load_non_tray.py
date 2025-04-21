@@ -18,7 +18,8 @@ def load_non_tray(
     # shelved_dt,#foreign unsatisfied
     size_class_short_name,#satisfied
     shelf_position_number,#satisfied
-    session,#satisfied
+    status,
+    # session,#satisfied
     container_types_dict,#satisfied
     shelf_position_dict,#satisfied
     size_class_dict,#satisfied
@@ -35,6 +36,8 @@ def load_non_tray(
     success = None
     failure = None
     error = None
+    barcode_object = None
+    non_tray_item_object = None
 
     try:
         # fix owner_name casing
@@ -53,8 +56,10 @@ def load_non_tray(
             value=item_barcode_value,
             type_id=barcode_types_dict.get("Item")
         )
-        session.add(non_tray_barcode_instance)
-        session.commit()
+        # session.add(non_tray_barcode_instance)
+        # session.commit()
+        # session.flush()  # assigns the `id`, but doesn't commit
+        barcode_object = non_tray_barcode_instance
 
         # grab missing data for item.txt (satisfied from tray.txt)
         non_tray_missing_data = non_tray_missing_data_dict.get(shelf_barcode_value) #returns a list of dictionaries
@@ -103,18 +108,26 @@ def load_non_tray(
         and use pattern "%m/%d/%Y" instead
         """
         shelved_dt = non_tray_missing_data.get('shelved_dt')
-        if shelved_dt == '?':
+        if shelved_dt in ['?', '', None]:
             shelved_dt = None
         else:
-            shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%y")
-        if item_accession_dt == '?':
+            # 11/12/2004 or 3/11/2004(tray.txt format)
+            # 11/12/04 or 03/11/04(item.txt format)
+            # if len(shelved_dt) < 10:
+            #     shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
+            # else:
+            shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%Y").replace(tzinfo=timezone.utc)
+        if item_accession_dt in ['?', '', None]:
             item_accession_dt = None
         else:
-            item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%y")
-        if create_dt == '?':
+            if len(item_accession_dt) < 10:
+                item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
+            else:
+                item_accession_dt=datetime.strptime(item_accession_dt, "%m/%d/%Y").replace(tzinfo=timezone.utc)
+        if create_dt in ['?', '', None]:
             create_dt = None
         else:
-            create_dt=datetime.strptime(create_dt, "%m/%d/%y")
+            create_dt=datetime.strptime(create_dt, "%m/%d/%y").replace(tzinfo=timezone.utc)
 
         # create the non-tray
         non_tray_instance = NonTrayItem(
@@ -130,24 +143,28 @@ def load_non_tray(
             scanned_for_accession=True,
             scanned_for_verification=True,
             scanned_for_shelving=True,
-            status="In",
+            status=status,
             create_dt=create_dt
         )
 
-        session.add(non_tray_instance)
+        # session.add(non_tray_instance)
 
-        session.commit()
+        # session.commit()
+
+        non_tray_item_object = non_tray_instance
 
         success = 1
         failure = 0
     except Exception as e:
-        session.rollback()
+        # session.rollback()
         success = 0
         failure = 1
+        barcode_object = None
+        non_tray_item_object = None
         error = {
             "row": row_num,
             "non_tray_item_barcode": f":: {item_barcode_value}",
             "reason": f"{e}"
         }
     finally:
-        return [success, failure, error]
+        return [success, failure, error, barcode_object, non_tray_item_object]

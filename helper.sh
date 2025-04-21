@@ -87,9 +87,21 @@ seed_initial_available_space_calc()
     podman exec -it fetch-inventory-api python -c "$RUN_SPACE_MIGRATION";
 }
 
+run-addressing-migration() {
+# do not indent on shell str
+RUN_ADDRESS_MIGRATION="
+from app import main
+from app.seed.seed_data import seed_location_address_values
+seed_location_address_values()
+";
+
+    podman exec -it fetch-inventory-api python -c "$RUN_ADDRESS_MIGRATION"; 
+}
+
 extract-data-migration() {
   # This can take like 20 minutes
   # dump in postgres native sql format
+  # you may have to jump into the container shell and do this manually
     (podman exec -i inventory-database pg_dump -U postgres -d inventory_service -Fc > /tmp/fetch_dump_$(date +%m-%d-%Y).dump);
   # compress to xz
     (podman exec -i inventory-database xz /tmp/fetch_dump_$(date +%m-%d-%Y).dump);

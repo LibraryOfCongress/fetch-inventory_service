@@ -36,10 +36,13 @@ def load_tray(
 
     try:
         # ensure leading zeroes on shelf_barcode_value
-        if len(shelf_barcode_value) < 6:
-            missing_zeros = 6 - len(shelf_barcode_value)
-            for _ in range(missing_zeros):
-                shelf_barcode_value = f"0{shelf_barcode_value}"
+        # 5 is now the threshold
+        shelf_barcode_value = shelf_barcode_value.zfill(5)
+
+        # if len(shelf_barcode_value) < 6:
+        #     missing_zeros = 6 - len(shelf_barcode_value)
+        #     for _ in range(missing_zeros):
+        #         shelf_barcode_value = f"0{shelf_barcode_value}"
 
         # deal with weird characters
         if re.search(r'[^a-zA-Z0-9]', container_barcode):
@@ -76,18 +79,26 @@ def load_tray(
         If your system has something from 1968 or earlier, modify ingested dates to always be 4 digit
         and use pattern "%m/%d/%Y" instead
         """
-        if shelved_dt == '?':
+        # if shelved_dt == '?':
+        if shelved_dt in ['?', '', None]:
             shelved_dt = None
         else:
-            shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%y")
-        if accession_dt == '?':
+            # two digit years (earlier spreadsheets)
+            # shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%y")
+            # four digit years
+            shelved_dt=datetime.strptime(shelved_dt, "%m/%d/%Y").replace(tzinfo=timezone.utc)
+        # if accession_dt == '?':
+        if accession_dt in ['?', '', None]:
             accession_dt = None
         else:
-            accession_dt=datetime.strptime(accession_dt, "%m/%d/%y")
+            # accession_dt=datetime.strptime(accession_dt, "%m/%d/%y")
+            accession_dt=datetime.strptime(accession_dt, "%m/%d/%Y").replace(tzinfo=timezone.utc)
 
         # fix owner_name casing
         if owner_name in ["lc", "Lc", "lC"]:
             owner_name = "LC"
+        if owner_name == "Vertrans History Project":
+            owner_name = "Veterans History Project"
 
         # create the tray
         tray_instance = Tray(

@@ -10,7 +10,9 @@ def load_shelf_positions(
     current_shelf_id,
     current_shelf_type_id,
     row_num,
-    session
+    session,
+    shelf_position_number_dict,
+    shelf_type_max_cap_dict
 ):
     """
     Given a shelf, creates X shelf_positions
@@ -30,9 +32,12 @@ def load_shelf_positions(
     new_records_created = 0
     failed_records = 0
 
-    shelf_type = session.query(ShelfType).filter(ShelfType.id == current_shelf_type_id).first()
+    # shelf_type = session.query(ShelfType).filter(ShelfType.id == current_shelf_type_id).first()
+    shelf_type_max_capacity_value = shelf_type_max_cap_dict.get(current_shelf_type_id)
 
-    if not shelf_type:
+    # if not shelf_type:
+    if not shelf_type_max_capacity_value:
+        # ^ this is valid because if it's missing from here, it's missing.
         success = 0
         failure = 1
         errors.append(
@@ -44,21 +49,22 @@ def load_shelf_positions(
             }
         )
         # Clear session when commit() doesn't
-        session.expire_all()
+        # session.expire_all()
         return [success, failure, errors, new_records_created, failed_records]
     else:
         success = 1
         failure = 0
 
-
-    for i in range(shelf_type.max_capacity):
+    for i in range(shelf_type_max_capacity_value):
+    # for i in range(shelf_type.max_capacity):
         try:
             # get shelf_position_number
             position_number = i + 1
-            shelf_position_number_id = (
-                session.query(ShelfPositionNumber.id)
-                .filter(ShelfPositionNumber.number == position_number).scalar()
-            )
+            shelf_position_number_id = shelf_position_number_dict.get(position_number)
+            # shelf_position_number_id = (
+            #     session.query(ShelfPositionNumber.id)
+            #     .filter(ShelfPositionNumber.number == position_number).scalar()
+            # )
             if not shelf_position_number_id:
                 failed_records += 1
                 errors.append(
@@ -81,9 +87,11 @@ def load_shelf_positions(
             session.commit()
             new_records_created += 1
 
+            # MOVING LOCATION GEN TO NEW SCRIPT
             # generate shelf_position.location and shelf_position.internal_location
-            position_to_update = session.query(ShelfPosition).filter(ShelfPosition.id == new_shelf_position[0]).first()
-            position_to_update.update_position_address(session=session)
+            # position_to_update = session.query(ShelfPosition).filter(ShelfPosition.id == new_shelf_position[0]).first()
+            # position_to_update.update_position_address(session=session)
+
             session.commit()
 
         except Exception as e:
@@ -97,7 +105,7 @@ def load_shelf_positions(
                 }
             )
             # Clear session when commit() doesn't
-            session.expire_all()
+            # session.expire_all()
             failed_records += 1
 
     return [success, failure, errors, new_records_created, failed_records]
