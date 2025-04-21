@@ -1,8 +1,13 @@
+from io import StringIO
+
+import pandas as pd
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime, timezone
+
+from starlette.responses import StreamingResponse
 
 from app.database.session import get_session, commit_record
 from app.events import update_shelf_space_after_non_tray
@@ -103,6 +108,73 @@ def get_non_tray_item_list(
 
     return paginate(session, query)
 
+
+@router.get("/download", response_class=StreamingResponse)
+def download_non_tray_items(
+    session: Session = Depends(get_session),
+    params: ItemFilterParams = Depends(),
+):
+    """
+    Get a paginated list of non tray items from the database
+
+    **Parameters:**
+    - owner_id (int): The ID of the owner to filter by.
+    - size_class_id (int): The ID of the size class to filter by.
+    - media_type_id (int): The ID of the media type to filter by.
+    - from_dt (datetime): The start date to filter by.
+    - to_dt (datetime): The end date to filter by.
+    - status (NonTrayItemStatus): The status to filter by.
+
+    **Returns:**
+    - Non Tray Item List Output: The paginated list of non tray items.
+    """
+    # Create a query to select all non tray items from the database
+    query = select(
+        NonTrayItem.accession_dt,
+        NonTrayItem.status,
+        Owner.name.label("owner_name"),
+        SizeClass.name.label("size_class_name"),
+        MediaType.name.label("media_type_name"),
+        Barcode.value.label("barcode_value"),
+    ).join(NonTrayItem.owner).join(NonTrayItem.size_class).join(NonTrayItem.media_type).join(NonTrayItem.barcode)
+
+    if params.barcode_value:
+        query = query.where(Barcode.value.in_(params.barcode_value))
+    if params.status:
+        query = query.where(NonTrayItem.status.in_(params.status.value))
+    if params.owner_id:
+        query = query.where(NonTrayItem.owner_id.in_(params.owner_id))
+    if params.owner:
+        query = query.where(Owner.name.in_(params.owner))
+    if params.size_class_id:
+        query = query.where(NonTrayItem.size_class_id.in_(params.size_class_id))
+    if params.size_class:
+        query = query.where(SizeClass.name.in_(params.size_class))
+    if params.media_type_id:
+        query = query.where(NonTrayItem.media_type_id.in_(params.media_type_id))
+    if params.media_type:
+        query = query.where(MediaType.name.in_(params.media_type))
+    if params.from_dt:
+        query = query.where(NonTrayItem.accession_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(NonTrayItem.accession_dt <= params.to_dt)
+
+    def generate_csv():
+        output = StringIO()
+        result = session.execute(query)
+        df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        df.to_csv(output, index=False)
+        output.seek(0)
+        yield output.read()
+
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; "
+                                   "filename=items_advance_search.csv"
+        },
+    )
 
 @router.get("/{id}", response_model=NonTrayItemDetailReadOutput)
 def get_non_tray_item_detail(id: int, session: Session = Depends(get_session)):

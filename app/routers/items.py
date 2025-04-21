@@ -1,6 +1,7 @@
 import csv
 from io import StringIO
 
+import pandas as pd
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -136,38 +137,36 @@ def download_items(
        - Item List Output: The paginated list of items.
        """
     # Create a query to select all items from the database
-    item_queryset = select(Item)
+    item_queryset = select(
+        Item.accession_dt,
+        Item.status,
+        Owner.name.label("owner_name"),
+        SizeClass.name.label("size_class_name"),
+        MediaType.name.label("media_type_name"),
+        Barcode.value.label("barcode_value"),
+    ).join(Item.owner).join(Item.size_class).join(Item.media_type).join(Item.barcode)
 
+    if params.barcode_value:
+        item_queryset = item_queryset.where(Barcode.value.in_(params.barcode_value))
     if params.status:
         item_queryset = item_queryset.where(Item.status.in_(params.status.value))
     if params.owner_id:
         item_queryset = item_queryset.where(Item.owner_id.in_(params.owner_id))
     if params.owner:
-        owner_subquery = select(Owner.id).where(Owner.name.in_(params.owner)).distinct()
-        item_queryset = item_queryset.where(Item.owner_id.in_(owner_subquery))
+        item_queryset = item_queryset.where(Owner.name.in_(params.owner))
     if params.size_class_id:
         item_queryset = item_queryset.where(
             Item.size_class_id.in_(params.size_class_id)
         )
     if params.size_class:
-        size_class_subquery = (
-            select(SizeClass.id).where(SizeClass.name.in_(params.size_class)).distinct()
-        )
-        item_queryset = item_queryset.where(Item.size_class_id.in_(size_class_subquery))
+        if params.size_class:
+            item_queryset = item_queryset.where(SizeClass.name.in_(params.size_class))
     if params.media_type_id:
         item_queryset = item_queryset.where(
             Item.media_type_id.in_(params.media_type_id)
         )
     if params.media_type:
-        media_type_subquery = (
-            select(MediaType.id).where(MediaType.name.in_(params.media_type)).distinct()
-        )
-        item_queryset = item_queryset.where(Item.media_type_id.in_(media_type_subquery))
-    if params.barcode_value:
-        barcode_value_subquery = (
-            select(Barcode.id).where(Barcode.value.in_(params.barcode_value)).distinct()
-        )
-        item_queryset = item_queryset.where(Item.barcode_id.in_(barcode_value_subquery))
+        item_queryset = item_queryset.where(MediaType.name.in_(params.media_type))
     if params.from_dt:
         item_queryset = item_queryset.where(Item.accession_dt >= params.from_dt)
     if params.to_dt:
@@ -175,35 +174,11 @@ def download_items(
 
     def generate_csv():
         output = StringIO()
-        writer = csv.writer(output)
-        # Write header row
-        writer.writerow(
-            [
-                "accession_dt",
-                "status",
-                "owner",
-                "size_class",
-                "media_type",
-                "barcode",
-            ]
-        )
-        yield output.getvalue()
+        result = session.execute(item_queryset)
+        df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        df.to_csv(output, index=False)
         output.seek(0)
-        output.truncate(0)
-        for row in session.execute(item_queryset).scalars():
-            writer.writerow(
-                [
-                    row.accession_dt,
-                    row.status,
-                    row.owner.name,
-                    row.size_class.name,
-                    row.media_type.name,
-                    row.barcode.value
-                ]
-            )
-            yield output.getvalue()
-            output.seek(0)
-            output.truncate(0)
+        yield output.read()
 
     return StreamingResponse(
         generate_csv(),

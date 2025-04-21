@@ -39,10 +39,10 @@ class ItemFilterParams:
             default=None, description="Value of the barcode " "to filter items."
         ),
         from_dt: datetime = Query(
-            default=None, description="Start created date to filter by."
+            default=None, description="Start Accession date to filter by."
         ),
         to_dt: datetime = Query(
-            default=None, description="End created date to filter by."
+            default=None, description="End Accession date to filter by."
         ),
         status: List[ItemStatus] = Query(
             default=None, description="Status to filter by."
