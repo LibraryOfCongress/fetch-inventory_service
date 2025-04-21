@@ -137,7 +137,6 @@ class User(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
-
     created_withdraw_jobs: List["WithdrawJob"] = Relationship(
         back_populates="created_by",
         sa_relationship_kwargs={
@@ -145,7 +144,6 @@ class User(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
-
     shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
         back_populates="assigned_user",
         sa_relationship_kwargs={
@@ -154,3 +152,10 @@ class User(SQLModel, table=True):
         }
     )
     verification_changes: List["VerificationChange"] = Relationship(back_populates="completed_by")
+    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
+        back_populates="assigned_user",
+        sa_relationship_kwargs={
+            "primaryjoin": "MoveDiscrepancy.assigned_user_id==User.id",
+            "lazy": "selectin"
+        }
+    )

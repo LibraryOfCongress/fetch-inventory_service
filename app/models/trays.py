@@ -153,3 +153,10 @@ class Tray(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
+    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
+        back_populates="tray",
+        sa_relationship_kwargs={
+            "primaryjoin": "MoveDiscrepancy.tray_id==Tray.id",
+            "lazy": "selectin"
+        }
+    )

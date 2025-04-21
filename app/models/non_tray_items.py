@@ -200,3 +200,10 @@ class NonTrayItem(SQLModel, table=True):
         Relationship(
         back_populates="non_tray_item"
     ))
+    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
+        back_populates="non_tray_item",
+        sa_relationship_kwargs={
+            "primaryjoin": "MoveDiscrepancy.non_tray_item_id==NonTrayItem.id",
+            "lazy": "selectin"
+        }
+    )

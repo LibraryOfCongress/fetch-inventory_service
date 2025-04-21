@@ -39,3 +39,10 @@ class ContainerType(SQLModel, table=True):
     verification_jobs: List["VerificationJob"] = Relationship(
         back_populates="container_type"
     )
+    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
+        back_populates="container_type",
+        sa_relationship_kwargs={
+            "primaryjoin": "MoveDiscrepancy.container_type_id==ContainerType.id",
+            "lazy": "selectin"
+        }
+    )

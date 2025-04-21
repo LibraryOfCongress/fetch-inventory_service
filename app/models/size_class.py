@@ -48,3 +48,10 @@ class SizeClass(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
+    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
+        back_populates="size_class",
+        sa_relationship_kwargs={
+            "primaryjoin": "MoveDiscrepancy.size_class_id==SizeClass.id",
+            "lazy": "selectin"
+        }
+    )

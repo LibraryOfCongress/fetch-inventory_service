@@ -170,3 +170,10 @@ class Item(SQLModel, table=True):
     items_retrieval_events: List["ItemRetrievalEvent"] = Relationship(
         back_populates="item"
     )
+    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
+        back_populates="item",
+        sa_relationship_kwargs={
+            "primaryjoin": "MoveDiscrepancy.item_id==Item.id",
+            "lazy": "selectin"
+        }
+    )

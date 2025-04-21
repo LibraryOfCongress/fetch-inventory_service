@@ -513,3 +513,31 @@ class BatchUploadParams:
         self.withdraw_job_id = withdraw_job_id
         self.file_name = file_name
         self.file_type = file_type
+
+
+class MoveDiscrepancyParams:
+    def __init__(
+        self,
+        assigned_user_id: list[int] = Query(default=None, description="ID of the user to filter jobs."),
+        owner_id: list[int] = Query(
+            default=None, description="ID of the user to filter jobs."
+        ),
+        size_class_id: list[int] = Query(
+            default=None, description="ID of the size class to filter jobs."
+        ),
+        container_type_id: list[int] = Query(
+            default=None, description="ID of the container type to filter jobs."
+        ),
+        from_dt: datetime = Query(
+            default=None, description="Start created date to " "filter by."
+        ),
+        to_dt: datetime = Query(
+            default=None, description="End created date to " "filter by."
+        ),
+    ):
+        self.assigned_user_id = assigned_user_id
+        self.owner_id = owner_id
+        self.size_class_id = size_class_id
+        self.container_type_id = container_type_id
+        self.from_dt = from_dt
+        self.to_dt = to_dt

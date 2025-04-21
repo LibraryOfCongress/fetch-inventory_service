@@ -71,3 +71,10 @@ class Owner(SQLModel, table=True):
     non_tray_items_retrieval_events: List["NonTrayItemRetrievalEvent"] = Relationship(
         back_populates="owner"
     )
+    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
+        back_populates="owner",
+        sa_relationship_kwargs={
+            "primaryjoin": "MoveDiscrepancy.owner_id==Owner.id",
+            "lazy": "selectin"
+        }
+    )

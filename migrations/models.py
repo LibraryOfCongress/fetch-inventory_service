@@ -52,3 +52,4 @@ from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
 from app.models.verification_changes import VerificationChange
 from app.models.item_retrieval_events import ItemRetrievalEvent
 from app.models.non_tray_item_retrieval_events import NonTrayItemRetrievalEvent
+from app.models.move_discrepancies import MoveDiscrepancy
