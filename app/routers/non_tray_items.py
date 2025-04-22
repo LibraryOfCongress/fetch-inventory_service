@@ -77,7 +77,7 @@ def get_non_tray_item_list(
         )
         query = query.where(NonTrayItem.barcode_id.in_(barcode_value_subquery))
     if params.status:
-        query = query.where(NonTrayItem.status.in_(params.status.value))
+        query = query.where(NonTrayItem.status.in_(params.status))
     if params.owner_id:
         query = query.where(NonTrayItem.owner_id.in_(params.owner_id))
     if params.owner:
@@ -130,19 +130,25 @@ def download_non_tray_items(
     - Non Tray Item List Output: The paginated list of non tray items.
     """
     # Create a query to select all non tray items from the database
-    query = select(
-        NonTrayItem.accession_dt,
-        NonTrayItem.status,
-        Owner.name.label("owner_name"),
-        SizeClass.name.label("size_class_name"),
-        MediaType.name.label("media_type_name"),
-        Barcode.value.label("barcode_value"),
-    ).join(NonTrayItem.owner).join(NonTrayItem.size_class).join(NonTrayItem.media_type).join(NonTrayItem.barcode)
+    query = (
+        select(
+            NonTrayItem.accession_dt,
+            NonTrayItem.status,
+            Owner.name.label("owner_name"),
+            SizeClass.name.label("size_class_name"),
+            MediaType.name.label("media_type_name"),
+            Barcode.value.label("barcode_value"),
+        )
+        .outerjoin(Owner, NonTrayItem.owner_id == Owner.id)
+        .outerjoin(SizeClass, NonTrayItem.size_class_id == SizeClass.id)
+        .outerjoin(MediaType, NonTrayItem.media_type_id == MediaType.id)
+        .outerjoin(Barcode, NonTrayItem.barcode_id == Barcode.id)
+    )
 
     if params.barcode_value:
         query = query.where(Barcode.value.in_(params.barcode_value))
     if params.status:
-        query = query.where(NonTrayItem.status.in_(params.status.value))
+        query = query.where(NonTrayItem.status.in_(params.status))
     if params.owner_id:
         query = query.where(NonTrayItem.owner_id.in_(params.owner_id))
     if params.owner:

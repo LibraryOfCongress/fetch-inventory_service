@@ -74,7 +74,7 @@ def get_item_list(
     item_queryset = select(Item)
 
     if params.status:
-        item_queryset = item_queryset.where(Item.status.in_(params.status.value))
+        item_queryset = item_queryset.where(Item.status.in_(params.status))
     if params.owner_id:
         item_queryset = item_queryset.where(Item.owner_id.in_(params.owner_id))
     if params.owner:
@@ -138,19 +138,26 @@ def download_items(
        - Item List Output: The paginated list of items.
        """
     # Create a query to select all items from the database
-    item_queryset = select(
-        Item.accession_dt,
-        Item.status,
-        Owner.name.label("owner_name"),
-        SizeClass.name.label("size_class_name"),
-        MediaType.name.label("media_type_name"),
-        Barcode.value.label("barcode_value"),
-    ).join(Item.owner).join(Item.size_class).join(Item.media_type).join(Item.barcode)
+
+    item_queryset = (
+        select(
+            Item.accession_dt,
+            Item.status,
+            Owner.name.label("owner_name"),
+            SizeClass.name.label("size_class_name"),
+            MediaType.name.label("media_type_name"),
+            Barcode.value.label("barcode_value"),
+        )
+        .outerjoin(Owner, Item.owner_id == Owner.id)
+        .outerjoin(SizeClass, Item.size_class_id == SizeClass.id)
+        .outerjoin(MediaType, Item.media_type_id == MediaType.id)
+        .outerjoin(Barcode, Item.barcode_id == Barcode.id)
+    )
 
     if params.barcode_value:
         item_queryset = item_queryset.where(Barcode.value.in_(params.barcode_value))
     if params.status:
-        item_queryset = item_queryset.where(Item.status.in_(params.status.value))
+        item_queryset = item_queryset.where(Item.status.in_(params.status))
     if params.owner_id:
         item_queryset = item_queryset.where(Item.owner_id.in_(params.owner_id))
     if params.owner:
