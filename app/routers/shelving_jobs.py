@@ -607,7 +607,7 @@ def reassign_container_location(
 
     if tray_exists or non_tray_exists:
         shelf_position_location = (
-            shelf.location + "-" + reassignment_input.shelf_position_number
+            shelf.location + "-" + str(reassignment_input.shelf_position_number)
         )
         new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
             shelving_job_id=id,
