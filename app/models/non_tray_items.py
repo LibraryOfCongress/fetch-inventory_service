@@ -103,7 +103,7 @@ class NonTrayItem(SQLModel, table=True):
         default=None, nullable=True, foreign_key="shelving_jobs.id"
     )
     shelf_position_id: Optional[int] = Field(
-        foreign_key="shelf_positions.id", nullable=True
+        foreign_key="shelf_positions.id", nullable=True, unique=True
     )
     shelf_position_proposed_id: Optional[int] = Field(
         sa_column=sa.Column(sa.Integer, nullable=True, unique=False)
