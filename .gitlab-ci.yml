@@ -200,6 +200,7 @@ deploy_dev:
     - kubectl -n fetch apply -f k8s/service.yml
     - sleep 10
     - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
@@ -215,6 +216,7 @@ deploy_demo:
     - kubectl -n fetch apply -f k8s/service.yml
     - sleep 10
     - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: '$DEMO_BUILD =~ /^TRUE$/'
       when: manual
@@ -231,6 +233,7 @@ deploy_test:
     - kubectl -n fetch apply -f k8s/service.yml
     - sleep 10
     - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
@@ -249,6 +252,7 @@ deploy_stage:
     - kubectl -n fetch apply -f k8s/service.yml
     - sleep 10
     - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: $CI_COMMIT_BRANCH == 'staging'
       when: manual
@@ -267,6 +271,7 @@ deploy_prod:
     - kubectl -n fetch apply -f k8s/service.yml
     - sleep 10
     - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: '$PROD_BUILD =~ /^TRUE$/'
       when: manual
