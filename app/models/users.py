@@ -159,3 +159,9 @@ class User(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
+    requests: List["Request"] = Relationship(
+        back_populates="requested_by",
+        sa_relationship_kwargs={
+            "primaryjoin": "Request.requested_by_id==User.id",
+        }
+    )

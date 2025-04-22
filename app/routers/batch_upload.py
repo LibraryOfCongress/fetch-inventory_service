@@ -193,7 +193,7 @@ async def update_batch_upload(
 
 @router.post("/request")
 async def batch_upload_request(
-    file: UploadFile, user_id: int = Form(None), session: Session = Depends(get_session)
+    file: UploadFile, requested_by_id: int = Form(None), session: Session = Depends(get_session)
 ):
     """
     Batch upload endpoint to process barcodes for different operations.
@@ -257,7 +257,7 @@ async def batch_upload_request(
             file_name=file_name,
             file_size=file_size,
             file_type=file_content_type,
-            user_id=user_id,
+            user_id=requested_by_id,
         )
 
         session.add(new_batch_upload)
@@ -329,7 +329,7 @@ async def batch_upload_request(
 
         # Process the request data
         request_df, request_instances = process_request_data(
-            session, validated_df, new_batch_upload.id
+            session, validated_df, new_batch_upload.id, requested_by_id
         )
 
         session.bulk_save_objects(request_instances)

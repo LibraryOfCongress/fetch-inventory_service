@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from app.models.requests import RequestStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.buildings import BuildingDetailReadOutput
+from app.schemas.users import UserDetailReadOutput
 
 
 class RequestInput(BaseModel):
@@ -20,6 +21,7 @@ class RequestInput(BaseModel):
     external_request_id: Optional[str] = None
     requestor_name: Optional[str] = None
     barcode_value: str  # pop this off in path operations
+    requested_by_id: Optional[int] = None
 
     @field_validator('status', mode='before', check_fields=True)
     @classmethod
@@ -44,6 +46,7 @@ class RequestInput(BaseModel):
                 "priority_id": 1,
                 "requestor_name": "Bilbo Baggins",
                 "external_request_id": "12345",
+                "requested_by_id": 1
             }
         }
 
@@ -61,6 +64,7 @@ class RequestUpdateInput(BaseModel):
     requestor_name: Optional[str] = None
     barcode_value: Optional[str] = None  # pop this off in path operations
     scanned_for_retrieval: Optional[bool] = None
+    requested_by_id: Optional[str] = None
 
     @field_validator('status', mode='before', check_fields=True)
     @classmethod
@@ -105,6 +109,8 @@ class RequestBaseOutput(BaseModel):
     requestor_name: Optional[str] = None
     scanned_for_pick_list: Optional[bool] = None
     scanned_for_retrieval: Optional[bool] = None
+    requested_by_id: Optional[int] = None
+    requested_by: Optional[UserDetailReadOutput] = None
 
 
 class MediaTypeNestedForRequest(BaseModel):

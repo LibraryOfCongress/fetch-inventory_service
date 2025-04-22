@@ -931,7 +931,7 @@ def validate_request_data(session, request_data: pd.DataFrame):
     return good_df, errored_df, {"errors": errors}
 
 
-def process_request_data(session, request_df: pd.DataFrame, batch_upload_id):
+def process_request_data(session, request_df: pd.DataFrame, batch_upload_id, requested_by_id):
     building_id = None
     barcodes = _fetch_existing_data(
         session, Barcode, request_df["Item Barcode"].astype(str).tolist(), Barcode.value
@@ -1037,6 +1037,8 @@ def process_request_data(session, request_df: pd.DataFrame, batch_upload_id):
         }
         if building_id is not None:
             request_data["building_id"] = building_id
+        if requested_by_id:
+            request_data["requested_by_id"] = requested_by_id
 
         request_instances.append(Request(**request_data))
 

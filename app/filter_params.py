@@ -234,6 +234,8 @@ class RequestFilterParams:
                                                                          "Requester "
                                                                          "ID to "
                                                                          "filter by."),
+        requested_by_id: List[str] = Query(default=None, description="Requested "
+                                                                     "by ID to filter by."),
         delivery_location: List[str] = Query(
             default=None, description="Delivery location to filter by."
         ),
@@ -256,6 +258,7 @@ class RequestFilterParams:
         self.priority = priority
         self.media_type = media_type
         self.external_request_id = external_request_id
+        self.requested_by_id = requested_by_id
         self.item_location = item_location
         self.non_tray_item_location = non_tray_item_location
         self.delivery_location = delivery_location

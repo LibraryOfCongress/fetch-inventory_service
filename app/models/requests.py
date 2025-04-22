@@ -78,6 +78,8 @@ class Request(SQLModel, table=True):
     requestor_name: Optional[str] = Field(
         sa_column=sa.Column(sa.VARCHAR(50), nullable=True, unique=False, default=None)
     )
+    requested_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True,
+                                          unique=False)
     create_dt: datetime = Field(
         sa_column=sa.Column(
             sa.TIMESTAMP(timezone=True),
@@ -103,3 +105,4 @@ class Request(SQLModel, table=True):
     building: Optional["Building"] = Relationship(back_populates="requests")
     pick_list: PickList = Relationship(back_populates="requests")
     batch_upload: Optional["BatchUpload"] = Relationship(back_populates="requests")
+    requested_by: Optional["User"] = Relationship(back_populates="requests")

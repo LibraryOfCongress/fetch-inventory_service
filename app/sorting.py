@@ -280,6 +280,11 @@ class RequestSorter(BaseSorter):
             return query
 
         # Fall back to base sorting if no custom sort logic applies
+        if sort_params.sort_by == "request_by":
+            return query.join(User).order_by(
+                order_func(func.concat(User.first_name, " ", User.last_name)
+                )
+            )
         return super().custom_sort(query, sort_params, order_func)
 
 
