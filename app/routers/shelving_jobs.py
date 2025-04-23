@@ -693,7 +693,7 @@ def reassign_container_location(
         if container.size_class_id != shelf_type.size_class_id:
             discrepancy_error = f"""Size Discrepancy - Container size_id: {container.size_class_id} does not match Shelf size_id: {shelf_type.size_class_id}"""
         if container.owner_id != shelf.owner_id:
-            discrepancy_error = f"""Owner Discrepancy does not match Container owner_id: {container.owner_id} - Shelf owner_id: {shelf.owner_id}"""
+            discrepancy_error = f"""Owner Discrepancy does not match Container owner_id: {container.owner_id} does not match Shelf owner_id: {shelf.owner_id}"""
 
         new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
             shelving_job_id=id,
@@ -796,7 +796,7 @@ def reassign_container_proposed_location(
 
         if not shelf_position_position_number_join:
             raise ValidationException(
-                detail=f"""Shelf Position Number {reassignment_input.shelf_position_number} does not exist on shelf {reassignment_input.shelf_id}"""
+                detail=f"""Shelf Position Number {reassignment_input.shelf_position_number} does not exist on shelf barcode {reassignment_input.shelf_barcode_value}"""
             )
 
     # Check for Availability
@@ -864,8 +864,7 @@ def reassign_container_proposed_location(
             size_class_id=shelf_type.size_class_id,
             assigned_location=shelf_position.location,
             pre_assigned_location=shelf_position_location,
-            error=f"""Shelf Position Discrepancy - Shelf Position {shelf_position_location}
-                    is already occupied""",
+            error=f"""Shelf Position Discrepancy - Shelf Position {shelf_position_location} is already occupied""",
         )
         commit_record(session, new_shelving_job_discrepancy)
 
@@ -884,8 +883,7 @@ def reassign_container_proposed_location(
             size_class_id=shelf_type.size_class_id,
             assigned_location=shelf.location,
             pre_assigned_location=shelf_position_location,
-            error=f"""Available Space Discrepancy - Shelf location {shelf.location}
-                    has no available space""",
+            error=f"""Available Space Discrepancy - Shelf location {shelf.location} has no available space""",
         )
         commit_record(session, new_shelving_job_discrepancy)
 
@@ -907,7 +905,7 @@ def reassign_container_proposed_location(
         if container.size_class_id != shelf_type.size_class_id:
             discrepancy_error = f"""Size Discrepancy - Container size_id: {container.size_class_id} does not match Shelf size_id: {shelf_type.size_class_id}"""
         if container.owner_id != shelf.owner_id:
-            discrepancy_error = f"""Owner Discrepancy does not match Container owner_id: {container.owner_id} - Shelf owner_id: {shelf.owner_id}"""
+            discrepancy_error = f"""Owner Discrepancy does not match Container owner_id: {container.owner_id} does not match Shelf owner_id: {shelf.owner_id}"""
 
         new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
             shelving_job_id=id,
@@ -923,8 +921,7 @@ def reassign_container_proposed_location(
         commit_record(session, new_shelving_job_discrepancy)
 
         raise ValidationException(
-            detail=f"Container Barcode {reassignment_input.container_barcode_value} "
-                   "does not match Shelf owner and size class."
+            detail=f"Container Barcode {reassignment_input.container_barcode_value} does not match Shelf owner and size class."
         )
 
     setattr(
