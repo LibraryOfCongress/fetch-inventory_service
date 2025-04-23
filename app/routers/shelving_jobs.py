@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams, JobFilterParams
 from app.logger import inventory_logger
+from app.models.accession_jobs import AccessionJob, AccessionJobStatus
 from app.models.users import User
 from app.events import update_shelf_space_after_tray, update_shelf_space_after_non_tray
 from app.sorting import ShelvingJobSorter
@@ -17,7 +18,7 @@ from app.utilities import (
     manage_transition,
     start_session_with_audit_info,
 )
-from app.models.verification_jobs import VerificationJob
+from app.models.verification_jobs import VerificationJob, VerificationJobStatus
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
 from app.models.shelving_jobs import ShelvingJob
@@ -588,6 +589,56 @@ def reassign_container_location(
             .where(ShelfPosition.id == container.shelf_position_proposed_id)
             .first()
         ).location
+
+    accession_job = (session.query(AccessionJob)
+                     .where(AccessionJob.id == container.accession_job_id).first())
+    if (
+        not container.scanned_for_accession or
+        not accession_job or
+        accession_job.status != AccessionJobStatus.Completed
+    ):
+        barcode = container.barcode
+
+        new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
+            shelving_job_id=id,
+            tray_id=discrepancy_tray_id,
+            non_tray_item_id=discrepancy_non_tray_id,
+            assigned_user_id=shelving_job.user_id,
+            owner_id=shelf.owner_id,
+            size_class_id=shelf_type.size_class_id,
+            assigned_location=shelf.location,
+            pre_assigned_location=pre_assigned_location,
+            error=f"""Not Accessioned Discrepancy - Container barcode {barcode.value} has not been accessioned""",
+        )
+        commit_record(session, new_shelving_job_discrepancy)
+        raise ValidationException(detail=f"Container barcode {barcode.value} has not been accessioned")
+
+    verification_job = (
+        session.query(VerificationJob)
+        .where(VerificationJob.id == container.verification_job_id).first()
+    )
+    if (
+        not container.scanned_for_verification or
+        not verification_job or
+        verification_job.status != VerificationJobStatus.Completed
+    ):
+        barcode = container.barcode
+
+        new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
+            shelving_job_id=id,
+            tray_id=discrepancy_tray_id,
+            non_tray_item_id=discrepancy_non_tray_id,
+            assigned_user_id=shelving_job.user_id,
+            owner_id=shelf.owner_id,
+            size_class_id=shelf_type.size_class_id,
+            assigned_location=shelf.location,
+            pre_assigned_location=pre_assigned_location,
+            error=f"""Not Accessioned Discrepancy - Container barcode {barcode.value} has not been verified""",
+        )
+        commit_record(session, new_shelving_job_discrepancy)
+        raise ValidationException(
+            detail=f"Container barcode {barcode.value} has not been verified"
+            )
 
     if shelf.available_space <= 0:
         new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
