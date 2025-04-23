@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams, ItemFilterParams
 from app.events import update_shelf_space_after_tray
+from app.logger import inventory_logger
 from app.models.move_discrepancies import MoveDiscrepancy
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
@@ -376,7 +377,8 @@ def move_tray(
         session.query(Shelf)
         .join(ShelfPosition, tray.shelf_position_id == ShelfPosition.id)
         .filter(ShelfPosition.shelf_id == Shelf.id)
-    ).first()
+        .first()
+    )
 
     # Retrieve the destination shelf
     dest_shelf = (
@@ -390,8 +392,10 @@ def move_tray(
     current_assigned_location = None
     original_assigned_location = None
     if src_shelf:
+        shelf_position = tray.shelf_position
+        shelf_position_number = shelf_position.shelf_position_number
         original_assigned_location = (src_shelf.location + "-" + str(
-            tray.shelf_position.shelf_position_number))
+            shelf_position_number.number))
     if dest_shelf:
         current_assigned_location = (dest_shelf.location + "-" + str(
             tray_input.shelf_position_number))
@@ -486,22 +490,13 @@ def move_tray(
             discrepancy_error = f"""Owner Discrepancy - Container owner:
             {tray_owner.name} does not match Shelf owner: {destination_owner.name}"""
 
-        assigned_location = (
-            session.query(ShelfPosition)
-            .where(ShelfPosition.id == tray.shelf_position_id)
-            .first()
-        ).location
-
-        current_assigned_location = (dest_shelf.location + "-" +
-                                   str(tray_input.shelf_position_number))
-
         new_move_discrepancy = MoveDiscrepancy(
             tray_id=tray.id,
             assigned_user_id=tray_input.assigned_user_id,
             owner_id=dest_shelf.owner_id,
             size_class_id=dest_shelf.shelf_type.size_class_id,
             container_type_id=tray.container_type_id,
-            original_assigned_location=assigned_location,
+            original_assigned_location=original_assigned_location,
             current_assigned_location=current_assigned_location,
             error=f"{discrepancy_error}",
         )
@@ -521,14 +516,12 @@ def move_tray(
             container_type_id=tray.container_type_id,
             original_assigned_location=original_assigned_location,
             current_assigned_location=current_assigned_location,
-            error=f"""Available Space Discrepancy - Shelf {tray_input.shelf_barcode_value} has no available
-            space""",
+            error=f"""Available Space Discrepancy - Shelf {tray_input.shelf_barcode_value} has no available space""",
         )
         commit_record(session, new_move_discrepancy)
 
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Shelf barcode
-            {tray_input.shelf_barcode_value} at location {current_assigned_location} has no available space"""
+            detail=f"""Failed to transfer: {barcode_value} - Shelf barcode {tray_input.shelf_barcode_value} at location {current_assigned_location} has no available space"""
         )
 
     destination_shelf_positions = dest_shelf.shelf_positions
