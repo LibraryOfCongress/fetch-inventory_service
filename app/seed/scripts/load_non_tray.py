@@ -95,6 +95,9 @@ def load_non_tray(
 
         # determine shelf position assignment
         shelf_position_number = int(shelf_position_number)
+        # kick out NT's with a zero for SPN
+        if shelf_position_number == 0:
+            raise ValueError(f"Legacy shelf_position number is 0. Non-Tray skipped.")
         positions_for_shelf = shelf_position_dict.get(shelf_barcode_value, [])
         sp_id = next(
             (position[shelf_position_number] for position in positions_for_shelf if shelf_position_number in position),
