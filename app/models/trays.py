@@ -86,7 +86,7 @@ class Tray(SQLModel, table=True):
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     shelf_position_id: Optional[int] = Field(
-        foreign_key="shelf_positions.id", nullable=True
+        foreign_key="shelf_positions.id", nullable=True, unique=True
     )
     shelf_position_proposed_id: Optional[int] = Field(
         sa_column=sa.Column(sa.Integer, nullable=True, unique=False)
@@ -150,6 +150,13 @@ class Tray(SQLModel, table=True):
         back_populates="tray",
         sa_relationship_kwargs={
             "primaryjoin": "ShelvingJobDiscrepancy.tray_id==Tray.id",
+            "lazy": "selectin"
+        }
+    )
+    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
+        back_populates="tray",
+        sa_relationship_kwargs={
+            "primaryjoin": "MoveDiscrepancy.tray_id==Tray.id",
             "lazy": "selectin"
         }
     )

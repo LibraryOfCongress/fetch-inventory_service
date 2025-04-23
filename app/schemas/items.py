@@ -126,11 +126,13 @@ class ItemUpdateInput(BaseModel):
 
 class ItemMoveInput(BaseModel):
     tray_barcode_value: str
+    assigned_user_id: Optional[int] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "tray_barcode_value": "5901234123457"
+                "tray_barcode_value": "5901234123457",
+                "assigned_user_id": 1
             }
         }
 

@@ -113,11 +113,14 @@ def sort_order_priority(session, pick_list, requests):
             # Extract the sorted request objects
             sorted_requests = [data["request"] for data in sorted_request_data]
 
+            sorted_requests = sorted(
+                sorted_requests,
+                key=lambda obj: obj.update_dt
+            )
+
             # Append requests not present in sorted_requests due to withdrawn
             remaining_requests = [req for req in requests if req not in sorted_requests]
             pick_list.requests = sorted_requests + remaining_requests
-
-    inventory_logger.info(f"Sorted Pick List: {pick_list}")
 
     return pick_list
 

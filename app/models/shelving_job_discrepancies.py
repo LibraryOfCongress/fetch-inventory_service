@@ -17,7 +17,8 @@ class ShelvingJobDiscrepancy(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
-    shelving_job_id: int = Field(foreign_key="shelving_jobs.id", nullable=False, unique=False)
+    shelving_job_id: int = Field(foreign_key="shelving_jobs.id", nullable=True,
+                                 unique=False)
     tray_id: Optional[int] = Field(foreign_key="trays.id", nullable=True, unique=False)
     non_tray_item_id: Optional[int] = Field(foreign_key="non_tray_items.id", nullable=True, unique=False)
     assigned_user_id: int = Field(foreign_key="users.id", nullable=True, unique=False)

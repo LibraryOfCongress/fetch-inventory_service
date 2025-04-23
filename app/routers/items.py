@@ -1,17 +1,28 @@
+import csv
+from io import StringIO
+
+import pandas as pd
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 
-from app.database.session import get_session
+from starlette.responses import StreamingResponse
+
+from app.database.session import get_session, commit_record
 from app.events import update_shelf_space_after_tray
 from app.filter_params import SortParams, ItemFilterParams
+from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.media_types import MediaType
+from app.models.move_discrepancies import MoveDiscrepancy
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
+from app.models.shelving_jobs import ShelvingJob
 from app.models.size_class import SizeClass
 from app.models.trays import Tray
 from app.models.verification_changes import VerificationChange
@@ -63,35 +74,33 @@ def get_item_list(
     item_queryset = select(Item)
 
     if params.status:
-        item_queryset = item_queryset.where(Item.status.in_(params.status.value))
+        item_queryset = item_queryset.where(Item.status.in_(params.status))
     if params.owner_id:
         item_queryset = item_queryset.where(Item.owner_id.in_(params.owner_id))
     if params.owner:
-        owner_subquery = (
-            select(Owner.id)
-            .where(Owner.name.in_(params.owner)).distinct()
-        )
+        owner_subquery = select(Owner.id).where(Owner.name.in_(params.owner)).distinct()
         item_queryset = item_queryset.where(Item.owner_id.in_(owner_subquery))
     if params.size_class_id:
-        item_queryset = item_queryset.where(Item.size_class_id.in_(params.size_class_id))
+        item_queryset = item_queryset.where(
+            Item.size_class_id.in_(params.size_class_id)
+        )
     if params.size_class:
         size_class_subquery = (
-            select(SizeClass.id)
-            .where(SizeClass.name.in_(params.size_class)).distinct()
+            select(SizeClass.id).where(SizeClass.name.in_(params.size_class)).distinct()
         )
         item_queryset = item_queryset.where(Item.size_class_id.in_(size_class_subquery))
     if params.media_type_id:
-        item_queryset = item_queryset.where(Item.media_type_id.in_(params.media_type_id))
+        item_queryset = item_queryset.where(
+            Item.media_type_id.in_(params.media_type_id)
+        )
     if params.media_type:
         media_type_subquery = (
-            select(MediaType.id)
-            .where(MediaType.name.in_(params.media_type)).distinct()
+            select(MediaType.id).where(MediaType.name.in_(params.media_type)).distinct()
         )
         item_queryset = item_queryset.where(Item.media_type_id.in_(media_type_subquery))
     if params.barcode_value:
         barcode_value_subquery = (
-            select(Barcode.id)
-            .where(Barcode.value.in_(params.barcode_value)).distinct()
+            select(Barcode.id).where(Barcode.value.in_(params.barcode_value)).distinct()
         )
         item_queryset = item_queryset.where(Item.barcode_id.in_(barcode_value_subquery))
     if params.from_dt:
@@ -106,6 +115,85 @@ def get_item_list(
         item_queryset = sorter.apply_sorting(item_queryset, sort_params)
 
     return paginate(session, item_queryset)
+
+
+@router.get("/download", response_class=StreamingResponse)
+def download_items(
+    session: Session = Depends(get_session),
+    params: ItemFilterParams = Depends(),
+):
+    """
+       Retrieve a paginated list of items from the database.
+
+       **Parameters:**
+       - owner_id (int): The ID of the owner to filter by.
+       - size_class_id (int): The ID of the size class to filter by.
+       - media_type_id (int): The ID of the media type to filter by.
+       - from_dt (datetime): The start date to filter by.
+       - to_dt (datetime): The end date to filter by.
+       - status (ItemStatus): The status to filter by.
+       - sort_params (SortParams): The sorting parameters.
+
+       **Returns:**
+       - Item List Output: The paginated list of items.
+       """
+    # Create a query to select all items from the database
+
+    item_queryset = (
+        select(
+            Item.accession_dt,
+            Item.status,
+            Owner.name.label("owner_name"),
+            SizeClass.name.label("size_class_name"),
+            MediaType.name.label("media_type_name"),
+            Barcode.value.label("barcode_value"),
+        )
+        .outerjoin(Owner, Item.owner_id == Owner.id)
+        .outerjoin(SizeClass, Item.size_class_id == SizeClass.id)
+        .outerjoin(MediaType, Item.media_type_id == MediaType.id)
+        .outerjoin(Barcode, Item.barcode_id == Barcode.id)
+    )
+
+    if params.barcode_value:
+        item_queryset = item_queryset.where(Barcode.value.in_(params.barcode_value))
+    if params.status:
+        item_queryset = item_queryset.where(Item.status.in_(params.status))
+    if params.owner_id:
+        item_queryset = item_queryset.where(Item.owner_id.in_(params.owner_id))
+    if params.owner:
+        item_queryset = item_queryset.where(Owner.name.in_(params.owner))
+    if params.size_class_id:
+        item_queryset = item_queryset.where(
+            Item.size_class_id.in_(params.size_class_id)
+        )
+    if params.size_class:
+        if params.size_class:
+            item_queryset = item_queryset.where(SizeClass.name.in_(params.size_class))
+    if params.media_type_id:
+        item_queryset = item_queryset.where(
+            Item.media_type_id.in_(params.media_type_id)
+        )
+    if params.media_type:
+        item_queryset = item_queryset.where(MediaType.name.in_(params.media_type))
+    if params.from_dt:
+        item_queryset = item_queryset.where(Item.accession_dt >= params.from_dt)
+    if params.to_dt:
+        item_queryset = item_queryset.where(Item.accession_dt <= params.to_dt)
+
+    def generate_csv():
+        output = StringIO()
+        result = session.execute(item_queryset)
+        df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        df.to_csv(output, index=False)
+        output.seek(0)
+        yield output.read()
+
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; "
+                                        "filename=items_advance_search.csv"},
+    )
 
 
 @router.get("/{id}", response_model=ItemDetailReadOutput)
@@ -231,23 +319,32 @@ def update_item(
         mutated_data = item.model_dump(exclude_unset=True)
 
         for key, value in mutated_data.items():
-            if key in ["media_type_id", "size_class_id"] and existing_item.__getattribute__(key) != value\
-                and existing_item.verification_job_id:
-                verification_job = session.query(VerificationJob).filter(
-                    VerificationJob.id == existing_item.verification_job_id).first()
-                tray_barcode = session.query(Barcode).join(
-                    Tray, Barcode.id == Tray.barcode_id
-                    ).filter(
-                    Tray.id == item.tray_id
-                    ).first()
+            if (
+                key in ["media_type_id", "size_class_id"]
+                and existing_item.__getattribute__(key) != value
+                and existing_item.verification_job_id
+            ):
+                verification_job = (
+                    session.query(VerificationJob)
+                    .filter(VerificationJob.id == existing_item.verification_job_id)
+                    .first()
+                )
+                tray_barcode = (
+                    session.query(Barcode)
+                    .join(Tray, Barcode.id == Tray.barcode_id)
+                    .filter(Tray.id == item.tray_id)
+                    .first()
+                )
                 item_barcode = session.get(Barcode, existing_item.barcode_id)
 
                 new_verification_change = VerificationChange(
                     workflow_id=verification_job.workflow_id,
                     tray_barcode_value=tray_barcode.value,
                     item_barcode_value=item_barcode.value,
-                    change_type="MediaTypeEdit" if key == "media_type_id" else "SizeClassEdit",
-                    completed_by_id=verification_job.user_id
+                    change_type=(
+                        "MediaTypeEdit" if key == "media_type_id" else "SizeClassEdit"
+                    ),
+                    completed_by_id=verification_job.user_id,
                 )
 
                 session.add(new_verification_change)
@@ -314,16 +411,15 @@ def move_item(
         raise ValidationException(
             detail=f"Failed to transfer: {barcode_value} Item with barcode not found"
         )
-
     tray_look_barcode_value = (
         session.query(Barcode)
         .where(Barcode.value == item_input.tray_barcode_value)
         .first()
     )
+
     if not tray_look_barcode_value:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value
-            {item_input.tray_barcode_value} not found"""
+            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value {item_input.tray_barcode_value} not found"""
         )
 
     item = (
@@ -332,41 +428,136 @@ def move_item(
         .first()
     )
 
-    if not item.scanned_for_accession or not item.scanned_for_verification:
-        raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} has not been verified"
-        )
-
-    if item.status != "In":
-        raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} is not in the tray"
-        )
-
-    source_tray = session.query(Tray).filter(Tray.id == item.tray_id).first()
-
-    if not source_tray:
-        raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Tray ID {item.tray_id} not found"
-        )
-
     if not item:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Item barcode value
-             {item_lookup_barcode_value.value} not found"""
+            detail=f"""Failed to transfer: {barcode_value} - Item barcode value {item_lookup_barcode_value.value} not found"""
         )
 
-    destination_tray = (
-        session.query(Tray).where(Tray.barcode_id == tray_look_barcode_value.id).first()
-    )
+    src_tray = session.query(Tray).filter(Tray.id == item.tray_id).first()
+    dest_tray = session.query(Tray).filter(Tray.barcode_id == tray_look_barcode_value.id).first()
+    current_assigned_location = (
+        session.query(ShelfPosition).filter(
+            ShelfPosition.id == dest_tray.shelf_position_id
+        ).first()
+    ).location
+    assigned_location = None
+    if src_tray and src_tray.shelf_position_id:
+        assigned_location = (
+            session.query(ShelfPosition).filter(
+                ShelfPosition.id == src_tray.shelf_position_id
+            ).first()
+        ).location
 
-    if not destination_tray:
+    if not src_tray:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value
-             {item_input.tray_barcode_value} not found"""
+            detail=f"""Failed to transfer: {barcode_value} - Tray Item not found"""
+        )
+
+    if not item.scanned_for_accession or not item.scanned_for_verification:
+        new_move_discrepancy = MoveDiscrepancy(
+            item_id=item.id,
+            tray_id=item.tray_id,
+            assigned_user_id=item_input.assigned_user_id,
+            owner_id=item.owner_id,
+            size_class_id=item.size_class_id,
+            container_type_id=src_tray.container_type_id,
+            original_assigned_location=assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"""Not Accessioned Discrepancy - Tray Item barcode
+                    {barcode_value} has not been accessioned or verified""",
+        )
+        commit_record(session, new_move_discrepancy)
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} has not been accessioned or verified"
+        )
+
+    if (
+        src_tray.shelf_position_id is None or
+        src_tray.withdrawn_barcode_id is not None
+    ):
+        new_move_discrepancy = MoveDiscrepancy(
+            item_id=item.id,
+            tray_id=item.tray_id,
+            assigned_user_id=item_input.assigned_user_id,
+            owner_id=item.owner_id,
+            size_class_id=item.size_class_id,
+            container_type_id=src_tray.container_type_id,
+            original_assigned_location=assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"""Not Shelved Discrepancy - Tray Item barcode
+            {barcode_value} was not previously shelved""",
+        )
+        commit_record(session, new_move_discrepancy)
+
+        raise ValidationException(
+            detail=f"""Failed to transfer: {barcode_value} - Tray Item was not previously shelved"""
+        )
+
+    if not dest_tray:
+        new_move_discrepancy = MoveDiscrepancy(
+            item_id=item.id,
+            tray_id=item.tray_id,
+            assigned_user_id=item_input.assigned_user_id,
+            owner_id=item.owner_id,
+            size_class_id=item.size_class_id,
+            container_type_id=src_tray.container_type_id,
+            original_assigned_location=assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"""Not Shelved Discrepancy - Destination Container barcode
+             {item_input.tray_barcode_value} not found""",
+        )
+        commit_record(session, new_move_discrepancy)
+
+        raise ValidationException(
+            detail=f"""Failed to transfer: {barcode_value} - Container barcode {item_input.tray_barcode_value} not found"""
+        )
+
+    if (
+        dest_tray.shelf_position_id is None or
+        dest_tray.withdrawn_barcode_id is not None
+    ):
+        new_move_discrepancy = MoveDiscrepancy(
+            item_id=item.id,
+            tray_id=item.tray_id,
+            assigned_user_id=item_input.assigned_user_id,
+            owner_id=item.owner_id,
+            size_class_id=item.size_class_id,
+            container_type_id=src_tray.container_type_id,
+            original_assigned_location=assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"""Not Shelved Discrepancy - Scanned Container barcode
+             {item_input.tray_barcode_value} was not previously shelved""",
+        )
+        commit_record(session, new_move_discrepancy)
+
+        raise ValidationException(
+            detail=f"""Failed to transfer: {barcode_value} - Scanned Container barcode {item_input.tray_barcode_value} was not previously shelved"""
+        )
+
+    if (
+        item.status != "In"
+        or item.withdrawn_barcode_id is not None
+        or item.tray_id is None
+    ):
+        new_move_discrepancy = MoveDiscrepancy(
+            item_id=item.id,
+            tray_id=item.tray_id,
+            assigned_user_id=item_input.assigned_user_id,
+            owner_id=item.owner_id,
+            size_class_id=item.size_class_id,
+            container_type_id=src_tray.container_type_id,
+            original_assigned_location=assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"""Not Shelved Discrepancy - Item barcode {barcode_value} is not in a tray""",
+        )
+        commit_record(session, new_move_discrepancy)
+
+        raise ValidationException(
+            detail=f"""Failed to transfer: Item barcode {barcode_value} is not in a tray"""
         )
 
     background_tasks.add_task(
-        process_tray_item_move(session, item, source_tray, destination_tray)
+        process_tray_item_move(session, item, src_tray, dest_tray)
     )
 
     return item

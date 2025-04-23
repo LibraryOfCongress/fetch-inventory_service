@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import asc, desc, or_
+from sqlalchemy import asc, desc, or_, func
 
 from app.database.session import get_session
 from app.filter_params import SortParams, RequestFilterParams
@@ -21,6 +21,7 @@ from app.models.barcodes import Barcode
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.models.trays import Tray
+from app.models.users import User
 from app.schemas.requests import (
     RequestInput,
     RequestUpdateInput,
@@ -70,11 +71,20 @@ def get_request_list(
         query = query.where(Request.fulfilled == False)
     if params.requestor_name:
         query = query.where(Request.requestor_name.like(f"%{params.requestor_name}%"))
+    if params.request_type_id:
+        query = query.where(Request.request_type_id.in_(params.request_type_id))
     if params.request_type:
         request_type_subquery = select(RequestType.id).where(
             RequestType.type.in_(params.request_type)
         )
         query = query.where(Request.request_type_id.in_(request_type_subquery))
+    if params.requested_by_id:
+        query = query.where(Request.requested_by_id.in_(params.requested_by_id))
+    if params.requested_by:
+        requested_by_subquery = select(User.id).where(
+            func.concat(User.first_name, " ", User.last_name).in_(params.requested_by)
+        )
+        query = query.where(Request.requested_by_id.in_(requested_by_subquery))
     if params.status:
         query = query.where(Request.status.in_(params.status))
     if params.from_dt:
@@ -90,6 +100,17 @@ def get_request_list(
         query = query.where(Request.building_id.in_(building_subquery))
     if params.unassociated_pick_list:
         query = query.where(Request.pick_list_id == None)
+    if params.barcode_value:
+        item_subquery = (session.query(Item.id)
+                         .join(Barcode, Barcode.id == Item.barcode_id)
+                         .where(Barcode.value == params.barcode_value).first())
+        non_tray_item_subquery = (session.query(NonTrayItem.id)
+                                  .join(Barcode, Barcode.id == NonTrayItem.barcode_id)
+                                  .where(Barcode.value == params.barcode_value).first())
+        if item_subquery:
+            query = query.where(Request.item_id.in_(item_subquery))
+        elif non_tray_item_subquery:
+            query = query.where(Request.non_tray_item_id.in_(non_tray_item_subquery))
     if params.item_barcode:
         item_subquery = (
             select(Item.id)
@@ -135,6 +156,10 @@ def get_request_list(
                 Request.non_tray_item_id.in_(non_tray_item_subquery),
             )
         )
+    if params.external_request_id:
+        query = query.where(Request.external_request_id.in_(params.external_request_id))
+    if params.priority_id:
+        query = query.where(Request.priority_id.in_(params.priority_id))
     if params.priority:
         priority_subquery = select(Priority.id).where(
             Priority.value.in_(params.priority)
@@ -146,6 +171,10 @@ def get_request_list(
         )
         query = query.where(
             Request.delivery_location_id.in_(delivery_location_subquery)
+        )
+    if params.delivery_location_id:
+        query = query.where(
+            Request.delivery_location_id.in_(params.delivery_location_id)
         )
     if params.item_location:
         tem_location_subquery = (

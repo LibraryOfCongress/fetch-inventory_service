@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import not_, or_, func
+from sqlalchemy import not_, or_, func, text
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
@@ -28,6 +28,7 @@ from app.schemas.accession_jobs import (
     AccessionJobListOutput,
     AccessionJobDetailOutput,
 )
+from app.utilities import start_session_with_audit_info
 
 router = APIRouter(
     prefix="/accession-jobs",
@@ -214,11 +215,13 @@ def create_accession_job(
 
         # generate a new workflow and attach
         workflow = Workflow()
+        audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
         session.add(workflow)
         session.commit()
         session.refresh(workflow)
         new_accession_job.workflow_id = workflow.id
         session.add(new_accession_job)
+        start_session_with_audit_info(audit_info, session)
         session.commit()
         session.refresh(new_accession_job)
 

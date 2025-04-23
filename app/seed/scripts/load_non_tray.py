@@ -16,7 +16,7 @@ def load_non_tray(
     owner_name,#satisfied
     item_accession_dt,#satisfied
     # shelved_dt,#foreign unsatisfied
-    size_class_short_name,#satisfied
+    # size_class_short_name,#satisfied
     shelf_position_number,#satisfied
     status,
     # session,#satisfied
@@ -45,7 +45,10 @@ def load_non_tray(
             owner_name = "LC"
 
         # shelf_barcode from container_barcode_value stripped (everything after 'T')
-        shelf_barcode_value = container_barcode_value[-6:]
+        if len(container_barcode_value) < 8:
+            shelf_barcode_value = container_barcode_value[-5:]
+        else:
+            shelf_barcode_value = container_barcode_value[-6:]
 
         # create non_tray barcode object
         # NonTray uses Item barcode rules of "^\\d{10}[0-9A]$"
@@ -92,6 +95,9 @@ def load_non_tray(
 
         # determine shelf position assignment
         shelf_position_number = int(shelf_position_number)
+        # kick out NT's with a zero for SPN
+        if shelf_position_number == 0:
+            raise ValueError(f"Legacy shelf_position number is 0. Non-Tray skipped.")
         positions_for_shelf = shelf_position_dict.get(shelf_barcode_value, [])
         sp_id = next(
             (position[shelf_position_number] for position in positions_for_shelf if shelf_position_number in position),
@@ -134,7 +140,7 @@ def load_non_tray(
             barcode_id=non_tray_barcode_instance.id,
             container_type_id=container_types_dict.get("Non-Tray"),
             owner_id=owners_dict.get(owner_name),
-            size_class_id=size_class_dict.get(size_class_short_name),
+            size_class_id=size_class_dict.get(non_tray_missing_data.get('size_class_short_name')),
             media_type_id=media_types_dict.get(media_type),
             shelf_position_id=sp_id,
             shelf_position_proposed_id=sp_id,
@@ -167,4 +173,4 @@ def load_non_tray(
             "reason": f"{e}"
         }
     finally:
-        return [success, failure, error, barcode_object, non_tray_item_object]
+        return [success, failure, error, barcode_object, non_tray_item_object, row_num, item_barcode_value]

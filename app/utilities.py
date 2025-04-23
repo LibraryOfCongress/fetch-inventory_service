@@ -202,10 +202,10 @@ def process_containers_for_shelving(
         - Commits transactions
     """
 
-    # conditions are where clauses
+    # Initial filter conditions
     conditions = []
 
-    # perform joins from most constrained to least, for efficiency
+    # Perform joins from most constrained to least, for efficiency
     if ladder_id:
         conditions.append(Shelf.ladder_id == ladder_id)
     elif side_id:
@@ -215,11 +215,9 @@ def process_containers_for_shelving(
     elif module_id:
         conditions.append(Aisle.module_id == module_id)
     else:
-        # searching in aisles belonging to a building's modules
         conditions.append(Module.building_id == building_id)
 
-    # query is built without execution beforehand
-    # query is built without execution beforehand
+    # Base query
     shelf_position_query = (
         select(
             ShelfPosition.id.label("shelf_position_id"),
@@ -246,26 +244,22 @@ def process_containers_for_shelving(
         .join(Module, Module.id == Aisle.module_id)
         .where(
             not_(
-                select(Tray)
-                .where(
-                    or_(
-                        Tray.shelf_position_id == ShelfPosition.id,
-                        Tray.shelf_position_proposed_id == ShelfPosition.id,
-                    )
-                )
-                .exists()
+                select(1).where(Tray.shelf_position_id == ShelfPosition.id).exists()
             )
         )
         .where(
             not_(
-                select(NonTrayItem)
-                .where(
-                    or_(
-                        NonTrayItem.shelf_position_id == ShelfPosition.id,
-                        NonTrayItem.shelf_position_proposed_id == ShelfPosition.id,
-                    )
-                )
-                .exists()
+                select(1).where(Tray.shelf_position_proposed_id == ShelfPosition.id).exists()
+            )
+        )
+        .where(
+            not_(
+                select(1).where(NonTrayItem.shelf_position_id == ShelfPosition.id).exists()
+            )
+        )
+        .where(
+            not_(
+                select(1).where(NonTrayItem.shelf_position_proposed_id == ShelfPosition.id).exists()
             )
         )
     )
@@ -937,7 +931,7 @@ def validate_request_data(session, request_data: pd.DataFrame):
     return good_df, errored_df, {"errors": errors}
 
 
-def process_request_data(session, request_df: pd.DataFrame, batch_upload_id):
+def process_request_data(session, request_df: pd.DataFrame, batch_upload_id, requested_by_id):
     building_id = None
     barcodes = _fetch_existing_data(
         session, Barcode, request_df["Item Barcode"].astype(str).tolist(), Barcode.value
@@ -1043,6 +1037,8 @@ def process_request_data(session, request_df: pd.DataFrame, batch_upload_id):
         }
         if building_id is not None:
             request_data["building_id"] = building_id
+        if requested_by_id:
+            request_data["requested_by_id"] = requested_by_id
 
         request_instances.append(Request(**request_data))
 
@@ -1244,22 +1240,30 @@ def process_withdraw_job_data(
     return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
 
 
-async def start_session_with_user_id(audit_name: str, session):
+async def start_session_with_user_id(audit_info: dict, session):
     """
-    This method is to add the user id for any database change.
+    This method is to add the user info for any database change.
     """
-    session.execute(text(f"select set_config('audit.user_id', '{audit_name}', true)"))
+    setattr(session, "audit_info", audit_info)
+    session.execute(text(f"select set_config('audit.user_name', '{audit_info['name']}', true)"))
+    session.execute(text(f"select set_config('audit.user_id', '{audit_info['id']}', true)"))
+
+
+def start_session_with_audit_info(audit_info: dict, session):
+    setattr(session, "audit_info", audit_info)
+    session.execute(text(f"select set_config('audit.user_name', '{audit_info['name']}', true)"))
+    session.execute(text(f"select set_config('audit.user_id', '{audit_info['id']}', true)"))
 
 
 async def set_session_to_request(
     request: Request,
     session: Session,
-    audit_name: str,
+    audit_info: dict,
 ):
     if request.method != "GET":
         request.state.db_session = session
 
-        await start_session_with_user_id(audit_name, session=request.state.db_session)
+        await start_session_with_user_id(audit_info, session=request.state.db_session)
 
     return request
     # if request.method != "GET":

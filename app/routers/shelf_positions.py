@@ -23,7 +23,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.sorting import BaseSorter
+from app.sorting import BaseSorter, ShelvesSorter
 
 router = APIRouter(
     prefix="/shelves/positions",
@@ -77,7 +77,7 @@ def get_shelf_position_list(
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
-        sorter = BaseSorter(ShelfPosition)
+        sorter = ShelvesSorter(ShelfPosition)
         statement = sorter.apply_sorting(statement, sort_params)
 
     return paginate(session, statement)

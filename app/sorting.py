@@ -6,6 +6,7 @@ from sqlalchemy.orm import Query, aliased
 from sqlalchemy.sql import union_all, select
 
 from app.config.exceptions import BadRequest
+from app.models.aisle_numbers import AisleNumber
 
 from app.models.barcodes import Barcode
 from app.models.buildings import Building
@@ -13,7 +14,9 @@ from app.models.container_types import ContainerType
 from app.models.delivery_locations import DeliveryLocation
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
+from app.models.ladder_numbers import LadderNumber
 from app.models.media_types import MediaType
+from app.models.move_discrepancies import MoveDiscrepancy
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
@@ -25,6 +28,7 @@ from app.models.refile_non_tray_items import RefileNonTrayItem
 from app.models.request_types import RequestType
 from app.models.requests import Request
 from app.models.shelf_numbers import ShelfNumber
+from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
@@ -76,7 +80,7 @@ class BaseSorter:
         sort_field = getattr(self.model, sort_params.sort_by, None)
 
         if sort_field:
-            if hasattr(sort_field, 'type') and isinstance(sort_field.type, enum):
+            if hasattr(sort_field, "type") and isinstance(sort_field.type, enum):
                 query = query.order_by(order_func(func.cast(sort_field, Text)))
                 return query
 
@@ -276,6 +280,11 @@ class RequestSorter(BaseSorter):
             return query
 
         # Fall back to base sorting if no custom sort logic applies
+        if sort_params.sort_by == "request_by":
+            return query.join(User).order_by(
+                order_func(func.concat(User.first_name, " ", User.last_name)
+                )
+            )
         return super().custom_sort(query, sort_params, order_func)
 
 
@@ -368,34 +377,28 @@ class RefileJobSorter(BaseSorter):
                     RefileJob.id,
                     (
                         func.coalesce(
-                            func.sum(case((Item.status == "In", 1), else_=0)),
-                            0
+                            func.sum(case((Item.status == "In", 1), else_=0)), 0
                         )
-                        +
-                        func.coalesce(
-                            func.sum(case((NonTrayItem.status == "In", 1), else_=0)),
-                            0
+                        + func.coalesce(
+                            func.sum(case((NonTrayItem.status == "In", 1), else_=0)), 0
                         )
-                    ).label("shelved_count")
+                    ).label("shelved_count"),
                 )
                 .select_from(RefileJob)
                 .outerjoin(RefileItem, RefileItem.refile_job_id == RefileJob.id)
                 .outerjoin(Item, Item.id == RefileItem.item_id)
                 .outerjoin(
                     RefileNonTrayItem, RefileNonTrayItem.refile_job_id == RefileJob.id
-                    )
+                )
                 .outerjoin(
                     NonTrayItem, NonTrayItem.id == RefileNonTrayItem.non_tray_item_id
-                    )
+                )
                 .group_by(RefileJob.id)
             ).alias("container_count_map")
 
             query = query.outerjoin(
-                container_count_subquery,
-                RefileJob.id == container_count_subquery.c.id
-            ).order_by(
-                order_func(container_count_subquery.c.shelved_count)
-            )
+                container_count_subquery, RefileJob.id == container_count_subquery.c.id
+            ).order_by(order_func(container_count_subquery.c.shelved_count))
 
             return query
 
@@ -415,10 +418,12 @@ class WithdrawJobSorter(BaseSorter):
                     func.coalesce(func.count(ItemWithdrawal.id), 0)
                     + func.coalesce(func.count(NonTrayItemWithdrawal.id), 0),
                 )
-                .outerjoin(ItemWithdrawal, ItemWithdrawal.withdraw_job_id ==
-                           WithdrawJob.id)
                 .outerjoin(
-                    NonTrayItemWithdrawal, NonTrayItemWithdrawal.withdraw_job_id == WithdrawJob.id
+                    ItemWithdrawal, ItemWithdrawal.withdraw_job_id == WithdrawJob.id
+                )
+                .outerjoin(
+                    NonTrayItemWithdrawal,
+                    NonTrayItemWithdrawal.withdraw_job_id == WithdrawJob.id,
                 )
                 .group_by(WithdrawJob.id)
                 .alias("item_count_map")
@@ -589,7 +594,9 @@ class VerificationChangeSorter(BaseSorter):
         if sort_params.sort_by == "tray_barcode":
             return query.order_by(order_func("tray_barcode_value"))
         if sort_params.sort_by == "action":
-            return query.order_by(order_func(func.cast(VerificationChange.change_type, Text)))
+            return query.order_by(
+                order_func(func.cast(VerificationChange.change_type, Text))
+            )
 
         return super().custom_sort(query, sort_params, order_func)
 
@@ -623,21 +630,130 @@ class ShelvingJobDiscrepancySorter(BaseSorter):
             query = query.join(User, ShelvingJobDiscrepancy.assigned_user_id == User.id)
             return query.order_by(
                 order_func(func.concat(User.first_name, " ", User.last_name))
-                )
+            )
         if sort_params.sort_by == "barcode_value":
             # Outer join to Tray and NonTrayItem so that if one is missing, the row is not dropped.
             query = query.outerjoin(Tray, ShelvingJobDiscrepancy.tray_id == Tray.id)
             query = query.outerjoin(
                 NonTrayItem, ShelvingJobDiscrepancy.non_tray_item_id == NonTrayItem.id
-                )
+            )
             # Outer join Barcode by checking both possibilities
             query = query.outerjoin(
                 Barcode,
-                or_(Tray.barcode_id == Barcode.id, NonTrayItem.barcode_id == Barcode.id)
+                or_(
+                    Tray.barcode_id == Barcode.id, NonTrayItem.barcode_id == Barcode.id
+                ),
             )
             return query.order_by(order_func(Barcode.value))
         if sort_params.sort_by == "size_class":
-            query = query.join(SizeClass, ShelvingJobDiscrepancy.size_class_id == SizeClass.id)
+            query = query.join(
+                SizeClass, ShelvingJobDiscrepancy.size_class_id == SizeClass.id
+            )
             return query.order_by(order_func(SizeClass.short_name))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class UserSorter(BaseSorter):
+    """
+    User List Sort By with specific sorting logic for related models.
+    """
+
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by == "name":
+            return query.order_by(func.concat(User.first_name, " ", User.last_name))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class MoveDiscrepancySorter(BaseSorter):
+    """
+    Move Discrepancy List Sort By with specific sorting logic for related models.
+    """
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by == "owner":
+            query = query.join(Owner, MoveDiscrepancy.owner_id == Owner.id)
+            return query.order_by(order_func(Owner.name))
+        if sort_params.sort_by == "assigned_user":
+            query = query.join(User, MoveDiscrepancy.assigned_user_id == User.id)
+            return query.order_by(
+                order_func(func.concat(User.first_name, " ", User.last_name))
+            )
+        if sort_params.sort_by == "barcode_value":
+            # Aliases to avoid conflicts
+            tray_alias = aliased(Tray)
+            item_alias = aliased(Item)
+            non_tray_item_alias = aliased(NonTrayItem)
+            barcode_tray_alias = aliased(Barcode)
+            barcode_item_alias = aliased(Barcode)
+            barcode_non_tray_alias = aliased(Barcode)
+
+            # Join MoveDiscrepancy -> Tray -> Barcode (for Trays)
+            query = query.outerjoin(
+                tray_alias, MoveDiscrepancy.tray_id == tray_alias.id
+            ).outerjoin(
+                barcode_tray_alias, tray_alias.barcode_id == barcode_tray_alias.id
+            )
+
+            # Join MoveDiscrepancy -> Item -> Barcode (for Items)
+            query = query.outerjoin(
+                item_alias, MoveDiscrepancy.item_id == item_alias.id
+            ).outerjoin(
+                barcode_item_alias, item_alias.barcode_id == barcode_item_alias.id
+            )
+
+            # Join Request -> NonTrayItem -> Barcode (for Non-Tray Items)
+            query = query.outerjoin(
+                non_tray_item_alias, MoveDiscrepancy.non_tray_item_id == non_tray_item_alias.id
+            ).outerjoin(
+                barcode_non_tray_alias,
+                non_tray_item_alias.barcode_id == barcode_non_tray_alias.id,
+            )
+
+            # Ensure sorting by barcode value from both barcode tables
+            query = query.order_by(
+                order_func(
+                    func.coalesce(
+                        barcode_tray_alias.value, barcode_item_alias.value,
+                        barcode_non_tray_alias.value
+                    )
+                )
+            )
+            return query
+
+        if sort_params.sort_by == "size_class":
+            query = query.join(
+                SizeClass, MoveDiscrepancy.size_class_id == SizeClass.id
+            )
+            return query.order_by(order_func(SizeClass.short_name))
+        if sort_params.sort_by == "container_type":
+            query = query.join(
+                ContainerType, MoveDiscrepancy.container_type_id == ContainerType.id
+            )
+            return query.order_by(order_func(ContainerType.type))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class AisleSorter(BaseSorter):
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by.lower() == 'aisle_number':
+            return query.join(AisleNumber).order_by(order_func(AisleNumber.number))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class LadderSorter(BaseSorter):
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by.lower() == 'ladder_number':
+            return query.join(LadderNumber).order_by(order_func(LadderNumber.number))
+
+        return super().custom_sort(query, sort_params, order_func)
+
+
+class ShelvesSorter(BaseSorter):
+    def custom_sort(self, query: Query, sort_params, order_func):
+        if sort_params.sort_by.lower() == 'shelf_position_number':
+            return query.join(ShelfPositionNumber).order_by(order_func(ShelfPositionNumber.number))
 
         return super().custom_sort(query, sort_params, order_func)

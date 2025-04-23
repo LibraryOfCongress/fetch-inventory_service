@@ -39,10 +39,10 @@ class ItemFilterParams:
             default=None, description="Value of the barcode " "to filter items."
         ),
         from_dt: datetime = Query(
-            default=None, description="Start created date to filter by."
+            default=None, description="Start Accession date to filter by."
         ),
         to_dt: datetime = Query(
-            default=None, description="End created date to filter by."
+            default=None, description="End Accession date to filter by."
         ),
         status: List[ItemStatus] = Query(
             default=None, description="Status to filter by."
@@ -148,7 +148,7 @@ class JobFilterParams:
         ),
         user_id: List[int] = Query(default=None, description="User ID to filter by."),
         assigned_user: List[str] = Query(
-            default=None, description="Assigned " "user to filter by."
+            default=None, description="Assigned user to filter by."
         ),
         status: List[str] = Query(default=None, description="Status to filter by."),
         from_dt: Optional[datetime] = None,
@@ -223,16 +223,33 @@ class RequestFilterParams:
         request_type: List[str] = Query(
             default=None, description="Request type to filter by."
         ),
+        request_type_id: List[str] = Query(
+            default=None, description="Request type id to filter by."
+        ),
         item_status: List[str] = Query(
             default=None, description="Item Status to " "filter " "by."
         ),
         priority: List[str] = Query(default=None, description="Priority to filter by."),
+        priority_id: List[str] = Query(default=None, description="Priority ID to "
+                                                                 "filter by."),
         media_type: List[str] = Query(
             default=None, description="Media type to filter by."
         ),
+        external_request_id: List[str] = Query(default=None, description="External "
+                                                                         "Requester "
+                                                                         "ID to "
+                                                                         "filter by."),
+        requested_by_id: List[str] = Query(default=None, description="Requested "
+                                                                     "by ID to filter by."),
+        requested_by: List[str] = Query(default=None, description="Requested By to "
+                                                                  "filter by."),
         delivery_location: List[str] = Query(
             default=None, description="Delivery location to filter by."
         ),
+        delivery_location_id: List[str] = Query(
+            default=None, description="Delivery location ID to filter by."
+        ),
+
         item_location: Optional[str] = None,
         non_tray_item_location: Optional[str] = None,
         from_dt: Optional[datetime] = None,
@@ -249,11 +266,17 @@ class RequestFilterParams:
         self.item_barcode = item_barcode
         self.non_tray_item_barcode = non_tray_item_barcode
         self.request_type = request_type
+        self.request_type_id = request_type_id
         self.priority = priority
+        self.priority_id = priority_id
         self.media_type = media_type
+        self.external_request_id = external_request_id
+        self.requested_by_id = requested_by_id
+        self.requested_by = requested_by
         self.item_location = item_location
         self.non_tray_item_location = non_tray_item_location
         self.delivery_location = delivery_location
+        self.delivery_location_id = delivery_location_id
         self.from_dt = from_dt
         self.to_dt = to_dt
 
@@ -508,3 +531,31 @@ class BatchUploadParams:
         self.withdraw_job_id = withdraw_job_id
         self.file_name = file_name
         self.file_type = file_type
+
+
+class MoveDiscrepancyParams:
+    def __init__(
+        self,
+        assigned_user_id: list[int] = Query(default=None, description="ID of the user to filter jobs."),
+        owner_id: list[int] = Query(
+            default=None, description="ID of the user to filter jobs."
+        ),
+        size_class_id: list[int] = Query(
+            default=None, description="ID of the size class to filter jobs."
+        ),
+        container_type_id: list[int] = Query(
+            default=None, description="ID of the container type to filter jobs."
+        ),
+        from_dt: datetime = Query(
+            default=None, description="Start created date to " "filter by."
+        ),
+        to_dt: datetime = Query(
+            default=None, description="End created date to " "filter by."
+        ),
+    ):
+        self.assigned_user_id = assigned_user_id
+        self.owner_id = owner_id
+        self.size_class_id = size_class_id
+        self.container_type_id = container_type_id
+        self.from_dt = from_dt
+        self.to_dt = to_dt

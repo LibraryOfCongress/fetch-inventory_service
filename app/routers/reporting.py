@@ -22,6 +22,7 @@ from app.filter_params import (
     UserJobItemsCountParams,
     VerificationChangesParams,
     RetrievalCountParams,
+    MoveDiscrepancyParams,
 )
 from app.models.accession_jobs import AccessionJob
 from app.models.aisle_numbers import AisleNumber
@@ -29,6 +30,7 @@ from app.models.barcodes import Barcode
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
 from app.models.media_types import MediaType
+from app.models.move_discrepancies import MoveDiscrepancy
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
@@ -65,6 +67,7 @@ from app.schemas.reporting import (
     UserJobItemCountReadOutput,
     VerificationChangesOutput,
     RetrievalItemCountReadOutput,
+    MoveDiscrepancyOutput
 )
 from app.config.exceptions import NotFound, BadRequest, InternalServerError
 from app.sorting import (
@@ -76,6 +79,7 @@ from app.sorting import (
     VerificationChangeSorter,
     RetrievalItemCountSorter,
     ShelvingJobDiscrepancySorter,
+    MoveDiscrepancySorter,
 )
 
 router = APIRouter(
@@ -211,7 +215,7 @@ def get_accessioned_items_count_query(params, sort_params=None):
 
     final_query = select(*selection).select_from(combined_query)
 
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         if sort_params.sort_order not in ["asc", "desc"]:
             raise BadRequest(
                 detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
@@ -284,20 +288,8 @@ def get_accessioned_items_csv(
     **Returns**:
     - Streaming Response: The response with the csv file
     """
-    if sort_params.sort_by:
-        if sort_params.sort_order not in ["asc", "desc"]:
-            raise BadRequest(
-                detail="Invalid value for 'sort_order'. Allowed values are: 'asc', 'desc'"
-            )
 
-        order_func = asc if sort_params.sort_order == "asc" else desc
-        # Get the query
-        accession_query = get_accessioned_items_count_query(
-            params, sort_params.sort_by, order_func
-        )
-    else:
-        # Get the query
-        accession_query = get_accessioned_items_count_query(params)
+    accession_query = get_accessioned_items_count_query(params)
 
     # Define the generator to stream data
     def generate_csv():
@@ -395,7 +387,7 @@ def get_shelving_job_report_csv(
     Translates list response of ShelvingJobDiscrepancy objects to csv,
     returns binary for download
     """
-    query = select(ShelvingJobDiscrepancy).distinct()
+    query = select(ShelvingJobDiscrepancy)
 
     if params.shelving_job_id:
         query = query.where(
@@ -742,7 +734,7 @@ def get_aisle_item_counts_query(params, sort_params=None):
         query = query.filter(AisleNumber.number <= params.aisle_num_to)
 
     # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = AisleItemsCountSorter(Aisle)
         query = sorter.apply_sorting(query, sort_params)
@@ -825,7 +817,7 @@ def get_aisles_items_count_csv(
         raise HTTPException(status_code=404, detail="Building not found")
 
     aisles_query = get_aisle_item_counts_query(
-        params.building_id, params.aisle_num_from, params.aisle_num_to
+        params
     )
 
     # Define the generator to stream data
@@ -923,7 +915,7 @@ def get_non_tray_item_counts_query(params, sort_params=None):
         query = query.where(NonTrayItem.shelved_dt != None)
 
         # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = NonTrayItemCountSorter(NonTrayItem)
         query = sorter.apply_sorting(query, sort_params)
@@ -1109,7 +1101,7 @@ def get_tray_item_counts_query(params, sort_params=None):
     if not params.from_dt or not params.to_dt:
         query = query.where(Tray.shelved_dt != None)
 
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = TrayItemCountSorter(Tray)
         query = sorter.apply_sorting(query, sort_params)
@@ -1679,7 +1671,7 @@ def get_verification_change_query(params, sort_params=None):
         .where(and_(*conditions))
     )
 
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = VerificationChangeSorter(VerificationChange)
         query = sorter.apply_sorting(query, sort_params)
@@ -1846,7 +1838,7 @@ def get_retrieval_item_count_query(params, sort_params=None):
     ).group_by(combined_query.c.owner_name)
 
     # Sorting logic
-    if sort_params.sort_by:
+    if sort_params is not None and sort_params.sort_by:
         # Apply sorting using BaseSorter
         sorter = RetrievalItemCountSorter(ItemRetrievalEvent)
         final_aggregation_query = sorter.apply_sorting(
@@ -1916,4 +1908,152 @@ def get_retrieval_count_csv(
         generate_csv(),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=retrieval_count.csv"},
+    )
+
+
+@router.get(
+    "/move-discrepancies/", response_model=Page[MoveDiscrepancyOutput]
+)
+def get_move_discrepancy_list(
+    session: Session = Depends(get_session),
+    params: MoveDiscrepancyParams = Depends(),
+    sort_params: SortParams = Depends(),
+) -> list:
+    """
+    Returns a list of Move Discrepancy objects.
+    """
+    query = select(MoveDiscrepancy)
+
+    if params.assigned_user_id:
+        query = query.where(
+            MoveDiscrepancy.assigned_user_id.in_(params.assigned_user_id)
+        )
+    if params.owner_id:
+        query = query.where(MoveDiscrepancy.owner_id.in_(params.owner_id))
+    if params.size_class_id:
+        query = query.where(
+            MoveDiscrepancy.size_class_id.in_(params.size_class_id)
+        )
+    if params.container_type_id:
+        query = query.where(
+            MoveDiscrepancy.container_type_id.in_(params.container_type_id)
+        )
+    if params.from_dt:
+        query = query.where(MoveDiscrepancy.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(MoveDiscrepancy.create_dt <= params.to_dt)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = MoveDiscrepancySorter(MoveDiscrepancy)
+        query = sorter.apply_sorting(query, sort_params)
+    else:
+        query = query.order_by(MoveDiscrepancy.create_dt.desc())
+
+    return paginate(session, query)
+
+
+@router.get("/move-discrepancies/download", response_class=StreamingResponse)
+def get_move_report_csv(
+    session: Session = Depends(get_session),
+    params: MoveDiscrepancyParams = Depends(),
+):
+    """
+    Translates list response of move Discrepancy objects to csv,
+    returns binary for download
+    """
+    query = select(MoveDiscrepancy)
+
+    if params.assigned_user_id:
+        query = query.where(
+            MoveDiscrepancy.assigned_user_id.in_(params.assigned_user_id)
+        )
+    if params.owner_id:
+        query = query.where(MoveDiscrepancy.owner_id.in_(params.owner_id))
+    if params.size_class_id:
+        query = query.where(
+            MoveDiscrepancy.size_class_id.in_(params.size_class_id)
+        )
+    if params.container_type_id:
+        query = query.where(
+            MoveDiscrepancy.container_type_id.in_(params.container_type_id)
+        )
+    if params.from_dt:
+        query = query.where(MoveDiscrepancy.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(MoveDiscrepancy.create_dt <= params.to_dt)
+
+    result = session.execute(query)
+    rows = result.scalars().all()
+
+    # Create an in-memory CSV
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Write headers (optional: use column names dynamically)
+    writer.writerow(
+        [
+            "discrepancy_id",
+            "tray",
+            "non_tray_item",
+            "assigned_user",
+            "owner",
+            "size_class",
+            "container_type",
+            "original_assigned_location",
+            "current_assigned_location",
+            "error",
+            "create_dt",
+            "update_dt",
+        ]
+    )
+
+    tray_barcode_value = None
+    non_tray_item_barcode_value = None
+    assigned_user_name = None
+    owner_name = None
+    size_class_shortname = None
+    container_type_type = None
+
+    # Write rows
+    for row in rows:
+        if row.non_tray_item:
+            non_tray_item_barcode_value = row.non_tray_item.barcode.value
+        if row.tray:
+            tray_barcode_value = row.tray.barcode.value
+        if row.assigned_user:
+            assigned_user_name = row.assigned_user.name
+        if row.owner:
+            owner_name = row.owner.name
+        if row.size_class:
+            size_class_shortname = row.size_class.short_name
+        if row.container_type:
+            container_type_type = row.container_type.type
+        writer.writerow(
+            [
+                row.id,
+                tray_barcode_value,
+                non_tray_item_barcode_value,
+                assigned_user_name,
+                owner_name,
+                size_class_shortname,
+                container_type_type,
+                row.original_assigned_location,
+                row.current_assigned_location,
+                row.error,
+                row.create_dt,
+                row.update_dt,
+            ]
+        )
+
+    # Reset the buffer position
+    output.seek(0)
+
+    # Create a StreamingResponse
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=shelving_discrepancies.csv"
+        },
     )

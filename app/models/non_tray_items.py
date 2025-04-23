@@ -103,7 +103,7 @@ class NonTrayItem(SQLModel, table=True):
         default=None, nullable=True, foreign_key="shelving_jobs.id"
     )
     shelf_position_id: Optional[int] = Field(
-        foreign_key="shelf_positions.id", nullable=True
+        foreign_key="shelf_positions.id", nullable=True, unique=True
     )
     shelf_position_proposed_id: Optional[int] = Field(
         sa_column=sa.Column(sa.Integer, nullable=True, unique=False)
@@ -182,7 +182,7 @@ class NonTrayItem(SQLModel, table=True):
     subcollection: Optional["Subcollection"] = Relationship(
         back_populates="non_tray_items"
     )
-    refile_jobs: Optional[RefileJob] = Relationship(
+    refile_jobs: List[RefileJob] = Relationship(
         back_populates="non_tray_items", link_model=RefileNonTrayItem
     )
     requests: List["Request"] = Relationship(back_populates="non_tray_item")
@@ -200,3 +200,10 @@ class NonTrayItem(SQLModel, table=True):
         Relationship(
         back_populates="non_tray_item"
     ))
+    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
+        back_populates="non_tray_item",
+        sa_relationship_kwargs={
+            "primaryjoin": "MoveDiscrepancy.non_tray_item_id==NonTrayItem.id",
+            "lazy": "selectin"
+        }
+    )

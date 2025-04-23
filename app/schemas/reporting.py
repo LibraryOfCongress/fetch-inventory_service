@@ -246,3 +246,132 @@ class RetrievalItemCountReadOutput(BaseModel):
                 "max_retrieved_count": 1,
             }
         }
+
+
+class MoveDiscrepancyBaseOutput(BaseModel):
+    id: int
+    tray_id: Optional[int] = None
+    non_tray_item_id: Optional[int] = None
+    assigned_user_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    size_class_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    original_assigned_location: Optional[str] = None
+    current_assigned_location: Optional[str] = None
+    error: Optional[str] = None
+    create_dt: datetime
+    update_dt: datetime
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "tray_id": 1,
+                "non_tray_item_id": 1,
+                "assigned_user_id": 1,
+                "owner_id": 1,
+                "size_class_id": 1,
+                "container_type_id": 1,
+                "original_assigned_location": "Fort Meade-1-1-L-27-1-8",
+                "current_assigned_location": "Fort Meade-1-1-L-28-1-8",
+                "error": "Not Shelved Discrepancy - Container barcode 12345678901 is "
+                         "not in a Shelf",
+                "create_dt": "2023-10-08T20:46:56.764426",
+                "update_dt": "2023-10-08T20:46:56.764426",
+            }
+        }
+
+
+class NestedUserMoveDiscrepancy(BaseModel):
+    id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+
+
+class NestedTrayMoveDiscrepancy(BaseModel):
+    id: int
+    barcode: BarcodeDetailReadOutput
+
+
+class NestedItemMoveDiscrepancy(BaseModel):
+    id: int
+    barcode: BarcodeDetailReadOutput
+
+
+class NestedNonTrayItemMoveDiscrepancy(BaseModel):
+    id: int
+    barcode: BarcodeDetailReadOutput
+
+
+class NestedOwnerMoveDiscrepancy(BaseModel):
+    id: int
+    name: Optional[str] = None
+
+
+class NestedSizeClassMoveDiscrepancy(BaseModel):
+    id: int
+    short_name: Optional[str] = None
+
+
+class MoveDiscrepancyOutput(MoveDiscrepancyBaseOutput):
+    assigned_user: Optional[NestedUserMoveDiscrepancy] = None
+    item: Optional[NestedItemMoveDiscrepancy] = None
+    tray: Optional[NestedTrayMoveDiscrepancy] = None
+    non_tray_item: Optional[NestedNonTrayItemMoveDiscrepancy] = None
+    owner: Optional[NestedOwnerMoveDiscrepancy] = None
+    size_class: Optional[NestedSizeClassMoveDiscrepancy] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "tray_id": 1,
+                "non_tray_item_id": 1,
+                "assigned_user_id": 1,
+                "owner_id": 1,
+                "size_class_id": 1,
+                "container_type_id": 1,
+                "original_assigned_location": "Fort Meade-1-1-L-27-1-8",
+                "current_assigned_location": "Fort Meade-1-1-L-28-1-8",
+                "error": "Not Shelved Discrepancy - Container barcode 12345678901 is "
+                         "not in a Shelf",
+                "create_dt": "2023-10-08T20:46:56.764426",
+                "update_dt": "2023-10-08T20:46:56.764426",
+                "assigned_user": {
+                    "id": 1,
+                    "first_name": "Bilbo",
+                    "last_name": "Baggins",
+                    "email": "bbaggins@bagend.hobbit",
+                },
+                "tray": {
+                    "id": 1,
+                    "barcode": {
+                        "id": "0031dbfb-28d3-496f-91d3-8e16d9bdbd16",
+                        "value": "12345",
+                    },
+                },
+                "item": {
+                    "id": 1,
+                    "barcode": {
+                        "id": "0031dbfb-28d3-496f-91d3-8e16d9bdbd16",
+                        "value": "12345",
+                    },
+                    "tray": {
+                        "id": 1,
+                        "barcode": {
+                            "id": "0031dbfb-28d3-496f-91d3-8e16d9bdbd16",
+                            "value": "12345",
+                        },
+                    },
+                },
+                "non_tray_item": {
+                    "id": 1,
+                    "barcode": {
+                        "id": "0031dbfb-28d3-496f-91d3-8e16d9bdbd16",
+                        "value": "12345",
+                    },
+                },
+            }
+        }

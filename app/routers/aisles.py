@@ -22,7 +22,7 @@ from app.config.exceptions import NotFound, ValidationException, InternalServerE
 
 import traceback
 
-from app.sorting import BaseSorter
+from app.sorting import BaseSorter, AisleSorter
 
 router = APIRouter(
     prefix="/aisles",
@@ -66,7 +66,7 @@ def get_aisle_list(
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
         # Apply sorting using BaseSorter
-        sorter = BaseSorter(Aisle)
+        sorter = AisleSorter(Aisle)
         query = sorter.apply_sorting(query, sort_params)
 
     return paginate(session, query)

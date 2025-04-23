@@ -7,11 +7,16 @@ from datetime import datetime, timezone
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams, ItemFilterParams
 from app.events import update_shelf_space_after_tray
+from app.logger import inventory_logger
+from app.models.move_discrepancies import MoveDiscrepancy
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
 from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
+from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
+from app.models.shelving_jobs import ShelvingJob
+from app.models.size_class import SizeClass
 from app.models.trays import Tray
 from app.models.barcodes import Barcode
 from app.models.container_types import ContainerType
@@ -42,7 +47,7 @@ router = APIRouter(
 def get_tray_list(
     session: Session = Depends(get_session),
     params: ItemFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    sort_params: SortParams = Depends(),
 ) -> list:
     """
     Get a paginated list of trays from the database
@@ -62,29 +67,27 @@ def get_tray_list(
     query = select(Tray)
 
     if params.barcode_value:
-        barcode_value_subquery = (
-            select(Barcode.id).where(Barcode.value.in_(params.barcode_value))
+        barcode_value_subquery = select(Barcode.id).where(
+            Barcode.value.in_(params.barcode_value)
         )
         query = query.where(Tray.barcode_id.in_(barcode_value_subquery))
     if params.owner_id:
         query = query.where(Tray.owner_id.in_(params.owner_id))
     if params.owner:
-        owner_subquery = (
-            select(Owner.id).where(Owner.name.in_(params.owner))
-        )
+        owner_subquery = select(Owner.id).where(Owner.name.in_(params.owner))
         query = query.where(Tray.owner_id.in_(owner_subquery))
     if params.size_class_id:
         query = query.where(Tray.size_class_id.in_(params.size_class_id))
     if params.size_class:
-        size_class_subquery = (
-            select(Tray.size_class_id).where(Tray.size_class.in_(params.size_class))
+        size_class_subquery = select(Tray.size_class_id).where(
+            Tray.size_class.in_(params.size_class)
         )
         query = query.where(Tray.size_class_id.in_(size_class_subquery))
     if params.media_type_id:
         query = query.where(Tray.media_type_id.in_(params.media_type_id))
     if params.media_type:
-        media_type_subquery = (
-            select(Tray.media_type_id).where(Tray.media_type.in_(params.media_type))
+        media_type_subquery = select(Tray.media_type_id).where(
+            Tray.media_type.in_(params.media_type)
         )
         query = query.where(Tray.media_type_id.in_(media_type_subquery))
     if params.from_dt:
@@ -248,7 +251,10 @@ def update_tray(
 
         for item in existing_tray.items:
             session.query(Item).filter(Item.id == item.id).update(
-                {"size_class_id": tray.size_class_id, "update_dt": datetime.now(timezone.utc)}
+                {
+                    "size_class_id": tray.size_class_id,
+                    "update_dt": datetime.now(timezone.utc),
+                }
             )
             item_barcode = session.get(Barcode, item.barcode_id)
             new_verification_changes.append(
@@ -257,7 +263,7 @@ def update_tray(
                     tray_barcode_value=tray_barcode.value,
                     item_barcode_value=item_barcode.value,
                     change_type="SizeClassEdit",
-                    completed_by_id=verification_job.user_id
+                    completed_by_id=verification_job.user_id,
                 )
             )
         session.add_all(new_verification_changes)
@@ -269,7 +275,10 @@ def update_tray(
         tray_barcode = session.get(Barcode, tray.barcode_id)
         for item in existing_tray.items:
             session.query(Item).filter(Item.id == item.id).update(
-                {"media_type_id": tray.media_type_id, "update_dt": datetime.now(timezone.utc)}
+                {
+                    "media_type_id": tray.media_type_id,
+                    "update_dt": datetime.now(timezone.utc),
+                }
             )
             item_barcode = session.get(Barcode, item.barcode_id)
             new_verification_changes.append(
@@ -278,7 +287,7 @@ def update_tray(
                     tray_barcode_value=tray_barcode.value,
                     item_barcode_value=item_barcode.value,
                     change_type="MediaTypeEdit",
-                    completed_by_id=verification_job.user_id
+                    completed_by_id=verification_job.user_id,
                 )
             )
         session.add_all(new_verification_changes)
@@ -297,9 +306,7 @@ def update_tray(
     session.refresh(existing_tray)
 
     update_shelf_space_after_tray(
-        existing_tray,
-        existing_tray.shelf_position_id,
-        tray.shelf_position_id
+        existing_tray, existing_tray.shelf_position_id, tray.shelf_position_id
     )
 
     return existing_tray
@@ -362,70 +369,162 @@ def move_tray(
     )
     if not tray:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Tray with barcode value
-            not found"""
+            detail=f"""Failed to transfer: {barcode_value} - Tray with barcode value not found"""
         )
 
-    if tray.shelf_position_id is None:
-        raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Tray has not been assigned to a shelf position."
-        )
-
-    # Retrieve the non_tray_item and shelves in a single query
-    source_shelf = (
+        # Retrieve the non_tray_item and shelves in a single query
+    src_shelf = (
         session.query(Shelf)
         .join(ShelfPosition, tray.shelf_position_id == ShelfPosition.id)
         .filter(ShelfPosition.shelf_id == Shelf.id)
-    ).first()
-
-    if not source_shelf:
-        raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} - Item with barcode not found"
-        )
-
-    if not tray.scanned_for_accession or not tray.scanned_for_verification:
-        raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} has not been verified"
-        )
-
-    if tray.shelf_position_id is None:
-        raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} is not in a shelf"
-        )
+        .first()
+    )
 
     # Retrieve the destination shelf
-    destination_shelf = (
+    dest_shelf = (
         session.query(Shelf)
         .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id)
         .join(Barcode, Shelf.barcode_id == Barcode.id)
         .filter(Barcode.value == tray_input.shelf_barcode_value)
         .first()
     )
-    if not destination_shelf:
+
+    current_assigned_location = None
+    original_assigned_location = None
+    if src_shelf:
+        shelf_position = tray.shelf_position
+        shelf_position_number = shelf_position.shelf_position_number
+        original_assigned_location = (src_shelf.location + "-" + str(
+            shelf_position_number.number))
+    if dest_shelf:
+        current_assigned_location = (dest_shelf.location + "-" + str(
+            tray_input.shelf_position_number))
+
+    if (
+        not tray.scanned_for_accession or
+        not tray.scanned_for_verification
+    ):
+        new_move_discrepancy = MoveDiscrepancy(
+            tray_id=tray.id,
+            assigned_user_id=tray_input.assigned_user_id,
+            owner_id=tray.owner_id,
+            size_class_id=tray.size_class_id,
+            container_type_id=tray.container_type_id,
+            original_assigned_location=original_assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"""Not Accessioned Discrepancy - Container barcode {barcode_value} has not been accessioned or verified""",
+        )
+        commit_record(session, new_move_discrepancy)
+
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Shelf with barcode value
-             {tray_input.shelf_barcode_value} not found"""
+            detail=f"Failed to transfer: {barcode_value} has not been accessioned or verified"
+        )
+
+    if (
+        tray.shelf_position_id is None or
+        tray.withdrawn_barcode_id is not None or
+        not src_shelf
+    ):
+        new_move_discrepancy = MoveDiscrepancy(
+            tray_id=tray.id,
+            assigned_user_id=tray_input.assigned_user_id,
+            owner_id=tray.owner_id,
+            size_class_id=tray.size_class_id,
+            container_type_id=tray.container_type_id,
+            original_assigned_location=original_assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"""Not Shelved Discrepancy - Container barcode {barcode_value} was not previously shelved""",
+        )
+        commit_record(session, new_move_discrepancy)
+
+        raise ValidationException(
+            detail=f"Failed to transfer: {barcode_value} - Container has not been assigned to a shelf position"
+        )
+
+    if not dest_shelf:
+        new_move_discrepancy = MoveDiscrepancy(
+            tray_id=tray.id,
+            assigned_user_id=tray_input.assigned_user_id,
+            owner_id=tray.owner_id,
+            size_class_id=tray.size_class_id,
+            container_type_id=tray.container_type_id,
+            original_assigned_location=original_assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"""Not Shelved Discrepancy - Destination shelf with barcode {barcode_value} not found""",
+        )
+        commit_record(session, new_move_discrepancy)
+
+        raise ValidationException(
+            detail=f"""Failed to transfer: {barcode_value} - Destination shelf with
+            barcode value {tray_input.shelf_barcode_value} not found"""
         )
 
     # Check if the source and destination shelves are of the same size class
     if (
-        source_shelf.shelf_type.size_class_id
-        != destination_shelf.shelf_type.size_class_id
-        or source_shelf.owner_id != destination_shelf.owner_id
+        src_shelf.shelf_type.size_class_id
+        != dest_shelf.shelf_type.size_class_id
+        or src_shelf.owner_id != dest_shelf.owner_id
     ):
+        tray_size_class = (
+            session.query(SizeClass).where(SizeClass.id == tray.size_class_id).first()
+        )
+        destination_size_class = (
+            session.query(SizeClass)
+            .where(SizeClass.id == dest_shelf.shelf_type.size_class_id)
+            .first()
+        )
+        tray_owner = session.query(Owner).where(Owner.id == tray.owner_id).first()
+        destination_owner = (
+            session.query(Owner).where(Owner.id == dest_shelf.owner_id).first()
+        )
+        # Create a Discrepancy
+        discrepancy_error = "Unknown"
+        if (
+            src_shelf.shelf_type.size_class_id
+            != dest_shelf.shelf_type.size_class_id
+        ):
+            discrepancy_error = f"""Size Discrepancy - Container size class:
+            {tray_size_class.name} does not match Shelf size class:
+             {destination_size_class.name}"""
+        if src_shelf.owner_id != dest_shelf.owner_id:
+            discrepancy_error = f"""Owner Discrepancy - Container owner:
+            {tray_owner.name} does not match Shelf owner: {destination_owner.name}"""
+
+        new_move_discrepancy = MoveDiscrepancy(
+            tray_id=tray.id,
+            assigned_user_id=tray_input.assigned_user_id,
+            owner_id=dest_shelf.owner_id,
+            size_class_id=dest_shelf.shelf_type.size_class_id,
+            container_type_id=tray.container_type_id,
+            original_assigned_location=original_assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"{discrepancy_error}",
+        )
+        commit_record(session, new_move_discrepancy)
+
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Shelf must be of the same
-            size class and owner"""
+            detail=f"""Failed to transfer: {barcode_value} - Shelf must be of the same size class and owner"""
         )
 
     # Check the available space in the destination shelf
-    if destination_shelf.available_space < 1:
+    if dest_shelf.available_space < 1:
+        new_move_discrepancy = MoveDiscrepancy(
+            tray_id=tray.id,
+            assigned_user_id=tray_input.assigned_user_id,
+            owner_id=dest_shelf.owner_id,
+            size_class_id=dest_shelf.shelf_type.size_class_id,
+            container_type_id=tray.container_type_id,
+            original_assigned_location=original_assigned_location,
+            current_assigned_location=current_assigned_location,
+            error=f"""Available Space Discrepancy - Shelf {tray_input.shelf_barcode_value} has no available space""",
+        )
+        commit_record(session, new_move_discrepancy)
+
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Shelf id
-            {destination_shelf.id} has no available space"""
+            detail=f"""Failed to transfer: {barcode_value} - Shelf barcode {tray_input.shelf_barcode_value} at location {current_assigned_location} has no available space"""
         )
 
-    destination_shelf_positions = destination_shelf.shelf_positions
+    destination_shelf_positions = dest_shelf.shelf_positions
     destination_shelf_position_id = None
     for destination_shelf_position in destination_shelf_positions:
         shel_position_number = (
@@ -450,9 +549,20 @@ def move_tray(
             )
 
             if tray_shelf_position or non_tray_shelf_position:
+                new_move_discrepancy = MoveDiscrepancy(
+                    tray_id=tray.id,
+                    assigned_user_id=tray_input.assigned_user_id,
+                    owner_id=dest_shelf.owner_id,
+                    size_class_id=dest_shelf.shelf_type.size_class_id,
+                    container_type_id=tray.container_type_id,
+                    original_assigned_location=original_assigned_location,
+                    current_assigned_location=current_assigned_location,
+                    error=f"""Available Space Discrepancy - Shelf
+                     Position {current_assigned_location} is already occupied""",
+                )
+                commit_record(session, new_move_discrepancy)
                 raise ValidationException(
-                    detail=f"""Failed to transfer: {barcode_value} - Shelf Position
-                     {tray_input.shelf_position_number} is already occupied"""
+                    detail=f"""Failed to transfer: {barcode_value} - Shelf Position {current_assigned_location} is already occupied"""
                 )
             break
 
@@ -467,6 +577,8 @@ def move_tray(
     session.add(tray)
     session.commit()
 
-    update_shelf_space_after_tray(tray, destination_shelf_position_id, old_shelf_position_id)
+    update_shelf_space_after_tray(
+        tray, destination_shelf_position_id, old_shelf_position_id
+    )
 
     return tray

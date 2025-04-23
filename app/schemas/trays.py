@@ -63,12 +63,14 @@ class TrayInput(BaseModel):
 class TrayMoveInput(BaseModel):
     shelf_barcode_value: str
     shelf_position_number: int
+    assigned_user_id: Optional[int] = None
 
     class Config:
         json_schema_extra = {
             "example": {
                 "shelf_barcode_value": "5901234123457",
-                "shelf_position_number": 1
+                "shelf_position_number": 1,
+                "user_id": 1
             }
         }
 

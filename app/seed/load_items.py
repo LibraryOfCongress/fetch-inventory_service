@@ -2,6 +2,7 @@ import os, csv, re, gc
 
 from collections import defaultdict
 from concurrent.futures import as_completed, ThreadPoolExecutor
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_sqlalchemy_session, get_sqlalchemy_session_for_item_migration
 from app.logger import migration_logger
@@ -53,15 +54,17 @@ def build_missing_non_tray_data(chunk_size=1000):
                     if row[0].startswith("T"):
                         # format shelf barcode value
                         shelf_barcode_value = row[4]
-                        if len(shelf_barcode_value) < 6:
-                            missing_zeros = 6 - len(shelf_barcode_value)
-                            for _ in range(missing_zeros):
-                                shelf_barcode_value = f"0{shelf_barcode_value}"
+                        shelf_barcode_value = shelf_barcode_value.zfill(5)
+                        # if len(shelf_barcode_value) < 6:
+                        #     missing_zeros = 6 - len(shelf_barcode_value)
+                        #     for _ in range(missing_zeros):
+                        #         shelf_barcode_value = f"0{shelf_barcode_value}"
 
                         missing_nt_data_dict[shelf_barcode_value].append( {
                             "shelved_dt": row[9],
                             "media_type": row[2],
-                            "nt_computed_barcode": row[0]
+                            "nt_computed_barcode": row[0],
+                            "size_class_short_name": row[10]
                         })
 
                 chunk = []  # Reset the chunk
@@ -224,7 +227,7 @@ def process_item_row(
             owner_name,
             item_accession_dt,
             # shelved_dt,
-            "NT",#size_class_short_name
+            # "NT",#size_class_short_name
             shelf_position_number,
             status,
             # session,
@@ -332,6 +335,19 @@ def load_items():
 
             # session = get_sqlalchemy_session_for_item_migration()
 
+            # DO NOT REMOVE (until this is handled by params)
+            # 9,885,000 rows in 100k chunks,  uneven batches
+            # 
+            # (1, 25), (26, 50), (51, 61), (62, 68) (69, 75) (76, 82) (83, 89)
+            # (90, 96) (97, 100)
+            # each run will overwrite previous error file
+            # so extract it between runs. also rebuild app between runs
+            # in order to capture chunk selection changes
+            # if chunk_start < 1:
+            #     continue
+            # if chunk_start > 25:
+            #     break
+
             session = next(get_sqlalchemy_session())
 
             futures = [
@@ -386,17 +402,38 @@ def load_items():
                     # p_non_tray_item_result[4] are non_tray_items
                     if p_non_tray_item_result[4]:
                         # session.add(p_non_tray_item_result[4])
-                        nt_objects.append(p_non_tray_item_result[4])
+                        nt_objects.append([
+                            p_non_tray_item_result[4],#nt_object
+                            p_non_tray_item_result[5],#row_num
+                            p_non_tray_item_result[6]#nt_barcode_value
+                        ])
 
             # Database ops here
             # Flush to get barcode id's before commit
-            session.flush()
+            # session.flush()
             # Save all
             session.bulk_save_objects(item_barcode_objects, return_defaults=True)
             session.bulk_save_objects(nt_barcode_objects, return_defaults=True)
             session.bulk_save_objects(item_objects, return_defaults=True)
-            session.bulk_save_objects(nt_objects, return_defaults=True)
             session.commit()
+
+            # session.bulk_save_objects(nt_objects, return_defaults=True)
+            for non_tray_item_object in nt_objects:
+                try:
+                    session.add(non_tray_item_object[0])
+                    session.flush()
+                except IntegrityError as e:
+                    session.rollback()
+                    error = {
+                        "row": non_tray_item_object[1],
+                        "non_tray_item_barcode": f":: {non_tray_item_object[2]}",
+                        "reason": f"{e}"
+                    }
+                    results["non_tray_items"]["errors"].append(error)
+                    results["non_tray_items"]["failed_rows"] += 1
+                    results["non_tray_items"]["successful_rows"] -= 1
+            session.commit()
+
             # Clear resources
             session.close()
             gc.collect()

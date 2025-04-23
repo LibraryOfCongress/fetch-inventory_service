@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from sqlalchemy import func, asc, desc
+from sqlalchemy import func, text, asc, desc
 from sqlalchemy.orm import aliased
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -35,7 +35,7 @@ from app.models.requests import Request
 from app.sorting import WithdrawJobSorter
 from app.utilities import (
     validate_item_not_shelved,
-    validate_container_not_shelved,
+    validate_container_not_shelved, start_session_with_audit_info,
 )
 from starlette import status
 from app.schemas.withdraw_jobs import (
@@ -217,7 +217,7 @@ def update_withdraw_job(
     pick_list = None
     building_id = None
     new_request = []
-
+    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     if withdraw_job_input.create_pick_list or withdraw_job_input.add_to_picklist:
         if withdraw_job_input.create_pick_list:
             pick_list = PickList(
@@ -252,6 +252,7 @@ def update_withdraw_job(
                 pick_list.building_id = building_id
                 pick_list.status = "Created"
                 session.add(pick_list)
+                start_session_with_audit_info(audit_info, session)
                 session.commit()
                 session.refresh(pick_list)
 
@@ -282,6 +283,7 @@ def update_withdraw_job(
                 building_id = module.building_id
                 pick_list.building_id = building_id
                 session.add(pick_list)
+                start_session_with_audit_info(audit_info, session)
                 session.commit()
                 session.refresh(pick_list)
 
@@ -307,6 +309,7 @@ def update_withdraw_job(
 
         if new_request:
             session.bulk_save_objects(new_request)
+            start_session_with_audit_info(audit_info, session)
             session.commit()
 
         session.query(Item).filter(Item.id.in_(item_ids)).update(
@@ -386,6 +389,7 @@ def update_withdraw_job(
                 synchronize_session=False,
             )
             # Committing the changes
+            start_session_with_audit_info(audit_info, session)
             session.commit()
 
             # leftover deprecated, slated for removal
@@ -547,7 +551,7 @@ def update_withdraw_job(
         setattr(existing_withdraw_job, key, value)
 
     setattr(existing_withdraw_job, "update_dt", updated_dt)
-
+    start_session_with_audit_info(audit_info, session)
     session.commit()
     session.refresh(existing_withdraw_job)
 

@@ -200,6 +200,7 @@ deploy_dev:
     - kubectl -n fetch apply -f k8s/service.yml
     - sleep 10
     - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
@@ -215,6 +216,7 @@ deploy_demo:
     - kubectl -n fetch apply -f k8s/service.yml
     - sleep 10
     - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: '$DEMO_BUILD =~ /^TRUE$/'
       when: manual
@@ -231,6 +233,7 @@ deploy_test:
     - kubectl -n fetch apply -f k8s/service.yml
     - sleep 10
     - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
@@ -249,34 +252,26 @@ deploy_stage:
     - kubectl -n fetch apply -f k8s/service.yml
     - sleep 10
     - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: $CI_COMMIT_BRANCH == 'staging'
       when: manual
 
 deploy_prod:
   stage: build_deploy_prod
-  tags:
-    - fetch-group-runner-prod
   image:
-    name: git.loc.gov:4567/fetch/build/terraform:alt
+    name: bitnami/kubectl:latest
     entrypoint: [""]
   environment:
     name: prod
     url: https://inventory.fetch.loc.gov/status/
   script:
-    - export TF_VAR_vault_deployer_password=$VAULT_DEPLOYER_PASSWORD_PROD
-    - export TF_VAR_vault_addr=$VAULT_ADDR_PROD
-    - export TF_VAR_app_name="inventory-service"
-    - export TF_VAR_image='git.loc.gov:4567/fetch/inventory_service/prod:latest'
-    - export TF_VAR_timestamp=$CI_COMMIT_TIMESTAMP
-    - terraform --version
-    - cd terraform
     - kubectl config use-context fetch/build:fetch-prod -v=6
-    - cp -v $KUBECONFIG kubeconfig
-    - export TF_STATE_NAME=prod
-    - envsubst < backend.hcl.tmpl > backend.hcl
-    - terraform init -backend-config=backend.hcl
-    - terraform apply -auto-approve
+    - kubectl -n fetch apply -f k8s/deployment-prod.yml
+    - kubectl -n fetch apply -f k8s/service.yml
+    - sleep 10
+    - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
     - if: '$PROD_BUILD =~ /^TRUE$/'
       when: manual
