@@ -761,55 +761,48 @@ def reassign_container_proposed_location(
     reassignment_input: ProposedReAssignmentInput,
     session: Session = Depends(get_session),
 ):
-    # We do not know if trayed or not. Check both
     shelving_job = session.get(ShelvingJob, id)
+    shelf_id = None
 
-    shelf_barcode_join = None
-    shelf_position_position_number_join = None
     if reassignment_input.shelf_id:
-        shelf_barcode_join = (
-            select(Shelf)
-            .where(Shelf.id == reassignment_input.shelf_id)
-        )
-        shelf_barcode_join = session.exec(shelf_barcode_join).first()
-
-        if not shelf_barcode_join:
-            raise NotFound(
-                detail=f"No shelves were found with shelf ID {reassignment_input.shelf_id}"
-            )
+        shelf_id = reassignment_input.shelf_id
     elif reassignment_input.shelf_barcode_value:
-        shelf_barcode_join = (
-            select(Shelf, Barcode)
+        existing_shelf = (
+            select(Shelf)
             .join(Barcode)
             .where(Barcode.value == reassignment_input.shelf_barcode_value)
         )
-        shelf_barcode_join = session.exec(shelf_barcode_join).first()
+        existing_shelf = session.exec(existing_shelf).first()
 
-        if not shelf_barcode_join:
+        if not existing_shelf:
             raise NotFound(
                 detail=f"No shelves were found with barcode {reassignment_input.shelf_barcode_value}"
             )
-    if shelf_barcode_join is not None:
-        shelf_id = shelf_barcode_join.Shelf.id
+        shelf_id = existing_shelf.id
 
-        # get shelf position
-        shelf_position_position_number_join = (
-            select(ShelfPosition, ShelfPositionNumber)
-            .join(ShelfPositionNumber)
-            .where(ShelfPosition.shelf_id == shelf_id)
-            .where(
-                ShelfPositionNumber.number == reassignment_input.shelf_position_number
-            )
+    if shelf_id is None:
+        raise NotFound(
+            detail=f"No shelves were found"
         )
-        shelf_position_position_number_join = session.exec(
-            shelf_position_position_number_join
-        ).first()
 
-        if not shelf_position_position_number_join:
-            raise ValidationException(
-                detail=f"""Shelf Position Number {reassignment_input.shelf_position_number} does not exist on shelf"""
+    # get shelf position
+    shelf_position_position_number_join = (
+        select(ShelfPosition, ShelfPositionNumber)
+        .join(ShelfPositionNumber)
+        .where(ShelfPosition.shelf_id == shelf_id)
+        .where(
+            ShelfPositionNumber.number == reassignment_input.shelf_position_number
+        )
+    )
+    shelf_position_position_number_join = session.exec(
+        shelf_position_position_number_join
+    ).first()
 
-            )
+    if not shelf_position_position_number_join:
+        raise ValidationException(
+            detail=f"""Shelf Position Number {reassignment_input.shelf_position_number} does not exist on shelf"""
+
+        )
 
     # Check for Availability
     shelf = shelf_position_position_number_join.ShelfPosition.shelf
