@@ -32,7 +32,7 @@ from app.schemas.shelving_jobs import (
     ShelvingJobListOutput,
     ShelvingJobDetailOutput,
     ReAssignmentInput,
-    ReAssignmentOutput,
+    ReAssignmentOutput, ProposedReAssignmentInput,
 )
 from app.config.exceptions import (
     NotFound,
@@ -659,7 +659,7 @@ def reassign_container_location(
 
         raise ValidationException(
             detail=f"Container Barcode {reassignment_input.container_barcode_value} "
-            "does not match Shelf owner and size class."
+                   "does not match Shelf owner and size class."
         )
 
     # Checking and verifying Verification Job
@@ -698,4 +698,206 @@ def reassign_container_location(
             container, container.shelf_position_id, old_shelf_position_id
         )
 
+    return container
+
+
+@router.post(
+    "/{id}/reassign-proposed-location",
+    response_model=ReAssignmentOutput
+)
+def reassign_container_proposed_location(
+    id: int,
+    reassignment_input: ProposedReAssignmentInput,
+    session: Session = Depends(get_session),
+):
+    # We do not know if trayed or not. Check both
+    shelving_job = session.get(ShelvingJob, id)
+
+    shelf_barcode_join = None
+    shelf_position_position_number_join = None
+    if reassignment_input.shelf_barcode_value:
+        shelf_barcode_join = (
+            select(Shelf, Barcode)
+            .join(Barcode)
+            .where(Barcode.value == reassignment_input.shelf_barcode_value)
+        )
+        shelf_barcode_join = session.exec(shelf_barcode_join).first()
+
+        if not shelf_barcode_join:
+            raise NotFound(
+                detail=f"No shelves were found with barcode {reassignment_input.shelf_barcode_value}"
+            )
+    if shelf_barcode_join is not None:
+        shelf_id = shelf_barcode_join.Shelf.id
+
+        # get shelf position
+        shelf_position_position_number_join = (
+            select(ShelfPosition, ShelfPositionNumber)
+            .join(ShelfPositionNumber)
+            .where(ShelfPosition.shelf_id == shelf_id)
+            .where(
+                ShelfPositionNumber.number == reassignment_input.shelf_position_number
+            )
+        )
+        shelf_position_position_number_join = session.exec(
+            shelf_position_position_number_join
+        ).first()
+
+        if not shelf_position_position_number_join:
+            raise ValidationException(
+                detail=f"""Shelf Position Number {reassignment_input.shelf_position_number} does not exist on shelf {reassignment_input.shelf_id}"""
+            )
+
+    # Check for Availability
+    shelf = shelf_position_position_number_join.ShelfPosition.shelf
+    shelf_position = shelf_position_position_number_join.ShelfPosition
+    non_tray_container = None
+
+    tray_container = session.exec(
+        select(Tray)
+        .join(Barcode, Tray.barcode_id == Barcode.id)
+        .where(Barcode.value == reassignment_input.container_barcode_value)
+    ).first()
+    if not tray_container:
+        non_tray_container = session.exec(
+            select(NonTrayItem)
+            .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
+            .where(Barcode.value == reassignment_input.container_barcode_value)
+        ).first()
+        if not non_tray_container:
+            raise NotFound(
+                detail=f"No containers were found with barcode {reassignment_input.container_barcode_value}"
+            )
+        container = non_tray_container
+        # Checking if position is already occupied by another container
+        tray_exists = (
+            session.query(Tray)
+            .filter(Tray.shelf_position_id == shelf_position.id)
+            .first()
+        )
+        non_tray_exists = (
+            session.query(NonTrayItem)
+            .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
+            .filter(NonTrayItem.shelf_position_id == shelf_position.id)
+            .where(NonTrayItem.id != container.id)
+            .first()
+        )
+    else:
+        container = tray_container
+        # Checking if position is already occupied by another container
+        tray_exists = (
+            session.query(Tray)
+            .filter(Tray.shelf_position_id == shelf_position.id)
+            .where(Tray.id != container.id)
+            .first()
+        )
+        non_tray_exists = (
+            session.query(NonTrayItem)
+            .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
+            .filter(NonTrayItem.shelf_position_id == shelf_position.id)
+            .first()
+        )
+
+    shelf_type = shelf.shelf_type
+    shelf_position_location = (
+        shelf.location + "-" + str(reassignment_input.shelf_position_number)
+    )
+    # Check if position is not already occupied by another container
+    if tray_exists or non_tray_exists:
+        new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
+            shelving_job_id=id,
+            tray_id=tray_container.id,
+            non_tray_item_id=non_tray_container.id,
+            assigned_user_id=shelving_job.user_id,
+            owner_id=shelf.owner_id,
+            size_class_id=shelf_type.size_class_id,
+            assigned_location=shelf_position.location,
+            pre_assigned_location=shelf_position_location,
+            error=f"""Shelf Position Discrepancy - Shelf Position {shelf_position_location}
+                    is already occupied""",
+        )
+        commit_record(session, new_shelving_job_discrepancy)
+
+        raise ValidationException(
+            detail=f"""Shelf Position {shelf_position_location} is already occupied"""
+        )
+
+    # Checking for available_space on shelf
+    if shelf.available_space <= 0:
+        new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
+            shelving_job_id=id,
+            tray_id=tray_container.id,
+            non_tray_item_id=non_tray_container.id,
+            assigned_user_id=shelving_job.user_id,
+            owner_id=shelf.owner_id,
+            size_class_id=shelf_type.size_class_id,
+            assigned_location=shelf.location,
+            pre_assigned_location=shelf_position_location,
+            error=f"""Available Space Discrepancy - Shelf location {shelf.location}
+                    has no available space""",
+        )
+        commit_record(session, new_shelving_job_discrepancy)
+
+        raise ValidationException(detail=f"Shelf ID {shelf.id} has no available space")
+
+    # Check if the container owner and size class match to shelf
+    if (
+        container.size_class_id != shelf_type.size_class_id
+        or container.owner_id != shelf.owner_id
+    ):
+        # Create a Discrepancy
+        discrepancy_error = "Unknown"
+        if container.container_type_id == 1:
+            discrepancy_tray_id = container.id
+            discrepancy_non_tray_id = None
+        else:
+            discrepancy_tray_id = None
+            discrepancy_non_tray_id = container.id
+        if container.size_class_id != shelf_type.size_class_id:
+            discrepancy_error = f"""Size Discrepancy - Container size_id: {container.size_class_id} does not match Shelf size_id: {shelf_type.size_class_id}"""
+        if container.owner_id != shelf.owner_id:
+            discrepancy_error = f"""Owner Discrepancy does not match Container owner_id: {container.owner_id} - Shelf owner_id: {shelf.owner_id}"""
+
+        new_shelving_job_discrepancy = ShelvingJobDiscrepancy(
+            shelving_job_id=id,
+            tray_id=discrepancy_tray_id,
+            non_tray_item_id=discrepancy_non_tray_id,
+            assigned_user_id=shelving_job.user_id,
+            owner_id=shelf.owner_id,
+            size_class_id=shelf_type.size_class_id,
+            assigned_location=shelf_position.location,
+            pre_assigned_location=shelf_position_location,
+            error=f"{discrepancy_error}",
+        )
+        commit_record(session, new_shelving_job_discrepancy)
+
+        raise ValidationException(
+            detail=f"Container Barcode {reassignment_input.container_barcode_value} "
+                   "does not match Shelf owner and size class."
+        )
+
+    setattr(
+        container, "shelf_position_proposed_id",
+        shelf_position.id
+    )
+    setattr(container, "update_dt", datetime.now(timezone.utc))
+
+    # Checking container has already been shelved and shelving_job not Completed,
+    # need to update the container shelf_position_id as well.
+    if (
+        container.shelf_position_id is not None and
+        container.shelf_position_id != shelf_position.id and
+        shelving_job.status != "Completed"
+    ):
+        setattr(
+            container, "shelf_position_id",
+            shelf_position.id
+        )
+
+    session.add(container)
+    session.commit()
+    session.refresh(container)
+    session.refresh(shelving_job)
+
+    setattr(container, "shelf_position", shelf_position)
     return container

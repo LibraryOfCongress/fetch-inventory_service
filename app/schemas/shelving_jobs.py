@@ -499,3 +499,17 @@ class ReAssignmentOutput(BaseModel):
                             }
             }
         }
+
+
+class ProposedReAssignmentInput(BaseModel):
+    """
+    Custom input with no underlying model.
+    This is used for manually re-assigning containers during
+    a ShelvingJob
+
+    Path operation expects either shelf barcode value OR shelf_id
+    """
+    container_id: Optional[int] = None
+    container_barcode_value: Optional[str] = None
+    shelf_position_number: int
+    shelf_barcode_value: Optional[str] = None
