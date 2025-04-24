@@ -761,43 +761,48 @@ def reassign_container_proposed_location(
     reassignment_input: ProposedReAssignmentInput,
     session: Session = Depends(get_session),
 ):
-    # We do not know if trayed or not. Check both
     shelving_job = session.get(ShelvingJob, id)
+    shelf_id = None
 
-    shelf_barcode_join = None
-    shelf_position_position_number_join = None
-    if reassignment_input.shelf_barcode_value:
-        shelf_barcode_join = (
-            select(Shelf, Barcode)
+    if reassignment_input.shelf_id:
+        shelf_id = reassignment_input.shelf_id
+    elif reassignment_input.shelf_barcode_value:
+        existing_shelf = (
+            select(Shelf)
             .join(Barcode)
             .where(Barcode.value == reassignment_input.shelf_barcode_value)
         )
-        shelf_barcode_join = session.exec(shelf_barcode_join).first()
+        existing_shelf = session.exec(existing_shelf).first()
 
-        if not shelf_barcode_join:
+        if not existing_shelf:
             raise NotFound(
                 detail=f"No shelves were found with barcode {reassignment_input.shelf_barcode_value}"
             )
-    if shelf_barcode_join is not None:
-        shelf_id = shelf_barcode_join.Shelf.id
+        shelf_id = existing_shelf.id
 
-        # get shelf position
-        shelf_position_position_number_join = (
-            select(ShelfPosition, ShelfPositionNumber)
-            .join(ShelfPositionNumber)
-            .where(ShelfPosition.shelf_id == shelf_id)
-            .where(
-                ShelfPositionNumber.number == reassignment_input.shelf_position_number
-            )
+    if shelf_id is None:
+        raise NotFound(
+            detail=f"No shelves were found"
         )
-        shelf_position_position_number_join = session.exec(
-            shelf_position_position_number_join
-        ).first()
 
-        if not shelf_position_position_number_join:
-            raise ValidationException(
-                detail=f"""Shelf Position Number {reassignment_input.shelf_position_number} does not exist on shelf barcode {reassignment_input.shelf_barcode_value}"""
-            )
+    # get shelf position
+    shelf_position_position_number_join = (
+        select(ShelfPosition, ShelfPositionNumber)
+        .join(ShelfPositionNumber)
+        .where(ShelfPosition.shelf_id == shelf_id)
+        .where(
+            ShelfPositionNumber.number == reassignment_input.shelf_position_number
+        )
+    )
+    shelf_position_position_number_join = session.exec(
+        shelf_position_position_number_join
+    ).first()
+
+    if not shelf_position_position_number_join:
+        raise ValidationException(
+            detail=f"""Shelf Position Number {reassignment_input.shelf_position_number} does not exist on shelf"""
+
+        )
 
     # Check for Availability
     shelf = shelf_position_position_number_join.ShelfPosition.shelf
@@ -937,10 +942,19 @@ def reassign_container_proposed_location(
         container.shelf_position_id != shelf_position.id and
         shelving_job.status != "Completed"
     ):
+        old_shelf_position_id = container.shelf_position_id
         setattr(
             container, "shelf_position_id",
             shelf_position.id
         )
+        if container.container_type_id == 1:
+            update_shelf_space_after_tray(
+                container, container.shelf_position_id, old_shelf_position_id
+            )
+        else:
+            update_shelf_space_after_non_tray(
+                container, container.shelf_position_id, old_shelf_position_id
+            )
 
     session.add(container)
     session.commit()

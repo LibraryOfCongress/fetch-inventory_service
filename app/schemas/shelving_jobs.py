@@ -511,5 +511,6 @@ class ProposedReAssignmentInput(BaseModel):
     """
     container_id: Optional[int] = None
     container_barcode_value: Optional[str] = None
+    shelf_id: Optional[int] = None
     shelf_position_number: int
     shelf_barcode_value: Optional[str] = None
