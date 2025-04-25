@@ -65,6 +65,7 @@ class RequestUpdateInput(BaseModel):
     barcode_value: Optional[str] = None  # pop this off in path operations
     scanned_for_retrieval: Optional[bool] = None
     requested_by_id: Optional[str] = None
+    fulfilled: Optional[bool] = None
 
     @field_validator('status', mode='before', check_fields=True)
     @classmethod
@@ -90,7 +91,8 @@ class RequestUpdateInput(BaseModel):
                 "requestor_name": "Bilbo Baggins",
                 "external_request_id": "12345",
                 "scanned_for_pick_list": False,
-                "scanned_for_retrieval": False
+                "scanned_for_retrieval": False,
+                "fulfilled": False
             }
         }
 
@@ -109,6 +111,7 @@ class RequestBaseOutput(BaseModel):
     requestor_name: Optional[str] = None
     scanned_for_pick_list: Optional[bool] = None
     scanned_for_retrieval: Optional[bool] = None
+    fulfilled: Optional[bool] = None
     requested_by_id: Optional[int] = None
     requested_by: Optional[UserDetailReadOutput] = None
 

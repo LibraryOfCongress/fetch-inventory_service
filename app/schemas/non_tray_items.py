@@ -92,6 +92,7 @@ class NonTrayItemUpdateInput(BaseModel):
     scanned_for_verification: Optional[bool] = None
     scanned_for_shelving: Optional[bool] = None
     scanned_for_refile_queue: Optional[bool] = None
+    scanned_for_refile: Optional[bool] = None
     verification_job_id: Optional[int] = None
     shelving_job_id: Optional[int] = None
     container_type_id: Optional[int] = None

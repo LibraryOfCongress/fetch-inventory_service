@@ -113,14 +113,14 @@ def sort_order_priority(session, pick_list, requests):
             # Extract the sorted request objects
             sorted_requests = [data["request"] for data in sorted_request_data]
 
-            sorted_requests = sorted(
-                sorted_requests,
-                key=lambda obj: obj.update_dt
-            )
+            # Separate fulfilled and unfulfilled
+            unfulfilled_requests = [req for req in sorted_requests if not req.fulfilled]
+            fulfilled_requests = [req for req in sorted_requests if req.fulfilled]
 
             # Append requests not present in sorted_requests due to withdrawn
+            # requests (e.g. without shelf location) at the end
             remaining_requests = [req for req in requests if req not in sorted_requests]
-            pick_list.requests = sorted_requests + remaining_requests
+            pick_list.requests = unfulfilled_requests + fulfilled_requests + remaining_requests
 
     return pick_list
 
@@ -326,7 +326,12 @@ def update_pick_list(
 
                 if item_ids:
                     session.query(Item).filter(Item.id.in_(item_ids)).update(
-                        {"status": ItemStatus.Out}, synchronize_session=False
+                        {
+                            "status": ItemStatus.Out,
+                            "scanned_for_refile": None,
+                            "update_dt": datetime.now(timezone.utc),
+                        },
+                        synchronize_session=False
                     )
 
                 if non_tray_item_ids:
@@ -334,7 +339,12 @@ def update_pick_list(
                     session.query(NonTrayItem).filter(
                         NonTrayItem.id.in_(non_tray_item_ids)
                     ).update(
-                        {"status": NonTrayItemStatus.Out}, synchronize_session=False
+                        {
+                            "status": NonTrayItemStatus.Out,
+                            "scanned_for_refile": None,
+                            "update_dt": datetime.now(timezone.utc),
+                        },
+                        synchronize_session=False
                     )
 
                 session.query(Request).filter(Request.id.in_(request_ids)).update(
@@ -531,7 +541,10 @@ def update_request_for_pick_list(
     existing_pick_list.update_dt = update_dt
     # Updating the pick list request
     session.query(Request).filter(Request.id == request_id).update(
-        {"update_dt": update_dt}
+        {
+            "fulfilled": True,
+            "update_dt": update_dt
+        }
     )
 
     # Updating the pick list request Item or Non Tray Item status
@@ -539,7 +552,10 @@ def update_request_for_pick_list(
         request = session.get(Request, request_id)
         if request.item:
             session.query(Item).filter(Item.id == request.item.id).update(
-                {"status": pick_list_request_input.status},
+                {
+                    "status": pick_list_request_input.status,
+                    "update_dt": datetime.now(timezone.utc)
+                },
                 synchronize_session=False,
             )
 
@@ -547,7 +563,10 @@ def update_request_for_pick_list(
             session.query(NonTrayItem).filter(
                 NonTrayItem.id == request.non_tray_item.id
             ).update(
-                {"status": pick_list_request_input.status},
+                {
+                    "status": pick_list_request_input.status,
+                    "update_dt": datetime.now(timezone.utc)
+                },
                 synchronize_session=False,
             )
 
@@ -594,7 +613,12 @@ def remove_request_from_pick_list(
         raise NotFound(detail=f"Request ID {request_id} Not Found")
 
     session.query(Request).filter(Request.id == request_id).update(
-        {"pick_list_id": None, "status": RequestStatus.New, "update_dt": update_dt},
+        {
+            "pick_list_id": None,
+            "status": RequestStatus.New,
+            "fulfilled": False,
+            "update_dt": update_dt
+        },
         synchronize_session=False,
     )
 
@@ -685,6 +709,7 @@ def delete_pick_list(id: int, session: Session = Depends(get_session)):
         {
             "pick_list_id": None,
             "status": RequestStatus.New,
+            "fulfilled": False,
             "update_dt": datetime.now(timezone.utc),
         },
         synchronize_session=False,

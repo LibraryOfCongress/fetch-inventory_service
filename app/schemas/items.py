@@ -81,6 +81,7 @@ class ItemUpdateInput(BaseModel):
     scanned_for_accession: Optional[bool] = None
     scanned_for_verification: Optional[bool] = None
     scanned_for_refile_queue: Optional[bool] = None
+    scanned_for_refile: Optional[bool] = None
     verification_job_id: Optional[int] = None
     tray_id: Optional[int] = None
     container_type_id: Optional[int] = None

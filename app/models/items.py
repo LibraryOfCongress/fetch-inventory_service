@@ -104,6 +104,9 @@ class Item(SQLModel, table=True):
     scanned_for_refile_queue: Optional[bool] = Field(
         sa_column=sa.Column(sa.Boolean, default=False, nullable=False)
     )
+    scanned_for_refile: Optional[bool] = Field(
+        sa_column=sa.Column(sa.Boolean, default=None, nullable=True)
+    )
     verification_job_id: Optional[int] = Field(
         default=None, nullable=True, foreign_key="verification_jobs.id"
     )
@@ -115,6 +118,9 @@ class Item(SQLModel, table=True):
     )
     media_type_id: Optional[int] = Field(foreign_key="media_types.id", nullable=True)
     scanned_for_refile_queue_dt: Optional[datetime] = Field(
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=None, nullable=True)
+    )
+    scanned_for_refile_dt: Optional[datetime] = Field(
         sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=None, nullable=True)
     )
     create_dt: datetime = Field(

@@ -107,12 +107,10 @@ def sorted_requests(session, refile_job):
             sorted_list.append(item["non_tray_item"])
 
     # Final sort of already location-prioritized items by update_dt
-    sorted_list = sorted(
-        sorted_list,
-        key=lambda obj: obj.update_dt
-    )
-
+    unfulfilled_requests = [list_item for list_item in sorted_list if not list_item.scanned_for_refile]
+    fulfilled_requests = [list_item for list_item in sorted_list if list_item.scanned_for_refile]
     # Append withdrawn items without shelf positions to the end
+    sorted_list = unfulfilled_requests + fulfilled_requests
     sorted_list.extend(withdrawn_items)
     sorted_list.extend(withdrawn_non_tray_items)
 
@@ -419,6 +417,8 @@ def delete_refile_job(id: int, session: Session = Depends(get_session)):
         {
             "scanned_for_refile_queue": True,
             "scanned_for_refile_queue_dt": update_dt,
+            "scanned_for_refile": False,
+            "scanned_for_refile_dt": None,
             "update_dt": update_dt,
         },
         synchronize_session=False,
@@ -428,6 +428,8 @@ def delete_refile_job(id: int, session: Session = Depends(get_session)):
         {
             "scanned_for_refile_queue": True,
             "scanned_for_refile_queue_dt": update_dt,
+            "scanned_for_refile": False,
+            "scanned_for_refile_dt": None,
             "update_dt": update_dt,
         },
         synchronize_session=False,
@@ -536,6 +538,8 @@ def add_items_to_refile_job(
 
             item.scanned_for_refile_queue = False
             item.scanned_for_refile_queue_dt = None
+            item.scanned_for_refile = False
+            item.scanned_for_refile_dt = None
             item.update_dt = update_dt
 
         elif non_tray_item:
@@ -570,6 +574,8 @@ def add_items_to_refile_job(
 
             non_tray_item.scanned_for_refile_queue = False
             non_tray_item.scanned_for_refile_queue_dt = None
+            non_tray_item.scanned_for_refile = False
+            non_tray_item.scanned_for_refile_dt = None
             non_tray_item.update_dt = update_dt
 
     session.bulk_save_objects(refile_items)
@@ -644,6 +650,8 @@ def remove_item_from_refile_job(
             if refile_item:
                 session.delete(refile_item)
                 item.scanned_for_refile_queue = True
+                item.scanned_for_refile = False
+                item.scanned_for_refile_dt = None
                 item.update_dt = update_dt
         elif non_tray_item:
             non_tray_item = (
@@ -664,6 +672,8 @@ def remove_item_from_refile_job(
             if refile_non_tray_item:
                 session.delete(refile_non_tray_item)
                 non_tray_item.scanned_for_refile_queue = True
+                non_tray_item.scanned_for_refile = False
+                non_tray_item.scanned_for_refile_dt = None
                 non_tray_item.update_dt = update_dt
 
     session.commit()
@@ -709,11 +719,12 @@ def update_item_in_refile_job(
 
     # Update the item record with the mutated data
     mutated_data = refile_job_item_input.model_dump(exclude_unset=True)
-
+    update_dt = datetime.now(timezone.utc)
     for key, value in mutated_data.items():
         setattr(existing_item, key, value)
-    setattr(existing_item, "update_dt", datetime.now(timezone.utc))
-
+    setattr(existing_item, "update_dt", update_dt)
+    setattr(existing_item, "scanned_for_refile", True)
+    setattr(existing_item, "scanned_for_refile_dt", update_dt)
     # Commit the changes to the database
     session.add(existing_item)
     session.commit()
@@ -765,10 +776,13 @@ def update_non_tray_item_in_refile_job(
 
     # Update the item record with the mutated data
     mutated_data = refile_job_non_tray_item_input.model_dump(exclude_unset=True)
+    update_dt = datetime.now(timezone.utc)
 
     for key, value in mutated_data.items():
         setattr(existing_item, key, value)
-    setattr(existing_item, "update_dt", datetime.now(timezone.utc))
+    setattr(existing_item, "update_dt", update_dt)
+    setattr(existing_item, "scanned_for_refile", True)
+    setattr(existing_item, "scanned_for_refile_dt", update_dt)
 
     # Commit the changes to the database
     session.add(existing_item)

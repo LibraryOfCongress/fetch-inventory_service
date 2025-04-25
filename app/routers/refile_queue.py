@@ -143,6 +143,7 @@ def add_to_refile_queue(
 
         item.scanned_for_refile_queue = True
         item.scanned_for_refile_queue_dt = update_dt
+        item.scanned_for_refile = False
         item.update_dt = update_dt
 
         session.add(item)
@@ -195,6 +196,7 @@ def add_to_refile_queue(
 
         non_tray_item.scanned_for_refile_queue = True
         non_tray_item.scanned_for_refile_queue_dt = update_dt
+        non_tray_item.scanned_for_refile = False
         non_tray_item.update_dt = update_dt
 
         session.add(non_tray_item)
@@ -251,6 +253,7 @@ def remove_from_refile_queue(
 
         item.scanned_for_refile_queue = False
         item.scanned_for_refile_queue_dt = None
+        item.scanned_for_refile = None
         item.update_dt = update_dt
 
     else:
@@ -263,6 +266,7 @@ def remove_from_refile_queue(
 
         non_tray_item.scanned_for_refile_queue = False
         non_tray_item.scanned_for_refile_queue_dt = None
+        non_tray_item.scanned_for_refile = None
         non_tray_item.update_dt = update_dt
 
     session.commit()
