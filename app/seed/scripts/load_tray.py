@@ -64,11 +64,16 @@ def load_tray(
 
         # determine shelf position assignment
         shelf_position_number = int(shelf_position_number)
+        # kick out Trays with a zero for SPN
+        if shelf_position_number == 0:
+            raise ValueError(f"Legacy shelf_position number is 0. Tray skipped.")
         positions_for_shelf = shelf_position_dict.get(shelf_barcode_value, [])
         sp_id = next(
             (position[shelf_position_number] for position in positions_for_shelf if shelf_position_number in position),
             None
         )
+        if not sp_id:
+            raise ValueError(f"Legacy shelf_position number {shelf_position_number} is outside the bounds for this shelf's shelf_type")
 
         # sanitize unknown dates
         """

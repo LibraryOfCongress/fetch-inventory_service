@@ -103,6 +103,8 @@ def load_non_tray(
             (position[shelf_position_number] for position in positions_for_shelf if shelf_position_number in position),
             None
         )
+        if not sp_id:
+            raise ValueError(f"Legacy shelf_position number {shelf_position_number} is outside the bounds for this shelf's shelf_type")
 
         # sanitize unknown dates
         """

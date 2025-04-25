@@ -42,6 +42,9 @@ def load_item(
         # lookup container
         current_container = container_dict.get(container_barcode_value) #list[dict]
 
+        if not current_container:
+            raise ValueError(f"Container not found for Tray barcode: {container_barcode_value}")
+
         # deal with weird characters
         if re.search(r'[^a-zA-Z0-9]', item_barcode_value):
             raise ValueError("Non alphanumeric characters in barcode")
