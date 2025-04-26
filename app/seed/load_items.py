@@ -336,16 +336,21 @@ def load_items():
             # session = get_sqlalchemy_session_for_item_migration()
 
             # DO NOT REMOVE (until this is handled by params)
-            # 9,885,000 rows in 100k chunks,  uneven batches
+            # 9,960,447 rows in 100k chunks
+            #
+            # (1, 10), (11, 21), (22, 32), (33, 43), (44, 54), (55, 65), (66, 76)
+            # (77, 87), (88, 98), (99, 100)
+            #
+            # (1, 10), (11, 21), (22, 32), (33, 43), (44, 54) |, (55, 60), (61, 66)
+            # (67, 72), (73, 78), (79, 84), (85, 90), (91, 96), (97, 100)
+            #
             # 
-            # (1, 25), (26, 50), (51, 61), (62, 68) (69, 75) (76, 82) (83, 89)
-            # (90, 96) (97, 100)
             # each run will overwrite previous error file
             # so extract it between runs. also rebuild app between runs
             # in order to capture chunk selection changes
             # if chunk_start < 1:
             #     continue
-            # if chunk_start > 25:
+            # if chunk_start > 10:
             #     break
 
             session = next(get_sqlalchemy_session())
@@ -369,9 +374,12 @@ def load_items():
             ]
 
             item_barcode_objects = []
+            standalone_item_barcode_objects = []
             item_objects = []
+            standalone_item_objects = []
             nt_barcode_objects = []
             nt_objects = []
+            standalone_nt_objects = []
 
             # Collect and unpack results
             for future in as_completed(futures):
@@ -385,11 +393,21 @@ def load_items():
                     # p_item_result[3] are barcode objects
                     if p_item_result[3]:
                         # session.add(p_item_result[3])
-                        item_barcode_objects.append(p_item_result[3])
+                        standalone_item_barcode_objects.append(p_item_result[3])
+                        item_barcode_objects.append([
+                            p_item_result[3],#barcode_object
+                            p_item_result[5],#row_num
+                            p_item_result[6]#item_barcode_value
+                        ])
                     # p_item_result[4] are item objects
                     if p_item_result[4]:
                         # session.add(p_item_result[4])
-                        item_objects.append(p_item_result[4])
+                        standalone_item_objects.append(p_item_result[4])
+                        item_objects.append([
+                            p_item_result[4],#item object
+                            p_item_result[5],#row_num
+                            p_item_result[6]#item_barcode_value
+                        ])
                 if p_non_tray_item_result:
                     results["non_tray_items"]["successful_rows"] += p_non_tray_item_result[0]
                     results["non_tray_items"]["failed_rows"] += p_non_tray_item_result[1]
@@ -402,6 +420,7 @@ def load_items():
                     # p_non_tray_item_result[4] are non_tray_items
                     if p_non_tray_item_result[4]:
                         # session.add(p_non_tray_item_result[4])
+                        standalone_nt_objects.append(p_non_tray_item_result[4])
                         nt_objects.append([
                             p_non_tray_item_result[4],#nt_object
                             p_non_tray_item_result[5],#row_num
@@ -412,27 +431,118 @@ def load_items():
             # Flush to get barcode id's before commit
             # session.flush()
             # Save all
-            session.bulk_save_objects(item_barcode_objects, return_defaults=True)
+
+            # session.bulk_save_objects(item_barcode_objects, return_defaults=True)
+            try:
+                session.bulk_save_objects(standalone_item_barcode_objects, return_defaults=True)
+                session.commit()
+            except Exception as e:
+                # session.rollback()
+                session.close()  # <-- important!
+                session = next(get_sqlalchemy_session())  # open a fresh session
+                # parse through for individual errors
+                safe_item_barcode_objects = []
+                for item_barcode_object in item_barcode_objects:
+                    try:
+                        session.add(item_barcode_object[0])
+                        session.flush()
+                        # session.commit()
+                    except Exception as e:
+                        session.rollback()
+                        error = {
+                            "row": item_barcode_object[1],
+                            "item_barcode": f":: {item_barcode_object[2]}",
+                            "reason": f"{e}"
+                        }
+                        results["items"]["errors"].append(error)
+                        results["items"]["failed_rows"] += 1
+                        results["items"]["successful_rows"] -= 1
+                    else:
+                        safe_item_barcode_objects.append(item_barcode_object[0])
+                # session.add_all(safe_item_barcode_objects)
+                session.bulk_save_objects(safe_item_barcode_objects, return_defaults=True)
+                session.commit()
+
             session.bulk_save_objects(nt_barcode_objects, return_defaults=True)
-            session.bulk_save_objects(item_objects, return_defaults=True)
             session.commit()
 
+
+            # session.bulk_save_objects(item_objects, return_defaults=True)
+            try:
+                session.bulk_save_objects(standalone_item_objects, return_defaults=True)
+                session.commit()
+            except Exception as e:
+                # session.rollback()
+                session.close()  # <-- important!
+                session = next(get_sqlalchemy_session())  # open a fresh session
+                safe_item_objects = []
+                for item_object in item_objects:
+                    try:
+                        session.add(item_object[0])
+                        session.flush()
+                        # session.commit()
+                    except Exception as e:
+                        session.rollback()
+                        error = {
+                            "row": item_object[1],
+                            "item_barcode": f":: {item_object[2]}",
+                            "reason": f"{e}"
+                        }
+                        results["items"]["errors"].append(error)
+                        results["items"]["failed_rows"] += 1
+                        results["items"]["successful_rows"] -= 1
+                    else:
+                        safe_item_objects.append(item_object[0])
+                # session.add_all(safe_item_objects)
+                session.bulk_save_objects(safe_item_objects, return_defaults=True)
+                session.commit()
+
+
+            # session.commit() # is this still needed - no
+
             # session.bulk_save_objects(nt_objects, return_defaults=True)
-            for non_tray_item_object in nt_objects:
-                try:
-                    session.add(non_tray_item_object[0])
-                    session.flush()
-                except IntegrityError as e:
-                    session.rollback()
-                    error = {
-                        "row": non_tray_item_object[1],
-                        "non_tray_item_barcode": f":: {non_tray_item_object[2]}",
-                        "reason": f"{e}"
-                    }
-                    results["non_tray_items"]["errors"].append(error)
-                    results["non_tray_items"]["failed_rows"] += 1
-                    results["non_tray_items"]["successful_rows"] -= 1
-            session.commit()
+            try:
+                session.bulk_save_objects(standalone_nt_objects, return_defaults=True)
+                session.commit()
+            except Exception as e:
+                # session.rollback()
+                session.close()  # <-- important!
+                session = next(get_sqlalchemy_session())  # open a fresh session
+                safe_nt_objects = []
+                used_shelf_positions_ids = set()
+                for non_tray_item_object in nt_objects:
+                    try:
+                        if non_tray_item_object[0].shelf_position_id in used_shelf_positions_ids:
+                            #error skip, no rollback needed
+                            error = {
+                                "row": non_tray_item_object[1],
+                                "non_tray_item_barcode": f":: {non_tray_item_object[2]}",
+                                "reason": f"Duplicate shelf position assignment sp_id: {non_tray_item_object[0].shelf_position_id}"
+                            }
+                            results["non_tray_items"]["errors"].append(error)
+                            results["non_tray_items"]["failed_rows"] += 1
+                            results["non_tray_items"]["successful_rows"] -= 1
+                            continue
+                        else:
+                            session.add(non_tray_item_object[0])
+                            session.flush()
+                        # session.commit()
+                    except Exception as e:
+                        session.rollback()
+                        error = {
+                            "row": non_tray_item_object[1],
+                            "non_tray_item_barcode": f":: {non_tray_item_object[2]}",
+                            "reason": f"{e}"
+                        }
+                        results["non_tray_items"]["errors"].append(error)
+                        results["non_tray_items"]["failed_rows"] += 1
+                        results["non_tray_items"]["successful_rows"] -= 1
+                    else:
+                        safe_nt_objects.append(non_tray_item_object[0])
+                        used_shelf_positions_ids.add(non_tray_item_object[0].shelf_position_id)
+                # session.add_all(safe_nt_objects)
+                session.bulk_save_objects(safe_nt_objects, return_defaults=True)
+                session.commit()
 
             # Clear resources
             session.close()

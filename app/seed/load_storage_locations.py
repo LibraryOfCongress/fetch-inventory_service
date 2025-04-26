@@ -373,9 +373,9 @@ def load_storage_locations():
             # 102k rows in 5k chunks,  21 chunks
             # (1, 6), (7, 12), (13, 18), (19, 24)
             # couple this with commenting out fixtures on second run and up
-            # if chunk_start < 19:
+            # if chunk_start < 1:
             #     continue
-            # if chunk_start > 24:
+            # if chunk_start > 6:
             #     break
 
             # garbage cleanup every chunk

@@ -467,7 +467,7 @@
       "!user_id": {
         "model": "app.models.users.User",
         "filter": {
-          "email": "egahn@umd.edu"
+          "email": "evgahn@umd.edu"
         }
       },
       "!group_id": {
@@ -481,7 +481,7 @@
       "!user_id": {
         "model": "app.models.users.User",
         "filter": {
-          "email": "kdorrough@loc.gov"
+          "email": "kgrooms@loc.gov"
         }
       },
       "!group_id": {

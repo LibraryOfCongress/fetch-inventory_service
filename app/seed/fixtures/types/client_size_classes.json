@@ -380,6 +380,13 @@
       "depth": 0
     },
     {
+      "name": "VHP-A/B",
+      "short_name": "VHP-A/B",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
       "name": "HP-A/B",
       "short_name": "HP-A/B",
       "height": 0,

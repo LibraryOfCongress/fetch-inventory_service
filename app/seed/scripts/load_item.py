@@ -116,4 +116,4 @@ def load_item(
             "reason": f"{e}"
         }
     finally:
-        return [success, failure, error, barcode_object, item_object]
+        return [success, failure, error, barcode_object, item_object, row_num, item_barcode_value]

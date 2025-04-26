@@ -285,6 +285,16 @@
       "!size_class_id": {
         "model": "app.models.size_class.SizeClass",
         "filter": {
+          "short_name": "AL"
+        }
+      },
+      "type": "20",
+      "max_capacity": 6
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
           "short_name": "AH"
         }
       },
@@ -300,6 +310,16 @@
       },
       "type": "40",
       "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "AH"
+        }
+      },
+      "type": "20",
+      "max_capacity": 6
     },
     {
       "!size_class_id": {
@@ -350,6 +370,26 @@
       },
       "type": "48",
       "max_capacity": 12
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "BH"
+        }
+      },
+      "type": "30",
+      "max_capacity": 8
+    },
+    {
+      "!size_class_id": {
+        "model": "app.models.size_class.SizeClass",
+        "filter": {
+          "short_name": "BH"
+        }
+      },
+      "type": "20",
+      "max_capacity": 5
     },
     {
       "!size_class_id": {
