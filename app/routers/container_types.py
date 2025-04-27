@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Response, Query
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.container_types import ContainerType
 
 from app.schemas.container_types import (
@@ -19,6 +22,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/container-types",
@@ -27,14 +31,36 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ContainerTypeListOutput])
-def get_container_type_list(session: Session = Depends(get_session)) -> list:
+def get_container_type_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Container Type Type"),
+) -> list:
     """
     Retrieve a list of container types.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Type: The type of the container type.
 
     **Returns:**
     - Container Type List Output: A list of container types.
     """
-    return paginate(session, select(ContainerType))
+
+    # Create a query to retrieve all Container Type
+    query = select(ContainerType)
+
+    if search:
+        query = query.where(ContainerType.type.icontains(search))
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using RequestSorter
+        sorter = BaseSorter(ContainerType)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=ContainerTypeDetailReadOutput)
@@ -56,7 +82,6 @@ def get_container_type_detail(id: int, session: Session = Depends(get_session)):
         return container_type
 
     raise NotFound(detail=f"Container Type ID {id} Not Found")
-
 
 
 @router.post("/", response_model=ContainerTypeDetailWriteOutput, status_code=201)
@@ -112,7 +137,7 @@ def update_container_type(
         for key, value in mutated_data.items():
             setattr(existing_container_type, key, value)
 
-        setattr(existing_container_type, "update_dt", datetime.utcnow())
+        setattr(existing_container_type, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_container_type)
         session.commit()
@@ -142,8 +167,7 @@ def delete_container_type(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Container Type ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Container Type ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Container Type ID {id} Not Found")

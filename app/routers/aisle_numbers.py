@@ -2,21 +2,23 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from app.config.exceptions import (
     NotFound,
     ValidationException,
-    InternalServerError,
+    InternalServerError
 )
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.aisle_numbers import AisleNumber
 from app.schemas.aisle_numbers import (
     AisleNumberInput,
     AisleNumberListOutput,
     AisleNumberDetailOutput,
 )
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/aisles",
@@ -25,14 +27,28 @@ router = APIRouter(
 
 
 @router.get("/numbers", response_model=Page[AisleNumberListOutput])
-def get_aisle_number_list(session: Session = Depends(get_session)) -> list:
+def get_aisle_number_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a paginated list of aisle numbers.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns**:
     - Aisle Number List Output: The paginated list of aisle numbers.
     """
-    return paginate(session, select(AisleNumber))
+    query = select(AisleNumber)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = BaseSorter(AisleNumber)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/numbers/{id}", response_model=AisleNumberDetailOutput)
@@ -103,7 +119,7 @@ def update_aisle_number(
         for key, value in mutated_data.items():
             setattr(existing_aisle_number, key, value)
 
-        setattr(existing_aisle_number, "update_dt", datetime.utcnow())
+        setattr(existing_aisle_number, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_aisle_number)
         session.commit()

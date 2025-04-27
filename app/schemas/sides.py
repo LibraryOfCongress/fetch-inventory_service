@@ -2,7 +2,7 @@ import uuid
 
 from typing import Optional, List
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.schemas.aisles import AisleBaseReadOutput
 from app.schemas.side_orientations import SideOrientationBaseReadOutput
@@ -34,6 +34,7 @@ class SideBaseOutput(BaseModel):
 
 
 class SideListOutput(SideBaseOutput):
+    side_orientation: Optional[SideOrientationBaseReadOutput]
     side_orientation_id: int
     aisle_id: int
 
@@ -46,6 +47,7 @@ class SideListOutput(SideBaseOutput):
 class SideDetailWriteOutput(SideBaseOutput):
     aisle_id: int
     side_orientation_id: int
+    side_orientation: Optional[SideOrientationBaseReadOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -74,7 +76,7 @@ class LadderNestedForSide(BaseModel):
 
 
 class SideDetailReadOutput(SideBaseOutput):
-    side_orientation: SideOrientationBaseReadOutput
+    side_orientation: Optional[SideOrientationBaseReadOutput] = None
     create_dt: datetime
     update_dt: datetime
     aisle: AisleBaseReadOutput

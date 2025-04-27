@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.buildings import Building
@@ -19,16 +19,16 @@ class Module(SQLModel, table=True):
 
     __tablename__ = "modules"
 
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
     building_id: int = Field(foreign_key="buildings.id", nullable=False)
     module_number: str = Field(
-        max_length=50, sa_column=sa.VARCHAR, nullable=True, unique=True
+        sa_column=sa.Column(sa.VARCHAR(50), nullable=True, unique=True)
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
 
     # building in a module

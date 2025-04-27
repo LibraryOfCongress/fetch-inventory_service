@@ -118,3 +118,47 @@ def test_delete_item_record_not_found(client):
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json().get("detail") == "Item ID 999 Not Found"
+
+
+def test_move_item_item_no1t_found(client):
+    """
+    Test when the item barcode lookup returns None.
+    """
+    # Simulate query for Barcode with the provided barcode_value returning None.
+
+    response = client.post("/move/ABC123", json={"tray_barcode_value": "RS123451"})
+    # Expect a validation error with the proper detail.
+    assert response.status_code == 422
+    assert "Item with barcode not found" in response.json()["detail"]
+
+
+def test_move_item_tray_not_found(client):
+    """
+    Test when the tray barcode lookup returns None.
+    """
+
+    response = client.post("/move/1234567890", json={"tray_barcode_value": "TRAY001"})
+    assert response.status_code == 422
+    assert "Tray barcode value" in response.json()["detail"]
+
+
+def test_move_item_not_verified(client):
+    """
+    Test when the item exists but has not been verified.
+    """
+    response = client.post("/move/ABC123", json={"tray_barcode_value": "TRAY001"})
+    assert response.status_code == 422
+    assert "has not been verified" in response.json()["detail"]
+
+
+def test_move_item_success(client):
+    """
+    Test the successful move of an item.
+    """
+    # No exception should occur.
+    response = client.post("/move/1234567890", json={"tray_barcode_value": "RS123451"})
+    # In a successful move, the returned JSON should represent the item.
+    # For this test, you may compare some fields from dummy_item.
+    assert response.status_code == 200
+    # For example, if the router returns the item, we expect the status to be "In"
+    assert response.json().get("status") == "In"

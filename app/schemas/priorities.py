@@ -1,6 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel, conint
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class PriorityInput(BaseModel):

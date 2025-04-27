@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.shelf_numbers import ShelfNumber
 from app.schemas.shelf_numbers import (
     ShelfNumberInput,
@@ -17,7 +18,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/shelves",
@@ -26,14 +27,29 @@ router = APIRouter(
 
 
 @router.get("/numbers", response_model=Page[ShelfNumberListOutput])
-def get_shelf_number_list(session: Session = Depends(get_session)) -> list:
+def get_shelf_number_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Get a paginated list of shelf numbers.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Shelf Number List Output: The paginated list of shelf numbers.
     """
-    return paginate(session, select(ShelfNumber))
+
+    # Create a query to select all Shelf Number
+    query = select(ShelfNumber)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = BaseSorter(ShelfNumber)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/numbers/{id}", response_model=ShelfNumberDetailOutput)
@@ -115,7 +131,7 @@ def update_shelf_number(
         for key, value in mutated_data.items():
             setattr(existing_shelf_number, key, value)
 
-        setattr(existing_shelf_number, "update_dt", datetime.utcnow())
+        setattr(existing_shelf_number, "update_dt", datetime.now(timezone.utc))
         session.add(existing_shelf_number)
         session.commit()
         session.refresh(existing_shelf_number)

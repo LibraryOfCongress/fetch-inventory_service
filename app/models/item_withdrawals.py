@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
 from sqlmodel import Field, SQLModel
 
 
@@ -20,14 +20,14 @@ class ItemWithdrawal(SQLModel, table=True):
         sa.UniqueConstraint("item_id", "withdraw_job_id", name="uix_item_withdrawals"),
     )
 
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
     item_id: int = Field(default=None, nullable=False, foreign_key="items.id")
     withdraw_job_id: int = Field(
         default=None, nullable=False, foreign_key="withdraw_jobs.id"
     )
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )

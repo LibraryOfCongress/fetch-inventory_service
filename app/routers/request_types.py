@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.request_types import RequestType
 from app.schemas.request_types import (
     RequestTypeInput,
@@ -15,11 +18,11 @@ from app.schemas.request_types import (
     RequestTypeDetailReadOutput,
 )
 from app.config.exceptions import (
-    BadRequest,
     NotFound,
     ValidationException,
     InternalServerError,
 )
+from app.sorting import BaseSorter
 
 
 router = APIRouter(
@@ -29,11 +32,35 @@ router = APIRouter(
 
 
 @router.get("/types", response_model=Page[RequestTypeListOutput])
-def get_request_type_list(session: Session = Depends(get_session)) -> list:
+def get_request_type_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Request Type Type"),
+) -> list:
     """
     Get a list of request types
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Type: The type of the request type
+
+    **Returns:**
+    - Request Type List Output: The paginated list of request types
     """
-    return paginate(session, select(RequestType))
+
+    # Create a query to select all Request Type
+    query = select(RequestType)
+
+    if search:
+        query = query.where(RequestType.type.icontains(search))
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = BaseSorter(RequestType)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/types/{id}", response_model=RequestTypeDetailReadOutput)
@@ -70,7 +97,9 @@ def create_request_type(
 
 @router.patch("/types/{id}", response_model=RequestTypeDetailWriteOutput)
 def update_request_type(
-    id: int, request_type: RequestTypeUpdateInput, session: Session = Depends(get_session)
+    id: int,
+    request_type: RequestTypeUpdateInput,
+    session: Session = Depends(get_session),
 ):
     """
     Update an existing Request Type
@@ -86,7 +115,7 @@ def update_request_type(
         for key, value in mutated_data.items():
             setattr(existing_request_type, key, value)
 
-        setattr(existing_request_type, "update_dt", datetime.utcnow())
+        setattr(existing_request_type, "update_dt", datetime.now(timezone.utc))
         session.add(existing_request_type)
         session.commit()
         session.refresh(existing_request_type)
@@ -109,8 +138,7 @@ def delete_request_type(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Request Type ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Request Type ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Request Type ID {id} Not Found")

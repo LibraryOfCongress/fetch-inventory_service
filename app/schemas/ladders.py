@@ -2,7 +2,7 @@ import uuid
 
 from typing import Optional, List
 from pydantic import BaseModel, conint
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.schemas.shelf_types import ShelfTypeDetailOutput
 from app.schemas.sides import SideDetailWriteOutput
@@ -49,6 +49,7 @@ class LadderBaseOutput(BaseModel):
 class LadderListOutput(LadderBaseOutput):
     side_id: int
     ladder_number_id: int
+    ladder_number: Optional[LadderNumberDetailOutput] = None
     sort_priority: Optional[int] = None
 
     class Config:
@@ -65,6 +66,7 @@ class LadderListOutput(LadderBaseOutput):
 class LadderDetailWriteOutput(LadderBaseOutput):
     side_id: int
     ladder_number_id: int
+    ladder_number: Optional[LadderNumberDetailOutput] = None
     sort_priority: Optional[int] = None
     create_dt: datetime
     update_dt: datetime
@@ -100,9 +102,9 @@ class ShelvesNestedForLadderOutput(BaseModel):
     id: int
     available_space: Optional[int] = None
     sort_priority: Optional[int] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_number: ShelfNumberNestedForLadderOutput
-    owner: OwnerNestedForLadderOutput
+    owner: Optional[OwnerNestedForLadderOutput] = None
     width: Optional[float] = None
     height: Optional[float] = None
     depth: Optional[float] = None
@@ -157,8 +159,7 @@ class LadderDetailReadOutput(LadderBaseOutput):
                             "size_class": {
                                 "id": 1,
                                 "name": "C-Low",
-                                "short_name": "CL",
-                                "assigned": False
+                                "short_name": "CL"
                             },
                             "create_dt": "2023-10-08T20:46:56.764426",
                             "update_dt": "2023-10-08T20:46:56.764398",

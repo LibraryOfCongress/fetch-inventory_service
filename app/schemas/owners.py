@@ -2,7 +2,7 @@ import uuid
 
 from typing import Optional, List
 from pydantic import BaseModel, conint
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.schemas.owner_tiers import OwnerTierDetailOutput
 
@@ -42,33 +42,46 @@ class OwnerBaseOutput(BaseModel):
     name: str
     owner_tier_id: int
     parent_owner_id: Optional[int] = None
-    size_classes: Optional[list] = None
+
+
+class NestedOwnerTierDetailOutput(BaseModel):
+    id: int
+    level: int
+    name: str
+
+
+class NestedParentOwnerDetailReadOutput(BaseModel):
+    id: int
+    name: str
 
 
 class OwnerListOutput(OwnerBaseOutput):
+    parent_owner: Optional[NestedParentOwnerDetailReadOutput] = None
+    owner_tier: Optional[NestedOwnerTierDetailOutput] = None
+
     class Config:
         json_schema_extra = {
             "example": {
                 "id": 1,
                 "name": "Special Collection Directorate",
                 "owner_tier_id": 2,
+                "owner_tier": {
+                    "id": 1,
+                    "level": 1,
+                    "name": "organization"
+                },
                 "parent_owner_id": 2,
-                "size_classes": [
-                    {
-                        "id": 1,
-                        "name": "C-Low",
-                        "short_name": "CL",
-                        "assigned": False,
-                        "height": 15.7,
-                        "width": 30.33,
-                        "depth": 27
-                    }
-                ]
+                "parent_owner": {
+                    "id": 2,
+                    "name": "Library of Congress"
+                }
             }
         }
 
 
 class OwnerDetailWriteOutput(OwnerBaseOutput):
+    owner_tier: Optional[OwnerTierDetailOutput] = None
+    parent_owner: Optional[NestedParentOwnerDetailReadOutput] = None
     create_dt: datetime
     update_dt: datetime
 
@@ -78,18 +91,16 @@ class OwnerDetailWriteOutput(OwnerBaseOutput):
                 "id": 1,
                 "name": "Special Collection Directorate",
                 "owner_tier_id": 2,
+                "owner_tier": {
+                    "id": 1,
+                    "level": 1,
+                    "name": "organization"
+                },
                 "parent_owner_id": 2,
-                "size_classes": [
-                    {
-                        "id": 1,
-                        "name": "C-Low",
-                        "short_name": "CL",
-                        "assigned": False,
-                        "height": 15.7,
-                        "width": 30.33,
-                        "depth": 27
-                    }
-                ],
+                "parent_owner": {
+                    "id": 2,
+                    "name": "Library of Congress"
+                },
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
@@ -133,17 +144,6 @@ class OwnerDetailReadOutput(OwnerBaseOutput):
                     "create_dt": "2023-10-08T20:46:56.764426",
                     "update_dt": "2023-10-08T20:46:56.764398"
                 },
-                "size_classes": [
-                    {
-                        "id": 1,
-                        "name": "C-Low",
-                        "short_name": "CL",
-                        "assigned": False,
-                        "height": 15.7,
-                        "width": 30.33,
-                        "depth": 27
-                    }
-                ],
                 "children": [],
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"

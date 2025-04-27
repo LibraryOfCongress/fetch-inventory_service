@@ -1,12 +1,12 @@
-import uuid
-
+import uuid, importlib
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime
+
+from sqlalchemy.sql import func
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import condecimal
-from sqlmodel import SQLModel, Field, Relationship, Session
+from sqlmodel import SQLModel, Field, Relationship, Session, select
 from sqlalchemy.schema import UniqueConstraint
 
 from app.models.owners import Owner
@@ -14,6 +14,7 @@ from app.models.ladders import Ladder
 from app.models.container_types import ContainerType
 from app.models.shelf_numbers import ShelfNumber
 from app.models.shelf_types import ShelfType
+from app.database.session import session_manager
 
 
 class Shelf(SQLModel, table=True):
@@ -34,18 +35,18 @@ class Shelf(SQLModel, table=True):
         UniqueConstraint("barcode_id"),
     )
 
-    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
+    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True, default=None))
+    available_space: int = Field(
+        sa_column=sa.Column(sa.SmallInteger, default=0, nullable=False)
+    )
     location: Optional[str] = Field(
-        max_length=175, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
+        sa_column=sa.Column(sa.VARCHAR(175), nullable=True, unique=True, default=None)
     )
     internal_location: Optional[str] = Field(
-        max_length=200, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
+        sa_column=sa.Column(sa.VARCHAR(200), nullable=True, unique=True, default=None)
     )
     barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id", nullable=False, default=None, unique=True
-    )
-    available_space: int = Field(
-        sa_column=sa.Column(sa.Integer, nullable=False, default=0)
+        foreign_key="barcodes.id", nullable=True, default=None, unique=True
     )
     height: condecimal(decimal_places=2) = Field(
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
@@ -57,7 +58,7 @@ class Shelf(SQLModel, table=True):
         sa_column=sa.Column(sa.Numeric(precision=4, scale=2), nullable=False)
     )
     sort_priority: Optional[int] = Field(
-        sa_column=sa.SmallInteger, nullable=True, default=None
+        sa_column=sa.Column(sa.SmallInteger, nullable=True, default=None)
     )
     container_type_id: int = Field(foreign_key="container_types.id", nullable=False)
     shelf_number_id: int = Field(foreign_key="shelf_numbers.id", nullable=False)
@@ -65,11 +66,45 @@ class Shelf(SQLModel, table=True):
     owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True)
     ladder_id: int = Field(foreign_key="ladders.id", nullable=False)
     create_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
     update_dt: datetime = Field(
-        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     )
+
+    def calc_available_space(self, session: Optional[Session] = None) -> int:
+        """
+        The reason this isn't done in memory is because of N+1 select issues.
+        You'll thank me later.
+        """
+        # This is called on-demand in events or legacy data migration
+        # session compatible with both sqlmodel and sqlalchemy (run time usage vs legacy migration)
+        ShelfPosition = importlib.import_module("app.models.shelf_positions").ShelfPosition
+        # Check if session is valid
+        if session is None or not session.is_active:
+            with session_manager() as new_session:
+                return self._calculate_space(new_session, ShelfPosition)
+        else:
+            return self._calculate_space(session, ShelfPosition)
+
+    def _calculate_space(self, session, ShelfPosition):
+        total_positions = session.execute(
+            select(func.count(ShelfPosition.id)).where(ShelfPosition.shelf_id == self.id)
+        ).scalar() or 0  
+
+        occupied_positions = session.execute(
+            select(func.count(ShelfPosition.id))
+            .where(ShelfPosition.shelf_id == self.id)
+            .where(
+                sa.or_(
+                    ShelfPosition.tray != None,
+                    ShelfPosition.non_tray_item != None
+                )
+            )
+        ).scalar() or 0  
+
+        self.available_space = total_positions - occupied_positions
+        return self.available_space
 
     ladder: Ladder = Relationship(back_populates="shelves")
     owner: Owner = Relationship(back_populates="shelves")

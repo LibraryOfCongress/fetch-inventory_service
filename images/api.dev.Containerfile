@@ -3,7 +3,7 @@ FROM python:3.11.4-slim AS requirements-stage
 
 WORKDIR /tmp
 
-RUN pip install poetry
+RUN pip install poetry==1.6.1
 
 COPY pyproject.toml poetry.lock* /tmp/
 
@@ -17,9 +17,19 @@ FROM python:3.11.4-slim
 # Install Java, Graphviz, pg tools
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y git && \
-    apt-get install -y default-jdk graphviz && \
-    apt-get install -y postgresql-client && \
+    apt-get install -y \
+        git \
+        openjdk-17-jdk \
+        graphviz \
+        postgresql-client && \
+        # gcc \
+        # g++ \
+        # make \
+        # libxml2-dev \
+        # libxslt-dev \
+        # libxmlsec1-dev \
+        # libxmlsec1-openssl \
+        # pkg-config && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -32,6 +42,7 @@ COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
 
 # Install dependencies
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+    # pip install --no-cache-dir --force-reinstall lxml xmlsec
 
 # Copy your application code
 COPY app /code/app
@@ -39,17 +50,7 @@ COPY --from=requirements-stage /tmp/.env /code/app/config/.env
 COPY migrations /code/migrations
 COPY alembic.ini /code/alembic.ini
 
-# Add log rotation to container
-COPY app/logs/log_rotate.conf /etc/logrotate.d/fetch
-COPY app/logs/logrotate-cron.sh /etc/cron.daily/logrotate-cron
-COPY app/logs/cron.sh /code/app/cron.sh
-RUN chmod +x /etc/cron.daily/logrotate-cron
-COPY app/logs/cronjob.txt /etc/cron.d/cronjob
-RUN apt-get update && apt-get install -y logrotate cron
-RUN crontab /etc/cron.d/cronjob
-
 # Add SchemaSpy
-# ADD schemaspy/schemaspy-6.2.4.jar /code/schemaspy.jar
 # snapshot release fixes graphiz warnings. Update when official release.
 ADD schemaspy/schemaspy-7.0.0-SNAPSHOT.jar /code/schemaspy.jar
 ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
@@ -63,9 +64,6 @@ ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
 
 # Expose the application port
 EXPOSE 8001
-
-# Start logrotate cron schedule
-ENTRYPOINT ["/code/app/cron.sh"]
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
 

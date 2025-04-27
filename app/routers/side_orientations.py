@@ -2,10 +2,11 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.side_orientations import SideOrientation
 
 from app.schemas.side_orientations import (
@@ -20,6 +21,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/sides",
@@ -28,14 +30,28 @@ router = APIRouter(
 
 
 @router.get("/orientations", response_model=Page[SideOrientationListOutput])
-def get_side_orientation_list(session: Session = Depends(get_session)) -> list:
+def get_side_orientation_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a paginated list of side orientations.
 
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+
     **Returns**:
-    - list: A paginated list of side orientations.
+    - Side Orientation List Output: A paginated list of side orientations.
     """
-    return paginate(session, select(SideOrientation))
+    # Create a query to select all Side Orientation
+    query = select(SideOrientation)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = BaseSorter(SideOrientation)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/orientations/{id}", response_model=SideOrientationDetailReadOutput)
@@ -119,7 +135,7 @@ def update_side_orientation(
         for key, value in mutated_data.items():
             setattr(existing_side_orientation, key, value)
 
-        setattr(existing_side_orientation, "update_dt", datetime.utcnow())
+        setattr(existing_side_orientation, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_side_orientation)
         session.commit()

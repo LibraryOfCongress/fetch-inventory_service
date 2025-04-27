@@ -1,0 +1,32 @@
+{
+  "model": "app.models.owners.Owner",
+  "data": [
+    {
+      "name": "LC",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 1
+        }
+      }
+    },
+    {
+      "name": "House Library",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 1
+        }
+      }
+    },
+    {
+      "name": "Unassigned",
+      "!owner_tier_id": {
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 1
+        }
+      }
+    }
+  ]
+}

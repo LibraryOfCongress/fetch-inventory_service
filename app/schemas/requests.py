@@ -1,14 +1,17 @@
 import uuid
 
 from typing import Optional, List
-from pydantic import BaseModel, conint
-from datetime import datetime
+from pydantic import BaseModel, conint, field_validator
+from datetime import datetime, timezone
 
+from app.models.requests import RequestStatus
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.buildings import BuildingDetailReadOutput
+from app.schemas.users import UserDetailReadOutput
 
 
 class RequestInput(BaseModel):
+    status: Optional[str] = RequestStatus.New
     building_id: Optional[int] = None
     request_type_id: Optional[int] = None
     item_id: Optional[int] = None
@@ -18,10 +21,22 @@ class RequestInput(BaseModel):
     external_request_id: Optional[str] = None
     requestor_name: Optional[str] = None
     barcode_value: str  # pop this off in path operations
+    requested_by_id: Optional[int] = None
+
+    @field_validator('status', mode='before', check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in RequestStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of "
+                f"{list(RequestStatus._member_names_)}"
+            )
+        return value
 
     class Config:
         json_schema_extra = {
             "example": {
+                "status": "New",
                 "building_id": 1,
                 "barcode_value": "RS4321",
                 "request_type_id": 1,
@@ -31,11 +46,13 @@ class RequestInput(BaseModel):
                 "priority_id": 1,
                 "requestor_name": "Bilbo Baggins",
                 "external_request_id": "12345",
+                "requested_by_id": 1
             }
         }
 
 
 class RequestUpdateInput(BaseModel):
+    status: Optional[str] = None
     building_id: Optional[int] = None
     request_type_id: Optional[int] = None
     item_id: Optional[int] = None
@@ -47,6 +64,18 @@ class RequestUpdateInput(BaseModel):
     requestor_name: Optional[str] = None
     barcode_value: Optional[str] = None  # pop this off in path operations
     scanned_for_retrieval: Optional[bool] = None
+    requested_by_id: Optional[str] = None
+    fulfilled: Optional[bool] = None
+
+    @field_validator('status', mode='before', check_fields=True)
+    @classmethod
+    def validate_status(cls, value):
+        if value is not None and value not in RequestStatus._member_names_:
+            raise ValueError(
+                f"Invalid status: {value}. Must be one of "
+                f"{list(RequestStatus._member_names_)}"
+            )
+        return value
 
     class Config:
         json_schema_extra = {
@@ -62,13 +91,15 @@ class RequestUpdateInput(BaseModel):
                 "requestor_name": "Bilbo Baggins",
                 "external_request_id": "12345",
                 "scanned_for_pick_list": False,
-                "scanned_for_retrieval": False
+                "scanned_for_retrieval": False,
+                "fulfilled": False
             }
         }
 
 
 class RequestBaseOutput(BaseModel):
     id: int
+    status: Optional[str] = None
     building_id: Optional[int] = None
     request_type_id: Optional[int] = None
     item_id: Optional[int] = None
@@ -80,6 +111,9 @@ class RequestBaseOutput(BaseModel):
     requestor_name: Optional[str] = None
     scanned_for_pick_list: Optional[bool] = None
     scanned_for_retrieval: Optional[bool] = None
+    fulfilled: Optional[bool] = None
+    requested_by_id: Optional[int] = None
+    requested_by: Optional[UserDetailReadOutput] = None
 
 
 class MediaTypeNestedForRequest(BaseModel):
@@ -113,7 +147,7 @@ class BuildingNestedForRequest(BaseModel):
 
 class ShelfNestedForRequest(BaseModel):
     id: int
-    # barcode: BarcodeDetailReadOutput
+    # barcode: Optional[BarcodeDetailReadOutput] = None
 
 
 class ShelfPositionNestedForRequest(BaseModel):
@@ -127,7 +161,7 @@ class ShelfPositionNestedForRequest(BaseModel):
 
 class TrayNestedForRequest(BaseModel):
     id: int
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
@@ -142,6 +176,21 @@ class NestedOwnerForRequest(BaseModel):
     name: Optional[str] = None
 
 
+class NestedBarcodeTypeOutputForBarcode(BaseModel):
+    id: int
+    name: str
+
+
+class NestedWithdrawnBarcode(BaseModel):
+    id: uuid.UUID | None
+    value: str
+    withdrawn: bool
+    type_id: int
+    type: NestedBarcodeTypeOutputForBarcode
+    create_dt: datetime
+    update_dt: datetime
+
+
 class ItemNestedForRequest(BaseModel):
     id: int
     title: Optional[str] = None
@@ -153,7 +202,8 @@ class ItemNestedForRequest(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     status: Optional[str] = None
     media_type: Optional[MediaTypeNestedForRequest] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
     tray: Optional[TrayNestedForRequest] = None
 
 
@@ -165,7 +215,8 @@ class NonTrayItemNestedForRequest(BaseModel):
     owner: Optional[NestedOwnerForRequest] = None
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
@@ -210,6 +261,7 @@ class RequestDetailWriteOutput(RequestBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "New",
                 "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,
@@ -318,7 +370,7 @@ class NestedBarcodeRequestList(BaseModel):
 
 class NestedTrayRequestList(BaseModel):
     id: int
-    barcode: NestedBarcodeRequestList
+    barcode: Optional[NestedBarcodeRequestList] = None
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
@@ -333,7 +385,8 @@ class NestedItemRequestList(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     status: Optional[str] = None
     media_type: Optional[MediaTypeNestedForRequest] = None
-    barcode: BarcodeDetailReadOutput
+    barcode: Optional[BarcodeDetailReadOutput] = None
+    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
     tray: Optional[NestedTrayRequestList] = None
 
 
@@ -353,6 +406,7 @@ class RequestListOutput(RequestBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "New",
                 "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,
@@ -453,6 +507,7 @@ class RequestDetailReadOutput(RequestDetailWriteOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "New",
                 "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,
@@ -560,6 +615,7 @@ class RequestDetailReadOutputNoPickList(RequestBaseOutput):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "status": "New",
                 "building_id": 1,
                 "request_type_id": 1,
                 "item_id": 1,

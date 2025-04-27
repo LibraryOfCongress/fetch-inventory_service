@@ -1,6 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.schemas.groups import GroupPermissionsOutput
 
@@ -34,6 +34,7 @@ class UserUpdateInput(UserInput):
 
 class UserBaseReadOutput(UserUpdateInput):
     id: int
+    name: Optional[str] = None
 
 
 class UserListOutput(UserBaseReadOutput):
@@ -44,6 +45,7 @@ class UserListOutput(UserBaseReadOutput):
                 "id": 1,
                 "first_name": "Bilbo",
                 "last_name": "Baggins",
+                "name": "Bilbo Baggins",
                 "email": "FBaggins@example.com"
             }
         }
@@ -59,6 +61,7 @@ class UserDetailWriteOutput(UserListOutput):
                 "id": 1,
                 "first_name": "Bilbo",
                 "last_name": "Baggins",
+                "name": "Bilbo Baggins",
                 "email": "FBaggins@example.com",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"
@@ -74,6 +77,7 @@ class UserDetailReadOutput(UserDetailWriteOutput):
                 "id": 1,
                 "first_name": "Frodo",
                 "last_name": "Baggins",
+                "name": "Bilbo Baggins",
                 "email": "FBaggins@example.com",
                 "create_dt": "2023-10-08T20:46:56.764426",
                 "update_dt": "2023-10-08T20:46:56.764398"

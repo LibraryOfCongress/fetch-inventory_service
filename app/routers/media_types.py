@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.media_types import MediaType
 
 from app.schemas.media_types import (
@@ -19,6 +22,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/media-types",
@@ -27,11 +31,35 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[MediaTypeListOutput])
-def get_media_type_list(session: Session = Depends(get_session)) -> list:
+def get_media_type_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Media Type Name"),
+) -> list:
     """
     Retrieve a list of media types
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Name: The type of the media type to search for.
+
+    **Returns:**
+    - Media Type List Output: A list of media types.
     """
-    return paginate(session, select(MediaType))
+    # Create a query to retrieve all Media Type
+    query = select(MediaType)
+
+    if search:
+        query = query.where(MediaType.name.icontains(search))
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = BaseSorter(MediaType)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=MediaTypeDetailReadOutput)
@@ -44,7 +72,6 @@ def get_media_type_detail(id: int, session: Session = Depends(get_session)):
         return media_type
 
     raise NotFound(detail=f"Media Type ID {id} Not Found")
-
 
 
 @router.post("/", response_model=MediaTypeDetailWriteOutput, status_code=201)
@@ -87,7 +114,7 @@ def update_media_type(
         for key, value in mutated_data.items():
             setattr(existing_media_type, key, value)
 
-        setattr(existing_media_type, "update_dt", datetime.utcnow())
+        setattr(existing_media_type, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_media_type)
         session.commit()
@@ -111,8 +138,7 @@ def delete_media_type(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Media Type ID {id} Deleted "
-                                    f"Successfully"
+            status_code=204, detail=f"Media Type ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Media Type ID {id} Not Found")

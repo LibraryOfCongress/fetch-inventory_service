@@ -1,20 +1,20 @@
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy import and_
-from sqlalchemy.orm import selectinload, joinedload
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.logger import inventory_logger
+from app.filter_params import SortParams, LadderFilterParams
+from app.models.buildings import Building
+from app.models.modules import Module
+from app.models.aisles import Aisle
+from app.models.sides import Side
 from app.models.ladders import Ladder
 from app.models.ladder_numbers import LadderNumber
-from app.models.shelf_types import ShelfType
-from app.models.shelves import Shelf
 from app.schemas.ladders import (
     LadderInput,
     LadderUpdateInput,
@@ -27,7 +27,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-
+from app.sorting import BaseSorter, LadderSorter
 
 router = APIRouter(
     prefix="/ladders",
@@ -36,21 +36,59 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[LadderListOutput])
-def get_ladder_list(session: Session = Depends(get_session)) -> list:
+def get_ladder_list(
+    session: Session = Depends(get_session),
+    params: LadderFilterParams = Depends(),
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Ladder Number"),
+) -> list:
     """
     Retrieve a paginated list of ladders.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Number: Search for ladders by their number.
 
     **Returns:**
     - Ladder List Output: A list of ladders.
     """
-    return paginate(session, select(Ladder))
+
+    # Create a query to retrieve all Ladder
+    query = (
+        select(Ladder)
+        .join(Side, Ladder.side_id == Side.id)
+        .join(Aisle, Side.aisle_id == Aisle.id)
+        .join(Module, Aisle.module_id == Module.id)
+        .join(Building, Module.building_id == Building.id)
+    )
+
+    if search:
+        query = query.join(
+            LadderNumber, Ladder.ladder_number_id == LadderNumber.id
+        ).where(LadderNumber.number == search)
+
+    if params.building_id:
+        query = query.where(Building.id == params.building_id)
+    if params.module_id:
+        query = query.where(Module.id == params.module_id)
+    if params.aisle_id:
+        query = query.where(Aisle.id == params.aisle_id)
+    if params.side_id:
+        query = query.where(Side.id == params.side_id)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = LadderSorter(Ladder)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=LadderDetailReadOutput)
 def get_ladder_detail(
     id: int,
-    owner_id: Optional[int] | None = None,
-    size_class_id: Optional[int] | None = None,
     session: Session = Depends(get_session),
 ):
     """
@@ -65,31 +103,17 @@ def get_ladder_detail(
     **Raises:**
     - HTTPException: If the ladder is not found.
     """
-    ladder = session.get(Ladder, id)
+    try:
+        ladder = session.get(Ladder, id)
 
-    if not ladder:
-        raise NotFound(detail=f"Ladder ID {id} Not Found")
+        if not ladder:
+            raise NotFound(detail=f"Ladder ID {id} Not Found")
+        return ladder
 
-    # Filter shelves if `owner_id` or `size_class_id` are provided
-    if owner_id or size_class_id:
-        filter_shelves = [
-            shelf
-            for shelf in ladder.shelves
-            if (not owner_id or shelf.owner_id == owner_id)
-            and (not size_class_id or shelf.shelf_type.size_class_id == size_class_id)
-        ]
-    else:
-        filter_shelves = ladder.shelves
-
-    # Return a new dictionary with `shelves` overridden, rather than modifying `ladder` directly
-    return {
-        "id": ladder.id,
-        "side": ladder.side,
-        "ladder_number": ladder.ladder_number,
-        "shelves": filter_shelves,  # Override shelves with filtered result
-        "create_dt": ladder.create_dt,
-        "update_dt": ladder.update_dt,
-    }
+    except IntegrityError as e:
+        raise ValidationException(detail=f"{e}")
+    except Exception as e:
+        raise InternalServerError(detail=f"{e}")
 
 
 @router.post("/", response_model=LadderDetailWriteOutput, status_code=201)
@@ -175,7 +199,7 @@ def update_ladder(
         for key, value in mutated_data.items():
             setattr(existing_ladder, key, value)
 
-        setattr(existing_ladder, "update_dt", datetime.utcnow())
+        setattr(existing_ladder, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_ladder)
         session.commit()
@@ -208,7 +232,7 @@ def delete_ladder(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Ladder ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Ladder ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Ladder ID {id} Not Found")

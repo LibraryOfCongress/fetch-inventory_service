@@ -1,15 +1,16 @@
-import logging
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Optional
 
 from app.database.session import get_session
+from app.filter_params import SortParams, AisleFilterParams
 from app.models.aisles import Aisle
 from app.models.aisle_numbers import AisleNumber
+from app.models.modules import Module
 from app.schemas.aisles import (
     AisleInput,
     AisleUpdateInput,
@@ -17,14 +18,11 @@ from app.schemas.aisles import (
     AisleDetailWriteOutput,
     AisleDetailReadOutput,
 )
-from app.config.exceptions import (
-    NotFound,
-    ValidationException,
-    InternalServerError,
-)
+from app.config.exceptions import NotFound, ValidationException, InternalServerError
 
 import traceback
 
+from app.sorting import BaseSorter, AisleSorter
 
 router = APIRouter(
     prefix="/aisles",
@@ -33,14 +31,45 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[AisleListOutput])
-def get_aisle_list(session: Session = Depends(get_session)) -> list:
+def get_aisle_list(
+    session: Session = Depends(get_session),
+    params: AisleFilterParams = Depends(),
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Aisle Number"),
+) -> list:
     """
     Get a paginated list of aisles.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Number: Search for aisles by their number.
 
     **Returns**:
     - Aisle List Output: The paginated list of aisles.
     """
-    return paginate(session, select(Aisle))
+    query = select(Aisle).join(Module, Aisle.module_id == Module.id)
+
+    if search:
+        query = query.join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id).where(
+            AisleNumber.number == search)
+
+    if params.module_number:
+        query = query.where(Module.module_number == params.module_number)
+
+    if params.building_id:
+        query.where(Module.building_id == params.building_id)
+
+    if params.module_id:
+        query = query.where(Module.id == params.module_id)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = AisleSorter(Aisle)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=AisleDetailReadOutput)
@@ -86,13 +115,21 @@ def create_aisle(aisle_input: AisleInput, session: Session = Depends(get_session
         aisle_number_id = aisle_input.aisle_number_id
         mutated_data = aisle_input.model_dump(exclude="aisle_number")
         if not aisle_number_id and not aisle_number:
-            raise ValidationException(detail=f"aisle_number_id OR aisle_number required")
+            raise ValidationException(
+                detail=f"aisle_number_id OR aisle_number required"
+            )
         elif aisle_number and not aisle_number_id:
             # get aisle_number_id from aisle number
-            aisle_num_object = session.query(AisleNumber).filter(AisleNumber.number == aisle_number).first()
+            aisle_num_object = (
+                session.query(AisleNumber)
+                .filter(AisleNumber.number == aisle_number)
+                .first()
+            )
             if not aisle_num_object:
-                raise ValidationException(detail=f"No aisle_number entity exists for aisle number {aisle_number}")
-            mutated_data['aisle_number_id'] = aisle_num_object.id
+                raise ValidationException(
+                    detail=f"No aisle_number entity exists for aisle number {aisle_number}"
+                )
+            mutated_data["aisle_number_id"] = aisle_num_object.id
 
         # Create a new Aisle object
         # new_aisle = Aisle(**aisle_input.model_dump())
@@ -133,7 +170,7 @@ def update_aisle(
         for key, value in mutated_data.items():
             setattr(existing_aisle, key, value)
 
-        setattr(existing_aisle, "update_dt", datetime.utcnow())
+        setattr(existing_aisle, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_aisle)
         session.commit()
@@ -165,7 +202,7 @@ def delete_aisle(id: int, session: Session = Depends(get_session)):
         session.delete(aisle)
         session.commit()
         return HTTPException(
-            status_code=204, detail=f"Aisle ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Aisle ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Aisle ID {id} Not Found")

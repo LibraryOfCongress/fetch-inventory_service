@@ -1,14 +1,18 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
+from app.models.size_class import SizeClass
 from app.schemas.shelf_types import (
     ShelfTypeInput,
     ShelfTypeUpdateInput,
@@ -17,11 +21,12 @@ from app.schemas.shelf_types import (
 )
 from app.config.exceptions import (
     NotFound,
+    MethodNotAllowed,
     ValidationException,
     InternalServerError,
     BadRequest,
 )
-
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/shelf-types",
@@ -31,21 +36,39 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[ShelfTypeListOutput])
 def get_shelf_type_list(
-    size_class_id: int = None, session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    size_class_id: int = None,
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by Shelf Type Type"),
 ) -> list:
     """
     Get a paginated list of Shelf Types.
+
+    **Parameters:**
+    - size_class_id (int): The ID of the size class to filter by.
+    - sort_params (SortParams): The sorting parameters.
+    - search (Optional[str]): The search query.
+        - Type: The type of the Shelf Type to search for.
 
     **Returns**:
     - Shelf Type List Output: The paginated list of shelf type.
     """
 
-    if size_class_id:
-        return paginate(
-            session, select(ShelfType).where(ShelfType.size_class_id == size_class_id)
-        )
+    # Create a query to select all Shelf Position Number
+    query = select(ShelfType)
 
-    return paginate(session, select(ShelfType))
+    if search:
+        query = query.where(ShelfType.type.icontains(search))
+
+    if size_class_id:
+        query = query.where(ShelfType.size_class_id == size_class_id)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = BaseSorter(ShelfType)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=ShelfTypeDetailOutput)
@@ -128,17 +151,38 @@ def update_shelf_type(
         if not id:
             raise BadRequest(detail="Shelf Type ID Required")
 
-        existing_shelf_type = session.get(ShelfType, id)
+        # Check if shelf_type has associated child shelves
+        existing_shelf_type = session.exec(
+            select(ShelfType).where(ShelfType.id == id)
+        ).one_or_none()
 
         if not existing_shelf_type:
             raise NotFound(detail=f"Shelf Type ID {id} Not Found")
 
         mutated_data = shelf_type_input.model_dump(exclude_unset=True)
 
+        if "max_capacity" in mutated_data.keys():
+            # Check if the parent has associated children
+            # Below method avoids having to load for check
+            child_shelves_count = session.exec(
+                select(func.count(Shelf.id)).where(Shelf.shelf_type_id == id)
+            ).one()
+            if child_shelves_count > 0:
+                # deny decrement
+                if mutated_data["max_capacity"] < existing_shelf_type.max_capacity:
+                    shelf_type_size_class = session.exec(
+                        select(SizeClass).where(
+                            SizeClass.id == existing_shelf_type.size_class_id
+                        )
+                    ).one_or_none()
+                    raise MethodNotAllowed(
+                        detail=f"""Cannot decrease capacity of Shelf Type id {id} ({shelf_type_size_class.short_name} {existing_shelf_type.type}), it is in use by {child_shelves_count} shelves"""
+                    )
+
         for key, value in mutated_data.items():
             setattr(existing_shelf_type, key, value)
 
-        setattr(existing_shelf_type, "update_dt", datetime.utcnow())
+        setattr(existing_shelf_type, "update_dt", datetime.now(timezone.utc))
 
         session.add(existing_shelf_type)
         session.commit()
@@ -147,6 +191,9 @@ def update_shelf_type(
         return existing_shelf_type
 
     except Exception as e:
+        if isinstance(e, MethodNotAllowed):
+            raise e
+
         raise InternalServerError(detail=f"{e}")
 
 
@@ -170,11 +217,22 @@ def delete_shelf_type(id: int, session: Session = Depends(get_session)):
     shelf_type = session.get(ShelfType, id)
 
     if shelf_type:
-        session.delete(shelf_type)
-        session.commit()
+        child_shelves_count = session.exec(
+            select(func.count(Shelf.id)).where(Shelf.shelf_type_id == id)
+        ).one()
+        if child_shelves_count > 0:
+            shelf_type_size_class = session.exec(
+                select(SizeClass).where(SizeClass.id == shelf_type.size_class_id)
+            ).one_or_none()
+            raise MethodNotAllowed(
+                detail=f"""Cannot delete Shelf Type id {id} ({shelf_type_size_class.short_name} {shelf_type.type}), it is in use by {child_shelves_count} shelves"""
+            )
+        else:
+            session.delete(shelf_type)
+            session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Shelf Type ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Shelf Type ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Shelf Type ID {id} Not Found")

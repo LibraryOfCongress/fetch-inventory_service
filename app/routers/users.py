@@ -1,19 +1,20 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
-from fastapi.responses import JSONResponse
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database.session import get_session
+from app.filter_params import SortParams
 from app.models.groups import Group
 from app.models.users import User
 from app.config.exceptions import (
     NotFound,
-    ValidationException,
-    InternalServerError,
 )
 from app.schemas.users import (
     UserInput,
@@ -27,6 +28,7 @@ from app.schemas.users import (
 
 import traceback
 
+from app.sorting import BaseSorter, UserSorter
 
 router = APIRouter(
     prefix="/users",
@@ -35,14 +37,34 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[UserListOutput])
-def get_user_list(session: Session = Depends(get_session)) -> list:
+def get_user_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends(),
+    search: Optional[str] = Query(None, description="Search by User Name"),
+) -> list:
     """
     Get a paginated list of users.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
+    - search: (Optional[str]): The search query.
+        - Name: The name of the user to search for.
 
     **Returns**:
     - User List Output: The paginated list of users.
     """
-    return paginate(session, select(User))
+    # Create a query to select all User from the database
+    query = select(User)
+
+    if search:
+        query = query.where(func.concat(User.first_name, " ", User.last_name).icontains(search))
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        sorter = UserSorter(User)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=UserDetailReadOutput)
@@ -125,7 +147,7 @@ def update_user(
     for key, value in mutated_data.items():
         setattr(existing_user, key, value)
 
-    setattr(existing_user, "update_dt", datetime.utcnow())
+    setattr(existing_user, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_user)
     session.commit()
@@ -178,11 +200,15 @@ def get_user_permissions(user_id: int, session: Session = Depends(get_session)):
         raise NotFound(status_code=404, detail="User not found")
 
     # Retrieve the user from the database using the provided ID
-    user_groups = session.exec(
-        select(Group)
-        .where(Group.users.any(id=user_id))
-        .options(joinedload(Group.permissions))
-    ).unique().all()  # Use unique().all() instead of all()
+    user_groups = (
+        session.exec(
+            select(Group)
+            .where(Group.users.any(id=user_id))
+            .options(joinedload(Group.permissions))
+        )
+        .unique()
+        .all()
+    )  # Use unique().all() instead of all()
 
     # Aggregate all unique permissions from the user's groups
     permissions_set = {

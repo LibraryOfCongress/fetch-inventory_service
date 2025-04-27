@@ -5,6 +5,12 @@ description = "An API serving the Findings Environment for Collected Holdings ap
 authors = ["Gregory Wolfe <gwolfe@loc.gov>"]
 readme = "README.md"
 
+[tool.setuptools_scm]
+write_to = "api/_version.py"
+version_scheme = "guess-next-dev"
+local_scheme = "node-and-date"
+
+
 [tool.poetry.dependencies]
 python = "3.11.4"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
@@ -13,19 +19,22 @@ httpx = "^0.24.1"
 alembic = "^1.12.0"
 psycopg2-binary = "^2.9.9"
 pydantic-settings = "^2.0.3"
-sqlmodel = {git = "https://github.com/honglei/sqlmodel.git", rev = "main"}
 pytz = "^2023.3.post1"
-fastapi = "^0.104.1"
-fastapi-pagination = "^0.12.12"
 sqlalchemy-utils = "^0.41.1"
 pytest-html = "^4.1.1"
 python-dotenv = "^1.0.1"
 sqlalchemyseed = "^2.0.0"
-python3-saml = "^1.16.0"
+python3-saml = "1.16.0"
 pyjwt = "^2.8.0"
 python-multipart = "^0.0.9"
 pandas = "^2.2.2"
 openpyxl = "^3.1.5"
+sqltap = "^0.3.11"
+fastapi-pagination = "0.12.34"
+sqlmodel = "0.0.22"
+fastapi = "0.115.8"
+debugpy = "1.8.12"
+setuptools-scm = "8.0.4"
 
 
 [build-system]

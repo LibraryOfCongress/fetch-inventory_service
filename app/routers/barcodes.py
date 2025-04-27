@@ -2,15 +2,22 @@ import uuid, re
 
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
+from app.filter_params import SortParams
+from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.barcode_types import BarcodeType
+from app.models.items import Item
+from app.models.non_tray_items import NonTrayItem
 from app.models.size_class import SizeClass
+from app.models.trays import Tray
+from app.models.verification_changes import VerificationChange
+from app.models.verification_jobs import VerificationJob
 from app.schemas.barcodes import (
     BarcodeInput,
     BarcodeUpdateInput,
@@ -20,6 +27,7 @@ from app.schemas.barcodes import (
     BarcodeMutationInput,
 )
 from app.config.exceptions import NotFound, ValidationException
+from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/barcodes",
@@ -28,15 +36,29 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[BarcodeListOutput])
-def get_barcode_list(session: Session = Depends(get_session)) -> list:
+def get_barcode_list(
+    session: Session = Depends(get_session),
+    sort_params: SortParams = Depends()
+) -> list:
     """
     Retrieve a list of barcodes from the database.
+
+    **Parameters:**
+    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - list: A list of barcodes.
     """
     # Create a query to retrieve all barcodes
-    return paginate(session, select(Barcode))
+    query = select(Barcode)
+
+    # Validate and Apply sorting based on sort_params
+    if sort_params.sort_by:
+        # Apply sorting using BaseSorter
+        sorter = BaseSorter(Barcode)
+        query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
 
 
 @router.get("/{id}", response_model=BarcodeDetailReadOutput)
@@ -76,8 +98,7 @@ def get_barcode_by_value(value: str, session: Session = Depends(get_session)):
     **Raises:**
     - HTTPException: If the barcode is not found.
     """
-    statement = select(Barcode).where(Barcode.value == value)
-    barcode = session.exec(statement).first()
+    barcode = session.query(Barcode).filter(Barcode.value == value).first()
     if not barcode:
         raise NotFound(detail=f"Barcode with value {value} not found")
     return barcode
@@ -225,6 +246,7 @@ def update_barcode(
         existing_barcode_type = session.exec(
             select(BarcodeType).where(BarcodeType.id == existing_barcode.type_id)
         ).first()
+        inventory_logger.info(f"Existing Barcode Type: {existing_barcode_type}")
         if (
             barcode.type
             and barcode.type == "Tray"
@@ -243,6 +265,40 @@ def update_barcode(
                     f"{short_name} doesnt exist in the system. Please add it and try again."
                 )
 
+        if (existing_barcode_type.name == "Item" and existing_barcode.value !=
+            barcode.value):
+            item = session.query(Item).filter(Item.barcode_id ==
+                                              existing_barcode.id).first()
+            non_tray_item = session.query(NonTrayItem).filter(
+                NonTrayItem.barcode_id == existing_barcode.id
+            ).first()
+            if item:
+                verification_job = session.query(VerificationJob).filter(
+                    VerificationJob.id == item.verification_job_id
+                ).first()
+                if verification_job:
+                    tray_barcode = session.query(Barcode).join(Tray, Barcode.id == Tray.barcode_id).filter(Tray.id == item.tray_id).first()
+                    new_verification_change = VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        tray_barcode_value=tray_barcode.value,
+                        item_barcode_value=existing_barcode.value,
+                        change_type="BarcodeValueEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                    session.add(new_verification_change)
+            else:
+                verification_job = session.query(VerificationJob).filter(
+                    VerificationJob.id == non_tray_item.verification_job_id
+                ).first()
+                if verification_job:
+                    new_verification_change = VerificationChange(
+                        workflow_id=verification_job.workflow_id,
+                        item_barcode_value=existing_barcode.value,
+                        change_type="BarcodeValueEdit",
+                        completed_by_id=verification_job.user_id
+                    )
+                    session.add(new_verification_change)
+
     mutated_data = barcode.model_dump(exclude={"type"}, exclude_unset=True)
 
     if mutated_barcode_type_id:
@@ -251,7 +307,7 @@ def update_barcode(
     for key, value in mutated_data.items():
         setattr(existing_barcode, key, value)
 
-    setattr(existing_barcode, "update_dt", datetime.utcnow())
+    setattr(existing_barcode, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_barcode)
     session.commit()
@@ -282,7 +338,7 @@ def delete_barcode(id: uuid.UUID, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Barcode ID {id} Deleted " f"Successfully"
+            status_code=204, detail=f"Barcode ID {id} Deleted Successfully"
         )
 
     raise NotFound(detail=f"Barcode ID {id} Not Found")
