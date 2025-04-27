@@ -14,6 +14,7 @@ from app.seed.load_containers import load_containers
 from app.seed.load_items import load_items
 from app.seed.load_available_space_calc import load_available_space_calc
 from app.seed.load_addressing import load_addressing
+from app.seed.load_barcode_cleanup import load_barcode_cleanup
 
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -139,3 +140,11 @@ def seed_location_address_values():
     migration_logger.disabled = False
     migration_logger.info("Generating location strings for shelves and shelf positions...")
     load_addressing()
+
+
+def seed_unused_barcode_cleanup():
+    """
+    Removes all orphaned barcodes from the system (fk_entity kicked out by mig errors)
+    """
+    migration_logger.disabled = False
+    load_barcode_cleanup()

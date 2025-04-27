@@ -98,6 +98,16 @@ seed_location_address_values()
     podman exec -it fetch-inventory-api python -c "$RUN_ADDRESS_MIGRATION"; 
 }
 
+run-barcode-cleanup() {
+RUN_BARCODE_CLEANUP="
+from app import main
+from app.seed.seed_data import seed_unused_barcode_cleanup
+seed_unused_barcode_cleanup()
+";
+
+    podman exec -it fetch-inventory-api python -c "$RUN_BARCODE_CLEANUP";
+}
+
 extract-data-migration() {
   # This can take like 20 minutes
   # dump in postgres native sql format
