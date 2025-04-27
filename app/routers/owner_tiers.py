@@ -1,12 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from app.database.session import get_session
-from app.filter_params import SortParams
 from app.models.owner_tiers import OwnerTier
 from app.schemas.owner_tiers import (
     OwnerTierInput,
@@ -19,7 +18,6 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/owners",
@@ -28,28 +26,14 @@ router = APIRouter(
 
 
 @router.get("/tiers", response_model=Page[OwnerTierListOutput])
-def get_owner_tier_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_owner_tier_list(session: Session = Depends(get_session)) -> list:
     """
     Get the list of owner tiers.
 
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-
-    **Returns:**
+    Returns:
     - Owner Tier List Output: The paginated list of owner tiers.
     """
-    # Create a query to select all Owner Tier
-    query = select(OwnerTier).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        sorter = BaseSorter(OwnerTier)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(OwnerTier))
 
 
 @router.get("/tiers/{id}", response_model=OwnerTierDetailOutput)
@@ -131,7 +115,7 @@ def update_owner_tier(
         for key, value in mutated_data.items():
             setattr(existing_owner_tier, key, value)
 
-        setattr(existing_owner_tier, "update_dt", datetime.now(timezone.utc))
+        setattr(existing_owner_tier, "update_dt", datetime.utcnow())
         session.add(existing_owner_tier)
         session.commit()
         session.refresh(existing_owner_tier)

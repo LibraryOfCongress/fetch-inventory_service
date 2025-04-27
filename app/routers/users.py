@@ -2,16 +2,18 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.database.session import get_session
-from app.filter_params import SortParams
 from app.models.groups import Group
 from app.models.users import User
 from app.config.exceptions import (
     NotFound,
+    ValidationException,
+    InternalServerError,
 )
 from app.schemas.users import (
     UserInput,
@@ -25,7 +27,6 @@ from app.schemas.users import (
 
 import traceback
 
-from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/users",
@@ -34,28 +35,14 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[UserListOutput])
-def get_user_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_user_list(session: Session = Depends(get_session)) -> list:
     """
     Get a paginated list of users.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
 
     **Returns**:
     - User List Output: The paginated list of users.
     """
-    # Create a query to select all User from the database
-    query = select(User).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        sorter = BaseSorter(User)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(User))
 
 
 @router.get("/{id}", response_model=UserDetailReadOutput)
@@ -138,7 +125,7 @@ def update_user(
     for key, value in mutated_data.items():
         setattr(existing_user, key, value)
 
-    setattr(existing_user, "update_dt", datetime.now(timezone.utc))
+    setattr(existing_user, "update_dt", datetime.utcnow())
 
     session.add(existing_user)
     session.commit()

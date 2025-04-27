@@ -36,7 +36,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "barcodes",
-        sa.Column("id", sa.dialects.postgresql.UUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
         sa.Column(
             "value",
             sqlmodel.sql.sqltypes.AutoString(length=255),
@@ -55,23 +55,23 @@ def upgrade() -> None:
     op.create_unique_constraint(None, "barcode_types", ["name"])
     op.create_unique_constraint(None, "barcodes", ["value"])
     op.add_column(
-        "aisles", sa.Column("barcode_id", sa.dialects.postgresql.UUID(), nullable=True)
+        "aisles", sa.Column("barcode_id", sqlmodel.sql.sqltypes.GUID(), nullable=True)
     )
     op.create_foreign_key(None, "aisles", "barcodes", ["barcode_id"], ["id"])
     op.drop_column("aisles", "barcode")
     op.add_column(
         "buildings",
-        sa.Column("barcode_id", sa.dialects.postgresql.UUID(), nullable=True),
+        sa.Column("barcode_id", sqlmodel.sql.sqltypes.GUID(), nullable=True),
     )
     op.create_foreign_key(None, "buildings", "barcodes", ["barcode_id"], ["id"])
     op.drop_column("buildings", "barcode")
     op.add_column(
-        "modules", sa.Column("barcode_id", sa.dialects.postgresql.UUID(), nullable=True)
+        "modules", sa.Column("barcode_id", sqlmodel.sql.sqltypes.GUID(), nullable=True)
     )
     op.create_foreign_key(None, "modules", "barcodes", ["barcode_id"], ["id"])
     op.drop_column("modules", "barcode")
     op.add_column(
-        "sides", sa.Column("barcode_id", sa.dialects.postgresql.UUID(), nullable=True)
+        "sides", sa.Column("barcode_id", sqlmodel.sql.sqltypes.GUID(), nullable=True)
     )
     op.create_foreign_key(None, "sides", "barcodes", ["barcode_id"], ["id"])
     op.drop_column("sides", "barcode")

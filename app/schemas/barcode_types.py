@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class BarcodeTypesInput(BaseModel):

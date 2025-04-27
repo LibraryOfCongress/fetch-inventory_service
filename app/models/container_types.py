@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -23,13 +23,13 @@ class ContainerType(SQLModel, table=True):
 
     __tablename__ = "container_types"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
-    type: str = Field(sa_column=sa.Column(sa.VARCHAR(25), nullable=False, unique=True))
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
+    type: str = Field(max_length=25, sa_column=sa.VARCHAR, nullable=False, unique=True)
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     # shelves assigned this container type

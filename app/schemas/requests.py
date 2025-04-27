@@ -2,7 +2,7 @@ import uuid
 
 from typing import Optional, List
 from pydantic import BaseModel, conint
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.buildings import BuildingDetailReadOutput
@@ -113,7 +113,7 @@ class BuildingNestedForRequest(BaseModel):
 
 class ShelfNestedForRequest(BaseModel):
     id: int
-    # barcode: Optional[BarcodeDetailReadOutput] = None
+    # barcode: BarcodeDetailReadOutput
 
 
 class ShelfPositionNestedForRequest(BaseModel):
@@ -127,7 +127,7 @@ class ShelfPositionNestedForRequest(BaseModel):
 
 class TrayNestedForRequest(BaseModel):
     id: int
-    barcode: Optional[BarcodeDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
@@ -142,21 +142,6 @@ class NestedOwnerForRequest(BaseModel):
     name: Optional[str] = None
 
 
-class NestedBarcodeTypeOutputForBarcode(BaseModel):
-    id: int
-    name: str
-
-
-class NestedWithdrawnBarcode(BaseModel):
-    id: uuid.UUID | None
-    value: str
-    withdrawn: bool
-    type_id: int
-    type: NestedBarcodeTypeOutputForBarcode
-    create_dt: datetime
-    update_dt: datetime
-
-
 class ItemNestedForRequest(BaseModel):
     id: int
     title: Optional[str] = None
@@ -168,8 +153,7 @@ class ItemNestedForRequest(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     status: Optional[str] = None
     media_type: Optional[MediaTypeNestedForRequest] = None
-    barcode: Optional[BarcodeDetailReadOutput] = None
-    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
+    barcode: BarcodeDetailReadOutput
     tray: Optional[TrayNestedForRequest] = None
 
 
@@ -181,8 +165,7 @@ class NonTrayItemNestedForRequest(BaseModel):
     owner: Optional[NestedOwnerForRequest] = None
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
-    barcode: Optional[BarcodeDetailReadOutput] = None
-    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
+    barcode: BarcodeDetailReadOutput
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
@@ -335,7 +318,7 @@ class NestedBarcodeRequestList(BaseModel):
 
 class NestedTrayRequestList(BaseModel):
     id: int
-    barcode: Optional[NestedBarcodeRequestList] = None
+    barcode: NestedBarcodeRequestList
     shelf_position: Optional[ShelfPositionNestedForRequest] = None
 
 
@@ -350,8 +333,7 @@ class NestedItemRequestList(BaseModel):
     withdrawal_dt: Optional[datetime] = None
     status: Optional[str] = None
     media_type: Optional[MediaTypeNestedForRequest] = None
-    barcode: Optional[BarcodeDetailReadOutput] = None
-    withdrawn_barcode: Optional[NestedWithdrawnBarcode] = None
+    barcode: BarcodeDetailReadOutput
     tray: Optional[NestedTrayRequestList] = None
 
 

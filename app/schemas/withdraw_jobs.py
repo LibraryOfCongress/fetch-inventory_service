@@ -5,7 +5,7 @@ from pydantic import (
     field_validator,
     computed_field,
 )
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from typing import Optional, List
 
 from app.models.withdraw_jobs import WithdrawJobStatus
@@ -102,7 +102,7 @@ class NestedShelfPositionNumberForWithdrawJob(BaseModel):
 
 class NestedShelfForWithdrawJob(BaseModel):
     id: int
-    barcode: Optional[BarcodeDetailOutput] = None
+    barcode: BarcodeDetailOutput
     shelf_number: NestedShelfNumberForWithdrawJob
 
 
@@ -110,17 +110,11 @@ class ShelfPositionNestedForWithdrawJob(BaseModel):
     id: int
     shelf_position_number: NestedShelfPositionNumberForWithdrawJob
     shelf: NestedShelfForWithdrawJob
-    location: Optional[str] = None
-    internal_location: Optional[str] = None
 
 
 class NestedTrayForWithdrawJob(BaseModel):
     id: int
-    barcode: Optional[BarcodeDetailOutput] = None
-    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
-    withdrawn_location: Optional[str] = None
-    withdrawn_internal_location: Optional[str] = None
-    withdrawn_loc_bcodes: Optional[str] = None
+    barcode: BarcodeDetailOutput
     shelf_position: ShelfPositionNestedForWithdrawJob
 
 
@@ -132,11 +126,7 @@ class NestedOwnerForWithdrawJob(BaseModel):
 class ItemNestedForWithdrawJob(BaseModel):
     id: int
     status: str
-    barcode: Optional[BarcodeDetailOutput] = None
-    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
-    withdrawn_location: Optional[str] = None
-    withdrawn_internal_location: Optional[str] = None
-    withdrawn_loc_bcodes: Optional[str] = None
+    barcode: BarcodeDetailOutput
     owner: Optional[NestedOwnerForWithdrawJob] = None
     tray: Optional[NestedTrayForWithdrawJob] = None
 
@@ -147,8 +137,7 @@ class ItemNestedForWithdrawJob(BaseModel):
 class ItemNestedWithoutTrayForWithdrawJob(BaseModel):
     id: int
     status: str
-    barcode: Optional[BarcodeDetailOutput] = None
-    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
+    barcode: BarcodeDetailOutput
     owner: Optional[NestedOwnerForWithdrawJob] = None
 
 
@@ -156,10 +145,6 @@ class NonTrayNestedForWithdrawJob(BaseModel):
     id: int
     status: str
     barcode: Optional[BarcodeDetailOutput] = None
-    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
-    withdrawn_location: Optional[str] = None
-    withdrawn_internal_location: Optional[str] = None
-    withdrawn_loc_bcodes: Optional[str] = None
     owner: Optional[NestedOwnerForWithdrawJob] = None
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForWithdrawJob] = None
@@ -170,11 +155,7 @@ class NonTrayNestedForWithdrawJob(BaseModel):
 
 class TrayNestedForWithdrawJob(BaseModel):
     id: int
-    barcode: Optional[BarcodeDetailOutput] = None
-    withdrawn_barcode: Optional[BarcodeDetailOutput] = None
-    withdrawn_location: Optional[str] = None
-    withdrawn_internal_location: Optional[str] = None
-    withdrawn_loc_bcodes: Optional[str] = None
+    barcode: BarcodeDetailOutput
     owner: Optional[NestedOwnerForWithdrawJob] = None
     shelf_position: Optional[ShelfPositionNestedForWithdrawJob] = None
     items: Optional[List[ItemNestedWithoutTrayForWithdrawJob]] = None
@@ -217,11 +198,6 @@ class WithdrawJobListOutput(WithdrawJobBaseOutput):
     def tray_count(self) -> int:
         return len(self.trays)
 
-    @computed_field(title="Container Count")
-    @property
-    def container_count(self) -> int:
-        return self.tray_count + self.non_tray_item_count
-
     class Config:
         json_schema_extra = {
             "example": {
@@ -244,7 +220,6 @@ class WithdrawJobListOutput(WithdrawJobBaseOutput):
                 "item_count": 1,
                 "tray_count": 1,
                 "non_tray_item_count": 1,
-                "container_count": 2
             }
         }
 

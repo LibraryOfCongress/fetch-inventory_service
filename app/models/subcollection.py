@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
 from sqlmodel import SQLModel, Field, Relationship
@@ -21,13 +21,13 @@ class Subcollection(SQLModel, table=True):
     # __table_args__ = (
     # )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
-    name: str = Field(sa_column=sa.Column(sa.VARCHAR(50), nullable=False, unique=True))
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
+    name: str = Field(max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=True)
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     items: List[Item] = Relationship(back_populates="subcollection")

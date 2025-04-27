@@ -1,5 +1,5 @@
 import json, jwt
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Request, HTTPException, Response, status, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from app.config.config import get_settings
@@ -101,12 +101,12 @@ def generate_token(user_object, session):
         "first_name": user_object.first_name,
         "last_name": user_object.last_name,
         "email": user_object.email
-        # 'exp': datetime.now(timezone.utc) + timedelta(minutes=15)  # Token expires in 15 minutes
+        # 'exp': datetime.utcnow() + timedelta(minutes=15)  # Token expires in 15 minutes
     }
     token = jwt.encode(payload, "your-secret-key", algorithm="HS256")
 
     setattr(user_object, "fetch_auth_token", token)
-    setattr(user_object, "fetch_auth_expiration", datetime.now(timezone.utc) + timedelta(minutes=15))
+    setattr(user_object, "fetch_auth_expiration", datetime.utcnow() + timedelta(minutes=15))
 
     session.add(user_object)
     session.commit()

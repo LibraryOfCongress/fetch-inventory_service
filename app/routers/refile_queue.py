@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -12,11 +12,9 @@ from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
-from app.models.pick_lists import PickList
 from app.models.refile_items import RefileItem
 from app.models.refile_jobs import RefileJob
 from app.models.refile_non_tray_items import RefileNonTrayItem
-from app.models.requests import Request
 
 from app.schemas.refile_queue import (
     RefileQueueInput,
@@ -26,9 +24,8 @@ from app.schemas.refile_queue import (
     NonTrayNestedForRefileQueue,
 )
 from app.config.exceptions import BadRequest, NotFound, ValidationException
-from app.sorting import RefileQueueSorter
 from app.utilities import get_refile_queue
-from app.filter_params import RefileQueueParams, SortParams
+
 
 router = APIRouter(
     prefix="/refile-queue",
@@ -38,9 +35,8 @@ router = APIRouter(
 
 @router.get("/", response_model=Page[RefileQueueListOutput])
 def get_refile_queue_list(
-    params: RefileQueueParams = Depends(),
+    building_id: int = None,
     session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of refile jobs
@@ -52,14 +48,7 @@ def get_refile_queue_list(
     **Returns:**
     - Refile Job List Output: The paginated list of refile jobs
     """
-    query = get_refile_queue(params)
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        sorter = RefileQueueSorter(PickList)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, get_refile_queue(building_id))
 
 
 @router.patch("/", response_model=RefileQueueWriteOutput)
@@ -79,7 +68,7 @@ def add_to_refile_queue(
     - HTTPException: If the item is not found.
     """
     lookup_barcode_value = refile_input.barcode_value
-    update_dt = datetime.now(timezone.utc)
+    update_dt = datetime.utcnow()
 
     if not lookup_barcode_value:
         raise BadRequest(detail="No barcode value found in request")
@@ -88,21 +77,16 @@ def add_to_refile_queue(
         session.query(Barcode).filter(Barcode.value == lookup_barcode_value).first()
     )
 
-    if not barcode:
-        raise NotFound(detail=f"Barcode value {lookup_barcode_value} not found")
-    if barcode.withdrawn:
-        raise ValidationException(detail="Item has already been withdrawn")
-
     item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
     non_tray_item = (
         session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
     )
 
     if item:
-        if item.status != "Out":
-            raise ValidationException(detail="Item must be in 'Out' status")
         if item.scanned_for_refile_queue:
             raise ValidationException(detail="Item is already in the refile queue")
+        if item.status == "In":
+            raise ValidationException(detail="Item is already has status 'In'")
 
         existing_refile_items = (
             session.query(RefileItem).filter(RefileItem.item_id == item.id).all()
@@ -126,20 +110,6 @@ def add_to_refile_queue(
                     "refile "
                     f"Job ID: {existing_refile_job.id}"
                 )
-        existing_pick_list_items = (
-            session.query(PickList.id)
-            .join(Request, PickList.id == Request.pick_list_id)
-            .filter(Request.item_id == item.id)
-            .filter(PickList.status != "Completed")
-            .all()
-        )
-
-        if existing_pick_list_items:
-            raise ValidationException(
-                detail=f"Item already exists in a uncompleted Pick List Job {existing_pick_list_items}"
-            )
-
-        item = session.get(Item, item.id)
 
         item.scanned_for_refile_queue = True
         item.scanned_for_refile_queue_dt = update_dt
@@ -148,10 +118,10 @@ def add_to_refile_queue(
         session.add(item)
 
     elif non_tray_item:
-        if non_tray_item.status != "Out":
-            raise ValidationException(detail="Item must be in 'Out' status")
         if non_tray_item.scanned_for_refile_queue:
             raise ValidationException(detail="Item is already in the refile queue")
+        if non_tray_item.status == "In":
+            raise ValidationException(detail="Item is already has status 'In'")
 
         existing_refile_non_tray_items = (
             session.query(RefileNonTrayItem)
@@ -174,24 +144,11 @@ def add_to_refile_queue(
 
             if existing_refile_job:
                 raise ValidationException(
-                    detail=f"Non Tray Item already exists in an "
+                    detail=f"Non TrayItem already exists in an "
                     "uncompleted "
                     "refile "
                     f"Job ID: {existing_refile_job.id}"
                 )
-
-        existing_pick_list_items = (
-            session.query(PickList.id)
-            .join(Request, PickList.id == Request.pick_list_id)
-            .filter(Request.non_tray_item_id == non_tray_item.id)
-            .filter(PickList.status != "Completed")
-            .all()
-        )
-
-        if existing_pick_list_items:
-            raise ValidationException(
-                detail=f"Non Tray Item already exists in a uncompleted Pick List Job {existing_pick_list_items}"
-            )
 
         non_tray_item.scanned_for_refile_queue = True
         non_tray_item.scanned_for_refile_queue_dt = update_dt
@@ -231,7 +188,7 @@ def remove_from_refile_queue(
     - HTTPException: If the item is not found.
     """
     lookup_barcode_value = refile_input.barcode_value
-    update_dt = datetime.now(timezone.utc)
+    update_dt = datetime.utcnow()
 
     if not lookup_barcode_value:
         raise BadRequest(detail="No barcode values found in request")

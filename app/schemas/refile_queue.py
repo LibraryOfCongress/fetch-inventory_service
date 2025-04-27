@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel
@@ -20,11 +20,8 @@ class RefileQueueInput(BaseModel):
 
 class RefileQueueListOutput(BaseModel):
     id: int
-    barcode_value: str
     shelf_position_id: int
     shelf_position_number: int
-    location: str
-    internal_location: str
     shelf_id: int
     shelf_number: int
     ladder_id: int
@@ -80,7 +77,7 @@ class NestedShelfPositionNumberForRefileQueue(BaseModel):
 
 class NestedShelfForRefileQueue(BaseModel):
     id: int
-    barcode: Optional[BarcodeDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
     shelf_number: NestedShelfNumberForRefileQueue
 
 
@@ -94,7 +91,7 @@ class ShelfPositionNestedForRefileQueue(BaseModel):
 
 class NestedTrayForRefileQueue(BaseModel):
     id: int
-    barcode: Optional[BarcodeDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
     shelf_position: ShelfPositionNestedForRefileQueue
 
 
@@ -115,7 +112,7 @@ class TrayNestedForRefileQueue(BaseModel):
     owner: Optional[NestedOwnerForRefileQueue] = None
     size_class: Optional[NestedSizeClassForRefileQueue] = None
     tray: Optional[NestedTrayForRefileQueue] = None
-    barcode: Optional[BarcodeDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 
@@ -131,7 +128,7 @@ class NonTrayNestedForRefileQueue(BaseModel):
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForRefileQueue] = None
     shelf_position_proposed_id: Optional[int] = None
-    barcode: Optional[BarcodeDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 

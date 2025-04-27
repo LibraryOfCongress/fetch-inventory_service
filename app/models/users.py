@@ -1,7 +1,8 @@
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.user_groups import UserGroup
@@ -17,31 +18,27 @@ class User(SQLModel, table=True):
 
     __tablename__ = "users"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     first_name: str = Field(
-        sa_column=sa.Column(sa.VARCHAR(50), nullable=False, unique=False)
+        max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=False
     )
     last_name: str = Field(
-        sa_column=sa.Column(sa.VARCHAR(50), nullable=False, unique=False)
+        max_length=50, sa_column=sa.VARCHAR, nullable=False, unique=False
     )
-    email: str = Field(sa_column=sa.Column(sa.VARCHAR(100), nullable=True, unique=True))
+    email: str = Field(max_length=100, sa_column=sa.VARCHAR, nullable=True, unique=True)
     # never serialize this
     fetch_auth_token: str = Field(
-        sa_column=sa.Column(sa.VARCHAR(300), nullable=True, unique=False)
+        max_length=300, sa_column=sa.VARCHAR, nullable=True, unique=False
     )
     fetch_auth_expiration: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), nullable=True, default=None, unique=False)
+        sa_column=sa.DateTime, nullable=True, default=None, unique=False
     )
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
-
-    @property
-    def name(self) -> str:
-            return f"{self.first_name} {self.last_name}"
 
     accession_jobs: List["AccessionJob"] = Relationship(
         back_populates="user",
@@ -145,12 +142,3 @@ class User(SQLModel, table=True):
             "lazy": "selectin"
         }
     )
-
-    shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
-        back_populates="assigned_user",
-        sa_relationship_kwargs={
-            "primaryjoin": "ShelvingJobDiscrepancy.assigned_user_id==User.id",
-            "lazy": "selectin"
-        }
-    )
-    verification_changes: List["VerificationChange"] = Relationship(back_populates="completed_by")

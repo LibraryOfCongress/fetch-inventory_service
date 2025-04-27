@@ -30,7 +30,7 @@ def upgrade() -> None:
     )
     op.create_table('items',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('barcode_id', sa.dialects.postgresql.UUID(), nullable=False),
+    sa.Column('barcode_id', sqlmodel.sql.sqltypes.GUID(), nullable=False),
     sa.Column('tray_id', sa.Integer(), nullable=True),
     sa.Column('title', sqlmodel.sql.sqltypes.AutoString(length=4000), nullable=True),
     sa.Column('volume', sqlmodel.sql.sqltypes.AutoString(length=15), nullable=True),

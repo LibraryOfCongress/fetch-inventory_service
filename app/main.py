@@ -4,8 +4,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.logger import inventory_logger
-from app.middlware import JWTMiddleware#, SQLProfilerMiddleware
-from app.profiling import USE_PROFILER
+from app.middlware import JWTMiddleware
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -16,6 +15,7 @@ from fastapi_pagination import add_pagination
 from alembic.config import Config
 from alembic import command
 
+from app.seed.seed_fake_data import seed_data
 from app.config.config import get_settings
 from app.config.exceptions import (
     BadRequest,
@@ -75,11 +75,6 @@ from app.routers import (
     batch_upload,
     shelf_types,
     reporting,
-    audit_trails,
-    verification_changes,
-    item_retrieval_events,
-    non_tray_item_retrieval_events,
-    query_profiler
 )
 
 
@@ -99,7 +94,7 @@ def alembic_context():
             last_slash_pos = get_settings().DATABASE_URL.find("/") + 1
             db_host = get_settings().DATABASE_URL[at_pos:last_colon_pos]
             db_port = get_settings().DATABASE_URL[
-                last_colon_pos + 1: last_colon_pos + 5
+                last_colon_pos + 1 : last_colon_pos + 5
             ]
             db_user_password = get_settings().DATABASE_URL[last_slash_pos + 1 : bat_pos]
             db_user, db_password = db_user_password.split(":")
@@ -127,6 +122,20 @@ def alembic_context():
                 f"{db_port}",
             ]
             subprocess.run(create_schemaspy)
+        # Only allow fake data seeding in local, dev, test, or stage
+        # temp allow all envs to seed
+        if 1 == 1:
+        # if get_settings().APP_ENVIRONMENT in ["local", "develop", "test", "stage"]:
+            # Only attempt seeding if seed flag is set
+            SEED_FAKE_DATA = os.environ.get("SEED_FAKE_DATA", False)
+            if SEED_FAKE_DATA in ["True", "true", True]:
+                # have to do this silliness for shell to py translation
+                SEED_FAKE_DATA = True
+            else:
+                # have to do this if shell script 'false' is str or lower
+                SEED_FAKE_DATA = False
+            if SEED_FAKE_DATA:
+                seed_data()
     except Exception as e:
         print(f"{e}")
         raise
@@ -150,11 +159,6 @@ app = FastAPI(lifespan=lifespan)
 # add log and auth check middleware
 app.add_middleware(JWTMiddleware)
 
-# add query profiling middleware
-# TODO DISABLE THIS DURING legacy data migration runs
-# if USE_PROFILER:
-#     app.add_middleware(SQLProfilerMiddleware)
-
 # add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -164,6 +168,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Configure logging directory for data activity log rotation
+# This is git ignored
+data_activity_log_dir = "app/logs"
+log_file = os.path.join(data_activity_log_dir, "data_activity.log")
+# Create the log directory if it doesn't exist
+os.makedirs(data_activity_log_dir, exist_ok=True)
 
 
 @app.get("/")
@@ -236,12 +247,5 @@ app.include_router(auth.router)
 app.include_router(status.router)
 app.include_router(batch_upload.router)
 app.include_router(reporting.router)
-app.include_router(audit_trails.router)
-app.include_router(verification_changes.router)
-app.include_router(item_retrieval_events.router)
-app.include_router(non_tray_item_retrieval_events.router)
-
-# if USE_PROFILER:
-#     app.include_router(query_profiler.router)
 
 add_pagination(app)

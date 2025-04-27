@@ -1,20 +1,18 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams, ItemFilterParams
+from app.logger import inventory_logger
 from app.models.barcodes import Barcode
-from app.models.items import Item
-from app.models.media_types import MediaType
+from app.models.items import Item, ItemStatus
 from app.models.non_tray_items import NonTrayItem
-from app.models.owners import Owner
-from app.models.size_class import SizeClass
+from app.models.shelf_positions import ShelfPosition
+from app.models.shelves import Shelf
 from app.models.trays import Tray
-from app.models.verification_changes import VerificationChange
-from app.models.verification_jobs import VerificationJob
 from app.schemas.items import (
     ItemInput,
     ItemMoveInput,
@@ -27,8 +25,8 @@ from app.config.exceptions import (
     NotFound,
     ValidationException,
     InternalServerError,
+    BadRequest,
 )
-from app.sorting import ItemSorter
 from app.tasks import process_tray_item_move
 
 router = APIRouter(
@@ -40,69 +38,34 @@ router = APIRouter(
 @router.get("/", response_model=Page[ItemListOutput])
 def get_item_list(
     session: Session = Depends(get_session),
-    params: ItemFilterParams = Depends(),
-    sort_params: SortParams = Depends(),
+    owner_id: int = Query(default=None),
+    size_class_id: int = Query(default=None),
+    media_type_id: int = Query(default=None),
+    from_dt: datetime = Query(default=None),
+    to_dt: datetime = Query(default=None),
+    status: ItemStatus | None = None
 ) -> list:
     """
     Retrieve a paginated list of items from the database.
-
-    **Parameters:**
-    - owner_id (int): The ID of the owner to filter by.
-    - size_class_id (int): The ID of the size class to filter by.
-    - media_type_id (int): The ID of the media type to filter by.
-    - from_dt (datetime): The start date to filter by.
-    - to_dt (datetime): The end date to filter by.
-    - status (ItemStatus): The status to filter by.
-    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Item List Output: The paginated list of items.
     """
     # Create a query to select all items from the database
-    item_queryset = select(Item)
+    item_queryset = select(Item).distinct()
 
-    if params.status:
-        item_queryset = item_queryset.where(Item.status.in_(params.status.value))
-    if params.owner_id:
-        item_queryset = item_queryset.where(Item.owner_id.in_(params.owner_id))
-    if params.owner:
-        owner_subquery = (
-            select(Owner.id)
-            .where(Owner.name.in_(params.owner)).distinct()
-        )
-        item_queryset = item_queryset.where(Item.owner_id.in_(owner_subquery))
-    if params.size_class_id:
-        item_queryset = item_queryset.where(Item.size_class_id.in_(params.size_class_id))
-    if params.size_class:
-        size_class_subquery = (
-            select(SizeClass.id)
-            .where(SizeClass.name.in_(params.size_class)).distinct()
-        )
-        item_queryset = item_queryset.where(Item.size_class_id.in_(size_class_subquery))
-    if params.media_type_id:
-        item_queryset = item_queryset.where(Item.media_type_id.in_(params.media_type_id))
-    if params.media_type:
-        media_type_subquery = (
-            select(MediaType.id)
-            .where(MediaType.name.in_(params.media_type)).distinct()
-        )
-        item_queryset = item_queryset.where(Item.media_type_id.in_(media_type_subquery))
-    if params.barcode_value:
-        barcode_value_subquery = (
-            select(Barcode.id)
-            .where(Barcode.value.in_(params.barcode_value)).distinct()
-        )
-        item_queryset = item_queryset.where(Item.barcode_id.in_(barcode_value_subquery))
-    if params.from_dt:
-        item_queryset = item_queryset.where(Item.accession_dt >= params.from_dt)
-    if params.to_dt:
-        item_queryset = item_queryset.where(Item.accession_dt <= params.to_dt)
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        # Apply sorting using BaseSorter
-        sorter = ItemSorter(Item)
-        item_queryset = sorter.apply_sorting(item_queryset, sort_params)
+    if status:
+        item_queryset = item_queryset.where(Item.status == status.value)
+    if owner_id:
+        item_queryset = item_queryset.where(Item.owner_id == owner_id)
+    if size_class_id:
+        item_queryset = item_queryset.where(Item.size_class_id == size_class_id)
+    if media_type_id:
+        item_queryset = item_queryset.where(Item.media_type_id == media_type_id)
+    if from_dt:
+        item_queryset = item_queryset.where(Item.accession_dt >= from_dt)
+    if to_dt:
+        item_queryset = item_queryset.where(Item.accession_dt <= to_dt)
 
     return paginate(session, item_queryset)
 
@@ -138,12 +101,9 @@ def get_item_by_barcode_value(value: str, session: Session = Depends(get_session
     """
     if not value:
         raise ValidationException(detail="Item barcode value is required")
-    item = (
-        session.query(Item)
-        .join(Barcode, Item.barcode_id == Barcode.id)
-        .filter(Barcode.value == value)
-        .first()
-    )
+
+    statement = select(Item).join(Barcode).where(Barcode.value == value)
+    item = session.exec(statement).first()
     if not item:
         raise NotFound(detail=f"Item with barcode value {value} not found")
     return item
@@ -173,7 +133,7 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
             session.query(Barcode).where(Barcode.id == item_input.barcode_id).first()
         )
         raise ValidationException(
-            detail=f"Item with barcode value {barcode.value} already exists"
+            detail=f"Item " f"with barcode value" f" {barcode.value} already exists"
         )
 
     # Create a new item
@@ -181,7 +141,7 @@ def create_item(item_input: ItemInput, session: Session = Depends(get_session)):
     new_item.withdrawal_dt = None
     # accession is how items are created. Set accession_dt
     if not new_item.accession_dt:
-        new_item.accession_dt = datetime.now(timezone.utc)
+        new_item.accession_dt = datetime.utcnow()
 
     # check if existing withdrawn item with this barcode
     previous_item = session.exec(
@@ -230,29 +190,8 @@ def update_item(
         mutated_data = item.model_dump(exclude_unset=True)
 
         for key, value in mutated_data.items():
-            if key in ["media_type_id", "size_class_id"] and existing_item.__getattribute__(key) != value\
-                and existing_item.verification_job_id:
-                verification_job = session.query(VerificationJob).filter(
-                    VerificationJob.id == existing_item.verification_job_id).first()
-                tray_barcode = session.query(Barcode).join(
-                    Tray, Barcode.id == Tray.barcode_id
-                    ).filter(
-                    Tray.id == item.tray_id
-                    ).first()
-                item_barcode = session.get(Barcode, existing_item.barcode_id)
-
-                new_verification_change = VerificationChange(
-                    workflow_id=verification_job.workflow_id,
-                    tray_barcode_value=tray_barcode.value,
-                    item_barcode_value=item_barcode.value,
-                    change_type="MediaTypeEdit" if key == "media_type_id" else "SizeClassEdit",
-                    completed_by_id=verification_job.user_id
-                )
-
-                session.add(new_verification_change)
-
             setattr(existing_item, key, value)
-        setattr(existing_item, "update_dt", datetime.now(timezone.utc))
+        setattr(existing_item, "update_dt", datetime.utcnow())
 
         # Commit the changes to the database
         session.add(existing_item)
@@ -284,7 +223,7 @@ def delete_item(id: int, session: Session = Depends(get_session)):
         session.commit()
 
         return HTTPException(
-            status_code=204, detail=f"Item ID {id} Deleted Successfully"
+            status_code=204, detail=f"Item ID {id} Deleted " f"Successfully"
         )
 
     raise NotFound(detail=f"Item ID {id} Not Found")
@@ -311,7 +250,8 @@ def move_item(
     )
     if not item_lookup_barcode_value:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} Item with barcode not found"
+            detail=f"Failed to transfer: {barcode_value} Item with barcode not "
+            f"found"
         )
 
     tray_look_barcode_value = (
@@ -321,8 +261,8 @@ def move_item(
     )
     if not tray_look_barcode_value:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value
-            {item_input.tray_barcode_value} not found"""
+            detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
+            f" {item_input.tray_barcode_value} not found"
         )
 
     item = (
@@ -333,12 +273,12 @@ def move_item(
 
     if not item.scanned_for_accession or not item.scanned_for_verification:
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} has not been verified"
+            detail=f"Failed to transfer: {barcode_value} has not been verified."
         )
 
     if item.status != "In":
         raise ValidationException(
-            detail=f"Failed to transfer: {barcode_value} is not in the tray"
+            detail=f"Failed to transfer: {barcode_value} is not in the tray."
         )
 
     source_tray = session.query(Tray).filter(Tray.id == item.tray_id).first()
@@ -350,18 +290,20 @@ def move_item(
 
     if not item:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Item barcode value
-             {item_lookup_barcode_value.value} not found"""
+            detail=f"Failed to transfer: {barcode_value} - Item barcode value"
+            f" {item_lookup_barcode_value.value} not found"
         )
 
     destination_tray = (
-        session.query(Tray).where(Tray.barcode_id == tray_look_barcode_value.id).first()
+        session.query(Tray)
+        .where(Tray.barcode_id == tray_look_barcode_value.id)
+        .first()
     )
 
     if not destination_tray:
         raise ValidationException(
-            detail=f"""Failed to transfer: {barcode_value} - Tray barcode value
-             {item_input.tray_barcode_value} not found"""
+            detail=f"Failed to transfer: {barcode_value} - Tray barcode value"
+            f" {item_input.tray_barcode_value} not found"
         )
 
     background_tasks.add_task(

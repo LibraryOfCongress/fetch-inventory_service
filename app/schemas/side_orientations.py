@@ -2,7 +2,7 @@ import uuid
 
 from typing import Optional
 from pydantic import BaseModel, constr
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class SideOrientationInput(BaseModel):

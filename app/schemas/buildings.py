@@ -1,6 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel, constr
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class BuildingInput(BaseModel):

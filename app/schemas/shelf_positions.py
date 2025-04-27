@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, conint, constr
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.shelves import ShelfDetailWriteOutput
@@ -53,7 +53,6 @@ class ShelfPositionBaseReadOutput(BaseModel):
 class NestedShelfPositionNumberForShelvingPositionList(BaseModel):
     number: int
 
-
 class ShelfPositionListOutput(ShelfPositionBaseReadOutput):
     shelf_position_number: NestedShelfPositionNumberForShelvingPositionList
 
@@ -95,12 +94,12 @@ class ShelfPositionDetailWriteOutput(BaseModel):
 
 class TrayNestedForShelfPositionOutput(BaseModel):
     id: int
-    barcode: Optional[BarcodeDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
 
 
 class NonTrayNestedForShelfPositionOutput(BaseModel):
     id: int
-    barcode: Optional[BarcodeDetailReadOutput] = None
+    barcode: BarcodeDetailReadOutput
 
 
 class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):
@@ -133,7 +132,8 @@ class ShelfPositionDetailReadOutput(ShelfPositionBaseReadOutput):
                         "size_class": {
                             "id": 1,
                             "name": "C-Low",
-                            "short_name": "CL"
+                            "short_name": "CL",
+                            "assigned": False
                         },
                         "create_dt": "2023-10-08T20:46:56.764426",
                         "update_dt": "2023-10-08T20:46:56.764398",

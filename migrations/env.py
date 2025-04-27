@@ -1,7 +1,7 @@
 import pytz, os
 
 from logging.config import fileConfig
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool

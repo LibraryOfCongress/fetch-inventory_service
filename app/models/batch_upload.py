@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 
 import sqlalchemy as sa
-
+from sqlalchemy import Column, DateTime
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -23,7 +23,7 @@ class BatchUpload(SQLModel, table=True):
 
     __tablename__ = "batch_uploads"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.BigInteger, default=None)
     status: str = Field(
         sa_column=sa.Column(
             sa.Enum(
@@ -38,14 +38,14 @@ class BatchUpload(SQLModel, table=True):
     withdraw_job_id: Optional[int] = Field(
         foreign_key="withdraw_jobs.id", nullable=True, default=None
     )
-    file_name: str = Field(sa_column=sa.Column(sa.VARCHAR, nullable=False))
-    file_size: int = Field(sa_column=sa.Column(sa.BigInteger, nullable=True, default=None))
-    file_type: str = Field(sa_column=sa.Column(sa.VARCHAR, nullable=True, default=None))
+    file_name: str = Field(sa_column=sa.VARCHAR, nullable=False)
+    file_size: int = Field(sa_column=sa.BigInteger, nullable=True, default=None)
+    file_type: str = Field(sa_column=sa.VARCHAR, nullable=True, default=None)
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     requests: List["Request"] = Relationship(back_populates="batch_upload")

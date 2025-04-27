@@ -1,12 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Response
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams
 from app.models.container_types import ContainerType
 
 from app.schemas.container_types import (
@@ -20,7 +19,6 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/container-types",
@@ -29,30 +27,14 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[ContainerTypeListOutput])
-def get_container_type_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_container_type_list(session: Session = Depends(get_session)) -> list:
     """
     Retrieve a list of container types.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Container Type List Output: A list of container types.
     """
-
-    # Create a query to retrieve all Container Type
-    query = select(ContainerType).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        # Apply sorting using RequestSorter
-        sorter = BaseSorter(ContainerType)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(ContainerType))
 
 
 @router.get("/{id}", response_model=ContainerTypeDetailReadOutput)
@@ -130,7 +112,7 @@ def update_container_type(
         for key, value in mutated_data.items():
             setattr(existing_container_type, key, value)
 
-        setattr(existing_container_type, "update_dt", datetime.now(timezone.utc))
+        setattr(existing_container_type, "update_dt", datetime.utcnow())
 
         session.add(existing_container_type)
         session.commit()

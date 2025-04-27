@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-
+from sqlalchemy import Column, DateTime
 
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship, Session
 from sqlalchemy.schema import UniqueConstraint
 
@@ -31,20 +31,20 @@ class ShelfPosition(SQLModel, table=True):
 
     id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True))
     location: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(175), nullable=True, unique=True, default=None)
+        max_length=175, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
     )
     internal_location: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(200), nullable=True, unique=True, default=None)
+        max_length=200, sa_column=sa.VARCHAR, nullable=True, unique=True, default=None
     )
     shelf_position_number_id: int = Field(
         foreign_key="shelf_position_numbers.id", nullable=False
     )
     shelf_id: int = Field(foreign_key="shelves.id", nullable=False)
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     shelf_position_number: ShelfPositionNumber = Relationship(
         back_populates="shelf_positions"

@@ -1,12 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams
 from app.models.request_types import RequestType
 from app.schemas.request_types import (
     RequestTypeInput,
@@ -16,11 +15,11 @@ from app.schemas.request_types import (
     RequestTypeDetailReadOutput,
 )
 from app.config.exceptions import (
+    BadRequest,
     NotFound,
     ValidationException,
     InternalServerError,
 )
-from app.sorting import BaseSorter
 
 
 router = APIRouter(
@@ -30,29 +29,11 @@ router = APIRouter(
 
 
 @router.get("/types", response_model=Page[RequestTypeListOutput])
-def get_request_type_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_request_type_list(session: Session = Depends(get_session)) -> list:
     """
     Get a list of request types
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-
-    **Returns:**
-    - Request Type List Output: The paginated list of request types
     """
-
-    # Create a query to select all Request Type
-    query = select(RequestType).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        sorter = BaseSorter(RequestType)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(RequestType))
 
 
 @router.get("/types/{id}", response_model=RequestTypeDetailReadOutput)
@@ -105,7 +86,7 @@ def update_request_type(
         for key, value in mutated_data.items():
             setattr(existing_request_type, key, value)
 
-        setattr(existing_request_type, "update_dt", datetime.now(timezone.utc))
+        setattr(existing_request_type, "update_dt", datetime.utcnow())
         session.add(existing_request_type)
         session.commit()
         session.refresh(existing_request_type)

@@ -1,10 +1,10 @@
 from enum import Enum
 
 import sqlalchemy as sa
-
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.refile_items import RefileItem
@@ -30,7 +30,7 @@ class RefileJob(SQLModel, table=True):
         default=None, foreign_key="users.id", nullable=True
     )
     created_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
-    run_time: Optional[timedelta] = Field(sa_column=sa.Column(sa.Interval, nullable=True))
+    run_time: Optional[timedelta] = Field(sa_column=sa.Interval, nullable=True)
     status: str = Field(
         sa_column=sa.Column(
             sa.Enum(
@@ -42,13 +42,13 @@ class RefileJob(SQLModel, table=True):
         default=RefileJobStatus.Created,
     )
     last_transition: Optional[datetime] = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     items: List["Item"] = Relationship(
         back_populates="refile_jobs", link_model=RefileItem

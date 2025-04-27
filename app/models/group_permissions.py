@@ -16,6 +16,6 @@ class GroupPermission(SQLModel, table=True):
         UniqueConstraint("permission_id", "group_id", name="uq_permission_id_group_id"),
     )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True), default=None)
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.SmallInteger, default=None)
     group_id: Optional[int] = Field(foreign_key="groups.id", nullable=False)
     permission_id: Optional[int] = Field(foreign_key="permissions.id", nullable=False)

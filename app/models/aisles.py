@@ -1,10 +1,10 @@
 import sqlalchemy as sa
 
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
-
+from sqlalchemy import Column, DateTime
 
 from app.models.modules import Module
 from app.models.aisle_numbers import AisleNumber
@@ -28,9 +28,9 @@ class Aisle(SQLModel, table=True):
         ),
     )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     sort_priority: Optional[int] = Field(
-        sa_column=sa.Column(sa.SmallInteger, nullable=True, default=None)
+        sa_column=sa.SmallInteger, nullable=True, default=None
     )
     aisle_number_id: int = Field(
         foreign_key="aisle_numbers.id", nullable=False, default=None
@@ -39,10 +39,10 @@ class Aisle(SQLModel, table=True):
         foreign_key="modules.id", nullable=True, default=None
     )
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     # aisle number belonging to an aisle

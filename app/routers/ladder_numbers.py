@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams
 from app.models.ladder_numbers import LadderNumber
 from app.schemas.ladder_numbers import (
     LadderNumberInput,
@@ -18,7 +18,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.sorting import BaseSorter
+
 
 router = APIRouter(
     prefix="/ladders",
@@ -27,30 +27,14 @@ router = APIRouter(
 
 
 @router.get("/numbers", response_model=Page[LadderNumberListOutput])
-def get_ladder_number_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_ladder_number_list(session: Session = Depends(get_session)) -> list:
     """
     Retrieve a paginated list of ladder numbers.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Ladder Number List Output: A list of ladder numbers with pagination metadata.
     """
-
-    # Create a query to retrieve all Ladder Number
-    query = select(LadderNumber).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        # Apply sorting using BaseSorter
-        sorter = BaseSorter(LadderNumber)
-        item_queryset = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(LadderNumber))
 
 
 @router.get("/numbers/{id}", response_model=LadderNumberDetailOutput)
@@ -129,7 +113,7 @@ def update_ladder_number(
         for key, value in mutated_data.items():
             setattr(existing_ladder_number, key, value)
 
-        setattr(existing_ladder_number, "update_dt", datetime.now(timezone.utc))
+        setattr(existing_ladder_number, "update_dt", datetime.utcnow())
         session.add(existing_ladder_number)
         session.commit()
         session.refresh(existing_ladder_number)

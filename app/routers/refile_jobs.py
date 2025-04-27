@@ -1,21 +1,21 @@
-from datetime import datetime, timezone
+from datetime import datetime
+from typing import List
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from sqlalchemy import func
 
 from app.database.session import get_session, commit_record
-from app.filter_params import SortParams, JobFilterParams
+from app.filter_params import JobFilterParams
+from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.items import Item
 from app.models.non_tray_items import NonTrayItem
-from app.models.refile_jobs import RefileJob
+from app.models.refile_jobs import RefileJob, RefileJobStatus
 from app.models.refile_items import RefileItem
 from app.models.refile_non_tray_items import RefileNonTrayItem
 from app.models.trays import Tray
-from app.models.users import User
 from app.schemas.refile_jobs import (
     RefileJobInput,
     RefileJobUpdateInput,
@@ -25,7 +25,6 @@ from app.schemas.refile_jobs import (
 from app.schemas.items import ItemUpdateInput
 from app.schemas.non_tray_items import NonTrayItemUpdateInput
 from app.config.exceptions import BadRequest, NotFound
-from app.sorting import RefileJobSorter
 from app.utilities import manage_transition, get_location
 
 router = APIRouter(
@@ -63,36 +62,20 @@ def sort_order_priority(session, item_type, item):
 
 def sorted_requests(session, refile_job):
     request_data = []
-    withdrawn_items = []
-    withdrawn_non_tray_items = []
-    assigned_user = None
-    created_by = None
-
     items = refile_job.items
     non_tray_items = refile_job.non_tray_items
 
-    if refile_job.assigned_user:
-        assigned_user = refile_job.assigned_user
-    if refile_job.created_by:
-        created_by = refile_job.created_by
     if items:
         for item in items:
-            if item.tray:
-                if item.tray.shelf_position:
-                    request_data.append(sort_order_priority(session, "item", item))
-                else:
-                    withdrawn_items.append(item)
-            else:
-                withdrawn_items.append(item)
+            request_data.append(sort_order_priority(session, "item", item))
 
     if non_tray_items:
         for non_tray_item in non_tray_items:
-            if non_tray_item.shelf_position:
-                request_data.append(
-                    sort_order_priority(session, "non_tray_item", non_tray_item)
-                )
-            else:
-                withdrawn_non_tray_items.append(non_tray_item)
+            if not non_tray_item.shelf_position:
+                raise NotFound(detail=f"Shelf Position Not Found")
+            request_data.append(
+                sort_order_priority(session, "non_tray_item", non_tray_item)
+            )
 
     sort_requests = sorted(
         request_data,
@@ -110,81 +93,42 @@ def sorted_requests(session, refile_job):
         elif item.get("non_tray_item"):
             sorted_list.append(item["non_tray_item"])
 
-    # Append withdrawn items without shelf positions to the end
-    sorted_list.extend(withdrawn_items)
-    sorted_list.extend(withdrawn_non_tray_items)
-
     refile_job = refile_job.model_dump()
     refile_job["refile_job_items"] = sorted_list
     refile_job["items"] = items
     refile_job["non_tray_items"] = non_tray_items
-    refile_job["assigned_user"] = assigned_user
-    refile_job["created_by"] = created_by
     return refile_job
 
 
 @router.get("/", response_model=Page[RefileJobListOutput])
 def get_refile_job_list(
+    queue: bool = Query(default=False),
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
-    sort_params: SortParams = Depends()
+    status: RefileJobStatus | None = None
 ) -> list:
     """
     Get a list of refile jobs
 
-    **Parameters:**
-    - session: The database session.
-
-    - params: The filter parameters.
-        - queue: If true, only return refile jobs that are not completed.
-        - workflow_id: The ID of the workflow.
-        - created_by_id: The ID of the user who created the refile job list.
-        - building_name: The name of the building.
-        - user_id: The ID of the user.
-        - assigned_user: The name of the assigned user.
-        - status: The status of the refile job list.
-        - from_dt: The start date.
-        - to_dt: The end date.
-    - sort_params: The sort parameters.
-        - sort_by: The field to sort by.
-        - sort_order: The order to sort by.
-
     **Returns:**
     - Refile Job List Output: The paginated list of refile jobs
     """
-    # Create a query to select all Refile Job
-    query = select(RefileJob)
+    query = select(RefileJob).distinct()
 
-    if params.queue:
+    if queue:
         query = query.where(RefileJob.status != "Completed")
-    if params.status and len(list(filter(None, params.status))) > 0:
-        query = query.where(RefileJob.status.in_(params.status))
     if params.workflow_id:
         query = query.where(RefileJob.id == params.workflow_id)
-    if params.assigned_user_id:
-        query = query.where(RefileJob.assigned_user_id.in_(params.user_id))
-    if params.assigned_user:
-        assigned_user_subquery = (
-            select(User.id)
-            .where(
-                func.concat(User.first_name, ' ', User.last_name).in_(
-                    params.assigned_user
-                )
-            )
-        )
-        query = query.where(RefileJob.assigned_user_id.in_(assigned_user_subquery))
+    if params.user_id:
+        query = query.where(RefileJob.assigned_user_id == params.user_id)
     if params.created_by_id:
         query = query.where(RefileJob.created_by_id == params.created_by_id)
     if params.from_dt:
         query = query.where(RefileJob.create_dt >= params.from_dt)
     if params.to_dt:
         query = query.where(RefileJob.create_dt <= params.to_dt)
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        # Apply sorting using RequestSorter
-        sorter = RefileJobSorter(RefileJob)
-        query = sorter.apply_sorting(query, sort_params)
+    if status:
+        query = query.where(RefileJob.status == status.value)
 
     return paginate(session, query)
 
@@ -232,7 +176,7 @@ def create_refile_job(
     """
 
     lookup_barcode_values = refile_job_input.barcode_values
-    update_dt = datetime.now(timezone.utc)
+    update_dt = datetime.utcnow()
 
     if not lookup_barcode_values:
         raise BadRequest(detail="At least one barcode value must be provided")
@@ -371,7 +315,7 @@ def update_refile_job(
     for key, value in mutated_data.items():
         setattr(existing_refile_job, key, value)
 
-    setattr(existing_refile_job, "update_dt", datetime.now(timezone.utc))
+    setattr(existing_refile_job, "update_dt", datetime.utcnow())
 
     session.add(existing_refile_job)
     session.commit()
@@ -416,7 +360,7 @@ def delete_refile_job(id: int, session: Session = Depends(get_session)):
         for refile_non_tray_item in refile_non_tray_items
     ]
 
-    update_dt = datetime.now(timezone.utc)
+    update_dt = datetime.utcnow()
 
     session.query(Item).filter(Item.id.in_(item_ids)).update(
         {
@@ -424,7 +368,7 @@ def delete_refile_job(id: int, session: Session = Depends(get_session)):
             "scanned_for_refile_queue_dt": update_dt,
             "update_dt": update_dt,
         },
-        synchronize_session=False,
+        synchronize_session="fetch",
     )
 
     session.query(NonTrayItem).filter(NonTrayItem.id.in_(non_tray_item_ids)).update(
@@ -433,7 +377,7 @@ def delete_refile_job(id: int, session: Session = Depends(get_session)):
             "scanned_for_refile_queue_dt": update_dt,
             "update_dt": update_dt,
         },
-        synchronize_session=False,
+        synchronize_session="fetch",
     )
 
     # Delete refile items
@@ -474,7 +418,7 @@ def add_items_to_refile_job(
     - Not Found HTTPException: If the refile job or item is not found.
     """
     lookup_barcode_values = refile_job_input.barcode_values
-    update_dt = datetime.now(timezone.utc)
+    update_dt = datetime.utcnow()
 
     if not lookup_barcode_values:
         raise BadRequest(detail="At least one barcode value must be provided")
@@ -483,9 +427,6 @@ def add_items_to_refile_job(
 
     if not refile_job:
         raise NotFound(detail=f"Refile Job ID {job_id} Not Found")
-
-    if refile_job.status in ["Running", "Completed"]:
-        raise BadRequest(detail=f"""Can not add to Refile Job ID {job_id} in '{refile_job.status}' status""")
 
     refile_items = []
     refile_non_tray_items = []
@@ -605,7 +546,7 @@ def remove_item_from_refile_job(
     """
 
     lookup_barcode_values = refile_job_input.barcode_values
-    update_dt = datetime.now(timezone.utc)
+    update_dt = datetime.utcnow()
 
     if not lookup_barcode_values:
         raise BadRequest(detail="At least one barcode value must be provided")
@@ -713,7 +654,7 @@ def update_item_in_refile_job(
 
     for key, value in mutated_data.items():
         setattr(existing_item, key, value)
-    setattr(existing_item, "update_dt", datetime.now(timezone.utc))
+    setattr(existing_item, "update_dt", datetime.utcnow())
 
     # Commit the changes to the database
     session.add(existing_item)
@@ -769,7 +710,7 @@ def update_non_tray_item_in_refile_job(
 
     for key, value in mutated_data.items():
         setattr(existing_item, key, value)
-    setattr(existing_item, "update_dt", datetime.now(timezone.utc))
+    setattr(existing_item, "update_dt", datetime.utcnow())
 
     # Commit the changes to the database
     session.add(existing_item)

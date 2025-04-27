@@ -2,11 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams
 from app.models.sides import Side
 from app.schemas.sides import (
     SideInput,
@@ -20,7 +19,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.sorting import BaseSorter
+
 
 router = APIRouter(
     prefix="/sides",
@@ -29,28 +28,15 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[SideListOutput])
-def get_side_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_side_list(session: Session = Depends(get_session)) -> list:
     """
     Get a paginated list of sides from the database.
 
-    **Parameters:**
-    - sort_params: The sorting parameters.
-
     **Returns**:
-    - Side List Output: A paginated list of sides.
+    - list: A paginated list of sides.
     """
     # Create a query to select all sides from the database
-    query = select(Side).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        sorter = BaseSorter(Side)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(Side))
 
 
 @router.get("/{id}", response_model=SideDetailReadOutput)
@@ -134,7 +120,7 @@ def update_side(
 
         for key, value in mutated_data.items():
             setattr(existing_side, key, value)
-        setattr(existing_side, "update_dt", datetime.now(timezone.utc))
+        setattr(existing_side, "update_dt", datetime.utcnow())
 
         # Commit the changes to the database
         session.add(existing_side)

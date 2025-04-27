@@ -1,14 +1,15 @@
 import sqlalchemy as sa
-
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import backref
 
 from app.models.owner_tiers import OwnerTier
 from app.models.items import Item
+from app.models.owners_size_classes import OwnersSizeClassesLink
 
 
 class Owner(SQLModel, table=True):
@@ -29,22 +30,17 @@ class Owner(SQLModel, table=True):
         default=None, foreign_key="owners.id", nullable=True
     )
     name: str = Field(
-        sa_column=sa.Column(
-            sa.VARCHAR(150),
-            nullable=False,
-            index=True,
-            default=None
-        )
+        max_length=150, sa_column=sa.VARCHAR, nullable=False, default=None
     )
     owner_tier_id: int = Field(
         foreign_key="owner_tiers.id",
         nullable=False,
     )
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     owner_tier: OwnerTier = Relationship(back_populates="owners")
@@ -58,16 +54,8 @@ class Owner(SQLModel, table=True):
         )
     )
     items: List[Item] = Relationship(back_populates="owner")
-    shelving_job_discrepancies: List["ShelvingJobDiscrepancy"] = Relationship(
-        back_populates="owner",
-        sa_relationship_kwargs={
-            "primaryjoin": "ShelvingJobDiscrepancy.owner_id==Owner.id",
-            "lazy": "selectin"
-        }
+    size_classes: List["SizeClass"] = Relationship(
+        back_populates="owners", link_model=OwnersSizeClassesLink
     )
-    items_retrieval_events: List["ItemRetrievalEvent"] = Relationship(
-        back_populates="owner"
-    )
-    non_tray_items_retrieval_events: List["NonTrayItemRetrievalEvent"] = Relationship(
-        back_populates="owner"
-    )
+    # trays (could support if needed)
+    # non-tray-items (could support if needed)

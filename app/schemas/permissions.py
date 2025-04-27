@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, constr, conint
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class PermissionInput(BaseModel):

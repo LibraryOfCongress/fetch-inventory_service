@@ -48,7 +48,7 @@ def upgrade() -> None:
     )
     op.create_table('shelves',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('barcode_id', sa.dialects.postgresql.UUID(), nullable=False),
+    sa.Column('barcode_id', sqlmodel.sql.sqltypes.GUID(), nullable=False),
     sa.Column('capacity', sa.SmallInteger(), nullable=False),
     sa.Column('height', sa.Numeric(precision=4, scale=2), nullable=False),
     sa.Column('width', sa.Numeric(precision=4, scale=2), nullable=False),

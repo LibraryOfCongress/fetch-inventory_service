@@ -1,6 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel, conint, constr
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.schemas.buildings import BuildingDetailWriteOutput
 
@@ -35,29 +35,18 @@ class ModuleBaseOutput(BaseModel):
     id: int
 
 
-class BuildingForModuleList(BaseModel):
-    id: int
-    name: Optional[str] = None
-
-
 class ModuleListOutput(ModuleBaseOutput):
-    module_number: Optional[str] = None
-    building_id: int
-    building: Optional[BuildingForModuleList] = None
-
     class Config:
         json_schema_extra = {
             "example": {
-                "id": 1,
-                "module_number": "CB",
-                "building_id": 1
+                "id": 1
             }
         }
 
 
 class ModuleDetailWriteOutput(ModuleBaseOutput):
     building_id: int
-    module_number: Optional[str] = None
+    module_number: str
     create_dt: datetime
     update_dt: datetime
 
@@ -86,7 +75,7 @@ class AisleNestedForModule(BaseModel):
 
 
 class ModuleDetailReadOutput(ModuleBaseOutput):
-    module_number: Optional[str] = None
+    module_number: str
     building: BuildingDetailWriteOutput
     aisles: List[AisleNestedForModule]
     create_dt: datetime
@@ -121,7 +110,7 @@ class ModuleDetailReadOutput(ModuleBaseOutput):
 
 
 class ModuleCustomDetailReadOutput(ModuleBaseOutput):
-    module_number: Optional[str] = None
+    module_number: str
 
     class Config:
         json_schema_extra = {

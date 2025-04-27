@@ -1,6 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel, field_validator, computed_field
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 
 from app.models.pick_lists import PickListStatus
 from app.schemas.buildings import BuildingBaseOutput

@@ -10,11 +10,6 @@ class BadRequest(HTTPException):
         super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
-class MethodNotAllowed(HTTPException):
-    def __init__(self, detail: str = "Method Not Allowed"):
-        super().__init__(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=detail)
-
-
 class NotFound(HTTPException):
     def __init__(self, detail: str = "Not Found"):
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
@@ -51,11 +46,6 @@ async def bad_request_exception_handler(request: Request, exc: BadRequest):
         content={"detail": exc.detail or "Bad Request"},
     )
 
-async def method_not_allowed_exception_handler(request: Request, exc: MethodNotAllowed):
-    return JSONResponse(
-        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-        content={"detail": exc.detail or "Method Not Allowed"},
-    )
 
 async def not_found_exception_handler(request: Request, exc: NotFound):
     return JSONResponse(

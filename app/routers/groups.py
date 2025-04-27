@@ -2,17 +2,17 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from sqlalchemy import asc, desc
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.database.session import get_session, commit_record, remove_record
-from app.filter_params import SortParams
 from app.models.groups import Group, GroupPermission
 from app.models.permissions import Permission
 from app.models.users import User
 from app.models.user_groups import UserGroup
 from app.config.exceptions import (
-    NotFound
+    NotFound,
+    ValidationException,
+    InternalServerError,
 )
 from app.schemas.groups import (
     GroupInput,
@@ -23,7 +23,7 @@ from app.schemas.groups import (
     GroupUserOutput,
     GroupPermissionsOutput,
 )
-from app.sorting import BaseSorter
+
 
 router = APIRouter(
     prefix="/groups",
@@ -32,30 +32,14 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[GroupListOutput])
-def get_group_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_group_list(session: Session = Depends(get_session)) -> list:
     """
     Get a list of groups
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
 
     **Returns**:
     - Group List Output: The list of groups.
     """
-
-    # Create a query to retrieve all Groups
-    query = select(Group).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        # Apply sorting using BaseSorter
-        sorter = BaseSorter(Group)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(Group))
 
 
 @router.get("/{id}", response_model=GroupDetailReadOutput)
@@ -126,7 +110,7 @@ def update_group(
     for key, value in mutated_data.items():
         setattr(existing_group, key, value)
 
-    setattr(existing_group, "update_dt", datetime.now(timezone.utc))
+    setattr(existing_group, "update_dt", datetime.utcnow())
 
     session.add(existing_group)
     session.commit()

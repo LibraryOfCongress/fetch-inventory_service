@@ -2,11 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams
 from app.models.subcollection import Subcollection
 from app.schemas.subcollection import (
     SubcollectionInput,
@@ -20,7 +19,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.sorting import BaseSorter
+
 
 router = APIRouter(
     prefix="/subcollections",
@@ -29,28 +28,11 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[SubcollectionListOutput])
-def get_subcollection_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_subcollection_list(session: Session = Depends(get_session)) -> list:
     """
     Get a paginated list of subcollections
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-
-    **Returns:**
-    - Subcollection List Output: The paginated list of subcollections
     """
-    # Create a query to select all sides from the database
-    query = select(Subcollection).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        sorter = BaseSorter(Subcollection)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(Subcollection))
 
 
 @router.get("/{id}", response_model=SubcollectionDetailReadOutput)
@@ -108,7 +90,7 @@ def update_subcollection(
         for key, value in mutated_data.items():
             setattr(existing_subcollection, key, value)
 
-        setattr(existing_subcollection, "update_dt", datetime.now(timezone.utc))
+        setattr(existing_subcollection, "update_dt", datetime.utcnow())
 
         session.add(existing_subcollection)
         session.commit()

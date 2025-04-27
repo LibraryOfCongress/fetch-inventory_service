@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.schema import UniqueConstraint
 
@@ -26,14 +26,14 @@ class Side(SQLModel, table=True):
         ),
     )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.Integer, default=None)
     aisle_id: int = Field(foreign_key="aisles.id", nullable=False)
     side_orientation_id: int = Field(foreign_key="side_orientations.id", nullable=False)
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     # side orientation belonging to a side

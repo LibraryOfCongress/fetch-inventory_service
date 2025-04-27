@@ -48,7 +48,4 @@ from app.models.withdraw_jobs import WithdrawJob
 from app.models.batch_upload import BatchUpload
 from app.models.workflows import Workflow
 from app.models.shelf_types import ShelfType
-from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
-from app.models.verification_changes import VerificationChange
-from app.models.item_retrieval_events import ItemRetrievalEvent
-from app.models.non_tray_item_retrieval_events import NonTrayItemRetrievalEvent
+from app.models.owners_size_classes import OwnersSizeClassesLink

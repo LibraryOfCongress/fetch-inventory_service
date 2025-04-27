@@ -36,7 +36,7 @@ def upgrade() -> None:
                existing_type=sa.VARCHAR(length=25),
                type_=sqlmodel.sql.sqltypes.AutoString(length=5),
                nullable=False)
-    op.add_column('sides', sa.Column('barcode', sa.dialects.postgresql.UUID(), nullable=True))
+    op.add_column('sides', sa.Column('barcode', sqlmodel.sql.sqltypes.GUID(), nullable=True))
     # ### end Alembic commands ###
 
 

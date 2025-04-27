@@ -1,5 +1,5 @@
 from pydantic import BaseModel, conint
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class AisleNumberInput(BaseModel):

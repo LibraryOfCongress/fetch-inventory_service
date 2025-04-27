@@ -1,7 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, constr
-from datetime import datetime, timezone
-
+from datetime import datetime
 
 class MediaTypeInput(BaseModel):
     name: Optional[constr(max_length=25)] = None

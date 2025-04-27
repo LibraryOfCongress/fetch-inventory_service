@@ -1,8 +1,8 @@
 import sqlalchemy as sa
-
+from sqlalchemy import Column, DateTime
 
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -16,15 +16,15 @@ class Building(SQLModel, table=True):
 
     __tablename__ = "buildings"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True), default=None)
+    id: Optional[int] = Field(primary_key=True, sa_column=sa.SmallInteger, default=None)
     name: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(25), nullable=True, default=None)
+        max_length=25, sa_column=sa.VARCHAR, nullable=True, default=None
     )
     create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
     update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+        sa_column=Column(DateTime, default=datetime.utcnow), nullable=False
     )
 
     # modules in a building

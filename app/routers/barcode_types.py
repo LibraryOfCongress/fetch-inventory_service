@@ -1,12 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams
 from app.models.barcode_types import BarcodeType
 from app.schemas.barcode_types import (
     BarcodeTypesInput,
@@ -17,9 +16,8 @@ from app.schemas.barcode_types import (
 from app.config.exceptions import (
     NotFound,
     ValidationException,
-    InternalServerError
+    InternalServerError,
 )
-from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/barcodes",
@@ -28,29 +26,15 @@ router = APIRouter(
 
 
 @router.get("/types", response_model=Page[BarcodeTypesListOutput])
-def get_barcode_types_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_barcode_types_list(session: Session = Depends(get_session)) -> list:
     """
     Get a list of barcode types.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     -Barcode Types List Output: The paginated list of barcode types.
     """
     # Create a query to select all barcode types
-    query = select(BarcodeType).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        # Apply sorting using BaseSorter
-        sorter = BaseSorter(BarcodeType)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(BarcodeType))
 
 
 @router.get("/types/{id}", response_model=BarcodeTypesDetailReadOutput)
@@ -127,7 +111,7 @@ def update_barcode_types(
         for key, value in mutated_data.items():
             setattr(existing_barcode_types, key, value)
 
-        setattr(existing_barcode_types, "update_dt", datetime.now(timezone.utc))
+        setattr(existing_barcode_types, "update_dt", datetime.utcnow())
 
         session.add(existing_barcode_types)
         session.commit()

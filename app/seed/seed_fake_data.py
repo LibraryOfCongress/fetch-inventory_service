@@ -8,7 +8,6 @@ from app.events import generate_location, generate_shelf_location
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.seed.seeder_session import get_session
-from app.seed.load_available_space_calc import load_available_space_calc
 from app.logger import inventory_logger
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -135,6 +134,7 @@ def generate_shelves_for_system():
                     shelf_type_id = random.choice(shelf_type__list_two)
                 shelf["!container_type_id"]["filter"]["type"] = cont_type
                 shelf["!shelf_type_id"]["filter"]["id"] = shelf_type_id
+                shelf["available_space"] = 8
                 # get max Ok,
                 shelf["!owner_id"]["filter"]["name"] = owner
                 old_shelf_num = shelf["!shelf_number_id"]["filter"]["number"]
@@ -244,8 +244,7 @@ fake_data = [
 ]
 
 
-def seed_fake_data():
-    inventory_logger.disabled = False
+def seed_data():
     inventory_logger.info("Staring process to seed fake data...")
     session = get_seeder_session()
     seeder = HybridSeeder(session)
@@ -270,5 +269,3 @@ def seed_fake_data():
     generate_shelves_for_system()
     # 41040 shelf positions (3 positions per shelf) to match capacity=3
     generate_shelf_positions_for_system()
-    # set available space on shelves
-    load_available_space_calc()

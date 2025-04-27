@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, constr
@@ -21,17 +21,16 @@ class ShelfTypeInput(BaseModel):
 
 
 class ShelfTypeUpdateInput(BaseModel):
-    max_capacity: Optional[int] = None
     type: Optional[constr(min_length=1, max_length=50)] = None
     size_class_id: Optional[int] = None
-    # update_dt: Optional[datetime] = None
+    update_dt: Optional[datetime] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "type": "Full",
+                "type": "Long",
                 "size_class_id": 1,
-                "max_capacity": 30
+                "update_dt": "2023-11-27T12:34:56.789123Z"
             }
         }
 
@@ -43,7 +42,6 @@ class ShelfTypeReadOutput(BaseModel):
 
 
 class ShelfTypeListOutput(ShelfTypeReadOutput):
-    max_capacity: int
     size_class: Optional[SizeClassListOutput] = None
 
     class Config:
@@ -52,11 +50,11 @@ class ShelfTypeListOutput(ShelfTypeReadOutput):
                 "id": 1,
                 "type": "Long",
                 "size_class_id": 1,
-                "max_capacity": 30,
                 "size_class": {
                     "id": 1,
                     "name": "C-Low",
-                    "short_name": "CL"
+                    "short_name": "CL",
+                    "assigned": False
                 }
             }
         }
@@ -64,7 +62,7 @@ class ShelfTypeListOutput(ShelfTypeReadOutput):
 
 class ShelfTypeDetailOutput(ShelfTypeReadOutput):
     size_class: Optional[SizeClassDetailReadOutput] = None
-    # shelves: Optional[list] = None #(Too large, not used)
+    shelves: Optional[list] = None
     max_capacity: Optional[int] = None
     update_dt: Optional[datetime] = None
     create_dt: Optional[datetime] = None
@@ -79,6 +77,7 @@ class ShelfTypeDetailOutput(ShelfTypeReadOutput):
                     "id": 1,
                     "name": "C-Low",
                     "short_name": "CL",
+                    "assigned": False,
                     "height": 15.7,
                     "width": 30.33,
                     "depth": 27,

@@ -1,0 +1,8 @@
+# Ignore everything in this directory
+*
+# Except
+!.gitignore
+!log_rotate.conf
+!logrotate-cron.sh
+!cron.sh
+!cronjob.txt

@@ -1,16 +1,20 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import and_
+from sqlalchemy.orm import selectinload, joinedload
 from sqlmodel import Session, select
-from datetime import datetime, timezone
+from datetime import datetime
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.filter_params import SortParams
+from app.logger import inventory_logger
 from app.models.ladders import Ladder
 from app.models.ladder_numbers import LadderNumber
+from app.models.shelf_types import ShelfType
+from app.models.shelves import Shelf
 from app.schemas.ladders import (
     LadderInput,
     LadderUpdateInput,
@@ -23,7 +27,7 @@ from app.config.exceptions import (
     ValidationException,
     InternalServerError,
 )
-from app.sorting import BaseSorter
+
 
 router = APIRouter(
     prefix="/ladders",
@@ -32,35 +36,21 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[LadderListOutput])
-def get_ladder_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_ladder_list(session: Session = Depends(get_session)) -> list:
     """
     Retrieve a paginated list of ladders.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
 
     **Returns:**
     - Ladder List Output: A list of ladders.
     """
-
-    # Create a query to retrieve all Ladder
-    query = select(Ladder).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        # Apply sorting using BaseSorter
-        sorter = BaseSorter(Ladder)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(Ladder))
 
 
 @router.get("/{id}", response_model=LadderDetailReadOutput)
 def get_ladder_detail(
     id: int,
+    owner_id: Optional[int] | None = None,
+    size_class_id: Optional[int] | None = None,
     session: Session = Depends(get_session),
 ):
     """
@@ -75,17 +65,31 @@ def get_ladder_detail(
     **Raises:**
     - HTTPException: If the ladder is not found.
     """
-    try:
-        ladder = session.get(Ladder, id)
+    ladder = session.get(Ladder, id)
 
-        if not ladder:
-            raise NotFound(detail=f"Ladder ID {id} Not Found")
-        return ladder
+    if not ladder:
+        raise NotFound(detail=f"Ladder ID {id} Not Found")
 
-    except IntegrityError as e:
-        raise ValidationException(detail=f"{e}")
-    except Exception as e:
-        raise InternalServerError(detail=f"{e}")
+    # Filter shelves if `owner_id` or `size_class_id` are provided
+    if owner_id or size_class_id:
+        filter_shelves = [
+            shelf
+            for shelf in ladder.shelves
+            if (not owner_id or shelf.owner_id == owner_id)
+            and (not size_class_id or shelf.shelf_type.size_class_id == size_class_id)
+        ]
+    else:
+        filter_shelves = ladder.shelves
+
+    # Return a new dictionary with `shelves` overridden, rather than modifying `ladder` directly
+    return {
+        "id": ladder.id,
+        "side": ladder.side,
+        "ladder_number": ladder.ladder_number,
+        "shelves": filter_shelves,  # Override shelves with filtered result
+        "create_dt": ladder.create_dt,
+        "update_dt": ladder.update_dt,
+    }
 
 
 @router.post("/", response_model=LadderDetailWriteOutput, status_code=201)
@@ -171,7 +175,7 @@ def update_ladder(
         for key, value in mutated_data.items():
             setattr(existing_ladder, key, value)
 
-        setattr(existing_ladder, "update_dt", datetime.now(timezone.utc))
+        setattr(existing_ladder, "update_dt", datetime.utcnow())
 
         session.add(existing_ladder)
         session.commit()

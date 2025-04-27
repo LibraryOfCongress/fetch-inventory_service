@@ -3,11 +3,9 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import asc, desc
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.database.session import get_session, commit_record
-from app.filter_params import SortParams
 from app.models.permissions import Permission
 from app.schemas.permissions import (
     PermissionInput,
@@ -17,9 +15,9 @@ from app.schemas.permissions import (
 )
 from app.config.exceptions import (
     NotFound,
-    ValidationException
+    ValidationException,
+    InternalServerError,
 )
-from app.sorting import BaseSorter
 
 router = APIRouter(
     prefix="/permissions",
@@ -28,28 +26,14 @@ router = APIRouter(
 
 
 @router.get("/", response_model=Page[PermissionListOutput])
-def get_permission_list(
-    session: Session = Depends(get_session),
-    sort_params: SortParams = Depends()
-) -> list:
+def get_permission_list(session: Session = Depends(get_session)) -> list:
     """
     Get a paginated list of permissions.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
 
     **Returns**:
     - Permission List Output: The paginated list of permissions.
     """
-    # Create a query to select all Permission
-    query = select(Permission).distinct()
-
-    # Validate and Apply sorting based on sort_params
-    if sort_params.sort_by:
-        sorter = BaseSorter(Permission)
-        query = sorter.apply_sorting(query, sort_params)
-
-    return paginate(session, query)
+    return paginate(session, select(Permission))
 
 
 @router.get("/{id}", response_model=PermissionDetailReadOutput)
@@ -127,7 +111,7 @@ def update_permission(
     for key, value in mutated_data.items():
         setattr(existing_permission, key, value)
 
-    setattr(existing_permission, "update_dt", datetime.now(timezone.utc))
+    setattr(existing_permission, "update_dt", datetime.utcnow())
 
     return commit_record(session, existing_permission)
 
