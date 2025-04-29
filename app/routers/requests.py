@@ -7,6 +7,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy import asc, desc, or_, func
 
 from app.database.session import get_session
+from app.pagination.requests import RequestListPagination
 from app.filter_params import SortParams, RequestFilterParams
 from app.logger import inventory_logger
 from app.models.buildings import Building
@@ -43,7 +44,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=Page[RequestListOutput])
+@router.get("/", response_model=RequestListPagination[RequestListOutput])
 def get_request_list(
     session: Session = Depends(get_session),
     params: RequestFilterParams = Depends(),
