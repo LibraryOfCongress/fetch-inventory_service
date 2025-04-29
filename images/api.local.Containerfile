@@ -62,4 +62,7 @@ EXPOSE 8001
 
 # CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--ssl-keyfile", "app/saml/local/key.pem", "--ssl-certfile", "app/saml/local/cert.pem"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--ssl-keyfile", "app/saml/local/key.pem", "--ssl-certfile", "app/saml/local/cert.pem"]
+
+CMD ["gunicorn", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "--workers", "2", "--bind", "0.0.0.0:8001", "--ssl-keyfile", "app/saml/local/key.pem", "--ssl-certfile", "app/saml/local/cert.pem"]
+# CMD ["fastapi", "run", "app.main:app", "--bind", "0.0.0.0:8001", "--workers", "2"]

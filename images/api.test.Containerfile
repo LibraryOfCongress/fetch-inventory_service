@@ -65,6 +65,7 @@ ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
 # Expose the application port
 EXPOSE 8001
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
-# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--ssl-keyfile", "app/saml/test/key.pem", "--ssl-certfile", "app/saml/test/cert.pem"]
+CMD ["gunicorn", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "--workers", "2", "--bind", "0.0.0.0:8001"]
+# CMD ["fastapi", "run", "app.main:app", "--bind", "0.0.0.0:8001", "--workers", "2"]
