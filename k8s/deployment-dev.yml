@@ -22,14 +22,12 @@ spec:
           - containerPort: 8001
           resources:
             requests:
-              cpu: "500m"
-              memory: "512Mi"
-            limits:
               cpu: "750m"
               memory: "1024Mi"
-            requests:
               ephemeral-storage: "200Mi"
             limits:
+              cpu: "1000m"
+              memory: "2048Mi"
               ephemeral-storage: "500Mi"
       imagePullSecrets:
       - name: gitlab-api-2023

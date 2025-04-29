@@ -35,6 +35,8 @@ sqlmodel = "0.0.22"
 fastapi = "0.115.8"
 debugpy = "1.8.12"
 setuptools-scm = "8.0.4"
+gunicorn = "^23.0.0"
+httptools = "^0.6.4"
 
 
 [build-system]
