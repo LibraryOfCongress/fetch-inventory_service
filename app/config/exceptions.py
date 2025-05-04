@@ -1,6 +1,10 @@
+import traceback
+
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
+from app.logger import inventory_logger
+from app.config.config import get_settings
 
 # Custom exception classes
 
@@ -74,10 +78,48 @@ async def validation_exception_handler(request: Request, exc: ValidationExceptio
 async def internal_server_error_exception_handler(
     request: Request, exc: InternalServerError
 ):
-    return JSONResponse(
+    """
+    Lower level exceptions occur before CORSMiddleware.
+    It's necessary to attach cross-origin-headers
+    directly on this exception handler.
+    If you wish to obscure internal server exceptions,
+    simply remove the response headers from this method,
+    and browser security will only return the response code.
+    """
+    inventory_logger.disabled = False
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    inventory_logger.warning(f"Unhandled exception at {request.url}:\n{tb}")
+    sanitized_client_version = traceback.format_exception_only(type(exc), exc)[-1].strip()
+    response = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": exc.detail or "Internal Server Error"},
+        content={"detail": str(sanitized_client_version) or "Internal Server Error"},
     )
+    response.headers["Access-Control-Allow-Origin"] = f"{get_settings().VUE_HOST}"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
+
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Lower level exceptions occur before CORSMiddleware.
+    It's necessary to attach cross-origin-headers
+    directly on this exception handler.
+    If you wish to obscure internal server exceptions,
+    simply remove the response headers from this method,
+    and browser security will only return the response code.
+    """
+    inventory_logger.disabled = False
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    inventory_logger.warning(f"Unhandled exception at {request.url}:\n{tb}")
+    sanitized_client_version = traceback.format_exception_only(type(exc), exc)[-1].strip()
+    response = JSONResponse(
+        # status_code=status.HTTP_418_IM_A_TEAPOT,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": str(sanitized_client_version) or "FETCH Server Error"}
+    )
+    response.headers["Access-Control-Allow-Origin"] = f"{get_settings().VUE_HOST}"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 
 async def not_authorized_exception_handler(request: Request, exc: NotAuthorized):

@@ -17,6 +17,7 @@ from alembic.config import Config
 from alembic import command
 
 from app.config.config import get_settings
+from sqlalchemy.exc import DBAPIError
 from app.config.exceptions import (
     BadRequest,
     NotFound,
@@ -30,6 +31,7 @@ from app.config.exceptions import (
     internal_server_error_exception_handler,
     not_authorized_exception_handler,
     forbidden_exception_handler,
+    unhandled_exception_handler,
 )
 from app.routers import (
     buildings,
@@ -150,15 +152,7 @@ app = FastAPI(
     debug=True if get_settings().APP_ENVIRONMENT == "debug" else False
 )
 
-# add log and auth check middleware
-app.add_middleware(JWTMiddleware)
-
-# add query profiling middleware
-# TODO DISABLE THIS DURING legacy data migration runs
-# if USE_PROFILER:
-#     app.add_middleware(SQLProfilerMiddleware)
-
-# add CORS middleware
+# add CORS middleware first
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=get_settings().ALLOWED_ORIGINS_REGEX,
@@ -168,6 +162,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# add log and auth check middleware
+app.add_middleware(JWTMiddleware)
+
+# add query profiling middleware
+# TODO DISABLE THIS DURING legacy data migration runs
+# if USE_PROFILER:
+#     app.add_middleware(SQLProfilerMiddleware)
 
 @app.get("/")
 async def root():
@@ -182,9 +183,9 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse({"detail": str(exc.detail)}, status_code=exc.status_code)
 
 
-@app.exception_handler(Exception)
-async def exception_handler(request: Request, exc: Exception):
-    return JSONResponse({"detail": str(exc)}, status_code=500)
+# @app.exception_handler(Exception)
+# async def exception_handler(request: Request, exc: Exception):
+#     return JSONResponse({"detail": str(exc)}, status_code=500)
 
 
 # Register custom exception handlers
@@ -194,6 +195,8 @@ app.exception_handler(ValidationException)(validation_exception_handler)
 app.exception_handler(InternalServerError)(internal_server_error_exception_handler)
 app.exception_handler(NotAuthorized)(not_authorized_exception_handler)
 app.exception_handler(Forbidden)(forbidden_exception_handler)
+app.exception_handler(DBAPIError)(unhandled_exception_handler)
+app.exception_handler(Exception)(unhandled_exception_handler)
 
 # order matters for route matching [nested before base]
 app.include_router(buildings.router)
