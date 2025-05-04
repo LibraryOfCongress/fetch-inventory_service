@@ -81,7 +81,7 @@ from app.routers import (
     verification_changes,
     item_retrieval_events,
     non_tray_item_retrieval_events,
-    query_profiler
+    # query_profiler
 )
 
 
@@ -92,7 +92,8 @@ def alembic_context():
         print("Migrating...")
         command.upgrade(alembic_cfg, "head")
 
-        if get_settings().APP_ENVIRONMENT not in ["debug"]:
+        # schema-spy regen over-cycles on prod gunicorn workers, and not needed
+        if get_settings().APP_ENVIRONMENT not in ["debug", "production"]:
             # Create Schema-Docs
             print("Updating Schema Docs...")
             bat_pos = get_settings().DATABASE_URL.find("@")
@@ -137,7 +138,8 @@ def alembic_context():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     alembic_context()
-    if get_settings().APP_ENVIRONMENT not in ["debug"]:
+    # schema-spy regen over-cycles on prod gunicorn workers, and not needed
+    if get_settings().APP_ENVIRONMENT not in ["debug", "production"]:
         app.mount(
             "/schema",
             StaticFiles(directory="/code/schema-docs", html=True),
