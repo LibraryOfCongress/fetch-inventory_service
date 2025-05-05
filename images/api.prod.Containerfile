@@ -71,6 +71,6 @@ EXPOSE 8001
 CMD ["gunicorn", "app.main:app", \
     "-k", "uvicorn.workers.UvicornWorker", \
     "--workers", "5", "--bind", "0.0.0.0:8001", \
-    "--max-requests", "10000", \
-    "--max-requests-jitter", "5000"]
+    "--max-requests", "2500", \
+    "--max-requests-jitter", "1250"]
 # CMD ["fastapi", "run", "app.main:app", "--bind", "0.0.0.0:8001", "--workers", "2"]
