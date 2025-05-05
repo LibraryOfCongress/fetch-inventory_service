@@ -28,7 +28,8 @@ from app.schemas.verification_jobs import (
     VerificationJobListOutput,
     VerificationJobDetailOutput,
     VerificationJobAddInput,
-    VerificationJobRemoveInput
+    VerificationJobRemoveInput,
+    VerificationJobAccCheckOutput
 )
 from app.config.exceptions import (
     NotFound,
@@ -143,6 +144,22 @@ def get_verification_job_detail(id: int, session: Session = Depends(get_session)
         return verification_job
 
     raise NotFound(detail=f"Verification Job ID {id} Not Found")
+
+
+@router.get("/by-accession-job-id/{id}", response_model=VerificationJobAccCheckOutput)
+def get_verification_job_id_by_acc_job_id(id: int, session: Session = Depends(get_session)):
+    """
+    This is a quick check endpoint to help the front-end determine if
+    an Accession Job has been lost in limbo when Verification Job transition
+    fails to fire off.
+    """
+    verification_job = session.exec(
+        select(VerificationJob).where(VerificationJob.accession_job_id == id)
+    ).first()
+    if verification_job:
+        return verification_job
+
+    raise NotFound(detail=f"Not Verification Job found for Accession Job id {id}")
 
 
 @router.get("/workflow/{id}", response_model=VerificationJobDetailOutput)
