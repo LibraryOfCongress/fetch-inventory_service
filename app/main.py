@@ -2,7 +2,7 @@ import subprocess
 # import app.memory_monitor # ONLY USE THIS FOR LOCAL DEBUG
 from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
-# from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # from app.logger import inventory_logger
 from app.middlware import JWTMiddleware#, SQLProfilerMiddleware
@@ -155,7 +155,10 @@ app = FastAPI(
     debug=True if get_settings().APP_ENVIRONMENT == "debug" else False
 )
 
-# add CORS middleware first
+# add log and auth check middleware first
+app.add_middleware(JWTMiddleware)
+
+# add CORS middleware second
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=get_settings().ALLOWED_ORIGINS_REGEX,
@@ -165,8 +168,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# add log and auth check middleware
-app.add_middleware(JWTMiddleware)
+# # add log and auth check middleware
+# app.add_middleware(JWTMiddleware)
 
 # add query profiling middleware
 # TODO DISABLE THIS DURING legacy data migration runs
