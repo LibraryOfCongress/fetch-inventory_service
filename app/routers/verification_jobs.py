@@ -159,7 +159,7 @@ def get_verification_job_id_by_acc_job_id(id: int, session: Session = Depends(ge
     if verification_job:
         return verification_job
 
-    raise NotFound(detail=f"Not Verification Job found for Accession Job id {id}")
+    raise NotFound(detail=f"No Verification Job found for Accession Job id {id}")
 
 
 @router.get("/workflow/{id}", response_model=VerificationJobDetailOutput)
