@@ -235,9 +235,13 @@ def update_verification_job(
         for key, value in mutated_data.items():
             if (key in ["media_type_id", "size_class_id"] and
                 existing_verification_job.__getattribute__(key) != value):
+                audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
                 background_tasks.add_task(
                     manage_verification_job_change_action(
-                        session, existing_verification_job, key, value
+                        existing_verification_job,
+                        key,
+                        value,
+                        audit_info=audit_info
                     )
                 )
 
@@ -248,16 +252,20 @@ def update_verification_job(
         existing_verification_job = commit_record(session, existing_verification_job)
 
         if mutated_data.get("status") == "Completed":
+            audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
             background_tasks.add_task(
-                complete_verification_job, session, existing_verification_job
+                complete_verification_job,
+                existing_verification_job,
+                audit_info=audit_info
             )
             session.refresh(existing_verification_job)
         else:
+            audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
             background_tasks.add_task(
                 manage_verification_job_transition,
-                session,
                 existing_verification_job,
                 original_status,
+                audit_info=audit_info
             )
 
             session.refresh(existing_verification_job)

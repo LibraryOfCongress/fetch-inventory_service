@@ -1,11 +1,12 @@
-import subprocess, os
+import subprocess
+# import app.memory_monitor # ONLY USE THIS FOR LOCAL DEBUG
 from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.middleware.base import BaseHTTPMiddleware
+# from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.logger import inventory_logger
+# from app.logger import inventory_logger
 from app.middlware import JWTMiddleware#, SQLProfilerMiddleware
-from app.profiling import USE_PROFILER
+# from app.profiling import USE_PROFILER
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse

@@ -21,7 +21,7 @@ from app.schemas.verification_jobs import VerificationJobInput
 from app.utilities import start_session_with_audit_info
 
 
-def complete_accession_job(session, accession_job: AccessionJob, original_status):
+def complete_accession_job(accession_job: AccessionJob, original_status, audit_info):
     """
     Upon accession job completion:
         - Generate a related verification job
@@ -32,7 +32,7 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
     This task allows us to auto-create verification jobs in queue,
     and to support job ownership change efficiently.
     """
-    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
+    # audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
         # update accession job run_time and last_transition
         start_session_with_audit_info(audit_info, session)
@@ -107,14 +107,14 @@ def complete_accession_job(session, accession_job: AccessionJob, original_status
         session.commit()
 
 
-def complete_verification_job(session, verification_job: VerificationJob):
+def complete_verification_job(verification_job: VerificationJob, audit_info):
     """
     Upon verification job completion:
         - Set verification entity ownership to verification job owner
 
     This task allows us to support job ownership change efficiently.
     """
-    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
+    # audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
         start_session_with_audit_info(audit_info, session)
         # update verification job last_transition
@@ -155,7 +155,7 @@ def complete_verification_job(session, verification_job: VerificationJob):
 
 
 def manage_accession_job_transition(
-    session, accession_job: AccessionJob, original_status
+    accession_job: AccessionJob, original_status, audit_info
 ):
     """
     Task manages transition logic for an accession job's running state.
@@ -164,7 +164,7 @@ def manage_accession_job_transition(
         - If job cancelled, rolls back accessioned entities
         - Rolls back barcodes used by deleted entities
     """
-    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
+    # audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
         start_session_with_audit_info(audit_info, session)
         # Compute time delta before changing last_transition
@@ -217,7 +217,7 @@ def manage_accession_job_transition(
 
 
 def manage_verification_job_transition(
-    session, verification_job: VerificationJob, original_status
+    session, verification_job: VerificationJob, original_status, audit_info
 ):
     """
     Task manages transition logic for an verification job's running state.
@@ -226,7 +226,7 @@ def manage_verification_job_transition(
 
     Verification jobs do not get cancelled, so no item rollback needed.
     """
-    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
+    # audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
         start_session_with_audit_info(audit_info, session)
         # Compute time delta before changing last_transition
@@ -322,8 +322,8 @@ def process_non_tray_item_move(session: Session, non_tray_item: NonTrayItem, sou
     return non_tray_item
 
 
-def manage_verification_job_change_action(session: Session, verification_job: VerificationJob, update_input: str, value: int):
-    audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
+def manage_verification_job_change_action(verification_job: VerificationJob, update_input: str, value: int, audit_info):
+    # audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
     with session_manager() as session:
         start_session_with_audit_info(audit_info, session)
         new_verification_changes = []

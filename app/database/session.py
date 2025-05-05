@@ -20,10 +20,9 @@ data_migration_engine = create_engine(
 
 sa_hybrid_session_local = sessionmaker(autocommit=False, autoflush=False, bind=data_migration_engine)
 
-def get_session():
-    """
-    Yields a new SQLModel session per request
-    """
+#v1.02
+from typing import Generator
+def get_session() -> Generator[Session, None, None]:
     with Session(engine, autoflush=False) as session:
         with session.no_autoflush:
             try:
@@ -32,6 +31,20 @@ def get_session():
                 session.rollback()
                 raise
 
+#v1.01
+# def get_session():
+#     """
+#     Yields a new SQLModel session per request
+#     """
+#     with Session(engine, autoflush=False) as session:
+#         with session.no_autoflush:
+#             try:
+#                 yield session
+#             except Exception:
+#                 session.rollback()
+#                 raise
+
+#v1.00
 # def get_session(request: Request = None):
 #     """
 #     Database sessions are injected as Path Operation Dependencies
