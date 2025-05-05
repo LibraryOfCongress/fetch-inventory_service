@@ -327,16 +327,21 @@ def update_accession_job(
                         synchronize_session=False,
                     )
 
+        audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
         background_tasks.add_task(
-            complete_accession_job, session, existing_accession_job, original_status
+            complete_accession_job,
+            existing_accession_job, 
+            original_status,
+            audit_info=audit_info
         )
         session.refresh(existing_accession_job)
     else:
+        audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
         background_tasks.add_task(
             manage_accession_job_transition,
-            session,
             existing_accession_job,
             original_status,
+            audit_info=audit_info
         )
 
         session.commit()

@@ -527,3 +527,14 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
+
+
+class VerificationJobAccCheckOutput(BaseModel):
+    id: int
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1
+            }
+        }

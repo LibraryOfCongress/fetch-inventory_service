@@ -28,7 +28,8 @@ from app.schemas.verification_jobs import (
     VerificationJobListOutput,
     VerificationJobDetailOutput,
     VerificationJobAddInput,
-    VerificationJobRemoveInput
+    VerificationJobRemoveInput,
+    VerificationJobAccCheckOutput
 )
 from app.config.exceptions import (
     NotFound,
@@ -145,6 +146,22 @@ def get_verification_job_detail(id: int, session: Session = Depends(get_session)
     raise NotFound(detail=f"Verification Job ID {id} Not Found")
 
 
+@router.get("/by-accession-job-id/{id}", response_model=VerificationJobAccCheckOutput)
+def get_verification_job_id_by_acc_job_id(id: int, session: Session = Depends(get_session)):
+    """
+    This is a quick check endpoint to help the front-end determine if
+    an Accession Job has been lost in limbo when Verification Job transition
+    fails to fire off.
+    """
+    verification_job = session.exec(
+        select(VerificationJob).where(VerificationJob.accession_job_id == id)
+    ).first()
+    if verification_job:
+        return verification_job
+
+    raise NotFound(detail=f"No Verification Job found for Accession Job id {id}")
+
+
 @router.get("/workflow/{id}", response_model=VerificationJobDetailOutput)
 def get_verification_job_detail_by_workflow(
     id: int, session: Session = Depends(get_session)
@@ -235,9 +252,13 @@ def update_verification_job(
         for key, value in mutated_data.items():
             if (key in ["media_type_id", "size_class_id"] and
                 existing_verification_job.__getattribute__(key) != value):
+                audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
                 background_tasks.add_task(
                     manage_verification_job_change_action(
-                        session, existing_verification_job, key, value
+                        existing_verification_job,
+                        key,
+                        value,
+                        audit_info=audit_info
                     )
                 )
 
@@ -248,16 +269,20 @@ def update_verification_job(
         existing_verification_job = commit_record(session, existing_verification_job)
 
         if mutated_data.get("status") == "Completed":
+            audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
             background_tasks.add_task(
-                complete_verification_job, session, existing_verification_job
+                complete_verification_job,
+                existing_verification_job,
+                audit_info=audit_info
             )
             session.refresh(existing_verification_job)
         else:
+            audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
             background_tasks.add_task(
                 manage_verification_job_transition,
-                session,
                 existing_verification_job,
                 original_status,
+                audit_info=audit_info
             )
 
             session.refresh(existing_verification_job)

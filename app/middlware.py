@@ -30,7 +30,9 @@ class JWTMiddleware(BaseHTTPMiddleware):
         if x_forwarded_for:
             client_ip = x_forwarded_for.split(',')[0].strip()
         else:
-            client_ip = request.client.host
+            # health check doesn't have scope['client'] for client context
+            client_ip = request.client.host if request.client else "unknown"
+            # client_ip = request.client.host
 
         process_time = time.time() - start
 

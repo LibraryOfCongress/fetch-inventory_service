@@ -1245,13 +1245,19 @@ async def start_session_with_user_id(audit_info: dict, session):
     This method is to add the user info for any database change.
     """
     setattr(session, "audit_info", audit_info)
-    session.execute(text(f"select set_config('audit.user_name', '{audit_info['name']}', true)"))
+    # sanitize names before execution
+    stmt = text("select set_config('audit.user_name', :user_name, true)")
+    # session.execute(text(f"select set_config('audit.user_name', '{audit_info['name']}', true)"))
+    session.execute(stmt, {"user_name": audit_info["name"]})
     session.execute(text(f"select set_config('audit.user_id', '{audit_info['id']}', true)"))
 
 
 def start_session_with_audit_info(audit_info: dict, session):
     setattr(session, "audit_info", audit_info)
-    session.execute(text(f"select set_config('audit.user_name', '{audit_info['name']}', true)"))
+    # sanitize names before execution
+    stmt = text("select set_config('audit.user_name', :user_name, true)")
+    # session.execute(text(f"select set_config('audit.user_name', '{audit_info['name']}', true)"))
+    session.execute(stmt, {"user_name": audit_info["name"]})
     session.execute(text(f"select set_config('audit.user_id', '{audit_info['id']}', true)"))
 
 

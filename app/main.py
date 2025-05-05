@@ -1,11 +1,12 @@
-import subprocess, os
+import subprocess
+# import app.memory_monitor # ONLY USE THIS FOR LOCAL DEBUG
 from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.logger import inventory_logger
+# from app.logger import inventory_logger
 from app.middlware import JWTMiddleware#, SQLProfilerMiddleware
-from app.profiling import USE_PROFILER
+# from app.profiling import USE_PROFILER
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -17,6 +18,7 @@ from alembic.config import Config
 from alembic import command
 
 from app.config.config import get_settings
+from sqlalchemy.exc import DBAPIError
 from app.config.exceptions import (
     BadRequest,
     NotFound,
@@ -30,6 +32,7 @@ from app.config.exceptions import (
     internal_server_error_exception_handler,
     not_authorized_exception_handler,
     forbidden_exception_handler,
+    unhandled_exception_handler,
 )
 from app.routers import (
     buildings,
@@ -79,7 +82,7 @@ from app.routers import (
     verification_changes,
     item_retrieval_events,
     non_tray_item_retrieval_events,
-    query_profiler
+    # query_profiler
 )
 
 
@@ -90,7 +93,8 @@ def alembic_context():
         print("Migrating...")
         command.upgrade(alembic_cfg, "head")
 
-        if get_settings().APP_ENVIRONMENT not in ["debug"]:
+        # schema-spy regen over-cycles on prod gunicorn workers, and not needed
+        if get_settings().APP_ENVIRONMENT not in ["debug", "production"]:
             # Create Schema-Docs
             print("Updating Schema Docs...")
             bat_pos = get_settings().DATABASE_URL.find("@")
@@ -135,7 +139,8 @@ def alembic_context():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     alembic_context()
-    if get_settings().APP_ENVIRONMENT not in ["debug"]:
+    # schema-spy regen over-cycles on prod gunicorn workers, and not needed
+    if get_settings().APP_ENVIRONMENT not in ["debug", "production"]:
         app.mount(
             "/schema",
             StaticFiles(directory="/code/schema-docs", html=True),
@@ -150,15 +155,10 @@ app = FastAPI(
     debug=True if get_settings().APP_ENVIRONMENT == "debug" else False
 )
 
-# add log and auth check middleware
+# add log and auth check middleware first
 app.add_middleware(JWTMiddleware)
 
-# add query profiling middleware
-# TODO DISABLE THIS DURING legacy data migration runs
-# if USE_PROFILER:
-#     app.add_middleware(SQLProfilerMiddleware)
-
-# add CORS middleware
+# add CORS middleware second
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=get_settings().ALLOWED_ORIGINS_REGEX,
@@ -168,6 +168,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# # add log and auth check middleware
+# app.add_middleware(JWTMiddleware)
+
+# add query profiling middleware
+# TODO DISABLE THIS DURING legacy data migration runs
+# if USE_PROFILER:
+#     app.add_middleware(SQLProfilerMiddleware)
 
 @app.get("/")
 async def root():
@@ -182,9 +189,9 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse({"detail": str(exc.detail)}, status_code=exc.status_code)
 
 
-@app.exception_handler(Exception)
-async def exception_handler(request: Request, exc: Exception):
-    return JSONResponse({"detail": str(exc)}, status_code=500)
+# @app.exception_handler(Exception)
+# async def exception_handler(request: Request, exc: Exception):
+#     return JSONResponse({"detail": str(exc)}, status_code=500)
 
 
 # Register custom exception handlers
@@ -194,6 +201,8 @@ app.exception_handler(ValidationException)(validation_exception_handler)
 app.exception_handler(InternalServerError)(internal_server_error_exception_handler)
 app.exception_handler(NotAuthorized)(not_authorized_exception_handler)
 app.exception_handler(Forbidden)(forbidden_exception_handler)
+app.exception_handler(DBAPIError)(unhandled_exception_handler)
+app.exception_handler(Exception)(unhandled_exception_handler)
 
 # order matters for route matching [nested before base]
 app.include_router(buildings.router)
