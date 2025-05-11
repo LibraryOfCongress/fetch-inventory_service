@@ -260,6 +260,18 @@ class VerificationJobListOutput(VerificationJobBaseOutput):
         }
 
 
+class VerificationJobListOptionOutput(BaseModel):
+    """
+    Lightweight list view for serving minimal job data as options
+    """
+    id: int
+    workflow_id: Optional[int] = None
+    trayed: bool
+    tray_count: int
+    item_count: int
+    non_tray_item_count: int
+
+
 class ItemDetailNestedForVerificationJob(BaseModel):
     id: int
     status: Optional[str] = None

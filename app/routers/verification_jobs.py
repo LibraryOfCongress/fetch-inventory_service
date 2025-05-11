@@ -3,8 +3,9 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import Session, select
 from datetime import datetime, timezone
-from sqlalchemy import func
+from sqlalchemy import func, distinct
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 
 from app.database.session import get_session, commit_record
 from app.filter_params import SortParams, JobFilterParams
@@ -26,6 +27,7 @@ from app.schemas.verification_jobs import (
     VerificationJobInput,
     VerificationJobUpdateInput,
     VerificationJobListOutput,
+    VerificationJobListOptionOutput,
     VerificationJobDetailOutput,
     VerificationJobAddInput,
     VerificationJobRemoveInput,
@@ -120,6 +122,63 @@ def get_verification_job_list(
     if sort_params.sort_by:
         sorter = BaseSorter(VerificationJob)
         query = sorter.apply_sorting(query, sort_params)
+
+    return paginate(session, query)
+
+
+@router.get("/options/", response_model=Page[VerificationJobListOptionOutput])
+def get_verification_job_list_lite(
+    unshelved: bool | None = False,
+    session: Session = Depends(get_session),
+    params: JobFilterParams = Depends(),
+    sort_params: SortParams = Depends()
+) -> list:
+    filtered_jobs_cte = (
+        select(VerificationJob)
+        .where(
+            VerificationJob.shelving_job_id == None,
+            VerificationJob.status == "Completed"
+        )
+        .cte("filtered_jobs")
+    )
+
+    VJ = aliased(filtered_jobs_cte)
+
+    tray_count_subq = (
+        select(func.count())
+        .select_from(Tray)
+        .where(Tray.verification_job_id == VJ.c.id)
+        .correlate(filtered_jobs_cte)
+        .scalar_subquery()
+    )
+
+    item_count_subq = (
+        select(func.count())
+        .select_from(Item)
+        .where(Item.verification_job_id == VJ.c.id)
+        .correlate(filtered_jobs_cte)
+        .scalar_subquery()
+    )
+
+    non_tray_item_count_subq = (
+        select(func.count())
+        .select_from(NonTrayItem)
+        .where(NonTrayItem.verification_job_id == VJ.c.id)
+        .correlate(filtered_jobs_cte)
+        .scalar_subquery()
+    )
+
+    query = (
+        select(
+            VJ.c.id,
+            VJ.c.workflow_id,
+            VJ.c.trayed,
+            tray_count_subq.label("tray_count"),
+            item_count_subq.label("item_count"),
+            non_tray_item_count_subq.label("non_tray_item_count"),
+        )
+        .order_by(VJ.c.workflow_id.asc())
+    )
 
     return paginate(session, query)
 
