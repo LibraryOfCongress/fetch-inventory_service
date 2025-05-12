@@ -194,6 +194,9 @@ deploy_dev:
   image:
     name: bitnami/kubectl:latest
     entrypoint: ['']
+  environment:
+    name: develop
+    url: https://inventory.dev.fetch.loc.gov/status/
   script:
     - kubectl config use-context fetch/build:fetch
     - kubectl -n fetch apply -f k8s/deployment-dev.yml
@@ -227,6 +230,9 @@ deploy_test:
   image:
     name: bitnami/kubectl:latest
     entrypoint: ['']
+  environment:
+    name: test
+    url: https://inventory.test.fetch.loc.gov/status/
   script:
     - kubectl config use-context fetch/build:fetch-test -v=6
     - kubectl -n fetch apply -f k8s/deployment-test.yml

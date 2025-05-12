@@ -303,7 +303,7 @@ def update_pick_list(
             request_ids = [
                 request.id
                 for request in session.query(Request.id)
-                .filter(Request.pick_list_id == id, Request.fulfilled == False)
+                .filter(Request.pick_list_id == id)
                 .all()
             ]
 
