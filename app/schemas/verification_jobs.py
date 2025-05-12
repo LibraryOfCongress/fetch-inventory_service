@@ -260,7 +260,7 @@ class VerificationJobListOutput(VerificationJobBaseOutput):
         }
 
 
-class VerificationJobListOptionOutput(BaseModel):
+class VerificationJobListDropdownOutput(BaseModel):
     """
     Lightweight list view for serving minimal job data as options
     """

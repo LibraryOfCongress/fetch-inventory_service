@@ -27,7 +27,7 @@ from app.schemas.verification_jobs import (
     VerificationJobInput,
     VerificationJobUpdateInput,
     VerificationJobListOutput,
-    VerificationJobListOptionOutput,
+    VerificationJobListDropdownOutput,
     VerificationJobDetailOutput,
     VerificationJobAddInput,
     VerificationJobRemoveInput,
@@ -126,7 +126,7 @@ def get_verification_job_list(
     return paginate(session, query)
 
 
-@router.get("/options/", response_model=Page[VerificationJobListOptionOutput])
+@router.get("/dropdown/", response_model=Page[VerificationJobListDropdownOutput])
 def get_verification_job_list_lite(
     unshelved: bool | None = False,
     session: Session = Depends(get_session),
