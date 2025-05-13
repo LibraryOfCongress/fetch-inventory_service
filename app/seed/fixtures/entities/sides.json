@@ -1,0 +1,117 @@
+{
+  "model": "app.models.sides.Side",
+  "data": [
+    {
+      "!aisle_id": {
+        "model": "app.models.aisles.Aisle",
+        "filter": {
+          "id": 1
+        }
+      },
+      "!side_orientation_id": {
+        "model": "app.models.side_orientations.SideOrientation",
+        "filter": {
+          "name": "Left"
+        }
+      }
+    },
+    {
+      "!aisle_id": {
+        "model": "app.models.aisles.Aisle",
+        "filter": {
+          "id": 2
+        }
+      },
+      "!side_orientation_id": {
+        "model": "app.models.side_orientations.SideOrientation",
+        "filter": {
+          "name": "Left"
+        }
+      }
+    },
+    {
+      "!aisle_id": {
+        "model": "app.models.aisles.Aisle",
+        "filter": {
+          "id": 3
+        }
+      },
+      "!side_orientation_id": {
+        "model": "app.models.side_orientations.SideOrientation",
+        "filter": {
+          "name": "Left"
+        }
+      }
+    },
+    {
+      "!aisle_id": {
+        "model": "app.models.aisles.Aisle",
+        "filter": {
+          "id": 4
+        }
+      },
+      "!side_orientation_id": {
+        "model": "app.models.side_orientations.SideOrientation",
+        "filter": {
+          "name": "Left"
+        }
+      }
+    },
+    {
+      "!aisle_id": {
+        "model": "app.models.aisles.Aisle",
+        "filter": {
+          "id": 1
+        }
+      },
+      "!side_orientation_id": {
+        "model": "app.models.side_orientations.SideOrientation",
+        "filter": {
+          "name": "Right"
+        }
+      }
+    },
+    {
+      "!aisle_id": {
+        "model": "app.models.aisles.Aisle",
+        "filter": {
+          "id": 2
+        }
+      },
+      "!side_orientation_id": {
+        "model": "app.models.side_orientations.SideOrientation",
+        "filter": {
+          "name": "Right"
+        }
+      }
+    },
+    {
+      "!aisle_id": {
+        "model": "app.models.aisles.Aisle",
+        "filter": {
+          "id": 3
+        }
+      },
+      "!side_orientation_id": {
+        "model": "app.models.side_orientations.SideOrientation",
+        "filter": {
+          "name": "Right"
+        }
+      }
+    },
+    {
+      "!aisle_id": {
+        "model": "app.models.aisles.Aisle",
+        "filter": {
+          "id": 4
+        }
+      },
+      "!side_orientation_id": {
+        "model": "app.models.side_orientations.SideOrientation",
+        "filter": {
+          "name": "Right"
+        }
+      }
+    }
+  ]
+}

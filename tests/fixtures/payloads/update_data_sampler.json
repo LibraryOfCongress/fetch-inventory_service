@@ -1,0 +1,110 @@
+{
+  "buildings": {
+    "name": "Updated Building 1"
+  },
+  "modules": {
+    "building_id": 1,
+    "module_number": "8"
+  },
+  "aisle_numbers": {
+    "number": 4
+  },
+  "aisles": {
+    "aisle_number_id": 1,
+    "module_id": 1
+  },
+  "side_orientations": {
+    "name": "down down"
+  },
+  "sides": {
+    "aisle_id": 1,
+    "side_orientation_id": 2
+  },
+  "shelves": {
+      "container_type_id": 1,
+      "depth": 30,
+      "height": 18,
+      "ladder_id": 1,
+      "owner_id": 1,
+      "shelf_number_id": 1,
+      "width": 33
+  },
+  "shelf_numbers": {
+    "number": 1
+  },
+  "shelf_positions": {
+    "shelf_id": 1,
+    "shelf_position_number_id": 1
+  },
+  "shelf_position_numbers": {
+    "number": 1
+  },
+  "container_types": {
+    "type": "Tray"
+  },
+  "barcode_types": {
+    "name": "barcode"
+  },
+  "shelving_jobs": {
+    "trayed": true,
+    "run_time": "04:00:00",
+    "status": "Paused"
+  },
+  "shelving_jobs_tray_association": {
+    "verified": false
+  },
+  "shelving_jobs_item_association": {
+    "verified": false
+  },
+  "barcodes": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "barcode_type_id": 1,
+      "barcode": "5901234123457"
+  },
+  "ladder_numbers": {
+    "number": 4
+  },
+  "ladders": {
+    "ladder_number_id": 1,
+    "side_id": 1
+  },
+  "owner_tiers": {
+    "level": 2,
+    "name": "organization"
+  },
+  "owners": {
+    "name": "Special Collection Assistant Directorate",
+    "owner_tier_id": 1
+  },
+  "accession_jobs": {
+    "trayed": true,
+    "run_time": "04:00:00",
+    "status": "Paused"
+  },
+  "verification_jobs": {
+    "trayed": false,
+    "run_time": "04:00:00",
+    "status": "Paused"
+  },
+  "items": {
+    "id": 1
+  },
+  "size_class": {
+    "name": "Extra Large"
+  },
+  "trays": {
+    "accession_dt": "2024-01-01T00:00:00",
+    "shelved_dt": "2024-01-01T00:00:00",
+    "withdrawal_dt": "2024-01-01T00:00:00"
+  },
+  "users": {
+    "first_name": "Jim",
+    "last_name": "Doe"
+  },
+  "groups": {
+    "name": "Updated Group 3"
+  },
+    "refile_jobs": {
+    "status": "Paused"
+  }
+}

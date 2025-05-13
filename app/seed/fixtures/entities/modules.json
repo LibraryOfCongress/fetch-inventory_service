@@ -1,0 +1,59 @@
+{
+  "model": "app.models.modules.Module",
+  "data": [
+    {
+      "module_number": "1",
+      "!building_id": {
+        "model": "app.models.buildings.Building",
+        "filter": {
+          "name": "Fort Meade"
+        }
+      }
+    },
+    {
+      "module_number": "2",
+      "!building_id": {
+        "model": "app.models.buildings.Building",
+        "filter": {
+          "name": "Fort Meade"
+        }
+      }
+    },
+    {
+      "module_number": "3",
+      "!building_id": {
+        "model": "app.models.buildings.Building",
+        "filter": {
+          "name": "Fort Meade"
+        }
+      }
+    },
+    {
+      "module_number": "4",
+      "!building_id": {
+        "model": "app.models.buildings.Building",
+        "filter": {
+          "name": "Cabin Branch"
+        }
+      }
+    },
+    {
+      "module_number": "5",
+      "!building_id": {
+        "model": "app.models.buildings.Building",
+        "filter": {
+          "name": "Isengard"
+        }
+      }
+    },
+    {
+      "module_number": "6",
+      "!building_id": {
+        "model": "app.models.buildings.Building",
+        "filter": {
+          "name": "Isengard"
+        }
+      }
+    }
+  ]
+}

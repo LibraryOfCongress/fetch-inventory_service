@@ -1,0 +1,46 @@
+{
+  "model": "app.models.shelves.Shelf",
+  "data": [
+    {
+      "!barcode_id": {
+        "model": "app.models.barcodes.Barcode",
+        "filter": {
+          "value": 100100
+        }
+      },
+      "height": 27.35,
+      "width": 70,
+      "depth": 48.2,
+      "!container_type_id": {
+        "model": "app.models.container_types.ContainerType",
+        "filter": {
+          "type": "Tray"
+        }
+      },
+      "!shelf_number_id": {
+        "model": "app.models.shelf_numbers.ShelfNumber",
+        "filter": {
+          "number": 1
+        }
+      },
+      "!shelf_type_id": {
+        "model": "app.models.shelf_types.ShelfType",
+        "filter": {
+          "id": 1
+        }
+      },
+      "!owner_id": {
+        "model": "app.models.owners.Owner",
+        "filter": {
+          "name": "Collections & Management"
+        }
+      },
+      "!ladder_id": {
+        "model": "app.models.ladders.Ladder",
+        "filter": {
+          "id": 1
+        }
+      }
+    }
+  ]
+}

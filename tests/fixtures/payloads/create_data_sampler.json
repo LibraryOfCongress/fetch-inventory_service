@@ -1,0 +1,169 @@
+{
+  "buildings": {
+    "name": "Building 1"
+  },
+  "modules": {
+    "building_id": 1,
+    "module_number": "1"
+  },
+  "aisle_numbers": {
+    "number": 1
+  },
+  "aisles": {
+    "aisle_number_id": 1,
+    "module_id": 1,
+    "sort_priority": 1
+  },
+  "side_orientations": {
+    "name": "Left"
+  },
+  "sides": {
+    "aisle_id": 1,
+    "side_orientation_id": 1
+  },
+  "shelves": {
+      "container_type_id": 1,
+      "depth": 27,
+      "height": 15.7,
+      "ladder_id": 1,
+      "owner_id": 1,
+      "shelf_number_id": 1,
+      "width": 30.33,
+      "shelf_type_id": 1,
+      "sort_priority": 3
+  },
+  "shelf_numbers": {
+    "number": 1
+  },
+  "shelf_positions": {
+    "shelf_id": 1,
+    "shelf_position_number_id": 1
+  },
+  "shelf_position_numbers": {
+    "number": 1
+  },
+  "container_types": {
+    "type": "Tray"
+  },
+  "barcode_types": {
+    "name": "qrcode"
+  },
+  "barcodes": {
+    "type_id": 1,
+    "value": "5901234123457"
+  },
+  "ladder_numbers": {
+    "number": 1
+  },
+  "ladders": {
+    "ladder_number_id": 1,
+    "side_id": 1,
+    "sort_priority": 2
+  },
+  "owner_tiers": {
+    "level": 1,
+    "name": "organization"
+  },
+  "owners": {
+    "name": "Special Collection Directorate",
+    "owner_tier_id": 1
+  },
+  "shelving_jobs": {
+       "building_id": 1,
+        "origin": "Verification",
+        "status": "Created",
+        "user_id": 1,
+        "verification_jobs": [
+          1
+        ]
+  },
+  "accession_jobs": {
+      "container_type_id": 1,
+      "run_time": "03:25:15",
+      "status": "Created",
+      "last_transition": "2023-11-27T12:34:56.789123Z",
+      "trayed": true,
+      "owner_id": 1,
+      "user_id": 1
+  },
+  "verification_jobs": {
+      "accession_job_id": 1,
+      "container_type_id": 1,
+      "last_transition": "2023-11-27T12:34:56.789123Z",
+      "owner_id": 1,
+      "run_time": "03:25:15",
+      "status": "Created",
+      "trayed": true,
+      "user_id": 1
+  },
+  "subcollections": {
+    "name": "A Song of Ice and Fire"
+  },
+  "items": {
+    "status": "In",
+    "accession_dt": "2023-10-08T20:46:56.764426",
+    "accession_job_id": 1,
+    "arbitrary_data": "Signed copy",
+    "condition": "Good",
+    "container_type_id": 1,
+    "media_type_id": 1,
+    "owner_id": 1,
+    "subcollection_id": 1,
+    "title": "Lord of The Rings",
+    "tray_id": 1,
+    "size_class_id": 1,
+    "verification_job_id": 1,
+    "volume": "I",
+    "withdrawal_dt": "2023-10-08T20:46:56.764426"
+  },
+  "size_class": {
+    "name": "Small",
+    "short_name": "S"
+  },
+  "media_types": {
+    "name": "Paper"
+  },
+  "trays": {
+    "accession_job_id": 1,
+    "verification_job_id": 1,
+    "container_type_id": 1,
+    "size_class_id": 1,
+    "owner_id": 1,
+    "media_type_id": 1,
+    "shelf_position_id": 1,
+    "conveyance_bin_id": 1,
+    "accession_dt": "2024-01-01T00:00:00.000000",
+    "shelved_dt": "2024-01-01T00:00:00.000000",
+    "withdrawal_dt": "2024-01-01T00:00:00.000000"
+  },
+  "users": {
+    "first_name": "John",
+    "last_name": "Wick"
+  },
+  "permissions": {
+    "name": "admin"
+  },
+  "groups": {
+    "name": "Test Group"
+  },
+  "request_types": {
+    "type": "General Delivery"
+  },
+  "requests": {
+    "barcode_value": "RS4321",
+    "request_type_id": 1,
+    "delivery_location_id": 1,
+    "requestor_name": "Bilbo Baggins",
+    "scanned_for_pick_list": false,
+    "pick_list_id": 1
+  },
+  "pick_lists": {
+    "user_id": 1,
+    "status": "Created"
+  },
+  "refile_jobs": {
+    "assigned_user_id": 1,
+    "run_time": "00:00:00",
+    "status": "Created"
+  }
+}

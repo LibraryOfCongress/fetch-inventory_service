@@ -1,0 +1,17 @@
+{
+  "model": "app.models.delivery_locations.DeliveryLocation",
+  "data": [
+    {
+      "name": "LMG28 - Gold Charge Station",
+      "address": "Madison Building"
+    },
+    {
+      "name": "LJG44 - IMDF Delivery",
+      "address": "Jefferson Building"
+    },
+    {
+      "name": "LJG49 - CMD Front Office",
+      "address": "Jefferson Building"
+    }
+  ]
+}

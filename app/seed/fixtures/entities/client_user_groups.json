@@ -1,0 +1,47 @@
+{
+  "model": "app.models.user_groups.UserGroup",
+  "data": [
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "eone@example.com"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Admin"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "etwo@example.com"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Admin"
+        }
+      }
+    },
+    {
+      "!user_id": {
+        "model": "app.models.users.User",
+        "filter": {
+          "email": "admin@example.com"
+        }
+      },
+      "!group_id": {
+        "model": "app.models.groups.Group",
+        "filter": {
+          "name": "Admin"
+        }
+      }
+    }
+  ]
+}

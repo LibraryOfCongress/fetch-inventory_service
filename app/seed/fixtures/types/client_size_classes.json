@@ -1,0 +1,1020 @@
+{
+  "model": "app.models.size_class.SizeClass",
+  "data": [
+    {
+      "name": "DOCUMENT STORAGE BOXES (LEGAL) - DS1",
+      "short_name": "DS1",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "DOCUMENT STORAGE BOXES (1/2 LEGAL) - DS2",
+      "short_name": "DS2",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "MICROFILM BOXES - 12-REEL - MF",
+      "short_name": "MF",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SHEET MUSIC BOXES - SM",
+      "short_name": "SM",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "RECORD STORAGE BOXES - RS",
+      "short_name": "RS",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "AFC-A",
+      "short_name": "AFC-A",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "AFC-B",
+      "short_name": "AFC-B",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "AFC-C",
+      "short_name": "AFC-C",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "AFC-D",
+      "short_name": "AFC-D",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "AFC-E",
+      "short_name": "AFC-E",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "GL-S/M/L",
+      "short_name": "GL-S/M/L",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "ROL-4",
+      "short_name": "ROL-4",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "PP-A",
+      "short_name": "PP-A",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "PP-AA",
+      "short_name": "PP-AA",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "PP-B",
+      "short_name": "PP-B",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "PP-C",
+      "short_name": "PP-C",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "RB-A",
+      "short_name": "RB-A",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "RB-B",
+      "short_name": "RB-B",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "RB-C",
+      "short_name": "RB-C",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "EH-S",
+      "short_name": "EH-S",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "AL FORT MEADE BOXES - AL",
+      "short_name": "AL",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "AH FORT MEADE BOXES - AH",
+      "short_name": "AH",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "BL FORT MEADE BOXES - BL",
+      "short_name": "BL",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "BH FORT MEADE BOXES - BH",
+      "short_name": "BH",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "CL FORT MEADE BOXES - CL",
+      "short_name": "CL",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "RM-A",
+      "short_name": "RM-A",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "RM-B",
+      "short_name": "RM-B",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SM-A",
+      "short_name": "SM-A",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SM-B",
+      "short_name": "SM-B",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SM-C",
+      "short_name": "SM-C",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SM-D",
+      "short_name": "SM-D",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SM-B/D",
+      "short_name": "SM-B/D",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-A",
+      "short_name": "SER-A",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-A1",
+      "short_name": "SER-A1",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-A2",
+      "short_name": "SER-A2",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-A3",
+      "short_name": "SER-A3",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-B",
+      "short_name": "SER-B",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-B1",
+      "short_name": "SER-B1",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-C",
+      "short_name": "SER-C",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "CH FORT MEADE BOXES - CH",
+      "short_name": "CH",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "DL FORT MEADE BOXES - DL",
+      "short_name": "DL",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "DH FORT MEADE BOXES - DH",
+      "short_name": "DH",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "EL FORT MEADE BOXES - EL",
+      "short_name": "EL",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "EH FORT MEADE BOXES - EH",
+      "short_name": "EH",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "RM-1",
+      "short_name": "RM-1",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "CF",
+      "short_name": "CF",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SB-L",
+      "short_name": "SB-L",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "MUS-A",
+      "short_name": "MUS-A",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "MUS-B/C/D/E",
+      "short_name": "MUS-B/C/D/E",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "MUS-F/G/H",
+      "short_name": "MUS-F/G/H",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-C1",
+      "short_name": "SER-C1",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-C2",
+      "short_name": "SER-C2",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "SER-D",
+      "short_name": "SER-D",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "VHP-A",
+      "short_name": "VHP-A",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "VHP-A/B",
+      "short_name": "VHP-A/B",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "HP-A/B",
+      "short_name": "HP-A/B",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "DHS",
+      "short_name": "DHS",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "EL-S",
+      "short_name": "EL-S",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "XA",
+      "short_name": "XA",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "XB",
+      "short_name": "XB",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "XF",
+      "short_name": "XF",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "XM",
+      "short_name": "XM",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "XP",
+      "short_name": "XP",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "XS",
+      "short_name": "XS",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat1",
+      "short_name": "Flat1",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat2",
+      "short_name": "Flat2",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat3",
+      "short_name": "Flat3",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat4",
+      "short_name": "Flat4",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat5",
+      "short_name": "Flat5",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat6",
+      "short_name": "Flat6",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat7",
+      "short_name": "Flat7",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat8",
+      "short_name": "Flat8",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat9",
+      "short_name": "Flat9",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat10",
+      "short_name": "Flat10",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat11",
+      "short_name": "Flat11",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat12",
+      "short_name": "Flat12",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat13",
+      "short_name": "Flat13",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat14",
+      "short_name": "Flat14",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat15",
+      "short_name": "Flat15",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat16",
+      "short_name": "Flat16",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat17",
+      "short_name": "Flat17",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat18",
+      "short_name": "Flat18",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat19",
+      "short_name": "Flat19",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat20",
+      "short_name": "Flat20",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat21",
+      "short_name": "Flat21",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat22",
+      "short_name": "Flat22",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat23",
+      "short_name": "Flat23",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat24",
+      "short_name": "Flat24",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat25",
+      "short_name": "Flat25",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat26",
+      "short_name": "Flat26",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat27",
+      "short_name": "Flat27",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat28",
+      "short_name": "Flat28",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat29",
+      "short_name": "Flat29",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat30",
+      "short_name": "Flat30",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat31",
+      "short_name": "Flat31",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat32",
+      "short_name": "Flat32",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat33",
+      "short_name": "Flat33",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat34",
+      "short_name": "Flat34",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat35",
+      "short_name": "Flat35",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat36",
+      "short_name": "Flat36",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat37",
+      "short_name": "Flat37",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat38",
+      "short_name": "Flat38",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat39",
+      "short_name": "Flat39",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat40",
+      "short_name": "Flat40",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Flat41",
+      "short_name": "Flat41",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Unassigned",
+      "short_name": "UNA",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 1 per Shelf",
+      "short_name": "NT1",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 10 per Shelf",
+      "short_name": "NT10",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 11 per Shelf",
+      "short_name": "NT11",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 12 per Shelf",
+      "short_name": "NT12",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 13 per Shelf",
+      "short_name": "NT13",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 14 per Shelf",
+      "short_name": "NT14",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 15 per Shelf",
+      "short_name": "NT15",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 16 per Shelf",
+      "short_name": "NT16",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 17 per Shelf",
+      "short_name": "NT17",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 18 per Shelf",
+      "short_name": "NT18",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 19 per Shelf",
+      "short_name": "NT19",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 2 per Shelf",
+      "short_name": "NT2",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 20 per Shelf",
+      "short_name": "NT20",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 21 per Shelf",
+      "short_name": "NT21",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 22 per Shelf",
+      "short_name": "NT22",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 23 per Shelf",
+      "short_name": "NT23",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 24 per Shelf",
+      "short_name": "NT24",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 25 per Shelf",
+      "short_name": "NT25",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 26 per Shelf",
+      "short_name": "NT26",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 27 per Shelf",
+      "short_name": "NT27",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 28 per Shelf",
+      "short_name": "NT28",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 29 per Shelf",
+      "short_name": "NT29",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 3 per Shelf",
+      "short_name": "NT3",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 30 per Shelf",
+      "short_name": "NT30",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 32 per Shelf",
+      "short_name": "NT32",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 33 per Shelf",
+      "short_name": "NT33",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 34 per Shelf",
+      "short_name": "NT34",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 35 per Shelf",
+      "short_name": "NT35",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 36 per Shelf",
+      "short_name": "NT36",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 39 per Shelf",
+      "short_name": "NT39",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 4 per Shelf",
+      "short_name": "NT4",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 40 per Shelf",
+      "short_name": "NT40",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 42 per Shelf",
+      "short_name": "NT42",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 48 per Shelf",
+      "short_name": "NT48",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 5 per Shelf",
+      "short_name": "NT5",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 6 per Shelf",
+      "short_name": "NT6",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 7 per Shelf",
+      "short_name": "NT7",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 8 per Shelf",
+      "short_name": "NT8",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    },
+    {
+      "name": "Non-Tray- 9 per Shelf",
+      "short_name": "NT9",
+      "height": 0,
+      "width": 0,
+      "depth": 0
+    }
+  ]
+}

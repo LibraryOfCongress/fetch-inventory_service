@@ -1,0 +1,17 @@
+{
+  "model": "app.models.media_types.MediaType",
+  "data": [
+    {
+      "name": "Book/Volume"
+    },
+    {
+      "name": "Flat File"
+    },
+    {
+      "name": "Microfilm"
+    },
+    {
+      "name": "Archival Box"
+    }
+  ]
+}

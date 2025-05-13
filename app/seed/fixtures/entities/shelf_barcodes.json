@@ -1,0 +1,14 @@
+{
+  "model": "app.models.barcodes.Barcode",
+  "data": [
+    {
+      "value": "100100",
+      "!type_id": {
+        "model": "app.models.barcode_types.BarcodeType",
+        "filter": {
+          "name": "Shelf"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,301 @@
+stages:
+  - build
+  - build_deploy_prod
+  - trigger
+  - deploy
+  - controls
+  - sonarqube
+
+build_image_dev:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:latest
+  script:
+    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
+    - cp -v images/api.dev.Containerfile Dockerfile
+    - echo $DEVELOP_APP_NAME > .env
+    - echo $DEVELOP_APP_ENVIRONMENT >> .env
+    - echo $DEVELOP_IDP_ENTITY_ID >> .env
+    - echo $DEVELOP_IDP_LOGIN_URL >> .env
+    - echo $DEVELOP_VUE_HOST >> .env
+    - echo $DEVELOP_TIMEZONE >> .env
+    - echo $DEVELOP_DATABASE_URL >> .env
+    - echo $DEVELOP_MIGRATION_URL >> .env
+    - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop'
+      when: manual
+      allow_failure: true
+
+build_demo:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    IMAGE_FULL_TAG: git.example.com:4567/fetch/inventory_service:demo
+  script:
+    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
+    - cp -v images/api.dev.Containerfile Dockerfile
+    - echo $DEVELOP_APP_NAME > .env
+    - echo $DEVELOP_APP_ENVIRONMENT >> .env
+    - echo $DEVELOP_IDP_ENTITY_ID >> .env
+    - echo $DEVELOP_IDP_LOGIN_URL >> .env
+    - echo $DEVELOP_VUE_HOST >> .env
+    - echo $DEVELOP_TIMEZONE >> .env
+    - echo $DEVELOP_DATABASE_URL >> .env
+    - echo $DEVELOP_MIGRATION_URL >> .env
+    - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
+  rules:
+    - if: '$DEMO_BUILD =~ /^TRUE$/'
+      when: manual
+    - when: never
+
+build_mr:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  script:
+    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
+    - echo CI_COMMIT_BRANCH $CI_COMMIT_BRANCH
+    - cp -v images/api.dev.Containerfile Dockerfile
+    - echo $DEVELOP_APP_NAME > .env
+    - echo $DEVELOP_APP_ENVIRONMENT >> .env
+    - echo $DEVELOP_TIMEZONE >> .env
+    - echo $DEVELOP_IDP_ENTITY_ID >> .env
+    - echo $DEVELOP_IDP_LOGIN_URL >> .env
+    - echo $DEVELOP_VUE_HOST >> .env
+    - echo $DEVELOP_DATABASE_URL >> .env
+    - echo $DEVELOP_MIGRATION_URL >> .env
+    - echo $DEVELOP_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $DEVELOP_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+
+build_image_test:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/test:latest
+  script:
+    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
+    - cp -v images/api.test.Containerfile Dockerfile
+    - echo $TEST_APP_NAME > .env
+    - echo $TEST_APP_ENVIRONMENT >> .env
+    - echo $TEST_TIMEZONE >> .env
+    - echo $TEST_IDP_ENTITY_ID >> .env
+    - echo $TEST_IDP_LOGIN_URL >> .env
+    - echo $TEST_VUE_HOST >> .env
+    - echo $TEST_DATABASE_URL >> .env
+    - echo $TEST_MIGRATION_URL >> .env
+    - echo $TEST_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $TEST_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $TEST_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'test' || $CI_COMMIT_BRANCH == 'develop'
+
+build_image_staging:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/stage:latest
+  script:
+    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
+    - cp -v images/api.stage.Containerfile Dockerfile
+    - echo $STAGING_APP_NAME > .env
+    - echo $STAGING_APP_ENVIRONMENT >> .env
+    - echo $STAGING_TIMEZONE >> .env
+    - echo $STAGING_IDP_ENTITY_ID >> .env
+    - echo $STAGING_IDP_LOGIN_URL >> .env
+    - echo $STAGING_VUE_HOST >> .env
+    - echo $STAGING_DATABASE_URL >> .env
+    - echo $STAGING_MIGRATION_URL >> .env
+    - echo $STAGING_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $STAGING_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $STAGING_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+      when: manual
+
+build_image_prod:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/prod:latest
+  script:
+    - echo IMAGE_FULL_TAG $IMAGE_FULL_TAG
+    - cp -v images/api.prod.Containerfile Dockerfile
+    - echo $PROD_APP_NAME > .env
+    - echo $PROD_APP_ENVIRONMENT >> .env
+    - echo $PROD_TIMEZONE >> .env
+    - echo $PROD_IDP_ENTITY_ID >> .env
+    - echo $PROD_IDP_LOGIN_URL >> .env
+    - echo $PROD_VUE_HOST >> .env
+    - echo $PROD_DATABASE_URL >> .env
+    - echo $PROD_MIGRATION_URL >> .env
+    - echo $PROD_ENABLE_ORM_SQL_LOGGING >> .env
+    - echo $PROD_ALLOWED_ORIGINS_REGEX >> .env
+    - echo $PROD_ALLOWED_ORIGINS >> .env
+    - echo "COMMIT=$CI_COMMIT_SHORT_SHA" >> .env
+    - echo "BRANCH=$CI_COMMIT_BRANCH" >> .env
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
+    - docker push $IMAGE_FULL_TAG
+  rules:
+    - if: '$PROD_BUILD =~ /^TRUE$/'
+      when: manual
+    - when: never
+
+deploy_dev:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: ['']
+  environment:
+    name: develop
+    url: https://inventory.dev.fetch.example.com/status/
+  script:
+    - kubectl config use-context fetch/build:fetch
+    - kubectl -n fetch apply -f k8s/deployment-dev.yml
+    - kubectl -n fetch apply -f k8s/service.yml
+    - sleep 10
+    - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop'
+      when: manual
+
+deploy_demo:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: ['']
+  script:
+    - kubectl config use-context fetch/build:fetch
+    - kubectl -n fetch apply -f k8s/deployment-demo.yml
+    - kubectl -n fetch apply -f k8s/service.yml
+    - sleep 10
+    - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
+  rules:
+    - if: '$DEMO_BUILD =~ /^TRUE$/'
+      when: manual
+    - when: never
+
+deploy_test:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: ['']
+  environment:
+    name: test
+    url: https://inventory.test.fetch.example.com/status/
+  script:
+    - kubectl config use-context fetch/build:fetch-test -v=6
+    - kubectl -n fetch apply -f k8s/deployment-test.yml
+    - kubectl -n fetch apply -f k8s/service.yml
+    - sleep 10
+    - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop'
+      when: manual
+
+deploy_stage:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: ['']
+  environment:
+    name: staging
+    url: https://inventory.stage.fetch.example.com/status/
+  script:
+    - kubectl config use-context fetch/build:fetch-stage -v=6
+    - kubectl -n fetch apply -f k8s/deployment-stage.yml
+    - kubectl -n fetch apply -f k8s/service.yml
+    - sleep 10
+    - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'staging'
+      when: manual
+
+deploy_prod:
+  stage: build_deploy_prod
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  environment:
+    name: prod
+    url: https://inventory.fetch.example.com/status/
+  script:
+    - kubectl config use-context fetch/build:fetch-prod -v=6
+    - kubectl -n fetch apply -f k8s/deployment-prod.yml
+    - kubectl -n fetch apply -f k8s/service.yml
+    - sleep 10
+    - kubectl -n fetch rollout restart deployment/inventory-service
+    - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
+  rules:
+    - if: '$PROD_BUILD =~ /^TRUE$/'
+      when: manual
+    - when: never
+
+sonarqube_run:
+  stage: sonarqube
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  script:
+    - sonar-scanner
+      -Dsonar.projectKey=fetch-inventory-service
+      -Dsonar.sources=.
+      -Dsonar.host.url=http://example.com:80
+      -Dsonar.login=$DEV_SONARQUBE_TOKEN
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: manual
+      allow_failure: true
+    - when: never

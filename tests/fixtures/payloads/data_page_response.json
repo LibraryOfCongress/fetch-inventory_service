@@ -1,0 +1,308 @@
+{
+  "buildings": {
+      "items": [
+        {
+          "id": 1,
+          "name": "Building 1"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "modules": {
+    "items": [
+      {
+        "id": 1
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "aisle_numbers": {
+      "items": [
+        {
+          "id": 1,
+          "number": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "aisles": {
+      "items": [
+        {
+          "id": 1,
+          "aisle_number_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "side_orientations": {
+      "items": [
+        {
+          "id": 1,
+          "name": "Left"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "sides": {
+      "items": [
+        {
+          "id": 1,
+          "side_orientation_id": 1,
+          "aisle_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "barcode_types": {
+      "items": [
+        {
+          "id": 1,
+          "name": "qrcode"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "barcodes": {
+      "items": [
+          {
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "barcode_type_id": 1,
+              "barcode": "5901234123457"
+          }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "ladder_numbers": {
+      "items": [
+        {
+          "id": 1,
+          "number": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "ladders": {
+      "items": [
+        {
+          "id": 1,
+          "ladder_number_id": 1,
+          "side_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelf_numbers": {
+      "items": [
+        {
+          "id": 1,
+          "number": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelf_position_numbers": {
+      "items": [
+        {
+          "id": 1,
+          "number": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelf_positions": {
+      "items": [
+        {
+          "id": 1,
+          "shelf_id": 1,
+          "shelf_position_number_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelves": {
+      "items": [
+        {
+          "id": 1,
+          "ladder_id": 1
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "shelving_jobs": {
+      "items": [
+        {
+          "id": 1,
+          "status": "Created"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "accession_jobs": {
+      "items": [
+        {
+          "id": 1,
+          "trayed": true,
+          "status": "Created"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "verification_jobs": {
+      "items": [
+        {
+          "id": 1,
+          "trayed": true,
+          "status": "Created"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 50,
+      "pages": 1
+  },
+  "items": {
+    "id": 1
+  },
+  "size_class": {
+    "items": [
+      {
+        "id": 1,
+        "name": "Small"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "trays": {
+    "items": [
+      {
+        "accession_job_id": 1,
+        "verification_job_id": 1,
+        "container_type_id": 1,
+        "barcode_id": 1,
+        "size_class_id": 1,
+        "owner_id": 1,
+        "media_type_id": 1,
+        "shelf_position_id": 1,
+        "conveyance_bin_id": 1
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "users": {
+    "items": [
+      {
+        "id": 1,
+        "first_name": "John",
+        "last_name": "Wick"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "permissions": {
+    "items": [
+      {
+        "id": 1,
+        "name": "admin"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "groups": {
+    "items": [
+      {
+        "id": 1,
+        "name": "Test Group"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "pick_lists": {
+    "items": [
+      {
+        "id": 1,
+        "status": "Created"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  },
+  "refile_jobs": {
+    "items": [
+      {
+        "id": 1,
+        "assigned_user_id": 1,
+        "run_time": "00:00:00",
+        "status": "Created"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 50,
+    "pages": 1
+  }
+}

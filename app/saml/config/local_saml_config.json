@@ -1,0 +1,32 @@
+{
+  "strict": true,
+  "debug": true,
+  "security": {
+    "requestedAuthnContext": false
+  },
+  "sp": {
+    "entityId": "https://localhost:8001/",
+    "assertionConsumerService": {
+        "url": "https://localhost:8001/auth/sso/acs",
+        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+    },
+    "singleLogoutService": {
+        "url": "https://localhost:8001/auth/sso/logout",
+        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+    },
+    "x509cert": "",
+    "privateKey": ""
+  },
+  "idp": {
+      "entityId": "https://sts.windows.net/example/",
+      "singleSignOnService": {
+          "url": "https://login.microsoftonline.com/example/saml2",
+          "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      },
+      "singleLogoutService": {
+          "url": "https://logout.microsoftonline.com/example/saml2",
+          "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      },
+      "x509cert": "example"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "model": "app.models.users.User",
+  "data": [
+    {
+      "first_name": "Example",
+      "last_name": "One",
+      "email": "eone@example.com"
+    },
+    {
+      "first_name": "Example",
+      "last_name": "Two",
+      "email": "etwo@example.com"
+    }
+  ]
+}

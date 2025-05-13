@@ -1,0 +1,8 @@
+address = "https://$CI_SERVER_HOST/api/v4/projects/$CI_PROJECT_ID/terraform/state/$TF_STATE_NAME"
+lock_address = "https://$CI_SERVER_HOST/api/v4/projects/$CI_PROJECT_ID/terraform/state/$TF_STATE_NAME/lock"
+unlock_address = "https://$CI_SERVER_HOST/api/v4/projects/$CI_PROJECT_ID/terraform/state/$TF_STATE_NAME/lock"
+username = "deployer"
+password = "$GITLAB_ACCESS_TOKEN"
+lock_method = "POST"
+unlock_method= "DELETE"
+retry_wait_min= 5
