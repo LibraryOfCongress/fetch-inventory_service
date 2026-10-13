@@ -1,14 +1,18 @@
+# /code/app/routers/refile_queue.py - REFACRORED TO SQLALCHEMY V2
+
 from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlmodel import Session, select
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
 from starlette import status
 
 from app.database.session import get_session
-from app.permissions import require_permissions
 from app.logger import inventory_logger
 from app.models.barcodes import Barcode
 from app.models.items import Item
@@ -18,6 +22,9 @@ from app.models.refile_items import RefileItem
 from app.models.refile_jobs import RefileJob
 from app.models.refile_non_tray_items import RefileNonTrayItem
 from app.models.requests import Request
+from app.models.owners import Owner
+from app.models.ils_configurations import ILSConfiguration
+from app.ils.factory import get_ils_adapter
 
 from app.schemas.refile_queue import (
     RefileQueueInput,
@@ -31,28 +38,22 @@ from app.sorting import RefileQueueSorter
 from app.utilities import get_refile_queue
 from app.filter_params import RefileQueueParams, SortParams
 
+from app.auth.dependencies import RequiresPermission
+
 router = APIRouter(
     prefix="/refile-queue",
     tags=["refile-queue"],
 )
 
 
-@router.get("/", response_model=Page[RefileQueueListOutput])
+@router.get("/", response_model=Page[RefileQueueListOutput], dependencies=[Depends(RequiresPermission("can_access_refile"))])
 def get_refile_queue_list(
     params: RefileQueueParams = Depends(),
     session: Session = Depends(get_session),
-    sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_refile")),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Get a list of refile jobs
-
-    **Args:**
-    - scanned_queue: Whether to get the scanned queue or not
-    - building_id: The ID of the building
-
-    **Returns:**
-    - Refile Job List Output: The paginated list of refile jobs
     """
     query = get_refile_queue(params)
 
@@ -64,23 +65,12 @@ def get_refile_queue_list(
     return paginate(session, query)
 
 
-@router.patch("/", response_model=RefileQueueWriteOutput)
+@router.patch("/", response_model=RefileQueueWriteOutput, dependencies=[Depends(RequiresPermission("can_add_refile_item_to_queue"))])
 def add_to_refile_queue(
-    refile_input: RefileQueueInput,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_add_refile_item_to_queue")),
+    refile_input: RefileQueueInput, session: Session = Depends(get_session)
 ):
     """
     Add an item to the refile queue
-
-    **Args:**
-    - Refile Queue Input: The ID of the item to add to the refile queue.
-
-    **Returns:**
-    - Refile Queue Detail Output: The refile queue details.
-
-    **Raises:**
-    - HTTPException: If the item is not found.
     """
     lookup_barcode_value = refile_input.barcode_value
     update_dt = datetime.now(timezone.utc)
@@ -88,8 +78,11 @@ def add_to_refile_queue(
     if not lookup_barcode_value:
         raise BadRequest(detail="No barcode value found in request")
 
+    # V2 FIX: session.query().filter().first() -> session.execute(select(...)).scalars().first()
     barcode = (
-        session.query(Barcode).filter(Barcode.value == lookup_barcode_value).first()
+        session.execute(select(Barcode).filter(Barcode.value == lookup_barcode_value))
+        .scalars()
+        .first()
     )
 
     if not barcode:
@@ -97,9 +90,13 @@ def add_to_refile_queue(
     if barcode.withdrawn:
         raise ValidationException(detail="Item has already been withdrawn")
 
-    item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    # V2 FIX
+    item = session.execute(select(Item).filter(Item.barcode_id == barcode.id)).scalars().first()
+    # V2 FIX
     non_tray_item = (
-        session.query(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id).first()
+        session.execute(select(NonTrayItem).filter(NonTrayItem.barcode_id == barcode.id))
+        .scalars()
+        .first()
     )
 
     if item:
@@ -108,18 +105,25 @@ def add_to_refile_queue(
         if item.scanned_for_refile_queue:
             raise ValidationException(detail="Item is already in the refile queue")
 
+        # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
         existing_refile_items = (
-            session.query(RefileItem).filter(RefileItem.item_id == item.id).all()
+            session.execute(select(RefileItem).filter(RefileItem.item_id == item.id))
+            .scalars()
+            .all()
         )
 
         if existing_refile_items:
             refile_items_id = [refile.refile_job_id for refile in existing_refile_items]
+            # V2 FIX: session.query().filter().first() -> session.execute(select(...)).scalars().first()
             existing_refile_job = (
-                session.query(RefileJob)
-                .filter(
-                    RefileJob.id.in_(refile_items_id),
-                    RefileJob.status != "Completed",
+                session.execute(
+                    select(RefileJob)
+                    .filter(
+                        RefileJob.id.in_(refile_items_id),
+                        RefileJob.status != "Completed",
+                    )
                 )
+                .scalars()
                 .first()
             )
 
@@ -130,11 +134,14 @@ def add_to_refile_queue(
                     "refile "
                     f"Job ID: {existing_refile_job.id}"
                 )
+        # V2 FIX: session.query().join().filter().all() -> session.execute(select(...)).all() (only need PickList.id)
         existing_pick_list_items = (
-            session.query(PickList.id)
-            .join(Request, PickList.id == Request.pick_list_id)
-            .filter(Request.item_id == item.id)
-            .filter(PickList.status != "Completed")
+            session.execute(
+                select(PickList.id)
+                .join(Request, PickList.id == Request.pick_list_id)
+                .filter(Request.item_id == item.id)
+                .filter(PickList.status != "Completed")
+            )
             .all()
         )
 
@@ -158,9 +165,10 @@ def add_to_refile_queue(
         if non_tray_item.scanned_for_refile_queue:
             raise ValidationException(detail="Item is already in the refile queue")
 
+        # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
         existing_refile_non_tray_items = (
-            session.query(RefileNonTrayItem)
-            .filter(RefileNonTrayItem.non_tray_item_id == non_tray_item.id)
+            session.execute(select(RefileNonTrayItem).filter(RefileNonTrayItem.non_tray_item_id == non_tray_item.id))
+            .scalars()
             .all()
         )
 
@@ -168,12 +176,16 @@ def add_to_refile_queue(
             refile_items_id = [
                 refile.refile_job_id for refile in existing_refile_non_tray_items
             ]
+            # V2 FIX: session.query().filter().first() -> session.execute(select(...)).scalars().first()
             existing_refile_job = (
-                session.query(RefileJob)
-                .filter(
-                    RefileJob.id.in_(refile_items_id),
-                    RefileJob.status != "Completed",
+                session.execute(
+                    select(RefileJob)
+                    .filter(
+                        RefileJob.id.in_(refile_items_id),
+                        RefileJob.status != "Completed",
+                    )
                 )
+                .scalars()
                 .first()
             )
 
@@ -185,11 +197,14 @@ def add_to_refile_queue(
                     f"Job ID: {existing_refile_job.id}"
                 )
 
+        # V2 FIX: session.query().join().filter().all() -> session.execute(select(...)).all() (only need PickList.id)
         existing_pick_list_items = (
-            session.query(PickList.id)
-            .join(Request, PickList.id == Request.pick_list_id)
-            .filter(Request.non_tray_item_id == non_tray_item.id)
-            .filter(PickList.status != "Completed")
+            session.execute(
+                select(PickList.id)
+                .join(Request, PickList.id == Request.pick_list_id)
+                .filter(Request.non_tray_item_id == non_tray_item.id)
+                .filter(PickList.status != "Completed")
+            )
             .all()
         )
 
@@ -203,8 +218,39 @@ def add_to_refile_queue(
         non_tray_item.scanned_for_refile = False
         non_tray_item.update_dt = update_dt
 
-        session.add(non_tray_item)
+        non_tray_item.update_dt = update_dt
 
+    # -- ILS SYNCHRONOUS REFILE INTERCEPT LAYER --
+    target_entity = item or non_tray_item
+    if target_entity.owner_id:
+        owner = session.get(Owner, target_entity.owner_id)
+        if owner and owner.resolved_ils_configuration_id:
+            config = session.get(ILSConfiguration, owner.resolved_ils_configuration_id)
+            if config and config.is_active and config.enable_refile_hook:
+                adapter = get_ils_adapter(config)
+                
+                try:
+                    check_in_resp = adapter.check_in_item(lookup_barcode_value)
+                    
+                    if not check_in_resp.is_valid:
+                        raise ValidationException(detail=f"ILS Check-In Failed: {check_in_resp.message or 'Verification failed.'}")
+                        
+                    if not check_in_resp.status_matches:
+                        raise ValidationException(detail=f"ILS Refile Block: Item status is '{check_in_resp.current_status}'. Discharge at Circulation Desk first before returning to facility.")
+                        
+                except ValidationException:
+                    raise
+                except HTTPException:
+                    raise
+                except Exception as e:
+                    inventory_logger.error(f"Critical ILS adapter fail on Refile for {lookup_barcode_value}: {e}")
+                    raise ValidationException(detail="ILS Synchronization currently unreachable. Cannot verify Refile status.")
+
+    if item:
+        session.add(item)
+    elif non_tray_item:
+        session.add(non_tray_item)
+        
     session.commit()
 
     if item:
@@ -220,23 +266,12 @@ def add_to_refile_queue(
     return results
 
 
-@router.delete("/")
+@router.delete("/", dependencies=[Depends(RequiresPermission("can_add_refile_item_to_queue"))])
 def remove_from_refile_queue(
-    refile_input: RefileQueueInput,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_add_refile_item_to_queue")),
+    refile_input: RefileQueueInput, session: Session = Depends(get_session)
 ):
     """
     Remove an item from the refile queue
-
-    **Args:**
-    - id: The ID of the item to remove from the refile queue.
-
-    **Returns:**
-    - Refile Queue Detail Output: The refile queue details.
-
-    **Raises:**
-    - HTTPException: If the item is not found.
     """
     lookup_barcode_value = refile_input.barcode_value
     update_dt = datetime.now(timezone.utc)
@@ -244,14 +279,18 @@ def remove_from_refile_queue(
     if not lookup_barcode_value:
         raise BadRequest(detail="No barcode values found in request")
 
+    # V2 FIX: session.query().where().first() -> session.execute(select(...)).scalars().first()
     barcode = (
-        session.query(Barcode).where(Barcode.value == lookup_barcode_value).first()
+        session.execute(select(Barcode).where(Barcode.value == lookup_barcode_value))
+        .scalars()
+        .first()
     )
 
     if not barcode:
         raise NotFound(detail=f"Barcode Value {lookup_barcode_value} not found")
 
-    item = session.query(Item).filter(Item.barcode_id == barcode.id).first()
+    # V2 FIX
+    item = session.execute(select(Item).filter(Item.barcode_id == barcode.id)).scalars().first()
 
     if item:
         if not item or not item.scanned_for_refile_queue:
@@ -263,9 +302,12 @@ def remove_from_refile_queue(
         item.update_dt = update_dt
 
     else:
+        # V2 FIX
         non_tray_item = (
-            session.query(NonTrayItem).where(barcode.id == NonTrayItem.barcode_id)
-        ).first()
+            session.execute(select(NonTrayItem).where(Barcode.id == NonTrayItem.barcode_id))
+            .scalars()
+            .first()
+        )
 
         if not non_tray_item or not non_tray_item.scanned_for_refile_queue:
             raise BadRequest(detail=f"Non Tray Item not found or not in refile queue")

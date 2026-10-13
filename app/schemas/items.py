@@ -1,7 +1,7 @@
 import uuid
 
 from typing import Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 from datetime import datetime, timezone
 
 from app.models.items import ItemStatus
@@ -48,8 +48,8 @@ class ItemInput(BaseModel):
             )
         return value
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "In",
                 "accession_job_id": 1,
@@ -73,6 +73,7 @@ class ItemInput(BaseModel):
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class ItemUpdateInput(BaseModel):
@@ -98,8 +99,8 @@ class ItemUpdateInput(BaseModel):
     accession_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "In",
                 "accession_job_id": 1,
@@ -123,19 +124,21 @@ class ItemUpdateInput(BaseModel):
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class ItemMoveInput(BaseModel):
     tray_barcode_value: str
     assigned_user_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "tray_barcode_value": "5901234123457",
                 "assigned_user_id": 1
             }
         }
+    )
 
 
 class ItemBaseOutput(ItemUpdateInput):
@@ -150,8 +153,8 @@ class ItemListOutput(ItemBaseOutput):
     barcode: Optional[BarcodeDetailReadOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "In",
@@ -235,6 +238,7 @@ class ItemListOutput(ItemBaseOutput):
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class ItemDetailWriteOutput(ItemBaseOutput):
@@ -243,8 +247,8 @@ class ItemDetailWriteOutput(ItemBaseOutput):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "In",
@@ -283,6 +287,7 @@ class ItemDetailWriteOutput(ItemBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class ItemDetailReadOutput(ItemDetailWriteOutput):
@@ -296,9 +301,12 @@ class ItemDetailReadOutput(ItemDetailWriteOutput):
     tray: Optional[TrayDetailReadOutput] = None
     last_requested_dt: Optional[datetime] = None
     last_refiled_dt: Optional[datetime] = None
+    last_refile_job_id: Optional[int] = None
+    last_withdraw_job_id: Optional[int] = None
+    last_request_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "In",
@@ -385,3 +393,4 @@ class ItemDetailReadOutput(ItemDetailWriteOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )

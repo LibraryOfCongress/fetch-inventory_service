@@ -1,11 +1,17 @@
-import pytz, os
+# /migrations/env.py - ULTIMATE FIX FOR NoReferencedTableError
+
+import os
+import importlib # <-- NEW IMPORT
+import pkgutil # <-- NEW IMPORT
 
 from logging.config import fileConfig
 from datetime import datetime, timezone
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from sqlmodel import SQLModel
+# REMOVED: from sqlmodel import SQLModel
+# ADDED: Import the new Base class from your corrected location
+from app.database.base import Base # <--- CRITICAL CHANGE
 
 from alembic import context
 
@@ -32,16 +38,42 @@ else:
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-from migrations.models import *
+
+# =======================================================================
+# CRITICAL FIX: Programmatic model discovery to ensure ALL models are loaded
+# =======================================================================
+def import_all_models():
+    """Dynamically imports all modules under the app.models package."""
+    
+    # We must ensure app.models is imported first to get its path (__path__)
+    models_package = importlib.import_module('app.models')
+
+    # Recursively walk the package to find and import every module.
+    for module_loader, name, is_pkg in pkgutil.walk_packages(
+        models_package.__path__,
+        models_package.__name__ + '.'
+    ):
+        try:
+            importlib.import_module(name)
+        except Exception as e:
+            # Optionally log which model file failed to load, but typically all should load cleanly now.
+            print(f"Warning: Failed to import model {name}: {e}")
+            pass
+
+# --- EXECUTE THE SCAN HERE ---
+import_all_models()
+# --- END EXECUTE THE SCAN ---
+
 
 # target_metadata = mymodel.Base.metadata
-target_metadata = SQLModel.metadata
+# CRITICAL CHANGE: Use Base.metadata instead of SQLModel.metadata
+target_metadata = Base.metadata
+
 
 # Filter out raw sql tables
 def include_object(object, name, type_, reflected, compare_to):
-    # remove this from filtering after we change to class based approach
+    # This filter can be simplified after all models inherit from Base
+    # but for now, keep the audit_log exclusion
     if type_ == "table" and name == "audit_log":
         return False
     return True
@@ -53,17 +85,7 @@ def include_object(object, name, type_, reflected, compare_to):
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
+    """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -78,20 +100,16 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
+    """Run migrations in 'online' mode."""
     def process_revision_directives(context, revision, directives):
         """
         Labels migration file autogeneration by inverted date
-        # 20230801211024 for a migration generated on Aug 1st, 2023 at 21:10:24
         """
-        eastern = pytz.timezone('US/Eastern')
-        current_time_et = datetime.now(eastern)
-        rev_id = current_time_et.strftime("%Y_%m_%d_%H:%M:%S")
+        # eastern = pytz.timezone('US/Eastern')
+        # current_time_et = datetime.now(eastern)
+        current_time_utc = datetime.now(timezone.utc)
+        # We already fixed this to use underscores in the previous step
+        rev_id = current_time_utc.strftime("%Y_%m_%d_%H_%M_%S")
         for directive in directives:
             directive.rev_id = rev_id
 
@@ -106,7 +124,8 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             include_object=include_object,
-            process_revision_directives=process_revision_directives
+            process_revision_directives=process_revision_directives,
+            transaction_per_migration=True
         )
 
         with context.begin_transaction():

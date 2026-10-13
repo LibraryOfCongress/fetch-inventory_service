@@ -1,20 +1,20 @@
 from operator import or_
 
-from sqlalchemy import asc, desc, func, inspect, case, Text, Integer
+from sqlalchemy import asc, desc, func, inspect, case, Text, Integer, nulls_last
 from sqlalchemy.types import Enum as enum
 from sqlalchemy.orm import Query, aliased
 from sqlalchemy.sql import union_all, select
 
 from app.config.exceptions import BadRequest
-from app.models.aisle_numbers import AisleNumber
 
+from app.models.aisles import Aisle
 from app.models.barcodes import Barcode
 from app.models.buildings import Building
 from app.models.container_types import ContainerType
 from app.models.delivery_locations import DeliveryLocation
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
-from app.models.ladder_numbers import LadderNumber
+from app.models.ladders import Ladder
 from app.models.media_types import MediaType
 from app.models.move_discrepancies import MoveDiscrepancy
 from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
@@ -27,8 +27,6 @@ from app.models.refile_jobs import RefileJob
 from app.models.refile_non_tray_items import RefileNonTrayItem
 from app.models.request_types import RequestType
 from app.models.requests import Request
-from app.models.shelf_numbers import ShelfNumber
-from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
@@ -161,10 +159,13 @@ class RequestSorter(BaseSorter):
             )
 
             # Ensure sorting by barcode value from both barcode tables
+            # Use nulls_last to keep NULL values at the end regardless of sort direction
             query = query.order_by(
-                order_func(
-                    func.coalesce(
-                        barcode_item_alias.value, barcode_non_tray_alias.value
+                nulls_last(
+                    order_func(
+                        func.coalesce(
+                            barcode_item_alias.value, barcode_non_tray_alias.value
+                        )
                     )
                 )
             )
@@ -193,10 +194,13 @@ class RequestSorter(BaseSorter):
             )
 
             # Select the correct media type name for sorting (prioritize Item media type first)
+            # Use nulls_last to keep NULL values at the end regardless of sort direction
             query = query.order_by(
-                order_func(
-                    func.coalesce(
-                        media_type_item_alias.name, media_type_non_tray_alias.name
+                nulls_last(
+                    order_func(
+                        func.coalesce(
+                            media_type_item_alias.name, media_type_non_tray_alias.name
+                        )
                     )
                 )
             )
@@ -228,13 +232,14 @@ class RequestSorter(BaseSorter):
             ).alias("location_map")
 
             # Join the subquery with ShelfPosition and order by ShelfPosition.location
+            # Use nulls_last to keep NULL values at the end regardless of sort direction
             query = (
                 query.outerjoin(location_subquery, Request.id == location_subquery.c.id)
                 .outerjoin(
                     shelf_position_alias,
                     location_subquery.c.shelf_position_id == shelf_position_alias.id,
                 )
-                .order_by(order_func(shelf_position_alias.location))
+                .order_by(nulls_last(order_func(shelf_position_alias.location)))
             )
 
             return query
@@ -331,9 +336,18 @@ class RefileQueueSorter(BaseSorter):
     def custom_sort(self, query: Query, sort_params, order_func):
         """
         Overrides the default sort to allow custom sorting for specific fields.
+        The refile queue uses a union query with aliased columns.
         """
-        if hasattr(query, "c"):
-            return query.order_by(order_func(sort_params.sort_by))
+        # The query is a select(...).select_from(aliased_subquery)
+        # Find the matching column from selected_columns by name
+        sort_by = sort_params.sort_by
+        
+        if hasattr(query, "selected_columns"):
+            for col in query.selected_columns:
+                # Match by the column's name/key
+                col_name = getattr(col, "name", None) or getattr(col, "key", None)
+                if col_name == sort_by:
+                    return query.order_by(order_func(col))
 
         return super().custom_sort(query, sort_params, order_func)
 
@@ -450,7 +464,7 @@ class ShelvingSorter(BaseSorter):
         Overrides the default sort to allow custom sorting for specific fields.
         """
         if sort_params.sort_by == "shelf_number":
-            return query.join(ShelfNumber).order_by(order_func(ShelfNumber.number))
+            return query.order_by(order_func(Shelf.shelf_number))
         if sort_params.sort_by == "size_class":
             return (
                 query.join(ShelfType)
@@ -738,7 +752,7 @@ class MoveDiscrepancySorter(BaseSorter):
 class AisleSorter(BaseSorter):
     def custom_sort(self, query: Query, sort_params, order_func):
         if sort_params.sort_by.lower() == 'aisle_number':
-            return query.join(AisleNumber).order_by(order_func(AisleNumber.number))
+            return query.order_by(order_func(Aisle.aisle_number))
 
         return super().custom_sort(query, sort_params, order_func)
 
@@ -746,7 +760,7 @@ class AisleSorter(BaseSorter):
 class LadderSorter(BaseSorter):
     def custom_sort(self, query: Query, sort_params, order_func):
         if sort_params.sort_by.lower() == 'ladder_number':
-            return query.join(LadderNumber).order_by(order_func(LadderNumber.number))
+            return query.order_by(order_func(Ladder.ladder_number))
 
         return super().custom_sort(query, sort_params, order_func)
 
@@ -754,6 +768,6 @@ class LadderSorter(BaseSorter):
 class ShelvesSorter(BaseSorter):
     def custom_sort(self, query: Query, sort_params, order_func):
         if sort_params.sort_by.lower() == 'shelf_position_number':
-            return query.join(ShelfPositionNumber).order_by(order_func(ShelfPositionNumber.number))
+            return query.order_by(order_func(ShelfPosition.position_number))
 
         return super().custom_sort(query, sort_params, order_func)

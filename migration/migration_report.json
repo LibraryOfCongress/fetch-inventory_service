@@ -1,0 +1,139 @@
+{
+  "start_time": "2026-05-12T14:12:04.894177",
+  "end_time": "2026-05-12T14:12:06.388840",
+  "tables": {
+    "users": {
+      "status": "success",
+      "rows_found": 1,
+      "rows_migrated": 1,
+      "error": null
+    },
+    "groups": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "user_groups": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "group_permissions": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "owners": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "buildings": {
+      "status": "success",
+      "rows_found": 1,
+      "rows_migrated": 1,
+      "error": null
+    },
+    "size_class": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "container_types": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "media_types": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "modules": {
+      "status": "success",
+      "rows_found": 1,
+      "rows_migrated": 1,
+      "error": null
+    },
+    "aisles": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "ladders": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "sides": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "shelves": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "shelf_positions": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "trays": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "items": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "non_tray_items": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "accession_jobs": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "pick_lists": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "verification_jobs": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    },
+    "shelving_jobs": {
+      "status": "skipped (no data)",
+      "rows_found": 0,
+      "rows_migrated": 0,
+      "error": null
+    }
+  },
+  "errors": []
+}

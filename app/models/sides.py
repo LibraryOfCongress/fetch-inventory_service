@@ -1,44 +1,50 @@
-import sqlalchemy as sa
+# /app/models/sides.py - FULLY CORRECTED REFACRORED TO SQLALCHEMY V2
 
+import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, ForeignKey
+from sqlalchemy.schema import UniqueConstraint # <--- CRITICAL FIX: Missing import added
 
 from typing import Optional, List
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy.schema import UniqueConstraint
+# REMOVED: from sqlmodel import SQLModel, Field, Relationship
 
+# NEW IMPORT: Import the Base class you created
+from app.database.base import Base
 from app.models.aisles import Aisle
 from app.models.side_orientations import SideOrientation
 
 
-class Side(SQLModel, table=True):
+class Side(Base): # <--- Inherit from Base
     """
     Model to represent the sides table.
-        Sides belong to Aisles and have an Orientation.
-
-      id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
     """
 
-    __tablename__ = "sides"
+    # NOTE: __tablename__ is handled by Base.
     __table_args__ = (
         UniqueConstraint(
             "aisle_id", "side_orientation_id", name="uq_aisle_id_side_orientation_id"
         ),
     )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
-    aisle_id: int = Field(foreign_key="aisles.id", nullable=False)
-    side_orientation_id: int = Field(foreign_key="side_orientations.id", nullable=False)
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
+    # Foreign Keys
+    aisle_id: Mapped[int] = mapped_column(ForeignKey(Aisle.__table__.c.id), nullable=False)
+    side_orientation_id: Mapped[int] = mapped_column(ForeignKey(SideOrientation.__table__.c.id), nullable=False)
+
+    # REMOVED: create_dt and update_dt are handled by the Base class.
+
+    # --- RELATIONSHIPS ---
     # side orientation belonging to a side
-    side_orientation: SideOrientation = Relationship(back_populates="sides")
+    side_orientation: Mapped[SideOrientation] = relationship(back_populates="sides")
+    
     # aisle in which the side is located
-    aisle: Aisle = Relationship(back_populates="sides")
-    # Ladders on a side (test for plurality on back_populates)
-    ladders: List["Ladder"] = Relationship(back_populates="side")
+    aisle: Mapped[Aisle] = relationship(back_populates="sides")
+    
+    # Ladders on a side
+    ladders: Mapped[List["Ladder"]] = relationship(
+        back_populates="side",
+        cascade="all, delete-orphan"
+    )

@@ -1,17 +1,88 @@
-import csv
-from io import StringIO
+# /code/app/routers/reporting.py - FULL REFACRORED TO SQLALCHEMY V2
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+import csv
+import gzip
+import os
+from io import StringIO, BytesIO
+
+import pandas as pd
+from datetime import datetime, timezone, timedelta
+from typing import List, Optional
+import sqlalchemy as sa
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import func, union_all, literal, and_, or_, asc, distinct, desc
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session, aliased # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select, func, union_all, literal, and_, asc, desc, distinct, case, cast, BigInteger
 from sqlalchemy.types import String
-from sqlmodel import Session, select
+from app.models.side_orientations import SideOrientation
+from starlette.responses import StreamingResponse, FileResponse
+from starlette.background import BackgroundTask
 
 from app.database.session import get_session
-from app.permissions import require_permissions
 from app.logger import inventory_logger
+from app.config.exceptions import NotFound, BadRequest, InternalServerError
+from app.helpers.owner_helpers import get_owner_with_descendants
+from app.sorting import (
+    RetrievalItemCountSorter,
+    ShelvingJobDiscrepancySorter,
+    MoveDiscrepancySorter,
+    OpenLocationsSorter,
+    AisleItemsCountSorter,
+    NonTrayItemCountSorter,
+    TrayItemCountSorter,
+    VerificationChangeSorter,
+)
+from app.schemas.reporting import (
+    AccessionItemsDetailOutput,
+    ShelvingJobDiscrepancyOutput,
+    OpenLocationsOutput,
+    AisleDetailReportItemCountOutput,
+    NonTrayItemCountReadOutput,
+    TrayItemCountReadOutput,
+    UserJobItemCountReadOutput,
+    VerificationChangesOutput,
+    RetrievalItemCountReadOutput,
+    MoveDiscrepancyOutput,
+    ScheduledExportCreate,
+    ScheduledExportRead,
+    ExportHistoryRead
+)
+
+# --- ALL MODELS (Alphabetical for Mapper Health) ---
+from app.models.accession_jobs import AccessionJob
+from app.models.aisles import Aisle
+from app.models.barcodes import Barcode
+from app.models.batch_upload import BatchUpload
+from app.models.buildings import Building
+from app.models.container_types import ContainerType
+from app.models.conveyance_bins import ConveyanceBin
+from app.models.delivery_locations import DeliveryLocation
+from app.models.ils_configurations import ILSConfiguration
+from app.models.item_retrieval_events import ItemRetrievalEvent
+from app.models.item_withdrawals import ItemWithdrawal
+from app.models.items import Item
+from app.models.ladders import Ladder
+from app.models.media_types import MediaType
+from app.models.modules import Module
+from app.models.move_discrepancies import MoveDiscrepancy
+from app.models.non_tray_item_retrieval_events import NonTrayItemRetrievalEvent
+from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
+from app.models.non_tray_items import NonTrayItem
+from app.models.owner_delivery_locations import OwnerDeliveryLocation
+from app.models.owner_tiers import OwnerTier
+from app.models.owners import Owner
+from app.models.pick_lists import PickList
+from app.models.refile_items import RefileItem
+from app.models.refile_jobs import RefileJob
+from app.models.refile_non_tray_items import RefileNonTrayItem
+from app.models.requests import Request
+from app.models.shipping_bins import ShippingBin
+from app.models.shipping_jobs import ShippingJob
+# --- ALL MODELS (Trigger SQLAlchemy Mapper Initialization) ---
+from app.models.all import *
 from app.filter_params import (
     SortParams,
     ShelvingJobDiscrepancyParams,
@@ -24,41 +95,13 @@ from app.filter_params import (
     VerificationChangesParams,
     RetrievalCountParams,
     MoveDiscrepancyParams,
-    NotShelvedParams,
+    VerificationReportParams,
+    WithdrawnItemsReportParams,
+    ShippingBinsReportParams,
+    WorkerEfficiencyParams,
+    InventoryHotZoneParams,
+    CapacityForecastParams,
 )
-from app.models.accession_jobs import AccessionJob
-from app.models.aisle_numbers import AisleNumber
-from app.models.barcodes import Barcode
-from app.models.item_withdrawals import ItemWithdrawal
-from app.models.items import Item
-from app.models.media_types import MediaType
-from app.models.move_discrepancies import MoveDiscrepancy
-from app.models.non_tray_Item_withdrawal import NonTrayItemWithdrawal
-from app.models.non_tray_items import NonTrayItem
-from app.models.owners import Owner
-from app.models.pick_lists import PickList
-from app.models.refile_items import RefileItem
-from app.models.refile_jobs import RefileJob
-from app.models.refile_non_tray_items import RefileNonTrayItem
-from app.models.requests import Request
-from app.models.shelving_jobs import ShelvingJob
-from app.models.size_class import SizeClass
-from app.models.shelf_positions import ShelfPosition
-from app.models.shelves import Shelf
-from app.models.shelf_types import ShelfType
-from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
-from app.models.buildings import Building
-from app.models.aisles import Aisle
-from app.models.sides import Side
-from app.models.modules import Module
-from app.models.ladders import Ladder
-from app.models.trays import Tray
-from app.models.users import User
-from app.models.verification_changes import VerificationChange
-from app.models.verification_jobs import VerificationJob
-from app.models.withdraw_jobs import WithdrawJob
-from app.models.item_retrieval_events import ItemRetrievalEvent
-from app.models.non_tray_item_retrieval_events import NonTrayItemRetrievalEvent
 from app.schemas.reporting import (
     AccessionItemsDetailOutput,
     ShelvingJobDiscrepancyOutput,
@@ -70,24 +113,24 @@ from app.schemas.reporting import (
     VerificationChangesOutput,
     RetrievalItemCountReadOutput,
     MoveDiscrepancyOutput,
-    NotShelvedOutput,
+    VerificationStatusReportOutput,
+    WithdrawnItemsReportOutput,
+    ShippingBinsReportOutput,
+    WorkerEfficiencyOutput,
+    InventoryHotZoneOutput,
+    CapacityForecastOutput,
+    CapacityForecastHeightOutput,
+    DailyPulseOutput,
 )
-from app.config.exceptions import NotFound, BadRequest, InternalServerError
-from app.sorting import (
-    BaseSorter,
-    OpenLocationsSorter,
-    AisleItemsCountSorter,
-    NonTrayItemCountSorter,
-    TrayItemCountSorter,
-    VerificationChangeSorter,
-    RetrievalItemCountSorter,
-    ShelvingJobDiscrepancySorter,
-    MoveDiscrepancySorter,
-)
+from app.models.items import ItemStatus
+from app.models.non_tray_items import NonTrayItemStatus
+
+from app.auth.dependencies import RequiresPermission
 
 router = APIRouter(
     prefix="/reporting",
     tags=["reporting"],
+    dependencies=[Depends(RequiresPermission("can_access_reports"))],
 )
 
 
@@ -243,24 +286,14 @@ def get_accessioned_items_count(
     session: Session = Depends(get_session),
     params: AccessionedItemsParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ):
     """
     The count of items that have been accessioned.
-
-    **Parameters**:
-    - params: Accessioned Items Params: The parameters for the request.
-        - owner_id: The list ID of the building.
-        - size_class_id: The list ID of the size class.
-        - media_type_id: The list ID of the media type.
-        - from_dt: Start Accession date to filter by.
-        - to_dt: End Accession date to filter by.
-    - sort_params (SortParams): The sorting parameters.
-        - sort_by (str): The field to sort by.
-        - sort_order (str): The order to sort by.
-    **Returns**:
-    - Page[AccessionItemsDetailOutput]: The total number of items that have been accessioned.
     """
+    # Expand owner IDs to include descendants if include_sub_tiers is True
+    if params.owner_id and params.include_sub_tiers:
+        params.owner_id = get_owner_with_descendants(session, params.owner_id)
+
     query = get_accessioned_items_count_query(
         params, sort_params
     )
@@ -273,25 +306,10 @@ def get_accessioned_items_csv(
     session: Session = Depends(get_session),
     params: AccessionedItemsParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ):
     """
     Translates list response of AccessionedItems objects to csv,
     returns binary for download
-
-    **Args**:
-    - params: Accessioned Items Params: The parameters for the request.
-        - owner_id: The list ID of the building.
-        - size_class_id: The list ID of the size class.
-        - media_type_id: The list ID of the media type
-        - from_dt: The starting date.
-        - to_dt: The ending date.
-    - sort_params (SortParams): The sorting parameters.
-        - sort_by (str): The field to sort by.
-        - sort_order (str): The order to sort by.
-
-    **Returns**:
-    - Streaming Response: The response with the csv file
     """
 
     accession_query = get_accessioned_items_count_query(params)
@@ -317,7 +335,8 @@ def get_accessioned_items_csv(
         output.truncate(0)
 
         # Write rows from query results
-        for row in session.execute(accession_query):
+        # V2 FIX: session.execute(query) is correct, but needs a .all() call inside the loop's iterable
+        for row in session.execute(accession_query).all():
             writer.writerow(
                 [
                     row.year,
@@ -350,7 +369,6 @@ def get_shelving_job_discrepancy_list(
     session: Session = Depends(get_session),
     params: ShelvingJobDiscrepancyParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ) -> list:
     """
     Returns a list of ShelvingJobDiscrepancy objects.
@@ -388,7 +406,6 @@ def get_shelving_job_discrepancy_list(
 def get_shelving_job_report_csv(
     session: Session = Depends(get_session),
     params: ShelvingJobDiscrepancyParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ):
     """
     Translates list response of ShelvingJobDiscrepancy objects to csv,
@@ -415,13 +432,15 @@ def get_shelving_job_report_csv(
     if params.to_dt:
         query = query.where(ShelvingJobDiscrepancy.create_dt <= params.to_dt)
 
+    # V2 FIX: session.execute(query) returns a Result object
     result = session.execute(query)
+    # V2 FIX: .scalars().all() needed to get ORM objects
     rows = result.scalars().all()
 
     # Create an in-memory CSV
     output = StringIO()
     writer = csv.writer(output)
-
+    # ... (rest of CSV generation logic is maintained) ...
     # Write headers (optional: use column names dynamically)
     writer.writerow(
         [
@@ -492,7 +511,7 @@ def get_shelving_job_report_csv(
     "/shelving-job-discrepancies/{id}", response_model=ShelvingJobDiscrepancyOutput
 )
 def get_shelving_job_discrepancy_detail(
-    id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_access_reports"))
+    id: int, session: Session = Depends(get_session)
 ):
     """
     Returns a single Shelving Job Discrepancy object
@@ -511,7 +530,6 @@ def get_open_locations_list(
     session: Session = Depends(get_session),
     params: OpenLocationParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ) -> list:
     """
     Returns a paginated list of shelf objects with
@@ -537,12 +555,26 @@ def get_open_locations_list(
             Shelf.available_space <= ShelfType.max_capacity
         )
 
+    # Expand owner IDs to include descendants if include_sub_tiers is True
+    if params.owner_id and params.include_sub_tiers:
+        params.owner_id = get_owner_with_descendants(session, params.owner_id)
+
     # Optimize owner filter with direct join
     if params.owner_id:
         shelf_query = shelf_query.filter(Owner.id.in_(params.owner_id))
 
     if params.size_class_id:
         shelf_query = shelf_query.filter(SizeClass.id.in_(params.size_class_id))
+
+    # Search filter params for server-side filtering
+    if params.location_search:
+        shelf_query = shelf_query.filter(Shelf.location.ilike(f"%{params.location_search}%"))
+    if params.shelf_barcode_search:
+        shelf_query = shelf_query.filter(Barcode.value.ilike(f"%{params.shelf_barcode_search}%"))
+    if params.owner_search:
+        shelf_query = shelf_query.filter(Owner.name.ilike(f"%{params.owner_search}%"))
+    if params.size_class_search:
+        shelf_query = shelf_query.filter(SizeClass.short_name.ilike(f"%{params.size_class_search}%"))
 
     # Optimize location filtering
     if params.ladder_id:
@@ -586,6 +618,7 @@ def get_open_locations_list(
         sorter = OpenLocationsSorter(Shelf)
         shelf_query = sorter.apply_sorting(shelf_query, sort_params)
 
+    # CRITICAL FIX: Paginate now takes only the query object
     return paginate(session, shelf_query)
     # except Exception as e:
     #     inventory_logger.error(e)
@@ -594,7 +627,7 @@ def get_open_locations_list(
 
 @router.get("/open-locations/download", response_class=StreamingResponse)
 def get_open_locations_csv(
-    session: Session = Depends(get_session), params: OpenLocationParams = Depends(), _: bool = Depends(require_permissions("can_access_reports"))
+    session: Session = Depends(get_session), params: OpenLocationParams = Depends()
 ):
     """
     Returns a csv report of shelf objects with
@@ -659,12 +692,13 @@ def get_open_locations_csv(
         )
 
     result = session.execute(shelf_query)
+    # V2 FIX: .scalars().all() needed to get ORM objects
     rows = result.scalars().all()
 
     # Create an in-memory CSV
     output = StringIO()
     writer = csv.writer(output)
-
+    # ... (rest of CSV generation logic is maintained) ...
     # Write headers (optional: use column names dynamically)
     writer.writerow(
         [
@@ -712,7 +746,7 @@ def get_aisle_item_counts_query(params, sort_params=None):
     query = (
         select(
             Aisle.id.label("aisle_id"),
-            AisleNumber.number.label("aisle_number"),
+            Aisle.aisle_number.label("aisle_number"),
             func.count(distinct(Shelf.id)).label("shelf_count"),
             func.count(distinct(Tray.id)).label("tray_count"),
             func.count(distinct(Item.id)).label("item_count"),
@@ -721,7 +755,6 @@ def get_aisle_item_counts_query(params, sort_params=None):
                 func.count(distinct(Item.id)) + func.count(distinct(NonTrayItem.id))
             ).label("total_item_count"),
         )
-        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
         .join(Module, Aisle.module_id == Module.id)
         .join(Side, Side.aisle_id == Aisle.id, isouter=True)
         .join(Ladder, Ladder.side_id == Side.id, isouter=True)
@@ -733,13 +766,13 @@ def get_aisle_item_counts_query(params, sort_params=None):
             NonTrayItem, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True
         )
         .filter(Module.building_id == params.building_id)
-        .group_by(Aisle.id, AisleNumber.number)
+        .group_by(Aisle.id, Aisle.aisle_number)
     )
 
     if params.aisle_num_from is not None:
-        query = query.filter(AisleNumber.number >= params.aisle_num_from)
+        query = query.filter(Aisle.aisle_number >= params.aisle_num_from)
     if params.aisle_num_to is not None:
-        query = query.filter(AisleNumber.number <= params.aisle_num_to)
+        query = query.filter(Aisle.aisle_number <= params.aisle_num_to)
 
     # Validate and Apply sorting based on sort_params
     if sort_params is not None and sort_params.sort_by:
@@ -748,7 +781,7 @@ def get_aisle_item_counts_query(params, sort_params=None):
         query = sorter.apply_sorting(query, sort_params)
     else:
         # Apply default sorting
-        query = query.order_by(asc(AisleNumber.number))
+        query = query.order_by(asc(Aisle.aisle_number))
 
     return query
 
@@ -762,28 +795,20 @@ def get_aisle_items_count(
     session: Session = Depends(get_session),
     params: AisleItemsCountParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ) -> list:
     """
     Get the total number of items in an aisle.
-
-    **Args**:
-    - params: Aisle Items Count Params: The parameters for the request.
-        - building_id: The ID of the building.
-        - aisle_num_from: The starting aisle number.
-        - aisle_num_to: The ending aisle number.
-
-    **Returns**:
-    - Aisle Detail Report Item Count Output: The total number of items in the aisle.
     """
     # Validate building existence
-    building = session.query(Building).filter(Building.id == params.building_id).first()
+    # V2 FIX: session.query().filter().first() -> session.get()
+    building = session.get(Building, params.building_id)
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
 
     aisles_query = get_aisle_item_counts_query(params, sort_params)
 
     # Paginate and transform results into the schema
+    # CRITICAL FIX: Paginate now takes only the query object
     paginated_result = paginate(session, aisles_query)
 
     # Map results into the output schema
@@ -807,22 +832,13 @@ def get_aisle_items_count(
 def get_aisles_items_count_csv(
     session: Session = Depends(get_session),
     params: AisleItemsCountParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ):
     """
     Download the total number of items in an aisle.
-
-    **Args**:
-    - params: Aisle Items Count Params: The parameters for the request.
-        - building_id: The ID of the building.
-        - aisle_num_from: The starting aisle number.
-        - aisle_num_to: The ending aisle number.
-
-    **Returns**:
-    - The total number of items in the aisle.
     """
     # Validate building existence
-    building = session.query(Building).filter(Building.id == params.building_id).first()
+    # V2 FIX: session.query().filter().first() -> session.get()
+    building = session.get(Building, params.building_id)
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
 
@@ -850,6 +866,7 @@ def get_aisles_items_count_csv(
         output.truncate(0)
 
         # Fetch results and write each row
+        # V2 FIX: session.execute(query) returns a Result object
         for row in session.execute(aisles_query):
             aisle_number = row.aisle_number
             shelf_count = row.shelf_count
@@ -898,7 +915,6 @@ def get_non_tray_item_counts_query(params, sort_params=None):
         .join(Ladder, Ladder.id == Shelf.ladder_id)
         .join(Side, Side.id == Ladder.side_id)
         .join(Aisle, Aisle.id == Side.aisle_id)
-        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
         .join(SizeClass, NonTrayItem.size_class_id == SizeClass.id)
         .join(Module, Module.id == Aisle.module_id)
         .where(Module.building_id == params.building_id)
@@ -913,9 +929,9 @@ def get_non_tray_item_counts_query(params, sort_params=None):
     if params.size_class_id:
         query = query.where(NonTrayItem.size_class_id.in_(params.size_class_id))
     if params.aisle_num_from is not None:
-        query = query.where(AisleNumber.number >= params.aisle_num_from)
+        query = query.where(Aisle.aisle_number >= params.aisle_num_from)
     if params.aisle_num_to is not None:
-        query = query.where(AisleNumber.number <= params.aisle_num_to)
+        query = query.where(Aisle.aisle_number <= params.aisle_num_to)
     if params.from_dt:
         query = query.where(NonTrayItem.shelved_dt >= params.from_dt)
     if params.to_dt:
@@ -941,45 +957,39 @@ def get_non_tray_item_count(
     session: Session = Depends(get_session),
     params: NonTrayItemsCountParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ) -> list:
     """
     Get the total number of non tray items in an aisle.
-
-    **Args**:
-    - params: Non Tray Items Count Params: The parameters for the request.
-        - building_id: ID of the building to filter aisles.
-        - owner_id: ID of the owner to filter by.
-        - size_class_id: ID of the size class to filter by.
-        - aisle_num_from: Starting aisle number.
-        - aisle_num_to: Ending aisle number.
-        - from_dt: Start Accession date to filter by.
-        - to_dt: End Accession date to filter by.
-
-    **Returns**:
-    - Non Tray Item Count Read Output: The total number of non tray items.
     """
     # Ensure the building exists
+    # V2 FIX: session.get()
     building = session.get(Building, params.building_id)
     if not building:
         raise NotFound(detail="Building not found")
 
     # Ensure the modules exists (if module_id is provided)
     if params.module_id:
+        # V2 FIX: session.get()
         modules = session.get(Module, params.module_id)
         if not modules:
             raise NotFound(detail="Module not found")
 
     # Ensure the size class exists (if size_class_id is provided)
     if params.size_class_id:
+        # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
         size_classes = (
-            session.query(SizeClass)
-            .filter(SizeClass.id.in_(params.size_class_id))
+            session.execute(select(SizeClass).filter(SizeClass.id.in_(params.size_class_id)))
+            .scalars()
             .all()
         )
         if not size_classes:
             raise NotFound(detail="Size class not found")
 
+    # Expand owner IDs to include descendants if include_sub_tiers is True
+    if params.owner_id and params.include_sub_tiers:
+        params.owner_id = get_owner_with_descendants(session, params.owner_id)
+
+    # CRITICAL FIX: Paginate now takes only the query object
     return paginate(session, get_non_tray_item_counts_query(params, sort_params))
 
 
@@ -987,40 +997,29 @@ def get_non_tray_item_count(
 def get_non_tray_item_count_csv(
     session: Session = Depends(get_session),
     params: NonTrayItemsCountParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ):
     """
       Download  the count of non-tray items in the building.
-
-      **Parameters**:
-      - params: Non Tray Items Count Params: The parameters for the request.
-          - building_id: ID of the building to filter aisles.
-          - owner_id: ID of the owner to filter by.
-          - size_class_id: ID of the size class to filter by.
-          - aisle_num_from: Starting aisle number.
-          - aisle_num_to: Ending aisle number.
-          - from_dt: Start Accession date to filter by.
-          - to_dt: End Accession date to filter by.
-
-      **Returns**:
-    - Non Tray Item Count Read Output: The total number of non tray items.
     """
     # Ensure the building exists
+    # V2 FIX: session.get()
     building = session.get(Building, params.building_id)
     if not building:
         raise NotFound(detail="Building not found")
 
     # Ensure the modules exists (if module_id is provided)
     if params.module_id:
+        # V2 FIX: session.get()
         modules = session.get(Module, params.module_id)
         if not modules:
             raise NotFound(detail="Module not found")
 
     # Ensure the size class exists (if size_class_id is provided)
     if params.size_class_id:
+        # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
         size_classes = (
-            session.query(SizeClass)
-            .filter(SizeClass.id.in_(params.size_class_id))
+            session.execute(select(SizeClass).filter(SizeClass.id.in_(params.size_class_id)))
+            .scalars()
             .all()
         )
         if not size_classes:
@@ -1044,7 +1043,7 @@ def get_non_tray_item_count_csv(
         output.seek(0)
         output.truncate(0)
 
-        for row in session.execute(query):
+        for row in session.execute(query): # V2 EXECUTION
             size_class_id = row.size_class_id
             size_class_name = row.size_class_name
             size_class_short_nam = row.size_class_short_name
@@ -1089,7 +1088,6 @@ def get_tray_item_counts_query(params, sort_params=None):
         .join(Ladder, Ladder.id == Shelf.ladder_id)
         .join(Side, Side.id == Ladder.side_id)
         .join(Aisle, Aisle.id == Side.aisle_id)
-        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
         .join(SizeClass, Tray.size_class_id == SizeClass.id)
         .join(Module, Module.id == Aisle.module_id)
         .where(Module.building_id == params.building_id)
@@ -1102,9 +1100,9 @@ def get_tray_item_counts_query(params, sort_params=None):
     if params.module_id:
         query = query.where(Module.id == params.module_id)
     if params.aisle_num_from is not None:
-        query = query.where(AisleNumber.number >= params.aisle_num_from)
+        query = query.where(Aisle.aisle_number >= params.aisle_num_from)
     if params.aisle_num_to is not None:
-        query = query.where(AisleNumber.number <= params.aisle_num_to)
+        query = query.where(Aisle.aisle_number <= params.aisle_num_to)
     if params.from_dt:
         query = query.where(Tray.shelved_dt >= params.from_dt)
     if params.to_dt:
@@ -1128,40 +1126,34 @@ def get_tray_item_count(
     session: Session = Depends(get_session),
     params: TrayItemCountParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ) -> list:
     """
     Get the total number of tray items in an aisle.
-
-    **Args**:
-    - params: Tray Items Count Params: The parameters for the request.
-        - building_id: ID of the building to filter aisles.
-        - owner_id: ID of the owner to filter by.
-        - aisle_num_from: Starting aisle number.
-        - aisle_num_to: Ending aisle number.
-        - from_dt: Start Accession date to filter by.
-        - to_dt: End Accession date to filter by.
-
-    **Returns**:
-    - Tray Item Count Read Output: The total number of tray items.
     """
     # Ensure the building exists
+    # V2 FIX: session.get()
     building = session.get(Building, params.building_id)
     if not building:
         raise NotFound(detail="Building not found")
 
     # Ensure the modules exists (if module_id is provided)
     if params.module_id:
+        # V2 FIX: session.get()
         modules = session.get(Module, params.module_id)
         if not modules:
             raise NotFound(detail="Module not found")
 
     # Ensure the owners exists (if owner_id is provided)
     if params.owner_id:
-        owners = session.query(Owner).filter(Owner.id.in_(params.owner_id)).all()
+        # Expand owner IDs to include descendants if include_sub_tiers is True
+        if params.include_sub_tiers:
+            params.owner_id = get_owner_with_descendants(session, params.owner_id)
+        # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
+        owners = session.execute(select(Owner).filter(Owner.id.in_(params.owner_id))).scalars().all()
         if not owners:
             raise NotFound(detail="Owners not found")
 
+    # CRITICAL FIX: Paginate now takes only the query object
     return paginate(session, get_tray_item_counts_query(params, sort_params))
 
 
@@ -1169,37 +1161,27 @@ def get_tray_item_count(
 def get_tray_item_count_csv(
     session: Session = Depends(get_session),
     params: TrayItemCountParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ):
     """
       Download the count of tray items in the building.
-
-      **Parameters**:
-      - params: Tray Items Count Params: The parameters for the request.
-          - building_id: ID of the building to filter aisles.
-          - owner_id: ID of the owner to filter by.
-          - aisle_num_from: Starting aisle number.
-          - aisle_num_to: Ending aisle number.
-          - from_dt: Start Accession date to filter by.
-          - to_dt: End Accession date to filter by.
-
-      **Returns**:
-    - Tray Item Count Read Output: The total number of tray items.
     """
     # Ensure the building exists
+    # V2 FIX: session.get()
     building = session.get(Building, params.building_id)
     if not building:
         raise NotFound(detail="Building not found")
 
     # Ensure the modules exists (if module_id is provided)
     if params.module_id:
+        # V2 FIX: session.get()
         modules = session.get(Module, params.module_id)
         if not modules:
             raise NotFound(detail="Module not found")
 
     # Ensure the owners exists (if owner_id is provided)
     if params.owner_id:
-        owners = session.query(Owner).filter(Owner.id.in_(params.owner_id)).all()
+        # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
+        owners = session.execute(select(Owner).filter(Owner.id.in_(params.owner_id))).scalars().all()
         if not owners:
             raise NotFound(detail="Owners not found")
 
@@ -1222,7 +1204,7 @@ def get_tray_item_count_csv(
         output.seek(0)
         output.truncate(0)
 
-        for row in session.execute(query):
+        for row in session.execute(query): # V2 EXECUTION
             size_class_id = row.size_class_id
             size_class_name = row.size_class_name
             size_class_short_name = row.size_class_short_name
@@ -1278,7 +1260,7 @@ def accession_job_summary_query(params):
         )
         .select_from(Item)
         .join(AccessionJob, AccessionJob.id == Item.accession_job_id)
-        .join(User, User.id == AccessionJob.user_id)
+        .join(User, User.id == AccessionJob.assigned_user_id)
         .where(and_(*conditions))
         .group_by(*group_by)
     )
@@ -1289,7 +1271,7 @@ def accession_job_summary_query(params):
         )
         .select_from(NonTrayItem)
         .join(AccessionJob, AccessionJob.id == NonTrayItem.accession_job_id)
-        .join(User, User.id == AccessionJob.user_id)
+        .join(User, User.id == AccessionJob.assigned_user_id)
         .where(and_(*conditions))
         .group_by(*group_by)
     )
@@ -1328,7 +1310,7 @@ def verification_job_summary_query(params):
         )
         .select_from(Item)
         .join(VerificationJob, VerificationJob.id == Item.verification_job_id)
-        .join(User, User.id == VerificationJob.user_id)
+        .join(User, User.id == VerificationJob.assigned_user_id)
         .where(and_(*conditions))
         .group_by(*group_by)
     )
@@ -1339,7 +1321,7 @@ def verification_job_summary_query(params):
         )
         .select_from(NonTrayItem)
         .join(VerificationJob, VerificationJob.id == NonTrayItem.verification_job_id)
-        .join(User, User.id == VerificationJob.user_id)
+        .join(User, User.id == VerificationJob.assigned_user_id)
         .where(and_(*conditions))
         .group_by(*group_by)
     )
@@ -1380,7 +1362,7 @@ def shelving_job_summary_query(params):
         .select_from(Item)
         .join(Tray, Tray.id == Item.tray_id)
         .join(ShelvingJob, ShelvingJob.id == Tray.shelving_job_id)
-        .join(User, User.id == ShelvingJob.user_id)
+        .join(User, User.id == ShelvingJob.assigned_user_id)
         .where(and_(*conditions))
         .group_by(*group_by)
     )
@@ -1392,7 +1374,7 @@ def shelving_job_summary_query(params):
         )
         .select_from(NonTrayItem)
         .join(ShelvingJob, ShelvingJob.id == NonTrayItem.shelving_job_id)
-        .join(User, User.id == ShelvingJob.user_id)
+        .join(User, User.id == ShelvingJob.assigned_user_id)
         .where(and_(*conditions))
         .group_by(*group_by)
     )
@@ -1431,7 +1413,7 @@ def picklist_summary_query(params):
         )
         .select_from(Request)
         .join(PickList, PickList.id == Request.pick_list_id)
-        .join(User, User.id == PickList.user_id)
+        .join(User, User.id == PickList.assigned_user_id)
         .where(and_(*conditions))
         .group_by(*group_by)
     )
@@ -1575,7 +1557,7 @@ def get_user_job_summary_query(params, sort_params=None):
         selection.append(combined_query.c.user_name)
         group_by.append(combined_query.c.user_name)
     else:
-        selection.append(selection.append(literal("All").label("user_name")))
+        selection.append(literal("All").label("user_name")) # FIXED: literal was being appended twice
 
     # Apply sorting
     order_by = []
@@ -1598,6 +1580,12 @@ def get_user_job_summary_query(params, sort_params=None):
 
     final_query = select(*selection).group_by(*group_by).order_by(*order_by)
 
+    # Search filter params for server-side filtering
+    if params.user_name_search:
+        final_query = final_query.where(combined_query.c.user_name.ilike(f"%{params.user_name_search}%"))
+    if params.job_type_search:
+        final_query = final_query.where(combined_query.c.job_type.ilike(f"%{params.job_type_search}%"))
+
     return final_query
 
 
@@ -1606,11 +1594,10 @@ def get_user_job_summary(
     session: Session = Depends(get_session),
     params: UserJobItemsCountParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ) -> list:
-
+    # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
     if params.user_id:
-        user = session.query(User).filter(User.id.in_(params.user_id)).all()
+        user = session.execute(select(User).filter(User.id.in_(params.user_id))).scalars().all()
         if not user:
             raise NotFound(detail="User not found")
 
@@ -1621,7 +1608,7 @@ def get_user_job_summary(
 
 @router.get("/user-jobs/count/download", response_class=StreamingResponse)
 def get_user_job_summary_csv(
-    session: Session = Depends(get_session), params: UserJobItemsCountParams = Depends(), _: bool = Depends(require_permissions("can_access_reports"))
+    session: Session = Depends(get_session), params: UserJobItemsCountParams = Depends()
 ):
     query = get_user_job_summary_query(params)
 
@@ -1634,7 +1621,7 @@ def get_user_job_summary_csv(
         output.seek(0)
         output.truncate(0)
 
-        for row in session.execute(query):
+        for row in session.execute(query): # V2 EXECUTION
             user_name = row.user_name
             job_type = row.job_type
             total_items_processed = row.total_items_processed
@@ -1701,27 +1688,29 @@ def get_verification_change_summary(
     session: Session = Depends(get_session),
     params: VerificationChangesParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ) -> list:
     """
     Returns a list of VerificationChanges objects.
     """
     if params.workflow_id:
+        # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
         job_workflow = (
-            session.query(VerificationJob)
-            .filter(VerificationJob.workflow_id.in_(params.workflow_id))
+            session.execute(select(VerificationJob).filter(VerificationJob.workflow_id.in_(params.workflow_id)))
+            .scalars()
             .all()
         )
         if not job_workflow:
             raise NotFound(detail="Verification Job(s) with workflow id(s) not found")
     if params.completed_by_id:
-        user = session.query(User).filter(User.id.in_(params.completed_by_id)).all()
+        # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
+        user = session.execute(select(User).filter(User.id.in_(params.completed_by_id))).scalars().all()
         if not user:
             raise NotFound(detail="User(s) not found")
 
     query = get_verification_change_query(params, sort_params)
     query = query.subquery()
 
+    # CRITICAL FIX: Paginate needs both session and query for SQLAlchemy 2.0
     return paginate(session, select(query))
 
 
@@ -1729,7 +1718,6 @@ def get_verification_change_summary(
 def get_verification_change_summary_csv(
     session: Session = Depends(get_session),
     params: VerificationChangesParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ):
     query = get_verification_change_query(params)
     query = query.subquery()
@@ -1751,7 +1739,7 @@ def get_verification_change_summary_csv(
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
-        for row in session.execute(select(query)):
+        for row in session.execute(select(query)): # V2 EXECUTION
             workflow_id = row.workflow_id
             item_barcode = row.item_barcode if row.item_barcode else None
             tray_barcode = row.tray_barcode if row.tray_barcode else None
@@ -1870,22 +1858,16 @@ def get_retrieval_count(
     session: Session = Depends(get_session),
     params: RetrievalCountParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ):
     """
     The count of items retrieved.
-
-    **Parameters**:
-    - params: Retrieval Count Params: The parameters for the request.
-        - owner_id: ID of the owner to filter by.
-        - from_dt: Start Accession date to filter by.
-        - to_dt: End Accession date to filter by.
-
-    **Returns**:
-    - Retrieval Count Read Output: The total number of retrievals.
     """
+    # V2 FIX: session.query().filter().all() -> session.execute(select(...)).scalars().all()
     if params.owner_id:
-        owner = session.query(Owner).filter(Owner.id.in_(params.owner_id)).all()
+        # Expand owner IDs to include descendants if include_sub_tiers is True
+        if params.include_sub_tiers:
+            params.owner_id = get_owner_with_descendants(session, params.owner_id)
+        owner = session.execute(select(Owner).filter(Owner.id.in_(params.owner_id))).scalars().all()
         if not owner:
             raise NotFound(detail="Owner(s) not found")
 
@@ -1896,7 +1878,7 @@ def get_retrieval_count(
 
 @router.get("/retrievals/count/download", response_class=StreamingResponse)
 def get_retrieval_count_csv(
-    session: Session = Depends(get_session), params: RetrievalCountParams = Depends(), _: bool = Depends(require_permissions("can_access_reports"))
+    session: Session = Depends(get_session), params: RetrievalCountParams = Depends()
 ):
     query = get_retrieval_item_count_query(params)
 
@@ -1910,7 +1892,7 @@ def get_retrieval_count_csv(
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
-        for row in session.execute(query):
+        for row in session.execute(query): # V2 EXECUTION
             owner_name = row.owner_name
             total_item_retrieved_count = row.total_item_retrieved_count
             max_retrieved_count = row.max_retrieved_count
@@ -1936,7 +1918,6 @@ def get_move_discrepancy_list(
     session: Session = Depends(get_session),
     params: MoveDiscrepancyParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ) -> list:
     """
     Returns a list of Move Discrepancy objects.
@@ -1976,7 +1957,6 @@ def get_move_discrepancy_list(
 def get_move_report_csv(
     session: Session = Depends(get_session),
     params: MoveDiscrepancyParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports"))
 ):
     """
     Translates list response of move Discrepancy objects to csv,
@@ -2004,6 +1984,7 @@ def get_move_report_csv(
         query = query.where(MoveDiscrepancy.create_dt <= params.to_dt)
 
     result = session.execute(query)
+    # V2 FIX: .scalars().all() needed to get ORM objects
     rows = result.scalars().all()
 
     # Create an in-memory CSV
@@ -2074,116 +2055,594 @@ def get_move_report_csv(
         output,
         media_type="text/csv",
         headers={
-            "Content-Disposition": "attachment; filename=shelving_discrepancies.csv"
+            "Content-Disposition": "attachment; filename=move_discrepancies.csv"
         },
     )
 
 
-def _build_not_shelved_query_for_model(Model, params):
-    """Build a not-shelved select query for a single model (Tray and/or NonTrayItem)."""
-    return (
-        select(
-            Barcode.value.label("barcode_value"),
-            Owner.name.label("owner_name"),
-            VerificationJob.workflow_id.label("workflow_id"),
-            Model.accession_dt.label("accession_dt"),
-        )
-        .select_from(Model)
-        .join(Barcode, Barcode.id == Model.barcode_id)
-        .outerjoin(Owner, Owner.id == Model.owner_id)
-        .outerjoin(VerificationJob, VerificationJob.id == Model.verification_job_id)
-        .where(
-            or_(
-                Model.shelf_position_id == None,
-                Model.scanned_for_shelving == False,
-            ),
-            Barcode.withdrawn == False,
-            Model.accession_dt >= params.from_dt,
-            Model.accession_dt <= params.to_dt,
-        )
-    )
-
-
-def get_not_shelved_query(params, sort_params=None):
-    """
-    Construct the query to fetch trays and/or non-tray items that are
-    not shelved, excluding withdrawn items.
-    """
+def get_verification_status_query(params: VerificationReportParams):
     if params.container_type == "Tray":
-        query = _build_not_shelved_query_for_model(Tray, params)
-    elif params.container_type == "NonTray":
-        query = _build_not_shelved_query_for_model(NonTrayItem, params)
-    elif params.container_type == "Both":
-        tray_query = _build_not_shelved_query_for_model(Tray, params)
-        non_tray_query = _build_not_shelved_query_for_model(NonTrayItem, params)
-        query = union_all(tray_query, non_tray_query)
+        query = (
+            select(
+                Barcode.value.label("barcode"),
+                Owner.name.label("owner"),
+                VerificationJob.id.label("verification_job_id"),
+                VerificationJob.update_dt.label("verification_dt"),
+            )
+            .select_from(Tray)
+            .join(Item, Item.tray_id == Tray.id)
+            .join(VerificationJob, Item.verification_job_id == VerificationJob.id)
+            .join(Barcode, Tray.barcode_id == Barcode.id)
+            .join(Owner, Tray.owner_id == Owner.id)
+            .where(
+                Item.status == ItemStatus.Verified,
+                VerificationJob.status == "Completed",
+            )
+            .distinct(Tray.id)
+        )
     else:
-        raise BadRequest(
-            detail="Invalid container_type. Allowed values: 'Tray', 'NonTray', 'Both'"
+        # Non-Tray
+        query = (
+            select(
+                Barcode.value.label("barcode"),
+                Owner.name.label("owner"),
+                VerificationJob.id.label("verification_job_id"),
+                VerificationJob.update_dt.label("verification_dt"),
+            )
+            .select_from(NonTrayItem)
+            .join(VerificationJob, NonTrayItem.verification_job_id == VerificationJob.id)
+            .join(Barcode, NonTrayItem.barcode_id == Barcode.id)
+            .join(Owner, NonTrayItem.owner_id == Owner.id)
+            .where(
+                NonTrayItem.status == NonTrayItemStatus.Verified,
+                VerificationJob.status == "Completed",
+            )
         )
 
-    needs_subquery = params.container_type == "Both"
 
-    if sort_params is not None and sort_params.sort_by:
-        sub = query.subquery()
-        sort_col = getattr(sub.c, sort_params.sort_by, None)
-        if sort_col is not None:
-            order = desc(sort_col) if sort_params.sort_order == "desc" else asc(sort_col)
-            return select(sub).order_by(order)
-        return select(sub)
+    if params.from_dt:
+        query = query.where(VerificationJob.update_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(VerificationJob.update_dt <= params.to_dt)
 
-    if needs_subquery:
-        sub = query.subquery()
-        return select(sub).order_by(desc(sub.c.accession_dt))
+    # Search filter params for server-side filtering
+    if params.barcode_search:
+        query = query.where(Barcode.value.ilike(f"%{params.barcode_search}%"))
+    if params.owner_search:
+        query = query.where(Owner.name.ilike(f"%{params.owner_search}%"))
 
-    return query.order_by(desc("accession_dt"))
+    return query
 
 
-@router.get("/not-shelved/", response_model=Page[NotShelvedOutput])
-def get_not_shelved_report(
+@router.get("/verification-status", response_model=Page[VerificationStatusReportOutput])
+def get_verification_status_report(
     session: Session = Depends(get_session),
-    params: NotShelvedParams = Depends(),
-    sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports")),
-):
+    params: VerificationReportParams = Depends(),
+) -> list:
     """
-    Returns a paginated list of trays and/or non-tray items that have been
-    accessioned but not yet shelved.
+    Get a paginated list of verification status items.
     """
-    query = get_not_shelved_query(params, sort_params)
-    sub = query.subquery()
-    return paginate(session, select(sub))
+    query = get_verification_status_query(params)
+    return paginate(session, query)
 
 
-@router.get("/not-shelved/download", response_class=StreamingResponse)
-def get_not_shelved_csv(
+@router.get("/verification-status/download", response_class=StreamingResponse)
+def get_verification_status_download_csv(
     session: Session = Depends(get_session),
-    params: NotShelvedParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_reports")),
+    params: VerificationReportParams = Depends(),
 ):
-    """
-    Download CSV of trays and/or non-tray items that are not shelved.
-    """
-    query = get_not_shelved_query(params)
-    sub = query.subquery()
+    query = get_verification_status_query(params)
 
     def generate_csv():
         output = StringIO()
         writer = csv.writer(output)
+        # Write header row
         writer.writerow(
-            ["barcode_value", "owner_name", "workflow_id", "accession_dt"]
+            [
+                "Barcode",
+                "Owner",
+                "Verification Job #",
+                "Verification Date",
+            ]
         )
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
 
-        for row in session.execute(select(sub)):
+        # Execute query
+        for row in session.execute(query):
             writer.writerow(
                 [
-                    row.barcode_value,
-                    row.owner_name,
-                    row.workflow_id,
-                    row.accession_dt,
+                    row.barcode,
+                    row.owner,
+                    row.verification_job_id,
+                    row.verification_dt,
+                ]
+            )
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    # Create a StreamingResponse
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=verification_status.csv"
+        },
+    )
+
+
+def get_withdrawn_items_query(params: WithdrawnItemsReportParams):
+    """
+    Build query for withdrawn items report.
+    """
+    # Alias for withdrawn barcode lookup
+    WithdrawnBarcode = aliased(Barcode)
+    WithdrawnBarcodeNonTray = aliased(Barcode)
+
+    # Build Tray Items query
+    tray_query = (
+        select(
+            WithdrawnBarcode.value.label("barcode"),
+            Owner.name.label("owner"),
+            Item.withdrawn_location.label("withdrawn_location"),
+            Item.withdrawal_dt.label("withdrawal_dt"),
+        )
+        .select_from(Item)
+        .outerjoin(WithdrawnBarcode, Item.withdrawn_barcode_id == WithdrawnBarcode.id)
+        .outerjoin(Owner, Item.owner_id == Owner.id)
+        .where(Item.status == ItemStatus.Withdrawn)
+    )
+
+    # Build Non-Tray Items query
+    non_tray_query = (
+        select(
+            WithdrawnBarcodeNonTray.value.label("barcode"),
+            Owner.name.label("owner"),
+            NonTrayItem.withdrawn_location.label("withdrawn_location"),
+            NonTrayItem.withdrawal_dt.label("withdrawal_dt"),
+        )
+        .select_from(NonTrayItem)
+        .outerjoin(WithdrawnBarcodeNonTray, NonTrayItem.withdrawn_barcode_id == WithdrawnBarcodeNonTray.id)
+        .outerjoin(Owner, NonTrayItem.owner_id == Owner.id)
+        .where(NonTrayItem.status == NonTrayItemStatus.Withdrawn)
+    )
+
+    # Apply date filters to Tray query
+    if params.from_dt:
+        tray_query = tray_query.where(Item.withdrawal_dt >= params.from_dt)
+    if params.to_dt:
+        tray_query = tray_query.where(Item.withdrawal_dt <= params.to_dt)
+    if params.owner_id:
+        tray_query = tray_query.where(Item.owner_id.in_(params.owner_id))
+
+    # Apply date filters to Non-Tray query
+    if params.from_dt:
+        non_tray_query = non_tray_query.where(NonTrayItem.withdrawal_dt >= params.from_dt)
+    if params.to_dt:
+        non_tray_query = non_tray_query.where(NonTrayItem.withdrawal_dt <= params.to_dt)
+    if params.owner_id:
+        non_tray_query = non_tray_query.where(NonTrayItem.owner_id.in_(params.owner_id))
+
+    # Return based on container type
+    if params.container_type == "Tray":
+        return tray_query
+    elif params.container_type == "Non-Tray":
+        return non_tray_query
+    else:
+        # "All" or None - combine both queries using union_all
+        # Create CTE to allow proper pagination
+        combined_cte = union_all(tray_query, non_tray_query).cte("combined_withdrawn")
+        return select(
+            combined_cte.c.barcode,
+            combined_cte.c.owner,
+            combined_cte.c.withdrawn_location,
+            combined_cte.c.withdrawal_dt
+        )
+
+
+
+@router.get("/withdrawn-items/", response_model=Page[WithdrawnItemsReportOutput])
+def get_withdrawn_items_report(
+    session: Session = Depends(get_session),
+    params: WithdrawnItemsReportParams = Depends(),
+) -> list:
+    """
+    Get a paginated list of withdrawn items.
+    """
+    # Expand owner IDs to include descendants if include_sub_tiers is True
+    if params.owner_id and params.include_sub_tiers:
+        params.owner_id = get_owner_with_descendants(session, params.owner_id)
+
+    query = get_withdrawn_items_query(params)
+    return paginate(session, query)
+
+
+@router.get("/withdrawn-items/download", response_class=StreamingResponse)
+def get_withdrawn_items_download_csv(
+    session: Session = Depends(get_session),
+    params: WithdrawnItemsReportParams = Depends(),
+):
+    """
+    Download withdrawn items report as CSV.
+    """
+    query = get_withdrawn_items_query(params)
+
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+        # Write header row
+        writer.writerow(
+            [
+                "Barcode",
+                "Owner",
+                "Last Location",
+                "Withdrawal Date",
+            ]
+        )
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        # Execute query
+        for row in session.execute(query):
+            writer.writerow(
+                [
+                    row.barcode,
+                    row.owner,
+                    row.withdrawn_location,
+                    row.withdrawal_dt,
+                ]
+            )
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    # Create a StreamingResponse
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=withdrawn_items.csv"
+        },
+    )
+
+
+
+@router.get("/shipping-bins/", response_model=Page[ShippingBinsReportOutput])
+def get_shipping_bins_report(
+    session: Session = Depends(get_session),
+    params: ShippingBinsReportParams = Depends(),
+    sort_params: SortParams = Depends(),
+) -> list:
+    """
+    Returns a list of active (uncleared) shipping bins.
+    """
+    query = (
+        select(ShippingBin)
+        .join(ShippingJob, ShippingBin.shipping_job_id == ShippingJob.id)
+        .outerjoin(DeliveryLocation, ShippingBin.delivery_location_id == DeliveryLocation.id)
+        .where(ShippingBin.cleared_dt.is_(None))
+    )
+
+    if params.from_dt:
+        query = query.where(ShippingJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(ShippingJob.create_dt <= params.to_dt)
+    
+    if params.delivery_location_id:
+         query = query.where(ShippingBin.delivery_location_id.in_(params.delivery_location_id))
+
+    # Basic sorting by created date desc if no sort param
+    if not sort_params.sort_by:
+        query = query.order_by(desc(ShippingJob.create_dt))
+    else:
+        # TODO: Implement ShippingBinSorter if needed, for now basic sorting support
+        if sort_params.sort_by == "create_dt":
+             order_func = asc if sort_params.sort_order == "asc" else desc
+             query = query.order_by(order_func(ShippingJob.create_dt))
+        elif sort_params.sort_by == "shipping_job_id":
+             order_func = asc if sort_params.sort_order == "asc" else desc
+             query = query.order_by(order_func(ShippingJob.id))
+        elif sort_params.sort_by == "barcode":
+             order_func = asc if sort_params.sort_order == "asc" else desc
+             query = query.order_by(order_func(ShippingBin.barcode))
+        elif sort_params.sort_by == "delivery_location":
+             order_func = asc if sort_params.sort_order == "asc" else desc
+             query = query.order_by(order_func(DeliveryLocation.name))
+        elif sort_params.sort_by == "item_count":
+             # This is a bit complex as item_count is a property or aggregation
+             # For now, skip sorting by item count or handle in memory if pages are small (not recommended)
+             pass
+
+
+    # Enhance the result with item counts
+    # Getting item counts might require a separate query or group by if not efficient
+    # But current ShippingBin model has `items` relationship (lazy="selectin"), so it should be available on the objects.
+    # The output schema expects `item_count`. We can add a property to the model or compute it here.
+    # ShippingBinsReportOutput uses `from_attributes=True`, passing the ShippingBin object.
+    # We need to make sure ShippingBin object has `item_count` attribute or key.
+    
+    # Let's inspect ShippingBin model again. It has `items` relationship.
+    # We can add a property to ShippingBin model or wrap the result.
+    
+    return paginate(session, query)
+
+
+@router.get("/shipping-bins/download", response_class=StreamingResponse)
+def get_shipping_bins_csv(
+    session: Session = Depends(get_session),
+    params: ShippingBinsReportParams = Depends(),
+):
+    """
+    Returns a csv report of active shipping bins.
+    """
+    query = (
+        select(ShippingBin)
+        .join(ShippingJob, ShippingBin.shipping_job_id == ShippingJob.id)
+        .outerjoin(DeliveryLocation, ShippingBin.delivery_location_id == DeliveryLocation.id)
+        .where(ShippingBin.cleared_dt.is_(None))
+    )
+
+    if params.from_dt:
+        query = query.where(ShippingJob.create_dt >= params.from_dt)
+    if params.to_dt:
+        query = query.where(ShippingJob.create_dt <= params.to_dt)
+    if params.delivery_location_id:
+         query = query.where(ShippingBin.delivery_location_id.in_(params.delivery_location_id))
+
+    # Order by date
+    query = query.order_by(desc(ShippingJob.create_dt))
+
+    result = session.execute(query)
+    rows = result.scalars().all()
+
+    output = StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(
+        [
+            "bin_number",
+            "shipping_job_number",
+            "created_date",
+            "item_count",
+            "delivery_location",
+        ]
+    )
+
+    for row in rows:
+        writer.writerow(
+            [
+                row.barcode if row.barcode else "",
+                row.shipping_job_id,
+                row.shipping_job.create_dt,
+                len(row.items),
+                row.delivery_location.name if row.delivery_location else "",
+            ]
+        )
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=shipping_bins.csv"},
+    )
+
+
+# --- FACILITY INTELLIGENCE REPORTS ---
+
+def get_worker_efficiency_query(params):
+    """
+    Construct the query measuring worker throughput (Items/Hour) across all job types.
+    """
+    # Define subqueries for each job type to union them
+    from app.models.trays import Tray
+    from app.models.items import Item
+    from app.models.non_tray_items import NonTrayItem
+    from app.models.requests import Request
+
+    # Pre-aggregating counts grouped by job_id to resolve SQL-level N+1 subqueries
+    shelving_trays_subq = select(
+        Tray.shelving_job_id.label("job_id"),
+        func.count(Tray.id).label("tray_count")
+    ).group_by(Tray.shelving_job_id).subquery()
+
+    shelving_nontrays_subq = select(
+        NonTrayItem.shelving_job_id.label("job_id"),
+        func.count(NonTrayItem.id).label("nontray_count")
+    ).group_by(NonTrayItem.shelving_job_id).subquery()
+
+    accession_items_subq = select(
+        Item.accession_job_id.label("job_id"),
+        func.count(Item.id).label("item_count")
+    ).group_by(Item.accession_job_id).subquery()
+
+    accession_nontrays_subq = select(
+        NonTrayItem.accession_job_id.label("job_id"),
+        func.count(NonTrayItem.id).label("nontray_count")
+    ).group_by(NonTrayItem.accession_job_id).subquery()
+
+    picklist_requests_subq = select(
+        Request.pick_list_id.label("job_id"),
+        func.count(Request.id).label("request_count")
+    ).group_by(Request.pick_list_id).subquery()
+
+    verification_items_subq = select(
+        Item.verification_job_id.label("job_id"),
+        func.count(Item.id).label("item_count")
+    ).group_by(Item.verification_job_id).subquery()
+
+    verification_nontrays_subq = select(
+        NonTrayItem.verification_job_id.label("job_id"),
+        func.count(NonTrayItem.id).label("nontray_count")
+    ).group_by(NonTrayItem.verification_job_id).subquery()
+
+    # Build the main job queries with pre-aggregated counts joined
+    shelving_subq = select(
+        ShelvingJob.assigned_user_id.label("user_id"),
+        ShelvingJob.run_time.label("run_time"),
+        (
+            func.coalesce(shelving_trays_subq.c.tray_count, 0) +
+            func.coalesce(shelving_nontrays_subq.c.nontray_count, 0)
+        ).label("items"),
+        literal("Shelving").label("job_type")
+    ).select_from(ShelvingJob)\
+     .outerjoin(shelving_trays_subq, ShelvingJob.id == shelving_trays_subq.c.job_id)\
+     .outerjoin(shelving_nontrays_subq, ShelvingJob.id == shelving_nontrays_subq.c.job_id)\
+     .where(ShelvingJob.assigned_user_id != None)
+
+    # Note: Tray count is removed from Accession total to avoid double counting
+    accession_subq = select(
+        AccessionJob.assigned_user_id.label("user_id"),
+        AccessionJob.run_time.label("run_time"),
+        (
+            func.coalesce(accession_items_subq.c.item_count, 0) +
+            func.coalesce(accession_nontrays_subq.c.nontray_count, 0)
+        ).label("items"),
+        literal("Accession").label("job_type")
+    ).select_from(AccessionJob)\
+     .outerjoin(accession_items_subq, AccessionJob.id == accession_items_subq.c.job_id)\
+     .outerjoin(accession_nontrays_subq, AccessionJob.id == accession_nontrays_subq.c.job_id)\
+     .where(AccessionJob.assigned_user_id != None)
+
+    pick_list_subq = select(
+        PickList.assigned_user_id.label("user_id"),
+        PickList.run_time.label("run_time"),
+        func.coalesce(picklist_requests_subq.c.request_count, 0).label("items"),
+        literal("PickList").label("job_type")
+    ).select_from(PickList)\
+     .outerjoin(picklist_requests_subq, PickList.id == picklist_requests_subq.c.job_id)\
+     .where(PickList.assigned_user_id != None)
+
+    # Note: Tray count is removed from Verification total to avoid double counting
+    verification_subq = select(
+        VerificationJob.assigned_user_id.label("user_id"),
+        VerificationJob.run_time.label("run_time"),
+        (
+            func.coalesce(verification_items_subq.c.item_count, 0) +
+            func.coalesce(verification_nontrays_subq.c.nontray_count, 0)
+        ).label("items"),
+        literal("Verification").label("job_type")
+    ).select_from(VerificationJob)\
+     .outerjoin(verification_items_subq, VerificationJob.id == verification_items_subq.c.job_id)\
+     .outerjoin(verification_nontrays_subq, VerificationJob.id == verification_nontrays_subq.c.job_id)\
+     .where(VerificationJob.assigned_user_id != None)
+
+    # Filter by user if provided
+    if params.user_id:
+        shelving_subq = shelving_subq.where(ShelvingJob.assigned_user_id.in_(params.user_id))
+        accession_subq = accession_subq.where(AccessionJob.assigned_user_id.in_(params.user_id))
+        pick_list_subq = pick_list_subq.where(PickList.assigned_user_id.in_(params.user_id))
+        verification_subq = verification_subq.where(VerificationJob.assigned_user_id.in_(params.user_id))
+
+    # Filter by date range if provided
+    if params.from_dt:
+        shelving_subq = shelving_subq.where(ShelvingJob.create_dt >= params.from_dt)
+        accession_subq = accession_subq.where(AccessionJob.create_dt >= params.from_dt)
+        pick_list_subq = pick_list_subq.where(PickList.create_dt >= params.from_dt)
+        verification_subq = verification_subq.where(VerificationJob.create_dt >= params.from_dt)
+
+    if params.to_dt:
+        shelving_subq = shelving_subq.where(ShelvingJob.create_dt <= params.to_dt)
+        accession_subq = accession_subq.where(AccessionJob.create_dt <= params.to_dt)
+        pick_list_subq = pick_list_subq.where(PickList.create_dt <= params.to_dt)
+        verification_subq = verification_subq.where(VerificationJob.create_dt <= params.to_dt)
+
+    # Collect active subqueries based on job_type filter
+    active_subqs = []
+    if not params.job_type or "Shelving" in params.job_type:
+        active_subqs.append(shelving_subq)
+    if not params.job_type or "Accession" in params.job_type:
+        active_subqs.append(accession_subq)
+    if not params.job_type or "PickList" in params.job_type:
+        active_subqs.append(pick_list_subq)
+    if not params.job_type or "Verification" in params.job_type:
+        active_subqs.append(verification_subq)
+
+    if not active_subqs:
+        # Fallback if filter excluded everything
+        active_subqs = [shelving_subq, accession_subq, pick_list_subq, verification_subq]
+
+    combined = union_all(*active_subqs).subquery()
+
+    # Final aggregation query
+    total_seconds = func.extract('epoch', func.sum(combined.c.run_time))
+    items_per_hour = (func.sum(combined.c['items']) * 3600.0) / func.nullif(total_seconds, 0)
+
+    query = (
+        select(
+            combined.c.user_id,
+            func.concat(User.first_name, ' ', User.last_name).label("user_name"),
+            combined.c.job_type,
+            func.count().label("total_jobs"),
+            func.sum(combined.c['items']).label("total_items_processed"),
+            func.coalesce(
+                func.to_char(func.sum(combined.c.run_time), 'HH24:MI:SS'), '00:00:00'
+            ).label("total_active_time"),
+            func.round(func.coalesce(items_per_hour, 0)).label("items_per_hour")
+        )
+        .join(User, User.id == combined.c.user_id)
+        .group_by(combined.c.user_id, User.first_name, User.last_name, combined.c.job_type)
+    )
+
+    return query
+
+
+@router.get("/worker-efficiency/", response_model=Page[WorkerEfficiencyOutput])
+def get_worker_efficiency(
+    session: Session = Depends(get_session),
+    params: WorkerEfficiencyParams = Depends(),
+):
+    """
+    SLA Report: Measures worker throughput (Items/Hour) across all job types.
+    """
+    query = get_worker_efficiency_query(params)
+
+    return paginate(session, query)
+
+
+@router.get("/worker-efficiency/download", response_class=StreamingResponse)
+def get_worker_efficiency_csv(
+    session: Session = Depends(get_session),
+    params: WorkerEfficiencyParams = Depends(),
+):
+    """
+    Translates list response of WorkerEfficiency rows to csv,
+    returns binary for download
+    """
+    query = get_worker_efficiency_query(params)
+
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow(
+            [
+                "user_id",
+                "user_name",
+                "job_type",
+                "total_jobs",
+                "total_items_processed",
+                "total_active_time",
+                "items_per_hour",
+            ]
+        )
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        for row in session.execute(query):
+            writer.writerow(
+                [
+                    row.user_id,
+                    row.user_name,
+                    row.job_type,
+                    row.total_jobs,
+                    row.total_items_processed,
+                    row.total_active_time,
+                    row.items_per_hour,
                 ]
             )
             yield output.getvalue()
@@ -2193,7 +2652,956 @@ def get_not_shelved_csv(
     return StreamingResponse(
         generate_csv(),
         media_type="text/csv",
-        headers={
-            "Content-Disposition": "attachment; filename=not_shelved_report.csv"
-        },
+        headers={"Content-Disposition": "attachment; filename=worker_efficiency.csv"},
+    )
+
+
+def get_inventory_hot_zones_query(session, params):
+    """
+    Construct the query measuring retrieval frequency (heatmap) by building and aisle.
+    """
+    # 1. Tray Item Retrievals Subquery
+    tray_retrievals_subq = (
+        select(
+            Building.name.label("building_name"),
+            Aisle.aisle_number.label("aisle_number"),
+            ItemRetrievalEvent.create_dt
+        )
+        .join(Item, ItemRetrievalEvent.item_id == Item.id)
+        .join(Tray, Item.tray_id == Tray.id)
+        .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id)
+        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+        .join(Ladder, Shelf.ladder_id == Ladder.id)
+        .join(Side, Ladder.side_id == Side.id)
+        .join(Aisle, Side.aisle_id == Aisle.id)
+        .join(Module, Aisle.module_id == Module.id)
+        .join(Building, Module.building_id == Building.id)
+    )
+
+    # 2. Non-Tray Item Retrievals Subquery
+    non_tray_retrievals_subq = (
+        select(
+            Building.name.label("building_name"),
+            Aisle.aisle_number.label("aisle_number"),
+            NonTrayItemRetrievalEvent.create_dt
+        )
+        .join(NonTrayItem, NonTrayItemRetrievalEvent.non_tray_item_id == NonTrayItem.id)
+        .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id)
+        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+        .join(Ladder, Shelf.ladder_id == Ladder.id)
+        .join(Side, Ladder.side_id == Side.id)
+        .join(Aisle, Side.aisle_id == Aisle.id)
+        .join(Module, Aisle.module_id == Module.id)
+        .join(Building, Module.building_id == Building.id)
+    )
+
+    # Apply filters to subqueries
+    if params.building_id:
+        tray_retrievals_subq = tray_retrievals_subq.where(Building.id == params.building_id)
+        non_tray_retrievals_subq = non_tray_retrievals_subq.where(Building.id == params.building_id)
+    if params.from_dt:
+        tray_retrievals_subq = tray_retrievals_subq.where(ItemRetrievalEvent.create_dt >= params.from_dt)
+        non_tray_retrievals_subq = non_tray_retrievals_subq.where(NonTrayItemRetrievalEvent.create_dt >= params.from_dt)
+    if params.to_dt:
+        tray_retrievals_subq = tray_retrievals_subq.where(ItemRetrievalEvent.create_dt <= params.to_dt)
+        non_tray_retrievals_subq = non_tray_retrievals_subq.where(NonTrayItemRetrievalEvent.create_dt <= params.to_dt)
+
+    combined_retrievals = union_all(tray_retrievals_subq, non_tray_retrievals_subq).subquery()
+    
+    # Calculate total for percentages
+    total_count_query = select(func.count()).select_from(combined_retrievals)
+    total_count = session.execute(total_count_query).scalar() or 1
+
+    # Final aggregation
+    query = (
+        select(
+            combined_retrievals.c.building_name,
+            combined_retrievals.c.aisle_number,
+            func.count().label("retrieval_count"),
+            (func.count() * 100.0 / total_count).label("percent_of_total")
+        )
+        .group_by(combined_retrievals.c.building_name, combined_retrievals.c.aisle_number)
+        .order_by(desc("retrieval_count"))
+    )
+
+    return query
+
+
+@router.get("/hot-zones/", response_model=Page[InventoryHotZoneOutput])
+def get_inventory_hot_zones(
+    session: Session = Depends(get_session),
+    params: InventoryHotZoneParams = Depends(),
+):
+    """
+    Heatmap: Retrieval frequency by building and aisle.
+    """
+    query = get_inventory_hot_zones_query(session, params)
+
+    return paginate(session, query)
+
+
+@router.get("/hot-zones/download", response_class=StreamingResponse)
+def get_inventory_hot_zones_csv(
+    session: Session = Depends(get_session),
+    params: InventoryHotZoneParams = Depends(),
+):
+    """
+    Translates list response of InventoryHotZone rows to csv,
+    returns binary for download
+    """
+    query = get_inventory_hot_zones_query(session, params)
+
+    def generate_csv():
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow(
+            [
+                "building_name",
+                "aisle_number",
+                "retrieval_count",
+                "percent_of_total",
+            ]
+        )
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        for row in session.execute(query):
+            writer.writerow(
+                [
+                    row.building_name,
+                    row.aisle_number,
+                    row.retrieval_count,
+                    row.percent_of_total,
+                ]
+            )
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=inventory_hot_zones.csv"},
+    )
+
+
+@router.get("/capacity-forecast/", response_model=List[CapacityForecastOutput])
+def get_capacity_forecast(
+    session: Session = Depends(get_session),
+    params: CapacityForecastParams = Depends(),
+):
+    """
+    Predictive: Storage runway in months for each size class.
+    """
+    owner_ids = None
+    if params.owner_id:
+        if params.include_sub_owners:
+            owner_ids = get_owner_with_descendants(session, params.owner_id)
+        else:
+            owner_ids = [params.owner_id]
+
+    # 1. Current Available Space (Facility total or filtered by owner/building)
+    space_stmt = (
+        select(
+            SizeClass.name.label("size_class_name"),
+            func.sum(Shelf.available_space).label("current_available_space")
+        )
+        .join(ShelfType, Shelf.shelf_type_id == ShelfType.id)
+        .join(SizeClass, ShelfType.size_class_id == SizeClass.id)
+        .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)
+        .join(Side, Ladder.side_id == Side.id, isouter=True)
+        .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)
+        .join(Module, Aisle.module_id == Module.id, isouter=True)
+        .join(Building, Module.building_id == Building.id, isouter=True)
+    )
+    if params.building_id:
+        space_stmt = space_stmt.where(Building.id == params.building_id)
+    if owner_ids:
+        space_stmt = space_stmt.where(Shelf.owner_id.in_(owner_ids))
+    
+    space_query = space_stmt.group_by(SizeClass.name).subquery()
+
+    # 2. Historical Growth (Last X days) - Unioned and filtered by owner and building
+    lookback_dt = datetime.now(timezone.utc) - timedelta(days=params.lookback_days)
+    divisor = max(params.lookback_days, 1) / 30.0
+    
+    item_growth = (
+        select(Tray.id, Tray.size_class_id, Tray.owner_id, Tray.accession_dt)
+        .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id)
+        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+        .join(Ladder, Shelf.ladder_id == Ladder.id)
+        .join(Side, Ladder.side_id == Side.id)
+        .join(Aisle, Side.aisle_id == Aisle.id)
+        .join(Module, Aisle.module_id == Module.id)
+        .join(Building, Module.building_id == Building.id)
+        .where(Tray.accession_dt >= lookback_dt)
+    )
+    
+    non_tray_growth = (
+        select(NonTrayItem.id, NonTrayItem.size_class_id, NonTrayItem.owner_id, NonTrayItem.accession_dt)
+        .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id)
+        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+        .join(Ladder, Shelf.ladder_id == Ladder.id)
+        .join(Side, Ladder.side_id == Side.id)
+        .join(Aisle, Side.aisle_id == Aisle.id)
+        .join(Module, Aisle.module_id == Module.id)
+        .join(Building, Module.building_id == Building.id)
+        .where(NonTrayItem.accession_dt >= lookback_dt)
+    )
+    
+    if owner_ids:
+        item_growth = item_growth.where(Tray.owner_id.in_(owner_ids))
+        non_tray_growth = non_tray_growth.where(NonTrayItem.owner_id.in_(owner_ids))
+    
+    if params.building_id:
+        item_growth = item_growth.where(Building.id == params.building_id)
+        non_tray_growth = non_tray_growth.where(Building.id == params.building_id)
+    
+    combined_items = union_all(item_growth, non_tray_growth).subquery()
+    
+    growth_query = (
+        select(
+            SizeClass.name.label("size_class_name"),
+            (func.count(combined_items.c.id) / divisor).label("avg_monthly_growth")
+        )
+        .join(SizeClass, combined_items.c.size_class_id == SizeClass.id)
+        .group_by(SizeClass.name)
+    ).subquery()
+
+    # 3. Join and calculate
+    final_query = (
+        select(
+            space_query.c.size_class_name,
+            space_query.c.current_available_space,
+            func.coalesce(growth_query.c.avg_monthly_growth, 0).label("avg_monthly_accession_rate"),
+            func.coalesce(
+                space_query.c.current_available_space / func.nullif(growth_query.c.avg_monthly_growth, 0),
+                99.9
+            ).label("estimated_runway_months")
+        )
+        .join(growth_query, growth_query.c.size_class_name == space_query.c.size_class_name, isouter=True)
+    )
+
+    return session.execute(final_query).all()
+
+
+@router.get("/capacity-forecast-height/", response_model=List[CapacityForecastHeightOutput])
+def get_capacity_forecast_height(
+    session: Session = Depends(get_session),
+    params: CapacityForecastParams = Depends(),
+):
+    """
+    Predictive: Storage runway in months for each physical shelf height.
+    """
+    owner_ids = None
+    if params.owner_id:
+        if params.include_sub_owners:
+            owner_ids = get_owner_with_descendants(session, params.owner_id)
+        else:
+            owner_ids = [params.owner_id]
+
+    # 1. Current Available Space (Grouped by physical height, filtered by owner/building)
+    # Using cast to Float for more reliable grouping/joining on decimal values
+    space_stmt = (
+        select(
+            sa.cast(Shelf.height, sa.Float).label("shelf_height"),
+            func.sum(Shelf.available_space).label("current_available_space")
+        )
+    )
+    
+    if params.building_id:
+        space_stmt = (
+            space_stmt.join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)
+            .join(Side, Ladder.side_id == Side.id, isouter=True)
+            .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)
+            .join(Module, Aisle.module_id == Module.id, isouter=True)
+            .join(Building, Module.building_id == Building.id, isouter=True)
+            .where(Building.id == params.building_id)
+        )
+    
+    if owner_ids:
+        space_stmt = space_stmt.where(Shelf.owner_id.in_(owner_ids))
+    
+    space_query = space_stmt.group_by(sa.cast(Shelf.height, sa.Float)).subquery()
+
+    # 2. Historical Growth - Grouped by shelf height
+    lookback_dt = datetime.now(timezone.utc) - timedelta(days=params.lookback_days)
+    divisor = max(params.lookback_days, 1) / 30.0
+    
+    # Growth joins from items to shelves to get height
+    item_growth_stmt = (
+        select(Tray.id, sa.cast(Shelf.height, sa.Float).label("shelf_height"), Tray.owner_id)
+        .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id)
+        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+        .where(Tray.accession_dt >= lookback_dt)
+    )
+    
+    non_tray_growth_stmt = (
+        select(NonTrayItem.id, sa.cast(Shelf.height, sa.Float).label("shelf_height"), NonTrayItem.owner_id)
+        .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id)
+        .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+        .where(NonTrayItem.accession_dt >= lookback_dt)
+    )
+    
+    if owner_ids:
+        item_growth_stmt = item_growth_stmt.where(Tray.owner_id.in_(owner_ids))
+        non_tray_growth_stmt = non_tray_growth_stmt.where(NonTrayItem.owner_id.in_(owner_ids))
+    
+    if params.building_id:
+        # Only join building chain if we actually need to filter by it
+        item_growth_stmt = (
+            item_growth_stmt.join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)
+            .join(Side, Ladder.side_id == Side.id, isouter=True)
+            .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)
+            .join(Module, Aisle.module_id == Module.id, isouter=True)
+            .join(Building, Module.building_id == Building.id, isouter=True)
+            .where(Building.id == params.building_id)
+        )
+        non_tray_growth_stmt = (
+            non_tray_growth_stmt.join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)
+            .join(Side, Ladder.side_id == Side.id, isouter=True)
+            .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)
+            .join(Module, Aisle.module_id == Module.id, isouter=True)
+            .join(Building, Module.building_id == Building.id, isouter=True)
+            .where(Building.id == params.building_id)
+        )
+    
+    combined_items = union_all(item_growth_stmt, non_tray_growth_stmt).subquery()
+    
+    growth_query = (
+        select(
+            combined_items.c.shelf_height,
+            (func.count(combined_items.c.id) / divisor).label("avg_monthly_growth")
+        )
+        .group_by(combined_items.c.shelf_height)
+    ).subquery()
+
+    # 3. Join and calculate
+    final_query = (
+        select(
+            space_query.c.shelf_height,
+            space_query.c.current_available_space,
+            func.coalesce(growth_query.c.avg_monthly_growth, 0).label("avg_monthly_accession_rate"),
+            func.coalesce(
+                space_query.c.current_available_space / func.nullif(growth_query.c.avg_monthly_growth, 0),
+                99.9
+            ).label("estimated_runway_months")
+        )
+        .join(growth_query, growth_query.c.shelf_height == space_query.c.shelf_height, isouter=True)
+    )
+
+    return session.execute(final_query).all()
+
+
+@router.get("/daily-pulse/", response_model=DailyPulseOutput)
+def get_daily_pulse(session: Session = Depends(get_session)):
+    """
+    Real-time Aggregate: Summary of today's facility throughput.
+    """
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    accessioned = session.execute(select(func.count(Item.id)).where(Item.accession_dt >= today_start)).scalar() or 0
+    shelved = session.execute(select(func.count(ShelvingJob.id)).where(ShelvingJob.last_transition >= today_start, ShelvingJob.status == "Completed")).scalar() or 0
+    retrieved_tray = session.execute(select(func.count(ItemRetrievalEvent.id)).where(ItemRetrievalEvent.create_dt >= today_start)).scalar() or 0
+    retrieved_non_tray = session.execute(select(func.count(NonTrayItemRetrievalEvent.id)).where(NonTrayItemRetrievalEvent.create_dt >= today_start)).scalar() or 0
+    retrieved = retrieved_tray + retrieved_non_tray
+    verified = session.execute(select(func.count(VerificationJob.id)).where(VerificationJob.last_transition >= today_start, VerificationJob.status == "Completed")).scalar() or 0
+    pending = session.execute(select(func.count(Request.id)).where(Request.status == "New")).scalar() or 0
+    verif_backlog = session.execute(select(func.count(VerificationJob.id)).where(VerificationJob.status != "Completed")).scalar() or 0
+
+    return {
+        "accessioned_today": accessioned,
+        "shelved_today": shelved,
+        "retrieved_today": retrieved,
+        "verified_today": verified,
+        "pending_requests": pending,
+        "backlog_verification_jobs": verif_backlog
+    }
+
+
+@router.get("/exports/{dataset}/")
+def export_raw_dataset(
+    dataset: str,
+    from_dt: Optional[datetime] = Query(None),
+    to_dt: Optional[datetime] = Query(None),
+    session: Session = Depends(get_session)
+):
+    """
+    High-performance flat-file export for external BI tools (Tableau/PowerBI).
+    """
+def get_export_stmt_and_headers(dataset: str, from_dt: Optional[datetime], to_dt: Optional[datetime], session: Session):
+    """
+    Helper to get the SQL statement and headers for a given dataset.
+    """
+    if dataset == "items_master":
+        # Flattened items with metadata
+        TrayBarcode = aliased(Barcode)
+        ShelfBarcode = aliased(Barcode)
+        stmt = (
+            select(
+                Barcode.value.label("barcode"),
+                TrayBarcode.value.label("tray_barcode"),
+                Item.accession_dt,
+                case(
+                    (Item.tray_id.isnot(None), "Tray"),
+                    else_="Non-Tray"
+                ).label("item_type"),
+                MediaType.name.label("media_type"),
+                SizeClass.name.label("size_class"),
+                Owner.name.label("owner"),
+                Building.name.label("building"),
+                Aisle.aisle_number,
+                Module.module_number,
+                Ladder.ladder_number,
+                SideOrientation.name.label("side"),
+                Shelf.shelf_number,
+                ShelfPosition.position_number,
+                ShelfBarcode.value.label("shelf_barcode"),
+                Shelf.height.label("shelf_height_in"),
+                Item.status
+            )
+            .join(Barcode, Item.barcode_id == Barcode.id, isouter=True)
+            .join(SizeClass, Item.size_class_id == SizeClass.id, isouter=True)
+            .join(Owner, Item.owner_id == Owner.id, isouter=True)
+            .join(MediaType, Item.media_type_id == MediaType.id, isouter=True)
+            .join(Tray, Item.tray_id == Tray.id, isouter=True)
+            .join(TrayBarcode, Tray.barcode_id == TrayBarcode.id, isouter=True)
+            .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id, isouter=True)
+            .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)
+            .join(ShelfBarcode, Shelf.barcode_id == ShelfBarcode.id, isouter=True)
+            .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)
+            .join(Side, Ladder.side_id == Side.id, isouter=True)
+            .join(SideOrientation, Side.side_orientation_id == SideOrientation.id, isouter=True)
+            .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)
+            .join(Module, Aisle.module_id == Module.id, isouter=True)
+            .join(Building, Module.building_id == Building.id, isouter=True)
+            # .distinct() removed here to prevent timeout of the very large exports. FETCH-1655
+        )
+        if from_dt: stmt = stmt.where(Item.accession_dt >= from_dt)
+        if to_dt: stmt = stmt.where(Item.accession_dt <= to_dt)
+        
+        headers = [
+            "barcode", "tray_barcode", "accession_date", "type", "media_type", "size_class", "owner", 
+            "building", "aisle", "module", "ladder", "side", "shelf", "shelf_position", "shelf_barcode",
+            "shelf_height", "status"
+        ]
+    elif dataset == "inventory_activity":
+        # Build individual queries for each event type to avoid join ambiguity
+        queries = []
+
+        # 1. Accession (Item)
+        q1 = select(
+            literal("Accession").label("event_type"),
+            Item.accession_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(Item.accession_job_id, BigInteger).label("job_number")
+        ).select_from(Item)\
+         .join(Barcode, Item.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, Item.owner_id == Owner.id, isouter=True)\
+         .join(Tray, Item.tray_id == Tray.id, isouter=True)\
+         .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q1 = q1.where(Item.accession_dt >= from_dt)
+        if to_dt: q1 = q1.where(Item.accession_dt <= to_dt)
+        queries.append(q1)
+
+        # 2. Accession (NonTray)
+        q2 = select(
+            literal("Accession (NT)").label("event_type"),
+            NonTrayItem.accession_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(NonTrayItem.accession_job_id, BigInteger).label("job_number")
+        ).select_from(NonTrayItem)\
+         .join(Barcode, NonTrayItem.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, NonTrayItem.owner_id == Owner.id, isouter=True)\
+         .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q2 = q2.where(NonTrayItem.accession_dt >= from_dt)
+        if to_dt: q2 = q2.where(NonTrayItem.accession_dt <= to_dt)
+        queries.append(q2)
+
+        # 3. Verification
+        q3 = select(
+            literal("Verification").label("event_type"),
+            VerificationJob.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(VerificationJob.id, BigInteger).label("job_number")
+        ).select_from(VerificationJob)\
+         .join(Item, Item.verification_job_id == VerificationJob.id)\
+         .join(Barcode, Item.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, Item.owner_id == Owner.id, isouter=True)\
+         .join(Tray, Item.tray_id == Tray.id, isouter=True)\
+         .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q3 = q3.where(VerificationJob.create_dt >= from_dt)
+        if to_dt: q3 = q3.where(VerificationJob.create_dt <= to_dt)
+        queries.append(q3)
+
+        # 4. Verification (NonTray)
+        q4 = select(
+            literal("Verification (NT)").label("event_type"),
+            VerificationJob.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(VerificationJob.id, BigInteger).label("job_number")
+        ).select_from(VerificationJob)\
+         .join(NonTrayItem, NonTrayItem.verification_job_id == VerificationJob.id)\
+         .join(Barcode, NonTrayItem.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, NonTrayItem.owner_id == Owner.id, isouter=True)\
+         .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q4 = q4.where(VerificationJob.create_dt >= from_dt)
+        if to_dt: q4 = q4.where(VerificationJob.create_dt <= to_dt)
+        queries.append(q4)
+
+        # 5. Shelving
+        q5 = select(
+            literal("Shelving").label("event_type"),
+            ShelvingJob.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(ShelvingJob.id, BigInteger).label("job_number")
+        ).select_from(ShelvingJob)\
+         .join(Tray, Tray.shelving_job_id == ShelvingJob.id)\
+         .join(Item, Item.tray_id == Tray.id)\
+         .join(Barcode, Item.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, Item.owner_id == Owner.id, isouter=True)\
+         .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q5 = q5.where(ShelvingJob.create_dt >= from_dt)
+        if to_dt: q5 = q5.where(ShelvingJob.create_dt <= to_dt)
+        queries.append(q5)
+
+        # 6. Shelving (NonTray)
+        q6 = select(
+            literal("Shelving (NT)").label("event_type"),
+            ShelvingJob.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(ShelvingJob.id, BigInteger).label("job_number")
+        ).select_from(ShelvingJob)\
+         .join(NonTrayItem, NonTrayItem.shelving_job_id == ShelvingJob.id)\
+         .join(Barcode, NonTrayItem.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, NonTrayItem.owner_id == Owner.id, isouter=True)\
+         .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q6 = q6.where(ShelvingJob.create_dt >= from_dt)
+        if to_dt: q6 = q6.where(ShelvingJob.create_dt <= to_dt)
+        queries.append(q6)
+
+        # 7. Request
+        q7 = select(
+            literal("Request").label("event_type"),
+            Request.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(Request.id, BigInteger).label("job_number")
+        ).select_from(Request)\
+         .join(Item, Request.item_id == Item.id)\
+         .join(Barcode, Item.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, Item.owner_id == Owner.id, isouter=True)\
+         .join(Tray, Item.tray_id == Tray.id, isouter=True)\
+         .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q7 = q7.where(Request.create_dt >= from_dt)
+        if to_dt: q7 = q7.where(Request.create_dt <= to_dt)
+        queries.append(q7)
+
+        # 8. Request (NonTray)
+        q8 = select(
+            literal("Request (NT)").label("event_type"),
+            Request.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(Request.id, BigInteger).label("job_number")
+        ).select_from(Request)\
+         .join(NonTrayItem, Request.non_tray_item_id == NonTrayItem.id)\
+         .join(Barcode, NonTrayItem.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, NonTrayItem.owner_id == Owner.id, isouter=True)\
+         .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q8 = q8.where(Request.create_dt >= from_dt)
+        if to_dt: q8 = q8.where(Request.create_dt <= to_dt)
+        queries.append(q8)
+
+        # 9. Picklist
+        q9 = select(
+            literal("Picklist").label("event_type"),
+            PickList.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(PickList.id, BigInteger).label("job_number")
+        ).select_from(PickList)\
+         .join(Request, Request.pick_list_id == PickList.id)\
+         .join(Item, Request.item_id == Item.id)\
+         .join(Barcode, Item.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, Item.owner_id == Owner.id, isouter=True)\
+         .join(Tray, Item.tray_id == Tray.id, isouter=True)\
+         .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q9 = q9.where(PickList.create_dt >= from_dt)
+        if to_dt: q9 = q9.where(PickList.create_dt <= to_dt)
+        queries.append(q9)
+
+        # 10. Picklist (NonTray)
+        q10 = select(
+            literal("Picklist (NT)").label("event_type"),
+            PickList.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(PickList.id, BigInteger).label("job_number")
+        ).select_from(PickList)\
+         .join(Request, Request.pick_list_id == PickList.id)\
+         .join(NonTrayItem, Request.non_tray_item_id == NonTrayItem.id)\
+         .join(Barcode, NonTrayItem.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, NonTrayItem.owner_id == Owner.id, isouter=True)\
+         .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q10 = q10.where(PickList.create_dt >= from_dt)
+        if to_dt: q10 = q10.where(PickList.create_dt <= to_dt)
+        queries.append(q10)
+
+        # 11. Retrieval
+        q11 = select(
+            literal("Retrieval").label("event_type"),
+            ItemRetrievalEvent.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(ItemRetrievalEvent.pick_list_id, BigInteger).label("job_number")
+        ).select_from(ItemRetrievalEvent)\
+         .join(Item, ItemRetrievalEvent.item_id == Item.id)\
+         .join(Barcode, Item.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, Item.owner_id == Owner.id, isouter=True)\
+         .join(Tray, Item.tray_id == Tray.id, isouter=True)\
+         .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q11 = q11.where(ItemRetrievalEvent.create_dt >= from_dt)
+        if to_dt: q11 = q11.where(ItemRetrievalEvent.create_dt <= to_dt)
+        queries.append(q11)
+
+        # 12. Retrieval (NonTray)
+        q12 = select(
+            literal("Retrieval (NT)").label("event_type"),
+            NonTrayItemRetrievalEvent.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(NonTrayItemRetrievalEvent.pick_list_id, BigInteger).label("job_number")
+        ).select_from(NonTrayItemRetrievalEvent)\
+         .join(NonTrayItem, NonTrayItemRetrievalEvent.non_tray_item_id == NonTrayItem.id)\
+         .join(Barcode, NonTrayItem.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, NonTrayItem.owner_id == Owner.id, isouter=True)\
+         .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q12 = q12.where(NonTrayItemRetrievalEvent.create_dt >= from_dt)
+        if to_dt: q12 = q12.where(NonTrayItemRetrievalEvent.create_dt <= to_dt)
+        queries.append(q12)
+
+        # 13. Refile
+        q13 = select(
+            literal("Refile").label("event_type"),
+            RefileJob.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(RefileJob.id, BigInteger).label("job_number")
+        ).select_from(RefileJob)\
+         .join(RefileItem, RefileItem.refile_job_id == RefileJob.id)\
+         .join(Item, RefileItem.item_id == Item.id)\
+         .join(Barcode, Item.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, Item.owner_id == Owner.id, isouter=True)\
+         .join(Tray, Item.tray_id == Tray.id, isouter=True)\
+         .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q13 = q13.where(RefileJob.create_dt >= from_dt)
+        if to_dt: q13 = q13.where(RefileJob.create_dt <= to_dt)
+        queries.append(q13)
+
+        # 14. Refile (NonTray)
+        q14 = select(
+            literal("Refile (NT)").label("event_type"),
+            RefileJob.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(RefileJob.id, BigInteger).label("job_number")
+        ).select_from(RefileJob)\
+         .join(RefileNonTrayItem, RefileNonTrayItem.refile_job_id == RefileJob.id)\
+         .join(NonTrayItem, RefileNonTrayItem.non_tray_item_id == NonTrayItem.id)\
+         .join(Barcode, NonTrayItem.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, NonTrayItem.owner_id == Owner.id, isouter=True)\
+         .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q14 = q14.where(RefileJob.create_dt >= from_dt)
+        if to_dt: q14 = q14.where(RefileJob.create_dt <= to_dt)
+        queries.append(q14)
+
+        # 15. Withdrawal
+        q15 = select(
+            literal("Withdrawal").label("event_type"),
+            WithdrawJob.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(WithdrawJob.id, BigInteger).label("job_number")
+        ).select_from(WithdrawJob)\
+         .join(ItemWithdrawal, ItemWithdrawal.withdraw_job_id == WithdrawJob.id)\
+         .join(Item, ItemWithdrawal.item_id == Item.id)\
+         .join(Barcode, Item.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, Item.owner_id == Owner.id, isouter=True)\
+         .join(Tray, Item.tray_id == Tray.id, isouter=True)\
+         .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q15 = q15.where(WithdrawJob.create_dt >= from_dt)
+        if to_dt: q15 = q15.where(WithdrawJob.create_dt <= to_dt)
+        queries.append(q15)
+
+        # 16. Withdrawal (NonTray)
+        q16 = select(
+            literal("Withdrawal (NT)").label("event_type"),
+            WithdrawJob.create_dt.label("event_dt"),
+            Barcode.value.label("item_barcode"),
+            Owner.name.label("owner"),
+            Building.name.label("building"),
+            cast(WithdrawJob.id, BigInteger).label("job_number")
+        ).select_from(WithdrawJob)\
+         .join(NonTrayItemWithdrawal, NonTrayItemWithdrawal.withdraw_job_id == WithdrawJob.id)\
+         .join(NonTrayItem, NonTrayItemWithdrawal.non_tray_item_id == NonTrayItem.id)\
+         .join(Barcode, NonTrayItem.barcode_id == Barcode.id, isouter=True)\
+         .join(Owner, NonTrayItem.owner_id == Owner.id, isouter=True)\
+         .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id, isouter=True)\
+         .join(Shelf, ShelfPosition.shelf_id == Shelf.id, isouter=True)\
+         .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)\
+         .join(Side, Ladder.side_id == Side.id, isouter=True)\
+         .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)\
+         .join(Module, Aisle.module_id == Module.id, isouter=True)\
+         .join(Building, Module.building_id == Building.id, isouter=True)
+        if from_dt: q16 = q16.where(WithdrawJob.create_dt >= from_dt)
+        if to_dt: q16 = q16.where(WithdrawJob.create_dt <= to_dt)
+        queries.append(q16)
+
+        # Build union and select from it for ordering
+        union_stmt = union_all(*queries).alias("activity_union")
+        stmt = select(
+            union_stmt.c.event_type,
+            union_stmt.c.event_dt,
+            union_stmt.c.item_barcode,
+            union_stmt.c.owner,
+            union_stmt.c.building,
+            union_stmt.c.job_number
+        ).select_from(union_stmt).order_by(union_stmt.c.event_dt.desc())
+
+        headers = ["event_type", "event_dt", "item_barcode", "owner", "building", "job_number"]
+
+
+    elif dataset == "facility_footprint":
+        # Comprehensive shelf utilization and path
+        from app.models.shelf_types import ShelfType
+        ShelfBarcode = aliased(Barcode)
+        stmt = (
+            select(
+                Building.name.label("building"),
+                Module.module_number.label("module"),
+                Aisle.aisle_number.label("aisle"),
+                SideOrientation.name.label("side"),
+                Ladder.ladder_number.label("ladder"),
+                Shelf.shelf_number.label("shelf"),
+                ShelfBarcode.value.label("shelf_barcode"),
+                Shelf.height.label("height"),
+                Shelf.width.label("width"),
+                Shelf.depth.label("depth"),
+                ShelfType.type.label("shelf_type"),
+                SizeClass.name.label("size_class"),
+                Owner.name.label("assigned_owner"),
+                ShelfType.max_capacity.label("total_slots"),
+                Shelf.available_space.label("available_slots"),
+                (ShelfType.max_capacity - Shelf.available_space).label("used_slots")
+            )
+            .join(Ladder, Shelf.ladder_id == Ladder.id, isouter=True)
+            .join(Side, Ladder.side_id == Side.id, isouter=True)
+            .join(SideOrientation, Side.side_orientation_id == SideOrientation.id, isouter=True)
+            .join(Aisle, Side.aisle_id == Aisle.id, isouter=True)
+            .join(Module, Aisle.module_id == Module.id, isouter=True)
+            .join(Building, Module.building_id == Building.id, isouter=True)
+            .join(ShelfType, Shelf.shelf_type_id == ShelfType.id, isouter=True)
+            .join(ShelfBarcode, Shelf.barcode_id == ShelfBarcode.id, isouter=True)
+            .join(Owner, Shelf.owner_id == Owner.id, isouter=True)
+            .join(SizeClass, ShelfType.size_class_id == SizeClass.id, isouter=True)
+            .order_by(Building.name, Module.module_number, Aisle.aisle_number, Shelf.shelf_number)
+        )
+        headers = [
+            "building", "module", "aisle", "side", "ladder", "shelf", "shelf_barcode",
+            "height", "width", "depth", "shelf_type", "size_class", 
+            "assigned_owner", "total_slots", "available_slots", "used_slots"
+        ]
+    
+    else:
+        raise HTTPException(status_code=400, detail="Invalid dataset requested")
+
+    return stmt, headers
+
+
+# NOTE: The on-demand /exports/ endpoint has been removed. 
+# All raw data exports must now be created via the /scheduled-exports/ system
+# to ensure background processing and compression.
+
+@router.post("/scheduled-exports/", response_model=ScheduledExportRead)
+def create_scheduled_export(
+    payload: ScheduledExportCreate,
+    session: Session = Depends(get_session)
+):
+    """
+    Schedules a new raw data export.
+    """
+    new_export = ScheduledExport(
+        name=payload.name,
+        dataset=payload.dataset,
+        filters=payload.filters,
+        schedule_type=payload.schedule_type,
+        frequency=payload.frequency,
+        retention_days=payload.retention_days,
+        next_run_at=payload.start_at
+    )
+    session.add(new_export)
+    session.commit()
+    session.refresh(new_export)
+    return new_export
+
+@router.get("/scheduled-exports/", response_model=List[ScheduledExportRead])
+def list_scheduled_exports(session: Session = Depends(get_session)):
+    """
+    Lists all active and inactive export schedules.
+    """
+    return session.execute(select(ScheduledExport)).scalars().all()
+
+@router.delete("/scheduled-exports/{export_id}")
+def delete_scheduled_export(export_id: int, session: Session = Depends(get_session)):
+    """
+    Deletes a scheduled export configuration.
+    """
+    export = session.get(ScheduledExport, export_id)
+    if not export:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    session.delete(export)
+    session.commit()
+    return {"message": "Schedule deleted"}
+
+@router.get("/export-history/", response_model=List[ExportHistoryRead])
+def list_export_history(session: Session = Depends(get_session)):
+    """
+    Lists all generated export files that haven't expired yet.
+    """
+    return session.execute(
+        select(ExportHistory)
+        .where(ExportHistory.expires_at > datetime.now(timezone.utc))
+        .order_by(ExportHistory.id.desc())
+    ).scalars().all()
+
+@router.get("/export-history/download/{history_id}")
+def download_historical_export(history_id: int, session: Session = Depends(get_session)):
+    """
+    Downloads a previously generated export file from server storage.
+    """
+    history = session.get(ExportHistory, history_id)
+    if not history:
+        raise HTTPException(status_code=404, detail="Export record not found")
+    
+    if not os.path.exists(history.file_path):
+        raise HTTPException(status_code=404, detail="Physical file missing from server storage")
+    
+    return FileResponse(
+        history.file_path,
+        media_type="application/x-gzip",
+        filename=history.filename
     )

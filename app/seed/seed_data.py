@@ -15,6 +15,24 @@ from app.seed.load_items import load_items
 from app.seed.load_available_space_calc import load_available_space_calc
 from app.seed.load_addressing import load_addressing
 from app.seed.load_barcode_cleanup import load_barcode_cleanup
+from app.models.item_retrieval_events import ItemRetrievalEvent
+from app.models.non_tray_item_retrieval_events import NonTrayItemRetrievalEvent
+from app.models.move_discrepancies import MoveDiscrepancy
+from app.models.owner_delivery_locations import OwnerDeliveryLocation
+from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
+from app.models.accession_jobs import AccessionJob
+from app.models.verification_jobs import VerificationJob
+from app.models.requests import Request
+from app.models.pick_lists import PickList
+from app.models.refile_jobs import RefileJob
+from app.models.groups import Group
+from app.models.batch_upload import BatchUpload
+from app.models.verification_changes import VerificationChange
+from app.models.workflows import Workflow
+from app.models.shelving_jobs import ShelvingJob
+from app.models.shelving_job_containers import ShelvingJobContainer
+from app.models.permissions import Permission
+
 
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -36,42 +54,47 @@ def enable_after_insert_listener():
     event.listen(ShelfPosition, "after_insert", generate_location)
 
 
+# fixture_data = [
+#     ("types", "client_owner_tiers.json"),#good
+#     ("entities", "client_tier_1_owners.json"),#good
+#     ("entities", "client_tier_2_owners.json"),#good
+#     ("entities", "client_tier_3_owners.json"),#good
+#     ("entities", "client_buildings.json"),#good
+#     ("entities", "client_modules.json"),#good
+#     ("types", "client_aisle_numbers.json"),#good
+#     ("entities", "client_1_aisles.json"),#good
+#     ("entities", "client_2_aisles.json"),#good
+#     ("entities", "client_3_aisles.json"),#good
+#     ("entities", "client_4_aisles.json"),#good
+#     ("entities", "client_5_aisles.json"),#good
+#     ("entities", "client_6_aisles.json"),#good
+#     ("entities", "client_CSR2A_aisles.json"),#good
+#     ("entities", "client_CSR2B_aisles.json"),#good
+#     ("entities", "client_CSR2C_aisles.json"),#good
+#     ("entities", "client_CSR1_aisles.json"),#good
+#     ("entities", "client_CB_aisles.json"),#good
+#     ("types", "client_side_orientations.json"),#good
+#     ("types", "client_barcode_types.json"),#good
+#     ("types", "client_ladder_numbers.json"),#good
+#     ("types", "client_container_types.json"),#good
+#     ("types", "client_size_classes.json"),#good-ish (pending width decisions)
+#     ("types", "client_shelf_types.json"),#good-ish (pending NT decisions)
+#     ("types", "client_shelf_position_numbers.json"),#good
+#     ("types", "client_media_types.json"),#good
+#     ("types", "client_permissions.json"),#good
+#     ("entities", "client_users.json"),#good
+#     ("entities", "client_groups.json"),#good
+#     ("entities", "client_group_permissions.json"),#good-ish (they can set)
+#     ("entities", "client_user_groups.json"),#good
+#     ("types", "client_request_types.json"),#good
+#     ("types", "client_priorities.json"),#good
+#     ("entities", "client_delivery_locations.json"),#good
+#     ("types", "client_shelf_numbers.json"),#good
+#     ("types", "client_system_settings.json"),#good
+# ]
+
 fixture_data = [
-    ("types", "client_owner_tiers.json"),#good
-    ("entities", "client_tier_1_owners.json"),#good
-    ("entities", "client_tier_2_owners.json"),#good
-    ("entities", "client_tier_3_owners.json"),#good
-    ("entities", "client_buildings.json"),#good
-    ("entities", "client_modules.json"),#good
-    ("types", "client_aisle_numbers.json"),#good
-    ("entities", "client_1_aisles.json"),#good
-    ("entities", "client_2_aisles.json"),#good
-    ("entities", "client_3_aisles.json"),#good
-    ("entities", "client_4_aisles.json"),#good
-    ("entities", "client_5_aisles.json"),#good
-    ("entities", "client_6_aisles.json"),#good
-    ("entities", "client_CSR2A_aisles.json"),#good
-    ("entities", "client_CSR2B_aisles.json"),#good
-    ("entities", "client_CSR2C_aisles.json"),#good
-    ("entities", "client_CSR1_aisles.json"),#good
-    ("entities", "client_CB_aisles.json"),#good
-    ("types", "client_side_orientations.json"),#good
-    ("types", "client_barcode_types.json"),#good
-    ("types", "client_ladder_numbers.json"),#good
-    ("types", "client_container_types.json"),#good
-    ("types", "client_size_classes.json"),#good-ish (pending width decisions)
-    ("types", "client_shelf_types.json"),#good-ish (pending NT decisions)
-    ("types", "client_shelf_position_numbers.json"),#good
-    ("types", "client_media_types.json"),#good
-    ("types", "client_permissions.json"),#good
-    ("entities", "client_users.json"),#good
-    ("entities", "client_groups.json"),#good
-    ("entities", "client_group_permissions.json"),#good-ish (they can set)
-    ("entities", "client_user_groups.json"),#good
-    ("types", "client_request_types.json"),#good
-    ("types", "client_priorities.json"),#good
-    ("entities", "client_delivery_locations.json"),#good
-    ("types", "client_shelf_numbers.json"),#good
+    ("types", "client_permissions.json"),
 ]
 
 def seed_data():

@@ -1,0 +1,10 @@
+{
+    "model": "app.models.system_settings.SystemSetting",
+    "data": [
+        {
+            "key": "shelf_position_auto_assign_direction",
+            "value": "low_to_high",
+            "description": "Direction for auto-assigning shelf positions during shelving. Options: low_to_high, high_to_low"
+        }
+    ]
+}

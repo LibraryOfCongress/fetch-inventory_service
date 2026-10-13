@@ -1,34 +1,33 @@
+# /code/app/models/subcollection.py - FINAL CIRCULAR IMPORT FIX
+
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import BigInteger, String, VARCHAR, Integer
 
-
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING # <-- CRITICAL: ADD TYPE_CHECKING
 from datetime import datetime, timezone
-from app.models.items import Item
-from app.models.non_tray_items import NonTrayItem
-from sqlmodel import SQLModel, Field, Relationship
+
+from app.database.base import Base
+
+# --- CRITICAL: DEFER IMPORTS TO BREAK CIRCULARITY ---
+# Only need to defer models that have an import path back to this file
+if TYPE_CHECKING:
+    from app.models.items import Item
+    from app.models.non_tray_items import NonTrayItem
+# -----------------------------------------------------
 
 
-class Subcollection(SQLModel, table=True):
+class Subcollection(Base): # <--- Inherit from Base
     """
     Model to represent the Subcollections table.
-        Items and Non-Trayed Items can belong to Subcollections
-
-      id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
     """
 
-    __tablename__ = "subcollections"
-    # __table_args__ = (
-    # )
-
-    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
-    name: str = Field(sa_column=sa.Column(sa.VARCHAR(50), nullable=False, unique=True))
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-
-    items: List[Item] = Relationship(back_populates="subcollection")
-    non_tray_items: List[NonTrayItem] = Relationship(back_populates="subcollection")
+    # Primary Key
+    id: Mapped[Optional[int]] = mapped_column(BigInteger, primary_key=True)
+    
+    # Name field (unique)
+    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    
+    # --- RELATIONSHIPS ---
+    items: Mapped[List["Item"]] = relationship(back_populates="subcollection")
+    non_tray_items: Mapped[List["NonTrayItem"]] = relationship(back_populates="subcollection")

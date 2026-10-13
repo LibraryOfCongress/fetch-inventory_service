@@ -4,6 +4,7 @@ from pydantic import (
     BaseModel,
     field_validator,
     computed_field,
+    ConfigDict,
 )
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
@@ -16,13 +17,14 @@ class WithdrawJobInput(BaseModel):
     created_by_id: Optional[int] = None
     barcode_value: Optional[str] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "created_by_id": 1,
                 "barcode_value": "1234567890"
             }
         }
+    )
 
 
 class WithdrawJobUpdateInput(BaseModel):
@@ -45,8 +47,8 @@ class WithdrawJobUpdateInput(BaseModel):
             )
         return value
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "Created",
                 "assigned_user_id": 1,
@@ -57,6 +59,7 @@ class WithdrawJobUpdateInput(BaseModel):
                 "run_timestamp": "2022-01-01 00:00:00",
             }
         }
+    )
 
 
 class PickBaseOutput(BaseModel):
@@ -89,12 +92,12 @@ class NestedShelfPositionNumberForWithdrawJob(BaseModel):
 class NestedShelfForWithdrawJob(BaseModel):
     id: int
     barcode: Optional[BarcodeDetailOutput] = None
-    shelf_number: NestedShelfNumberForWithdrawJob
+    shelf_number: int
 
 
 class ShelfPositionNestedForWithdrawJob(BaseModel):
     id: int
-    shelf_position_number: NestedShelfPositionNumberForWithdrawJob
+    position_number: int
     shelf: NestedShelfForWithdrawJob
     location: Optional[str] = None
     internal_location: Optional[str] = None
@@ -142,8 +145,7 @@ class ItemNestedForWithdrawJob(BaseModel):
     owner: Optional[NestedOwnerForWithdrawJob] = None
     tray: Optional[NestedTrayForWithdrawJob] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ItemNestedWithoutTrayForWithdrawJob(BaseModel):
@@ -166,8 +168,7 @@ class NonTrayNestedForWithdrawJob(BaseModel):
     shelf_position_id: Optional[int] = None
     shelf_position: Optional[ShelfPositionNestedForWithdrawJob] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TrayNestedForWithdrawJob(BaseModel):
@@ -181,8 +182,7 @@ class TrayNestedForWithdrawJob(BaseModel):
     shelf_position: Optional[ShelfPositionNestedForWithdrawJob] = None
     items: Optional[List[ItemNestedWithoutTrayForWithdrawJob]] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WithdrawJobBaseOutput(BaseModel):
@@ -224,8 +224,8 @@ class WithdrawJobListOutput(WithdrawJobBaseOutput):
     def container_count(self) -> int:
         return self.tray_count + self.non_tray_item_count
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "Created",
@@ -249,6 +249,7 @@ class WithdrawJobListOutput(WithdrawJobBaseOutput):
                 "container_count": 2
             }
         }
+    )
 
 
 class WithdrawJobWriteOutput(WithdrawJobListOutput):
@@ -315,9 +316,7 @@ class WithdrawJobWriteOutput(WithdrawJobListOutput):
                                 }
                             },
                             "shelf_id": 1,
-                            "shelf_position_number": {
-                                "number": 1
-                            }
+                            "shelf_position_number": 1
                         },
                         "create_dt": "2023-10-08T20:46:56.764426",
                         "update_dt": "2023-10-08T20:46:56.764426"
@@ -351,9 +350,7 @@ class WithdrawJobWriteOutput(WithdrawJobListOutput):
                                 }
                             },
                             "shelf_id": 1,
-                            "shelf_position_number": {
-                                "number": 1
-                            }
+                            "shelf_position_number": 1
                         },
                         "items": [
                             {
@@ -413,8 +410,8 @@ class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
             return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "Created",
@@ -476,9 +473,7 @@ class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
                                 }
                             },
                             "shelf_id": 1,
-                            "shelf_position_number": {
-                                "number": 1
-                            }
+                            "shelf_position_number": 1
                         },
                         "create_dt": "2023-10-08T20:46:56.764426",
                         "update_dt": "2023-10-08T20:46:56.764426"
@@ -512,9 +507,7 @@ class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
                                 }
                             },
                             "shelf_id": 1,
-                            "shelf_position_number": {
-                                "number": 1
-                            }
+                            "shelf_position_number": 1
                         },
                         "items": [
                             {
@@ -543,3 +536,4 @@ class WithdrawJobDetailOutput(WithdrawJobBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )

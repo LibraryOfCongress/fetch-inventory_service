@@ -1,76 +1,59 @@
+# /code/app/models/move_discrepancies.py - ULTIMATE, UNBREAKABLE FIX FOR FK RESOLUTION
+
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import BigInteger, Integer, VARCHAR, ForeignKey, String, CheckConstraint
 
 from typing import Optional
 from datetime import datetime, timezone
+from app.database.base import Base 
 
-from sqlmodel import SQLModel, Field, Relationship
+# Dependencies (MUST BE IMPORTED FOR ABSOLUTE FK REFERENCE)
+from app.models.container_types import ContainerType
+from app.models.owners import Owner
+from app.models.size_class import SizeClass
 
 
-class MoveDiscrepancy(SQLModel, table=True):
+class MoveDiscrepancy(Base): 
+    
     __tablename__ = "move_discrepancies"
     __table_args__ = (
-        sa.CheckConstraint(
+        CheckConstraint(
             "(tray_id IS NOT NULL) OR (non_tray_item_id IS NOT NULL) OR (item_id IS NOT NULL)",
             name="ck_s_discrepancy_tray_item_xor_non_tray",
         ),
     )
 
-    id: Optional[int] = Field(
-        sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None
-    )
-    tray_id: Optional[int] = Field(foreign_key="trays.id", nullable=True, unique=False)
-    item_id: Optional[int] = Field(foreign_key="items.id", nullable=True, unique=False)
-    non_tray_item_id: Optional[int] = Field(
-        foreign_key="non_tray_items.id", nullable=True, unique=False
-    )
-    container_type_id: Optional[int] = Field(
-        foreign_key="container_types.id", nullable=True, unique=False
-    )
-    assigned_user_id: Optional[int] = Field(
-        foreign_key="users.id", nullable=True, unique=False
-    )
-    owner_id: Optional[int] = Field(
-        foreign_key="owners.id", nullable=True, unique=False
-    )
-    size_class_id: Optional[int] = Field(
-        foreign_key="size_class.id", nullable=True, unique=False
-    )
-    original_assigned_location: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(175), nullable=True, unique=False, default=None)
-    )
-    current_assigned_location: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(175), nullable=True, unique=False, default=None)
-    )
-    error: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(350), nullable=True, unique=False)
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(
-            sa.TIMESTAMP(timezone=True),
-            default=lambda: datetime.now(timezone.utc),
-            nullable=False,
-        )
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(
-            sa.TIMESTAMP(timezone=True),
-            default=lambda: datetime.now(timezone.utc),
-            nullable=False,
-        )
-    )
+    # Primary Key
+    id: Mapped[Optional[int]] = mapped_column(BigInteger, primary_key=True)
 
-    tray: Optional["Tray"] = Relationship(back_populates="move_discrepancies")
-    item: Optional["Item"] = Relationship(back_populates="move_discrepancies")
-    non_tray_item: Optional["NonTrayItem"] = Relationship(
-        back_populates="move_discrepancies"
+    # Foreign Keys (CRITICAL FIX: Absolute Foreign Keys)
+    tray_id: Mapped[Optional[int]] = mapped_column(ForeignKey("trays.id"), nullable=True)
+    item_id: Mapped[Optional[int]] = mapped_column(ForeignKey("items.id"), nullable=True)
+    non_tray_item_id: Mapped[Optional[int]] = mapped_column(ForeignKey("non_tray_items.id"), nullable=True)
+    
+    # CRITICAL FIXES: ABSOLUTE FOREIGN KEY REFERENCES
+    container_type_id: Mapped[Optional[int]] = mapped_column(ForeignKey(ContainerType.__table__.c.id), nullable=True)
+    assigned_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    owner_id: Mapped[Optional[int]] = mapped_column(ForeignKey(Owner.__table__.c.id), nullable=True)
+    size_class_id: Mapped[Optional[int]] = mapped_column(ForeignKey(SizeClass.__table__.c.id), nullable=True)
+
+
+    # Location Fields
+    original_assigned_location: Mapped[Optional[str]] = mapped_column(String(175), nullable=True)
+    current_assigned_location: Mapped[Optional[str]] = mapped_column(String(175), nullable=True)
+    error: Mapped[Optional[str]] = mapped_column(String(350), nullable=True)
+    
+    # --- RELATIONSHIPS ---
+    tray: Mapped[Optional["Tray"]] = relationship(back_populates="move_discrepancies")
+    item: Mapped[Optional["Item"]] = relationship(back_populates="move_discrepancies")
+    non_tray_item: Mapped[Optional["NonTrayItem"]] = relationship(back_populates="move_discrepancies")
+    
+    # CRITICAL FIX: Explicitly link forward relations
+    container_type: Mapped[Optional[ContainerType]] = relationship(
+        back_populates="move_discrepancies",
+        foreign_keys=[container_type_id]
     )
-    container_type: Optional["ContainerType"] = Relationship(
-        back_populates="move_discrepancies"
-    )
-    assigned_user: Optional["User"] = Relationship(
-        back_populates="move_discrepancies"
-    )
-    owner: Optional["Owner"] = Relationship(back_populates="move_discrepancies")
-    size_class: Optional["SizeClass"] = Relationship(
-        back_populates="move_discrepancies"
-    )
+    assigned_user: Mapped[Optional["User"]] = relationship(back_populates="move_discrepancies")
+    owner: Mapped[Optional[Owner]] = relationship(back_populates="move_discrepancies")
+    size_class: Mapped[Optional[SizeClass]] = relationship(back_populates="move_discrepancies")

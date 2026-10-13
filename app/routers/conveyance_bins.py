@@ -1,8 +1,14 @@
+# /code/app/routers/conveyance_bins.py - REFACRORED TO SQLALCHEMY V2
+
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends
-from sqlmodel import Session, select
-from datetime import datetime, timezone
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
@@ -21,11 +27,13 @@ from app.config.exceptions import (
     InternalServerError,
 )
 from app.sorting import BaseSorter
-from app.permissions import require_permissions
+
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
 
 router = APIRouter(
     prefix="/conveyance-bins",
     tags=["conveyance bins"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -36,12 +44,6 @@ def get_conveyance_bin_list(
 ) -> list:
     """
     Retrieve a paginated list of Conveyance Bins from the database.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-
-    **Returns:**
-    - Conveyance Bin List Output: A paginated list of Conveyance Bins.
     """
 
     # Create a query to retrieve all Conveyance Bin
@@ -60,12 +62,6 @@ def get_conveyance_bin_list(
 def get_conveyance_bin_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve details of a specific conveyance bin by ID.
-
-    **Args:**
-    - id: The ID of the conveyance bin to retrieve.
-
-    **Returns:**
-    - Conveyance Bin: The details of the requested conveyance bin.
     """
 
     conveyance_bin = session.get(ConveyanceBin, id)
@@ -75,21 +71,12 @@ def get_conveyance_bin_detail(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Container Type ID {id} Not Found")
 
 
-
-@router.post("/", response_model=ConveyanceBinDetailWriteOutput, status_code=201)
+@router.post("/", response_model=ConveyanceBinDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_conveyance_bin(
-    conveyance_bin_input: ConveyanceBinInput, session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
+    conveyance_bin_input: ConveyanceBinInput, session: Session = Depends(get_session)
 ):
     """
     Create a new conveyance bin in the database.
-
-    **Parameters:**
-    - Conveyance Bin Input: The input data for the new
-    conveyance bin.
-
-    **Returns:**
-    - Conveyance Bin: The newly created conveyance bin.
     """
     try:
         new_conveyance_bin = ConveyanceBin(**conveyance_bin_input.model_dump())
@@ -104,20 +91,12 @@ def create_conveyance_bin(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/{id}", response_model=ConveyanceBinDetailWriteOutput)
+@router.patch("/{id}", response_model=ConveyanceBinDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_conveyance_bin(
-    id: int, conveyance_bin: ConveyanceBinInput, session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
+    id: int, conveyance_bin: ConveyanceBinInput, session: Session = Depends(get_session)
 ):
     """
     Update conveyance bin details by ID.
-
-    **Args:**
-    - id: The ID of the conveyance bin to update.
-    - ConveyanceBinInput: The new conveyance bin data.
-
-    **Returns:**
-    - Conveyance Bin Detail Write Output: The updated conveyance bin details.
     """
     try:
         existing_conveyance_bin = session.get(ConveyanceBin, id)
@@ -138,30 +117,22 @@ def update_conveyance_bin(
 
         return existing_conveyance_bin
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/{id}", status_code=204)
-def delete_conveyance_bin(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))):
+@router.delete("/{id}", status_code=204, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_conveyance_bin(id: int, session: Session = Depends(get_session)):
     """
     Delete a conveyance bin by id.
-
-    **Args:**
-    - id: The id of the conveyance bin to delete.
-
-    **Raises:**
-    - HTTPException: If the conveyance bin with the given id is not found (status
-    code 404).
     """
     conveyance_bin = session.get(ConveyanceBin, id)
     if conveyance_bin:
         session.delete(conveyance_bin)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Conveyance Bin ID {id} Deleted "
-                                    f"Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Conveyance Bin ID {id} Not Found")

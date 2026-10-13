@@ -1,14 +1,19 @@
+# /code/app/routers/media_types.py - REFACRORED TO SQLALCHEMY V2
+
 from typing import Optional
 
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends, Query
-from sqlmodel import Session, select
-from datetime import datetime, timezone
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate 
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.permissions import require_permissions
 from app.filter_params import SortParams
 from app.models.media_types import MediaType
 
@@ -25,9 +30,12 @@ from app.config.exceptions import (
 )
 from app.sorting import BaseSorter
 
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
+
 router = APIRouter(
     prefix="/media-types",
     tags=["media types"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -36,18 +44,9 @@ def get_media_type_list(
     session: Session = Depends(get_session),
     sort_params: SortParams = Depends(),
     search: Optional[str] = Query(None, description="Search by Media Type Name"),
-    _: bool = Depends(require_permissions("can_manage_media_type"))
 ) -> list:
     """
     Retrieve a list of media types
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-    - search (Optional[str]): The search query.
-        - Name: The type of the media type to search for.
-
-    **Returns:**
-    - Media Type List Output: A list of media types.
     """
     # Create a query to retrieve all Media Type
     query = select(MediaType)
@@ -65,7 +64,7 @@ def get_media_type_list(
 
 
 @router.get("/{id}", response_model=MediaTypeDetailReadOutput)
-def get_media_type_detail(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_media_type"))):
+def get_media_type_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve the details of a media type by its ID.
     """
@@ -76,14 +75,12 @@ def get_media_type_detail(id: int, session: Session = Depends(get_session), _: b
     raise NotFound(detail=f"Media Type ID {id} Not Found")
 
 
-@router.post("/", response_model=MediaTypeDetailWriteOutput, status_code=201)
+@router.post("/", response_model=MediaTypeDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_media_type(
-    media_type_input: MediaTypeInput, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_media_type"))
+    media_type_input: MediaTypeInput, session: Session = Depends(get_session)
 ):
     """
     Create a new media type record.
-
-    **type**: Required varchar 25
     """
     try:
         new_media_type = MediaType(**media_type_input.model_dump())
@@ -98,9 +95,9 @@ def create_media_type(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/{id}", response_model=MediaTypeDetailWriteOutput)
+@router.patch("/{id}", response_model=MediaTypeDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_media_type(
-    id: int, media_type: MediaTypeInput, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_media_type"))
+    id: int, media_type: MediaTypeInput, session: Session = Depends(get_session)
 ):
     """
     Update a media type record by its id.
@@ -124,12 +121,14 @@ def update_media_type(
 
         return existing_media_type
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/{id}", status_code=204)
-def delete_media_type(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_media_type"))):
+@router.delete("/{id}", status_code=204, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_media_type(id: int, session: Session = Depends(get_session)):
     """
     Delete a media type by its ID.
     """
@@ -139,8 +138,6 @@ def delete_media_type(id: int, session: Session = Depends(get_session), _: bool 
         session.delete(media_type)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Media Type ID {id} Deleted Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Media Type ID {id} Not Found")

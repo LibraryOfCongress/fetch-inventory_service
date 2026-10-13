@@ -3,9 +3,12 @@
 
 import tracemalloc, time, threading
 from app.logger import inventory_logger
+from app.config.config import get_settings
 
+USE_PROFILER = get_settings().APP_ENVIRONMENT in {"debug", "local"}
 
-tracemalloc.start()
+if USE_PROFILER:
+    tracemalloc.start()
 
 def log_memory_growth(interval_sec: int = 60, top: int = 10):
     inventory_logger.disabled = False
@@ -24,5 +27,6 @@ def log_memory_growth(interval_sec: int = 60, top: int = 10):
 
         prev_snapshot = snapshot
 
-# Run in background thread
-threading.Thread(target=log_memory_growth, daemon=True).start()
+# Run in background thread if enabled
+if USE_PROFILER:
+    threading.Thread(target=log_memory_growth, daemon=True).start()

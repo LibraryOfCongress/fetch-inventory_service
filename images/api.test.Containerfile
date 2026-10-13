@@ -65,11 +65,17 @@ ADD schemaspy/postgresql-42.7.0.jar /code/postgresql.jar
 # Expose the application port
 EXPOSE 8001
 
+# Trust X-Forwarded-Proto/-For from the ingress so 307 redirects preserve the
+# original https scheme. UvicornWorker default only trusts 127.0.0.1; "*" is
+# safe in k8s where the pod is only reachable via the ingress.
+ENV FORWARDED_ALLOW_IPS="*"
+
 # CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
 CMD ["gunicorn", "app.main:app", \
     "-k", "uvicorn.workers.UvicornWorker", \
     "--workers", "1", "--bind", "0.0.0.0:8001", \
+    "--timeout", "120", \
     "--max-requests", "1000", \
     "--max-requests-jitter", "100"]
 # CMD ["fastapi", "run", "app.main:app", "--bind", "0.0.0.0:8001", "--workers", "2"]

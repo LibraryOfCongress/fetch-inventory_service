@@ -1,8 +1,14 @@
+# /code/app/routers/barcodes.py - REFACRORED TO SQLALCHEMY V2
+
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends
-from sqlmodel import Session, select
-from datetime import datetime, timezone
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
@@ -20,11 +26,13 @@ from app.config.exceptions import (
     InternalServerError
 )
 from app.sorting import BaseSorter
-from app.permissions import require_permissions
+
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
 
 router = APIRouter(
     prefix="/barcodes",
     tags=["barcodes"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -35,12 +43,6 @@ def get_barcode_types_list(
 ) -> list:
     """
     Get a list of barcode types.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-
-    **Returns:**
-    -Barcode Types List Output: The paginated list of barcode types.
     """
     # Create a query to select all barcode types
     query = select(BarcodeType)
@@ -51,6 +53,7 @@ def get_barcode_types_list(
         sorter = BaseSorter(BarcodeType)
         query = sorter.apply_sorting(query, sort_params)
 
+    # CRITICAL FIX: Paginate now takes only the query object
     return paginate(session, query)
 
 
@@ -58,15 +61,6 @@ def get_barcode_types_list(
 def get_barcode_types_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve details of a specific barcode type.
-
-    **Parameters:**
-    - id: The ID of the barcode type to retrieve.
-
-    **Returns:**
-    - Barcode Types Detail Read Output: The details of the barcode type.
-
-    **Raises:**
-    - HTTPException: If the barcode type with the specified ID is not found.
     """
     # Retrieve the barcode type from the session
     barcode_types = session.get(BarcodeType, id)
@@ -77,19 +71,12 @@ def get_barcode_types_detail(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Barcode Type ID {id} Not Found")
 
 
-@router.post("/types", response_model=BarcodeTypesDetailWriteOutput, status_code=201)
+@router.post("/types", response_model=BarcodeTypesDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_barcode_types(
-    barcode_types_input: BarcodeTypesInput, session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
+    barcode_types_input: BarcodeTypesInput, session: Session = Depends(get_session)
 ) -> BarcodeType:
     """
     Creates a new barcode type using the provided input data.
-
-    **Parameters:**
-    - Barcode Types Input: The input data for the barcode types.
-
-    **Returns:**
-    - Barcode Types: The newly created barcode type.
     """
     try:
         # Create a new instance of BarcodeTypes using the input data
@@ -104,19 +91,12 @@ def create_barcode_types(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/types/{id}", response_model=BarcodeTypesDetailWriteOutput)
+@router.patch("/types/{id}", response_model=BarcodeTypesDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_barcode_types(
-    id: int, barcode_types: BarcodeTypesInput, session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
+    id: int, barcode_types: BarcodeTypesInput, session: Session = Depends(get_session)
 ):
     """
     Update barcode type details.
-
-    **Parameters:**
-    - id: The ID of the barcode type to update.
-
-    **Returns:**
-    - Barcode Types Detail Write Output: The updated barcode type.
     """
     try:
         existing_barcode_types = session.get(BarcodeType, id)
@@ -137,20 +117,16 @@ def update_barcode_types(
         session.refresh(existing_barcode_types)
 
         return existing_barcode_types
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/types/{id}")
-def delete_barcode_types(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))):
+@router.delete("/types/{id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_barcode_types(id: int, session: Session = Depends(get_session)):
     """
     Delete barcode types by id.
-
-    **Parameters:**
-    - id: The id of the barcode types to delete.
-
-    **Raises:**
-    - HTTPException: If the barcode types with the given id does not exist.
     """
     # Get the barcode types from the session by id
     barcode_types = session.get(BarcodeType, id)
@@ -159,9 +135,6 @@ def delete_barcode_types(id: int, session: Session = Depends(get_session), _: bo
         session.delete(barcode_types)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Barcode Type ID {id} Deleted "
-                                    f"Successfully"
-            )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Barcode Type ID {id} Not Found")

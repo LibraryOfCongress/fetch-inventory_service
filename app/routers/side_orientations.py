@@ -1,9 +1,16 @@
+# /code/app/routers/side_orientations.py - REFACRORED TO SQLALCHEMY V2
+
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlmodel import Session, select
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
+from typing import Optional
 
 from app.database.session import get_session
 from app.filter_params import SortParams
@@ -22,11 +29,15 @@ from app.config.exceptions import (
     InternalServerError,
 )
 from app.sorting import BaseSorter
-from app.permissions import require_permissions
+
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
 
 router = APIRouter(
     prefix="/sides",
     tags=["sides"],
+    # Authenticated-only at the router level; writes carry the manage permission
+    # per-endpoint so GETs aren't gated by admin perms.
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -37,12 +48,6 @@ def get_side_orientation_list(
 ) -> list:
     """
     Retrieve a paginated list of side orientations.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-
-    **Returns**:
-    - Side Orientation List Output: A paginated list of side orientations.
     """
     # Create a query to select all Side Orientation
     query = select(SideOrientation)
@@ -59,15 +64,6 @@ def get_side_orientation_list(
 def get_side_orientation_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve the details of a side orientation by its ID.
-
-    **Parameters**:
-    - id: The ID of the side orientation to retrieve.
-
-    **Returns**:
-    - Side Orientation Detail Read Output: The details of the side orientation.
-
-    **Raises**:
-    - HTTPException: If the side orientation is not found.
     """
 
     side_orientation = session.get(SideOrientation, id)
@@ -79,21 +75,15 @@ def get_side_orientation_detail(id: int, session: Session = Depends(get_session)
 
 
 @router.post(
-    "/orientations", response_model=SideOrientationDetailWriteOutput, status_code=201
+    "/orientations", response_model=SideOrientationDetailWriteOutput, status_code=201,
+    dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))]
 )
 def create_side_orientation(
     side_orientation_input: SideOrientationInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
 ):
     """
     Create a new side orientation record.
-
-    **Parameters**:
-    - Side Orientation Input: The input data for the side orientation.
-
-    **Returns**:
-    - Side Orientation Detail Write Output: The created side orientation record.
     """
     try:
         # Create a new side orientation
@@ -107,25 +97,14 @@ def create_side_orientation(
     except IntegrityError as e:
         raise ValidationException(detail=f"{e}")
 
-@router.patch("/orientations/{id}", response_model=SideOrientationDetailWriteOutput)
+@router.patch("/orientations/{id}", response_model=SideOrientationDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_side_orientation(
     id: int,
     side_orientation: SideOrientationUpdateInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
 ):
     """
     Update a side orientation by its ID.
-
-    **Args**:
-    - id: The ID of the side orientation to update.
-    - Side Orientation Update Input: The updated side orientation data.
-
-    **Returns**:
-    - Side Orientation Detail Write Output: The updated side orientation.
-
-    **Raises**:
-    - HTTPException: If the side orientation is not found or an error occurs during the update.
     """
     try:
         existing_side_orientation = session.get(SideOrientation, id)
@@ -146,23 +125,16 @@ def update_side_orientation(
 
         return existing_side_orientation
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/orientations/{id}")
-def delete_side_orientation(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))):
+@router.delete("/orientations/{id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_side_orientation(id: int, session: Session = Depends(get_session)):
     """
     Deletes a side orientation with the given ID.
-
-    **Parameters**:
-    - id: The ID of the side orientation to delete.
-
-    **Returns**:
-    - None
-
-    **Raises**:
-    - HTTPException: If no side orientation with the given ID is found.
     """
     side_orientation = session.get(SideOrientation, id)
 
@@ -170,9 +142,6 @@ def delete_side_orientation(id: int, session: Session = Depends(get_session), _:
         session.delete(side_orientation)
         session.commit()
 
-        return HTTPException(
-            status_code=204,
-            detail=f"Side Orientation id {id} Deleted Successfully",
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Side Orientation ID {id} Not Found")

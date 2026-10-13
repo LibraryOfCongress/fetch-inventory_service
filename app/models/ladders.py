@@ -1,46 +1,45 @@
-import sqlalchemy as sa
+# /app/models/ladders.py - REFACTORED: Removed LadderNumber lookup table dependency
 
+import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, SmallInteger, ForeignKey
+from sqlalchemy.schema import UniqueConstraint
 
 from typing import Optional, List
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy.schema import UniqueConstraint
+from app.database.base import Base
 
-from app.models.ladder_numbers import LadderNumber
+# Dependencies
 from app.models.sides import Side
 
 
-class Ladder(SQLModel, table=True):
+class Ladder(Base):
     """
     Model to represent Ladders table
-
-          id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
     """
 
-    __tablename__ = "ladders"
+    # NOTE: __tablename__ is handled by Base.
     __table_args__ = (
         UniqueConstraint(
-            "side_id", "ladder_number_id", name="uq_side_id_ladder_number_id"
+            "side_id", "ladder_number", name="uq_side_id_ladder_number"
         ),
     )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
-    ladder_number_id: int = Field(
-        foreign_key="ladder_numbers.id",
-        nullable=False,
-    )
-    side_id: int = Field(foreign_key="sides.id", nullable=False)
-    sort_priority: Optional[int] = Field(
-        sa_column=sa.Column(sa.SmallInteger, nullable=True, default=None)
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    side: Side = Relationship(back_populates="ladders")
-    ladder_number: LadderNumber = Relationship(back_populates="ladders")
-    shelves: List["Shelf"] = Relationship(back_populates="ladder")
+    # Direct integer column (replaces ladder_number_id FK)
+    ladder_number: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+
+    # Foreign Keys
+    side_id: Mapped[int] = mapped_column(ForeignKey("sides.id"), nullable=False)
+
+    # Sort Priority
+    sort_priority: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True, default=None)
+    
+    # --- RELATIONSHIPS ---
+    side: Mapped[Side] = relationship(back_populates="ladders")
+    shelves: Mapped[List["Shelf"]] = relationship(
+        back_populates="ladder",
+        cascade="all, delete-orphan"
+    )

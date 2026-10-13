@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from app.database.session import get_session
-from sqlmodel import Session
+from sqlalchemy.orm import Session 
 
 
 router = APIRouter(

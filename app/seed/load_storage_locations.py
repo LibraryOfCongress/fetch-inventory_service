@@ -77,11 +77,8 @@ def process_loc_row(
         row_num,
         row,
         side_orientations_dict,
-        ladder_number_dict,
-        shelf_number_dict,
         container_type_dict,
         owners_dict,
-        shelf_position_number_dict,
         shelf_type_max_cap_dict,
         barcode_types_dict,
         shelf_type_lookup_dict,
@@ -161,7 +158,6 @@ def process_loc_row(
         current_side_id,
         row_num,
         session,
-        ladder_number_dict
     )
 
     if not ladder_result[4]:
@@ -202,7 +198,6 @@ def process_loc_row(
         shelf_container_type,
         row_num,
         session,
-        shelf_number_dict,
         container_type_dict,
         owners_dict,
         barcode_types_dict,
@@ -231,7 +226,6 @@ def process_loc_row(
         current_shelf_type_id,
         row_num,
         session,
-        shelf_position_number_dict,
         shelf_type_max_cap_dict
     )
 
@@ -291,40 +285,24 @@ def load_storage_locations():
 
     # reusable memory dicts
     from app.models.side_orientations import SideOrientation
-    from app.models.ladder_numbers import LadderNumber
-    from app.models.shelf_numbers import ShelfNumber
     from app.models.container_types import ContainerType
     from app.models.owners import Owner
-    from app.models.shelf_position_numbers import ShelfPositionNumber
     from app.models.shelf_types import ShelfType
     from app.models.barcode_types import BarcodeType
     from app.models.size_class import SizeClass
     from app.models.aisles import Aisle
-    from app.models.aisle_numbers import AisleNumber
     session = next(get_sqlalchemy_session())
 
     aisle_dict = {
         str(aisle_number): int(aisle_id)
         for aisle_id, aisle_number in session.query(
-            Aisle.id, AisleNumber.number
-        )
-        .join(AisleNumber, AisleNumber.id == Aisle.aisle_number_id)
-        .all()
+            Aisle.id, Aisle.aisle_number
+        ).all()
     }
 
     side_orientations_dict = {
         str(so_name): int(so_id)
         for so_name, so_id in session.query(SideOrientation.name, SideOrientation.id).all()
-    }
-
-    ladder_number_dict = {
-        int(ln_number): int(ln_id)
-        for ln_number, ln_id in session.query(LadderNumber.number, LadderNumber.id).all()
-    }
-
-    shelf_number_dict = {
-        int(sn_number): int(sn_id)
-        for sn_number, sn_id in session.query(ShelfNumber.number, ShelfNumber.id).all()
     }
 
     container_type_dict = {
@@ -335,11 +313,6 @@ def load_storage_locations():
     owners_dict = {
         str(owner_name): int(owner_id)
         for owner_name, owner_id in session.query(Owner.name, Owner.id).all()
-    }
-
-    shelf_position_number_dict = {
-        int(spn_number): int(spn_id)
-        for spn_number, spn_id in session.query(ShelfPositionNumber.number, ShelfPositionNumber.id).all()
     }
 
     shelf_type_max_cap_dict = {
@@ -387,11 +360,8 @@ def load_storage_locations():
                     row_num, 
                     row,
                     side_orientations_dict,
-                    ladder_number_dict,
-                    shelf_number_dict,
                     container_type_dict,
                     owners_dict,
-                    shelf_position_number_dict,
                     shelf_type_max_cap_dict,
                     barcode_types_dict,
                     shelf_type_lookup_dict,

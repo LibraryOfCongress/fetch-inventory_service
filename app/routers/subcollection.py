@@ -1,7 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends
+# /code/app/routers/subcollections.py - REFACRORED TO SQLALCHEMY V2
+
+from typing import Optional
+
+from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlmodel import Session, select
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
@@ -21,11 +29,15 @@ from app.config.exceptions import (
     InternalServerError,
 )
 from app.sorting import BaseSorter
-from app.permissions import require_permissions
+
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
 
 router = APIRouter(
     prefix="/subcollections",
     tags=["subcollections"],
+    # Authenticated-only at the router level; writes carry the manage permission
+    # per-endpoint so GETs (e.g. accession tray scanning) aren't gated by admin perms.
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -36,12 +48,6 @@ def get_subcollection_list(
 ) -> list:
     """
     Get a paginated list of subcollections
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-
-    **Returns:**
-    - Subcollection List Output: The paginated list of subcollections
     """
     # Create a query to select all sides from the database
     query = select(Subcollection)
@@ -68,10 +74,9 @@ def get_subcollection_detail(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Subcollection ID {id} Not Found")
 
 
-@router.post("/", response_model=SubcollectionDetailWriteOutput, status_code=201)
+@router.post("/", response_model=SubcollectionDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_subcollection(
-    subcollection_input: SubcollectionInput, session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
+    subcollection_input: SubcollectionInput, session: Session = Depends(get_session)
 ):
     """
     Create a new subcollection
@@ -89,12 +94,11 @@ def create_subcollection(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/{id}", response_model=SubcollectionDetailWriteOutput)
+@router.patch("/{id}", response_model=SubcollectionDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_subcollection(
     id: int,
     subcollection: SubcollectionUpdateInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
 ):
     """
     Updates an subcollection with the given ID using the provided subcollection data
@@ -119,12 +123,14 @@ def update_subcollection(
 
         return existing_subcollection
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/{id}")
-def delete_subcollection(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))):
+@router.delete("/{id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_subcollection(id: int, session: Session = Depends(get_session)):
     """
     Delete an subcollection with the given id
     """
@@ -134,9 +140,6 @@ def delete_subcollection(id: int, session: Session = Depends(get_session), _: bo
         session.delete(subcollection)
         session.commit()
 
-        return HTTPException(
-            status_code=204,
-            detail=f"Subcollection id {id} Deleted Successfully",
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Subcollection ID {id} Not Found")

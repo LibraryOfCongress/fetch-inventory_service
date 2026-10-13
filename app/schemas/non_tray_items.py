@@ -1,7 +1,7 @@
 import uuid
 
 from typing import Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 from datetime import datetime, timezone
 
 from app.models.non_tray_items import NonTrayItemStatus
@@ -45,8 +45,8 @@ class NonTrayItemInput(BaseModel):
             )
         return value
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "In",
                 "accession_job_id": 1,
@@ -68,6 +68,7 @@ class NonTrayItemInput(BaseModel):
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class NonTrayItemMoveInput(BaseModel):
@@ -75,14 +76,15 @@ class NonTrayItemMoveInput(BaseModel):
     shelf_position_number: int
     assigned_user_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "shelf_barcode_value": "5901234123457",
                 "shelf_position_number": 1,
                 "assigned_user_id": 1
             }
         }
+    )
 
 
 class NonTrayItemUpdateInput(BaseModel):
@@ -108,8 +110,8 @@ class NonTrayItemUpdateInput(BaseModel):
     shelf_position_proposed_id: Optional[int] = None
     shelved_dt: Optional[datetime] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "In",
                 "accession_job_id": 1,
@@ -133,6 +135,7 @@ class NonTrayItemUpdateInput(BaseModel):
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class NestedShelfPositionNumberNonTray(BaseModel):
@@ -147,7 +150,7 @@ class NestedShelfForNonTray(BaseModel):
 class ShelfPositionNestedForNonTrayOutput(BaseModel):
     id: int
     shelf_id: int
-    shelf_position_number: NestedShelfPositionNumberNonTray
+    position_number: int
     location: Optional[str] = None
     internal_location: Optional[str] = None
     shelf: Optional[NestedShelfForNonTray] = None
@@ -167,8 +170,8 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
     barcode: Optional[BarcodeDetailReadOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "In",
@@ -184,9 +187,7 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
                     "shelf_id": 1,
                     "location": "Cabin Branch-04-57-L-23-10-08",
                     "internal_location": "01-04-57-L-23-10-08",
-                    "shelf_position_number": {
-                        "number": 1
-                    }
+                    "position_number": 1
                 },
                 "shelf_position_proposed_id": 1,
                 "container_type_id": 1,
@@ -215,6 +216,7 @@ class NonTrayItemListOutput(NonTrayItemBaseOutput):
                 "shelved_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
@@ -227,8 +229,8 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "In",
@@ -246,9 +248,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                 "shelf_position": {
                     "id": 1,
                     "shelf_id": 1,
-                    "shelf_position_number": {
-                        "number": 1
-                    }
+                    "position_number": 1
                 },
                 "shelf_position_proposed_id": 1,
                 "container_type_id": 1,
@@ -301,6 +301,7 @@ class NonTrayItemDetailWriteOutput(NonTrayItemBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
@@ -310,9 +311,13 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
     owner: Optional[OwnerDetailReadOutput] = None
     last_requested_dt: Optional[datetime] = None
     last_refiled_dt: Optional[datetime] = None
+    last_refile_job_id: Optional[int] = None
+    last_withdraw_job_id: Optional[int] = None
+    last_request_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "In",
@@ -332,9 +337,7 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                 "shelf_position": {
                     "id": 1,
                     "shelf_id": 1,
-                    "shelf_position_number": {
-                        "number": 1
-                    }
+                    "position_number": 1
                 },
                 "shelf_position_proposed_id": 1,
                 "container_type_id": 2,
@@ -417,3 +420,4 @@ class NonTrayItemDetailReadOutput(NonTrayItemDetailWriteOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )

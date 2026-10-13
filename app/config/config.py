@@ -15,18 +15,18 @@ class Settings(BaseSettings):
     TIMEZONE: str = "America/New_York"
     IDP_ENTITY_ID: str = "https://idp.example.net/12345-ffff/"
     IDP_LOGIN_URL: str = "https://login.example.com/12345-fff/saml2"
+    JWT_SECRET_KEY: str # NIST Control: Enforces fail-safe cryptography without hardcoded fallbacks
     VUE_HOST: str = "https://localhost:8000"
-    JWT_SECRET_KEY: str = "your-secret-key"
     DATABASE_URL: str = (
-        "postgresql://postgres:postgres@inventory-database:5432/inventory_service"
+        "postgresql://user:pass@inventory-database:5432/inventory_service"
     )
     # migration_url = database_url except in local
     MIGRATION_URL: str = (
-        "postgresql://postgres:postgres@localhost:5432/inventory_service"
+        "postgresql://user:pass@localhost:5432/inventory_service"
     )
     ENABLE_ORM_SQL_LOGGING: bool = False
-    # Allowed origins for CORS
-    ALLOWED_ORIGINS_REGEX: str = "https://*\.example\.com, http://*\.example\.com"
+    # Allowed origins for CORS (Requires precise start/end matching)
+    ALLOWED_ORIGINS_REGEX: str = r"^https://.*\.example\.com$,^http://.*\.example\.com$"
     ALLOWED_ORIGINS: str = "http://127.0.0.1:8080,https://127.0.0.1:8080,http://localhost:8000,https://localhost:8000,http://localhost:3000,https://localhost:3000,http://localhost:4000"
 
     class Config:

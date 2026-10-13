@@ -1,14 +1,25 @@
+# /app/models/shelving_job_discrepancies.py - ULTIMATE, UNBREAKABLE FIX FOR FK RESOLUTION
+
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import BigInteger, Integer, VARCHAR, ForeignKey, String, CheckConstraint
 
 from typing import Optional, List
 from datetime import datetime, timezone
+from app.database.base import Base 
 
-from sqlmodel import SQLModel, Field, Relationship
+# Dependencies (MUST BE IMPORTED FOR ABSOLUTE FK REFERENCE)
+from app.models.shelving_jobs import ShelvingJob # <--- CRITICAL IMPORT
+from app.models.trays import Tray
+from app.models.non_tray_items import NonTrayItem
+from app.models.owners import Owner
+from app.models.size_class import SizeClass
 
 
-
-class ShelvingJobDiscrepancy(SQLModel, table=True):
+class ShelvingJobDiscrepancy(Base): 
     __tablename__ = "shelving_job_discrepancies"
+    
+
     __table_args__ = (
         sa.CheckConstraint(
             "(tray_id IS NOT NULL) OR (non_tray_item_id IS NOT NULL)",
@@ -16,33 +27,39 @@ class ShelvingJobDiscrepancy(SQLModel, table=True):
         ),
     )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
-    shelving_job_id: int = Field(foreign_key="shelving_jobs.id", nullable=True,
-                                 unique=False)
-    tray_id: Optional[int] = Field(foreign_key="trays.id", nullable=True, unique=False)
-    non_tray_item_id: Optional[int] = Field(foreign_key="non_tray_items.id", nullable=True, unique=False)
-    assigned_user_id: int = Field(foreign_key="users.id", nullable=True, unique=False)
-    owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=True, unique=False)
-    size_class_id: Optional[int] = Field(foreign_key="size_class.id", nullable=True, unique=False)
-    assigned_location: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(175), nullable=True, unique=False, default=None)
-    )
-    pre_assigned_location: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(175), nullable=True, unique=False, default=None)
-    )
-    error: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(350), nullable=True, unique=False)
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
+    # Primary Key
+    id: Mapped[Optional[int]] = mapped_column(BigInteger, primary_key=True)
 
-    shelving_job: Optional["ShelvingJob"] = Relationship(back_populates="shelving_job_discrepancies")
-    tray: Optional["Tray"] = Relationship(back_populates="shelving_job_discrepancies")
-    non_tray_item: Optional["NonTrayItem"] = Relationship(back_populates="shelving_job_discrepancies")
-    assigned_user: Optional["User"] = Relationship(back_populates="shelving_job_discrepancies")
-    owner: Optional["Owner"] = Relationship(back_populates="shelving_job_discrepancies")
-    size_class: Optional["SizeClass"] = Relationship(back_populates="shelving_job_discrepancies")
+    # Foreign Keys
+    # CRITICAL FIX: Use ShelvingJob.__table__.c.id for explicit, unbreakable reference
+    shelving_job_id: Mapped[Optional[int]] = mapped_column(ForeignKey(ShelvingJob.__table__.c.id), nullable=True)
+
+    # Standard FKs (less likely to be circular)
+    tray_id: Mapped[Optional[int]] = mapped_column(ForeignKey("trays.id"), nullable=True)
+    non_tray_item_id: Mapped[Optional[int]] = mapped_column(ForeignKey("non_tray_items.id"), nullable=True)
+    assigned_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    
+    # CRITICAL FIXES: ABSOLUTE FOREIGN KEY REFERENCES
+    owner_id: Mapped[Optional[int]] = mapped_column(ForeignKey(Owner.__table__.c.id), nullable=True)
+    size_class_id: Mapped[Optional[int]] = mapped_column(ForeignKey(SizeClass.__table__.c.id), nullable=True)
+
+
+    # Location Fields
+    assigned_location: Mapped[Optional[str]] = mapped_column(String(175), nullable=True)
+    pre_assigned_location: Mapped[Optional[str]] = mapped_column(String(175), nullable=True)
+    error: Mapped[Optional[str]] = mapped_column(String(350), nullable=True)
+    
+    # --- RELATIONSHIPS ---
+    
+    # The relationship is fixed by using primaryjoin to link to the FK
+    shelving_job: Mapped[Optional["ShelvingJob"]] = relationship(
+        back_populates="shelving_job_discrepancies",
+        primaryjoin="ShelvingJobDiscrepancy.shelving_job_id==ShelvingJob.id"
+    )
+    
+    # Standard relationships using string forward references
+    tray: Mapped[Optional["Tray"]] = relationship(back_populates="shelving_job_discrepancies")
+    non_tray_item: Mapped[Optional["NonTrayItem"]] = relationship(back_populates="shelving_job_discrepancies")
+    assigned_user: Mapped[Optional["User"]] = relationship(back_populates="shelving_job_discrepancies")
+    owner: Mapped[Optional["Owner"]] = relationship(back_populates="shelving_job_discrepancies")
+    size_class: Mapped[Optional["SizeClass"]] = relationship(back_populates="shelving_job_discrepancies")

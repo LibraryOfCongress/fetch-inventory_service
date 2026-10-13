@@ -1,15 +1,19 @@
+# /code/app/routers/auth.py - REFACRORED TO SQLALCHEMY V2
+
 import json, jwt
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Request, HTTPException, Response, status, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from app.config.config import get_settings
-from app.models.groups import Group
 from app.models.users import User
-from sqlmodel import Session, select
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
 from app.database.session import get_session
 from app.schemas.auth import LegacyUserInput
 from app.config.exceptions import NotFound
 from app.filter_params import AuthFilterParams
+from app.auth.dependencies import get_current_user_with_permissions
 
 from urllib.parse import urlparse
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -72,7 +76,7 @@ def load_saml_settings():
             # with open("app/saml/stage/cert.pem", "r") as cert_file:
             #     certificate = cert_file.read()
             # with open("app/saml/stage/key.pem", "r") as key_file:
-            #     private_key = key_file.read()
+            #     private_key = cert_file.read()
             # settings['sp']['x509cert'] = certificate
             # settings['sp']['privateKey'] = private_key
         case "production":
@@ -82,7 +86,7 @@ def load_saml_settings():
             # with open("app/saml/production/cert.pem", "r") as cert_file:
             #     certificate = cert_file.read()
             # with open("app/saml/production/key.pem", "r") as key_file:
-            #     private_key = key_file.read()
+            #     private_key = cert_file.read()
             # settings['sp']['x509cert'] = certificate
             # settings['sp']['privateKey'] = private_key
         case _:
@@ -97,22 +101,13 @@ def init_saml_auth(req):
     auth = OneLogin_Saml2_Auth(req, old_settings=settings)
     return auth
 
-def generate_token(user_object, session):
-    user_groups = (
-        session.exec(
-            select(Group)
-            .where(Group.users.any(id=user_object.id))
-        )
-        .unique()
-        .all()
-    )
+def generate_token(user_object, session: Session):
     payload = {
         "user_id": user_object.id,
         "first_name": user_object.first_name,
         "last_name": user_object.last_name,
         "email": user_object.email,
-        "role": ':'.join([group.name for group in user_groups]),
-        # 'exp': datetime.now(timezone.utc) + timedelta(minutes=15)  # Token expires in 15 minutes
+        'exp': datetime.now(timezone.utc) + timedelta(minutes=15)  # NIST IA-11: Cryptographic session expiration
     }
     token = jwt.encode(payload, get_settings().JWT_SECRET_KEY, algorithm="HS256")
 
@@ -169,10 +164,10 @@ async def saml_metadata():
     metadata = settings.get_sp_metadata()
     errors = settings.validate_metadata(metadata)
     if len(errors) > 0:
-        return HTTPException(status_code=500, detail=', '.join(errors))
+        raise HTTPException(status_code=500, detail=', '.join(errors))
     return Response(content=metadata, media_type="text/xml")
 
-@router.get("/sso/login")
+@router.get("/sso/login/")
 async def saml_login(
     request: Request,
     params: AuthFilterParams = Depends()
@@ -196,9 +191,9 @@ async def saml_acs(request: Request, session: Session = Depends(get_session)):
     errors = auth.get_errors()
     last_error_reason = auth.get_last_error_reason()
     if len(errors) > 0 or not auth.is_authenticated():
-        # return HTTPException(status_code=400, detail=', '.join(errors))
+        # raise HTTPException(status_code=400, detail=', '.join(errors))
         # temp debug
-        return HTTPException(status_code=400, detail=f"{errors}, last error reason: {last_error_reason}")
+        raise HTTPException(status_code=400, detail=f"{errors}, last error reason: {last_error_reason}")
 
     user_info = auth.get_attributes()
 
@@ -213,7 +208,8 @@ async def saml_acs(request: Request, session: Session = Depends(get_session)):
         'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'
     ][0]
     user_query = select(User).where(User.email==user_email)
-    user = session.exec(user_query).first()
+    # CRITICAL V2 FIX: session.exec().first() -> session.execute(query).scalars().first()
+    user = session.execute(user_query).scalars().first()
     if not user:
         # create user
         user = User(
@@ -231,19 +227,83 @@ async def saml_acs(request: Request, session: Session = Depends(get_session)):
     # Retrieve RelayState from 'preserve_route' pass through
     relay_state = req.get('post_data').get('RelayState', "/")
 
-    return RedirectResponse(url=f"{get_settings().VUE_HOST}/?token={token}&preserve_route={relay_state}", status_code=status.HTTP_303_SEE_OTHER)
+    # Set token as an HttpOnly secure cookie instead of a URL parameter.
+    # lstrip the leading slash(es): relay_state is the SPA fullPath (starts with
+    # "/"), so f"{VUE_HOST}/{relay_state}" would yield a double slash
+    # (host//shelving/123). A leading "//" is parsed by the browser as a
+    # protocol-relative URL — the route is lost and it's an open-redirect risk —
+    # so normalize to a single-slash path under VUE_HOST.
+    response = RedirectResponse(
+        url=f"{get_settings().VUE_HOST}/{relay_state.lstrip('/')}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+    # Determine Secure flag based on environment (local might be http)
+    is_secure = get_settings().APP_ENVIRONMENT not in ["debug", "local"]
+
+    response.set_cookie(
+        key="fetch_auth_token",
+        value=token,
+        httponly=True,
+        secure=is_secure,
+        samesite="lax",  # Allows the redirect to send the cookie
+        max_age=900,  # 15 minutes
+    )
+
+    return response
+
+@router.post("/sso/logout/")
+async def sso_logout():
+    """Clears the explicit HttpOnly authentication cookie."""
+    response = JSONResponse(content={"detail": "Logged out successfully"})
+    response.delete_cookie("fetch_auth_token")
+    return response
 
 if get_settings().APP_ENVIRONMENT in ['debug', 'local', 'develop', 'test']:
-    # Route only available in non prod envs
+        # Route only available in non prod envs
     @router.post('/legacy/login')
     async def legacy_login(request: Request, legacy_user: LegacyUserInput, session: Session = Depends(get_session)):
         user_query = select(User).where(User.email==legacy_user.email)
-        user = session.exec(user_query).first()
+        # CRITICAL V2 FIX: session.exec().first() -> session.execute(query).scalars().first()
+        user = session.execute(user_query).scalars().first()
         if not user:
             raise NotFound(detail=f"User not found for {legacy_user.email}")
 
         token = generate_token(user, session)
 
-        return JSONResponse({"detail": f"{token}"}, status_code=200)
+        response = JSONResponse({"detail": "Login successful"}, status_code=200)
 
-        # return RedirectResponse(url=f"{get_settings().VUE_HOST}/?token={token}", status_code=status.HTTP_303_SEE_OTHER)
+        is_secure = get_settings().APP_ENVIRONMENT not in ["debug", "local"]
+        response.set_cookie(
+            key="fetch_auth_token",
+            value=token,
+            httponly=True,
+            secure=is_secure,
+            samesite="lax",
+            max_age=900
+        )
+
+        return response
+
+@router.get('/me')
+async def get_current_user_profile(user: User = Depends(get_current_user_with_permissions)):
+    """
+    Returns the profile and permissions of the currently authenticated user.
+    Required by the frontend to initialize the User Store via HttpOnly cookies.
+    """
+    # Build a simplified response mirroring what jwt decoding + users API used to provide
+    permissions = []
+    if user.groups:
+        for group in user.groups:
+            if group.permissions:
+                for perm in group.permissions:
+                    permissions.append(perm.name)
+
+    return {
+        "user_id": user.id,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "default_building_id": user.default_building_id,
+        "permissions": list(set(permissions))
+    }

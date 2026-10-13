@@ -1,9 +1,16 @@
+# /code/app/routers/owner_tiers.py - REFACRORED TO SQLALCHEMY V2
+
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends
-from sqlmodel import Session, select
+from fastapi_pagination import Page
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
-from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
+from typing import Optional
 
 from app.database.session import get_session
 from app.filter_params import SortParams
@@ -20,11 +27,13 @@ from app.config.exceptions import (
     InternalServerError,
 )
 from app.sorting import BaseSorter
-from app.permissions import require_permissions
+
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
 
 router = APIRouter(
     prefix="/owners",
     tags=["owners"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -35,12 +44,6 @@ def get_owner_tier_list(
 ) -> list:
     """
     Get the list of owner tiers.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-
-    **Returns:**
-    - Owner Tier List Output: The paginated list of owner tiers.
     """
     # Create a query to select all Owner Tier
     query = select(OwnerTier)
@@ -57,15 +60,6 @@ def get_owner_tier_list(
 def get_owner_tier_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieves the details of an owner tier by its ID.
-
-    **Parameters:**
-    - id: The ID of the owner tier to retrieve.
-
-    **Returns:**
-    - Owner Tier Detail Output: The details of the owner tier.
-
-    **Raises:**
-    - HTTPException: If the owner tier with the specified ID is not found.
     """
     owner_tier = session.get(OwnerTier, id)
     if owner_tier:
@@ -74,27 +68,12 @@ def get_owner_tier_detail(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Owner Tier ID {id} Not Found")
 
 
-@router.post("/tiers", response_model=OwnerTierDetailOutput, status_code=201)
+@router.post("/tiers", response_model=OwnerTierDetailOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_owner_tier(
-    owner_tier_input: OwnerTierInput, session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_owners")),
+    owner_tier_input: OwnerTierInput, session: Session = Depends(get_session)
 ) -> OwnerTier:
     """
     Create an owner tier:
-
-    **Args:**
-    - Owner Tier Input: The input data for creating the owner tier.
-
-    **Returns:**
-    - Owner Tier Detail Output: The created owner tier.
-
-    **Raises:**
-    - HTTPException: If there is an integrity error during the creation of the owner
-    tier.
-
-    **Notes:**
-    - **level**: Required unique integer that represents a tier
-    - **name**: Required unique string that names a tier (category)
     """
     try:
         new_owner_tier = OwnerTier(**owner_tier_input.model_dump())
@@ -108,20 +87,12 @@ def create_owner_tier(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/tiers/{id}", response_model=OwnerTierDetailOutput)
+@router.patch("/tiers/{id}", response_model=OwnerTierDetailOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_owner_tier(
-    id: int, owner_tier: OwnerTierUpdateInput, session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_owners")),
+    id: int, owner_tier: OwnerTierUpdateInput, session: Session = Depends(get_session)
 ):
     """
     Update an owner tier by its ID.
-
-    **Args:**
-    - id: The ID of the owner tier to update.
-    - Owner Tier Input: The updated owner tier data.
-
-    **Returns:**
-    - OwnerTierDetailOutput: The updated owner tier.
     """
     try:
         existing_owner_tier = session.get(OwnerTier, id)
@@ -141,23 +112,16 @@ def update_owner_tier(
 
         return existing_owner_tier
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/tiers/{id}")
-def delete_owner_tier(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_owners"))):
+@router.delete("/tiers/{id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_owner_tier(id: int, session: Session = Depends(get_session)):
     """
     Delete an owner tier by its ID.
-
-    **Parameters:**
-    - id: The ID of the owner tier to delete.
-
-    **Returns:**
-    - None
-
-    **Raises:**
-        HTTPException: If the owner tier with the specified ID is not found.
     """
     owner_tier = session.get(OwnerTier, id)
 
@@ -165,8 +129,6 @@ def delete_owner_tier(id: int, session: Session = Depends(get_session), _: bool 
         session.delete(owner_tier)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Owner Tier ID {id} Deleted " f"Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Owner Tier ID {id} Not Found")

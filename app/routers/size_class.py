@@ -1,14 +1,19 @@
+# /code/app/routers/size_class.py - REFACRORED TO SQLALCHEMY V2
+
 from typing import Optional
 
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlmodel import Session, select
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
 from datetime import datetime, timezone
+from sqlalchemy.exc import IntegrityError
 
-from app.config.exceptions import BadRequest, InternalServerError
 from app.database.session import get_session
-from app.permissions import require_permissions
 from app.filter_params import SortParams
 from app.logger import inventory_logger
 from app.models.size_class import SizeClass
@@ -19,11 +24,19 @@ from app.schemas.size_class import (
     SizeClassDetailWriteOutput,
     SizeClassDetailReadOutput,
 )
+from app.config.exceptions import (
+    NotFound,
+    ValidationException,
+    InternalServerError,
+)
 from app.sorting import BaseSorter
+
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
 
 router = APIRouter(
     prefix="/size_class",
     tags=["size class"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -33,19 +46,9 @@ def get_size_class_list(
     short_name: str | None = None,
     sort_params: SortParams = Depends(),
     search: Optional[str] = Query(None),
-    _: bool = Depends(require_permissions("can_manage_size_class"))
 ) -> list:
     """
     Get a paginated list of size classes
-
-    **Parameters:**
-    - short_name (str): The short name of the size class to filter by.
-    - sort_params (SortParams): The sorting parameters.
-    - search (str): The search term to filter by.
-        - Name: The name of the size class.
-
-    **Returns:**
-    - Size Class List Output: The paginated list of size classes
     """
     # Create a query to select all sides from the database
     query = select(SizeClass)
@@ -69,7 +72,7 @@ def get_size_class_list(
 
 
 @router.get("/{id}", response_model=SizeClassDetailReadOutput)
-def get_size_class_detail(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_size_class"))):
+def get_size_class_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve the details of a size class by its ID.
     """
@@ -80,9 +83,9 @@ def get_size_class_detail(id: int, session: Session = Depends(get_session), _: b
         raise HTTPException(status_code=404, detail="Not Found")
 
 
-@router.post("/", response_model=SizeClassDetailWriteOutput, status_code=201)
+@router.post("/", response_model=SizeClassDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_size_class(
-    size_class_input: SizeClassInput, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_size_class"))
+    size_class_input: SizeClassInput, session: Session = Depends(get_session)
 ):
     """
     Create a new size class record.
@@ -96,12 +99,11 @@ def create_size_class(
     return new_size_class
 
 
-@router.patch("/{id}", response_model=SizeClassDetailWriteOutput)
+@router.patch("/{id}", response_model=SizeClassDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_size_class(
     id: int,
     size_class_input: SizeClassUpdateInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_size_class"))
 ):
     """
     Update a size class record in the database
@@ -128,8 +130,8 @@ def update_size_class(
     return existing_size_class
 
 
-@router.delete("/{id}")
-def delete_size_class(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_size_class"))):
+@router.delete("/{id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_size_class(id: int, session: Session = Depends(get_session)):
     """
     Delete a size_class by its ID
     """
@@ -138,6 +140,6 @@ def delete_size_class(id: int, session: Session = Depends(get_session), _: bool 
     if size_class:
         session.delete(size_class)
         session.commit()
-        return HTTPException(status_code=204)
+        return Response(status_code=204)
     else:
         raise HTTPException(status_code=404, detail=f"Size Class ID {id} Not Found")

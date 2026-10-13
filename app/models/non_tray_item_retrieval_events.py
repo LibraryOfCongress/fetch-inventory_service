@@ -1,37 +1,44 @@
-from typing import Optional
+# /code/app/models/non_tray_item_retrieval_events.py - REFACRORED TO SQLALCHEMY V2
+
+from typing import Optional, List
 from datetime import datetime, timezone
 
-from sqlmodel import SQLModel, Field, Relationship
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import BigInteger, ForeignKey, Integer
+
+# REMOVED: from sqlmodel import SQLModel, Field, Relationship
+
+# NEW IMPORT: Import the Base class you created
+from app.database.base import Base
 
 
-
-class NonTrayItemRetrievalEvent(SQLModel, table=True):
+class NonTrayItemRetrievalEvent(Base): # <--- Inherit from Base
     """
     Model to represent the non_tray_items_retrieval_events table
     """
 
+    # NOTE: __tablename__ is handled by Base.
     __tablename__ = "non_tray_items_retrieval_events"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
-    non_tray_item_id: Optional[int] = Field(
-       foreign_key="non_tray_items.id", nullable=False, unique=False)
-    owner_id: Optional[int] = Field(foreign_key="owners.id", nullable=False, unique=False)
-    pick_list_id: Optional[int] = Field(
-        foreign_key="pick_lists.id", nullable=False, unique=False)
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    non_tray_item: Optional["NonTrayItem"] = Relationship(
-        back_populates="non_tray_items_retrieval_events"
-    )
-    owner: Optional["Owner"] = Relationship(
-        back_populates="non_tray_items_retrieval_events"
-    )
-    pick_list: Optional["PickList"] = Relationship(
-        back_populates="non_tray_items_retrieval_events"
-    )
+    # Primary Key
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    
+    # Foreign Keys
+    # Note: Mapped[int] because nullable=False in original model
+    non_tray_item_id: Mapped[int] = mapped_column(ForeignKey("non_tray_items.id"), nullable=False)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("owners.id"), nullable=False)
+    pick_list_id: Mapped[int] = mapped_column(ForeignKey("pick_lists.id"), nullable=False)
+    
+    # REMOVED: create_dt and update_dt are inherited from Base
 
+    # --- RELATIONSHIPS ---
+    non_tray_item: Mapped[Optional["NonTrayItem"]] = relationship(
+        back_populates="non_tray_items_retrieval_events"
+    )
+    owner: Mapped[Optional["Owner"]] = relationship(
+        back_populates="non_tray_items_retrieval_events"
+    )
+    pick_list: Mapped[Optional["PickList"]] = relationship(
+        back_populates="non_tray_items_retrieval_events"
+    )

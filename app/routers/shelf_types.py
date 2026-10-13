@@ -1,22 +1,26 @@
-from datetime import datetime, timezone
-from typing import Optional
-import logging # <-- START: NEW IMPORT
-from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks # <-- MODIFIED IMPORT
+# /code/app/routers/shelf_types.py - FULLY REFACRORED TO SQLALCHEMY V2
+
+import logging
+from typing import Optional, List
+
+from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlmodel import Session, select
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select, func, update # select/update/func imported from sqlalchemy now
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
 
 # --- START: MODIFIED/NEW IMPORTS FOR BACKGROUND TASK ---
-from app.database.session import get_session, AppSessionLocal
-from app.permissions import require_permissions
+from app.database.session import get_session, AppSessionLocal # AppSessionLocal is a synchronous session factory
 from app.filter_params import SortParams
 from app.models.shelf_types import ShelfType
 from app.models.shelves import Shelf
 from app.models.size_class import SizeClass
 from app.models.shelf_positions import ShelfPosition
-from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.trays import Tray
 from app.models.non_tray_items import NonTrayItem
 # --- END: MODIFIED/NEW IMPORTS FOR BACKGROUND TASK ---
@@ -37,18 +41,20 @@ from app.config.exceptions import (
 from app.sorting import BaseSorter
 
 # --- START: NEW LOGGER ---
-# Create a logger for this module to see background task output
 LOGGER = logging.getLogger(__name__)
 # --- END: NEW LOGGER ---
+
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
 
 router = APIRouter(
     prefix="/shelf-types",
     tags=["shelf types"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
 # ======================================================================
-# ========= START: NEW BACKGROUND TASK FUNCTION ========================
+# ========= START: NEW BACKGROUND TASK FUNCTION (V2 CONVERTED) =========
 # ======================================================================
 def resize_shelves_for_type(
     shelf_type_id: int,
@@ -58,13 +64,15 @@ def resize_shelves_for_type(
     """
     A background task to resize all shelves of a given type.
     It creates its own database session to ensure it works after the initial request is closed.
+    CRITICAL: All session.exec() calls are converted to V2 execution.
     """
     # Create a new, independent database session for this task.
     session = AppSessionLocal()
     LOGGER.info(f"Background Task: Starting resize for ShelfType ID {shelf_type_id}.")
     try:
         # Find all shelves that use this shelf type.
-        affected_shelves = session.exec(select(Shelf).where(Shelf.shelf_type_id == shelf_type_id)).all()
+        # V2 FIX: session.exec().all() -> session.execute(select(...)).scalars().all()
+        affected_shelves = session.execute(select(Shelf).where(Shelf.shelf_type_id == shelf_type_id)).scalars().all()
         if not affected_shelves:
             LOGGER.info("Background Task: No shelves found for this type. Task finished.")
             return
@@ -77,20 +85,21 @@ def resize_shelves_for_type(
                 # Find the positions with the highest numbers to remove them.
                 positions_to_check_query = (
                     select(ShelfPosition)
-                    .join(ShelfPositionNumber, ShelfPosition.shelf_position_number_id == ShelfPositionNumber.id)
                     .where(ShelfPosition.shelf_id == shelf.id)
-                    .order_by(ShelfPositionNumber.number.desc())
+                    .order_by(ShelfPosition.position_number.desc())
                     .limit(num_to_remove)
                 )
-                positions_to_delete = session.exec(positions_to_check_query).all()
+                # V2 FIX: session.exec().all() -> session.execute(select(...)).scalars().all()
+                positions_to_delete = session.execute(positions_to_check_query).scalars().all()
                 position_ids_to_delete = [p.id for p in positions_to_delete]
 
                 if not position_ids_to_delete:
                     continue
 
                 # SAFETY CHECK: Ensure these positions are empty.
-                occupied_tray = session.exec(select(Tray.id).where(Tray.shelf_position_id.in_(position_ids_to_delete)).limit(1)).first()
-                occupied_non_tray = session.exec(select(NonTrayItem.id).where(NonTrayItem.shelf_position_id.in_(position_ids_to_delete)).limit(1)).first()
+                # V2 FIX: session.exec().first() -> session.execute(select(...)).first()
+                occupied_tray = session.execute(select(Tray.id).where(Tray.shelf_position_id.in_(position_ids_to_delete)).limit(1)).first()
+                occupied_non_tray = session.execute(select(NonTrayItem.id).where(NonTrayItem.shelf_position_id.in_(position_ids_to_delete)).limit(1)).first()
 
                 if occupied_tray or occupied_non_tray:
                     LOGGER.warning(f"Background Task: Cannot resize Shelf ID {shelf.id}: positions are occupied. Skipping.")
@@ -105,13 +114,11 @@ def resize_shelves_for_type(
             # --- INCREASING CAPACITY ---
             new_position_numbers_range = list(range(old_capacity + 1, new_capacity + 1))
             if new_position_numbers_range:
-                pos_nums_map = {p.number: p for p in session.exec(select(ShelfPositionNumber).where(ShelfPositionNumber.number.in_(new_position_numbers_range))).all()}
+                # Direct position_number — no lookup table needed
                 for shelf in affected_shelves:
                     for position_num in new_position_numbers_range:
-                        shelf_pos_num_obj = pos_nums_map.get(position_num)
-                        if shelf_pos_num_obj:
-                            new_position = ShelfPosition(shelf_id=shelf.id, shelf_position_number_id=shelf_pos_num_obj.id)
-                            session.add(new_position)
+                        new_position = ShelfPosition(shelf_id=shelf.id, position_number=position_num)
+                        session.add(new_position)
                     LOGGER.info(f"Background Task: Queued {len(new_position_numbers_range)} new positions for Shelf ID {shelf.id}.")
 
         session.commit()
@@ -119,6 +126,7 @@ def resize_shelves_for_type(
         # Recalculate available space after committing the resize.
         for shelf in affected_shelves:
             if hasattr(shelf, 'calc_available_space'):
+                # NOTE: calc_available_space is a method on the ORM object that needs the session for its V2 internal queries
                 shelf.calc_available_space(session=session)
                 session.add(shelf)
         session.commit()
@@ -128,7 +136,7 @@ def resize_shelves_for_type(
         session.close()
         LOGGER.info(f"Background Task: Finished for ShelfType ID {shelf_type_id}. Session closed.")
 # ======================================================================
-# ========= END: NEW BACKGROUND TASK FUNCTION ==========================
+# ========= END: NEW BACKGROUND TASK FUNCTION (V2 CONVERTED) ============
 # ======================================================================
 
 
@@ -138,9 +146,7 @@ def get_shelf_type_list(
     size_class_id: int = None,
     sort_params: SortParams = Depends(),
     search: Optional[str] = Query(None, description="Search by Shelf Type Type"),
-    _: bool = Depends(require_permissions("can_manage_shelf_type"))
 ) -> list:
-    # This function is unchanged from your original file.
     query = select(ShelfType)
     if search:
         query = query.where(ShelfType.type.icontains(search))
@@ -153,8 +159,7 @@ def get_shelf_type_list(
 
 
 @router.get("/{id}", response_model=ShelfTypeDetailOutput)
-def get_shelf_type_detail(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_shelf_type"))):
-    # This function is unchanged from your original file.
+def get_shelf_type_detail(id: int, session: Session = Depends(get_session)):
     if not id:
         raise BadRequest(detail="Shelf Type ID Required")
     shelf_type = session.get(ShelfType, id)
@@ -163,11 +168,10 @@ def get_shelf_type_detail(id: int, session: Session = Depends(get_session), _: b
     raise NotFound(detail=f"Shelf Type ID {id} Not Found")
 
 
-@router.post("/", response_model=ShelfTypeDetailOutput)
+@router.post("/", response_model=ShelfTypeDetailOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_shelf_type(
-    shelf_type_input: ShelfTypeInput, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_shelf_type"))
+    shelf_type_input: ShelfTypeInput, session: Session = Depends(get_session)
 ):
-    # This function is unchanged from your original file.
     try:
         new_shelf_type = ShelfType(**shelf_type_input.model_dump())
         session.add(new_shelf_type)
@@ -179,19 +183,17 @@ def create_shelf_type(
 
 
 # --- START: COMPLETELY REVISED `update_shelf_type` FUNCTION ---
-@router.patch("/{id}", response_model=ShelfTypeDetailOutput)
+@router.patch("/{id}", response_model=ShelfTypeDetailOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_shelf_type(
     id: int,
     shelf_type_input: ShelfTypeUpdateInput,
-    background_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks, # This dependency is new
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_shelf_type"))
 ):
     """
     Update an existing Shelf Type. If max_capacity is changed, a background
     task is triggered to resize all associated shelves.
     """
-    # This logic replaces the old, restrictive check.
     existing_shelf_type = session.get(ShelfType, id)
     if not existing_shelf_type:
         raise NotFound(detail=f"Shelf Type ID {id} not found")
@@ -214,7 +216,6 @@ def update_shelf_type(
     if new_capacity != old_capacity:
         LOGGER.info(f"API: ShelfType ID {id} capacity changed from {old_capacity} to {new_capacity}. Scheduling background task.")
         # If it has changed, add the resizing function to run in the background.
-        # We do NOT pass the session from the request to the background task.
         background_tasks.add_task(
             resize_shelves_for_type,
             id,
@@ -226,27 +227,26 @@ def update_shelf_type(
 # --- END: COMPLETELY REVISED `update_shelf_type` FUNCTION ---
 
 
-@router.delete("/{id}")
-def delete_shelf_type(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_shelf_type"))):
-    # This function is unchanged from your original file.
+@router.delete("/{id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_shelf_type(id: int, session: Session = Depends(get_session)):
     if not id:
         raise BadRequest(detail="Shelf Type ID Required")
     shelf_type = session.get(ShelfType, id)
     if shelf_type:
-        child_shelves_count = session.exec(
+        # V2 FIX: session.exec().one() -> session.execute(select(...)).scalar_one()
+        child_shelves_count = session.execute(
             select(func.count(Shelf.id)).where(Shelf.shelf_type_id == id)
-        ).one()
+        ).scalar_one()
         if child_shelves_count > 0:
-            shelf_type_size_class = session.exec(
+            # V2 FIX: session.exec().one_or_none() -> session.execute(select(...)).scalars().one_or_none()
+            shelf_type_size_class = session.execute(
                 select(SizeClass).where(SizeClass.id == shelf_type.size_class_id)
-            ).one_or_none()
+            ).scalars().one_or_none()
             raise MethodNotAllowed(
                 detail=f"""Cannot delete Shelf Type id {id} ({shelf_type_size_class.short_name} {shelf_type.type}), it is in use by {child_shelves_count} shelves"""
             )
         else:
             session.delete(shelf_type)
             session.commit()
-        return HTTPException(
-            status_code=204, detail=f"Shelf Type ID {id} Deleted Successfully"
-        )
+        return Response(status_code=204)
     raise NotFound(detail=f"Shelf Type ID {id} Not Found")

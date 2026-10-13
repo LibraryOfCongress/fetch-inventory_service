@@ -8,7 +8,6 @@ from app.logger import migration_logger
 from app.seed.scripts.load_tray import load_tray
 
 from app.models.container_types import ContainerType
-from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.size_class import SizeClass
 from app.models.owners import Owner
 from app.models.media_types import MediaType
@@ -187,11 +186,10 @@ def load_containers():
         session.query(
             Barcode.value.label('shelf_barcode_value'),
             ShelfPosition.id.label('shelf_position_id'),
-            ShelfPositionNumber.number.label('shelf_position_number_value'),
+            ShelfPosition.position_number.label('shelf_position_number_value'),
         )
         .join(Shelf, Shelf.barcode_id == Barcode.id)
         .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id)
-        .join(ShelfPositionNumber, ShelfPositionNumber.id == ShelfPosition.shelf_position_number_id)
         .all()
     )
     shelf_position_dict = defaultdict(list)

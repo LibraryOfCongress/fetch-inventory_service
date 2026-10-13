@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timezone
 
 from app.schemas.groups import GroupPermissionsOutput
@@ -9,27 +9,46 @@ class UserInput(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[str] = None
+    default_building_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "first_name": "Frodo",
                 "last_name": "Baggins",
-                "email": "FBaggins@example.com"
+                "email": "FBaggins@example.com",
+                "default_building_id": 1
             }
         }
+    )
 
 
 class UserUpdateInput(UserInput):
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "first_name": "Frodo",
                 "last_name": "Baggins",
                 "email": "FBaggins@example.com"
             }
         }
+    )
+
+
+class UserSelfUpdateInput(BaseModel):
+    """Restricted self-service update: the fields a user may change on their OWN
+    record without admin permissions. Deliberately excludes name/email/groups so
+    a non-admin can only adjust personal preferences (e.g. default building)."""
+    default_building_id: Optional[int] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "default_building_id": 1
+            }
+        }
+    )
 
 
 class UserBaseReadOutput(UserUpdateInput):
@@ -39,8 +58,8 @@ class UserBaseReadOutput(UserUpdateInput):
 
 class UserListOutput(UserBaseReadOutput):
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "first_name": "Bilbo",
@@ -49,14 +68,15 @@ class UserListOutput(UserBaseReadOutput):
                 "email": "FBaggins@example.com"
             }
         }
+    )
 
 
 class UserDetailWriteOutput(UserListOutput):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "first_name": "Bilbo",
@@ -67,12 +87,13 @@ class UserDetailWriteOutput(UserListOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class UserDetailReadOutput(UserDetailWriteOutput):
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "first_name": "Frodo",
@@ -83,6 +104,7 @@ class UserDetailReadOutput(UserDetailWriteOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class NestedGroupForUserOutput(BaseModel):
@@ -93,8 +115,8 @@ class NestedGroupForUserOutput(BaseModel):
 class UserGroupOutput(BaseModel):
     groups: Optional[List[NestedGroupForUserOutput]] = []
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "groups": [
                     {
@@ -108,14 +130,15 @@ class UserGroupOutput(BaseModel):
                 ]
             }
         }
+    )
 
 
 class UserPermissionsOutput(BaseModel):
     id: int
     permissions: list
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "permissions": [
@@ -127,3 +150,4 @@ class UserPermissionsOutput(BaseModel):
                 ]
             }
         }
+    )

@@ -8,12 +8,7 @@
           "module_number": "CSR2A"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 21
-        }
-      }
+      "aisle_number": 21
     },
     {
       "!module_id": {
@@ -22,12 +17,7 @@
           "module_number": "CSR2A"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 22
-        }
-      }
+      "aisle_number": 22
     },
     {
       "!module_id": {
@@ -36,12 +26,7 @@
           "module_number": "CSR2A"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 23
-        }
-      }
+      "aisle_number": 23
     },
     {
       "!module_id": {
@@ -50,12 +35,7 @@
           "module_number": "CSR2A"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 24
-        }
-      }
+      "aisle_number": 24
     },
     {
       "!module_id": {
@@ -64,12 +44,7 @@
           "module_number": "CSR2A"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 25
-        }
-      }
+      "aisle_number": 25
     },
     {
       "!module_id": {
@@ -78,12 +53,7 @@
           "module_number": "CSR2A"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 26
-        }
-      }
+      "aisle_number": 26
     },
     {
       "!module_id": {
@@ -92,12 +62,7 @@
           "module_number": "CSR2A"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 27
-        }
-      }
+      "aisle_number": 27
     },
     {
       "!module_id": {
@@ -106,12 +71,7 @@
           "module_number": "CSR2A"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 28
-        }
-      }
+      "aisle_number": 28
     }
   ]
 }

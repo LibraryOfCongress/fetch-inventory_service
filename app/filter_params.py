@@ -98,6 +98,28 @@ class ModuleFilterParams(BaseModel):
     building_name: Optional[str] = None
 
 
+class ShippingBinsReportParams:
+    """
+    Params for Shipping Bins Report.
+    """
+
+    def __init__(
+        self,
+        from_dt: Optional[datetime] = Query(
+            None, description="Start Job Creation date to filter by."
+        ),
+        to_dt: Optional[datetime] = Query(
+            None, description="End Job Creation date to filter by."
+        ),
+        delivery_location_id: Optional[List[int]] = Query(
+            None, description="Delivery Location IDs to filter by."
+        ),
+    ):
+        self.from_dt = from_dt
+        self.to_dt = to_dt
+        self.delivery_location_id = delivery_location_id
+
+
 class AisleFilterParams(BaseModel):
     """
     Params for Aisle List.
@@ -146,7 +168,6 @@ class JobFilterParams:
         building_name: List[str] = Query(
             default=None, description="Building name to filter by."
         ),
-        user_id: List[int] = Query(default=None, description="User ID to filter by."),
         assigned_user: List[str] = Query(
             default=None, description="Assigned user to filter by."
         ),
@@ -161,7 +182,6 @@ class JobFilterParams:
         self.trayed = trayed
         self.assigned_user_id = assigned_user_id
         self.building_name = building_name
-        self.user_id = user_id
         self.assigned_user = assigned_user
         self.status = status
         self.from_dt = from_dt
@@ -235,7 +255,7 @@ class RequestFilterParams:
         media_type: List[str] = Query(
             default=None, description="Media type to filter by."
         ),
-        external_request_id: List[str] = Query(default=None, description="External "
+        external_request_id: Optional[str] = Query(default=None, description="External "
                                                                          "Requester "
                                                                          "ID to "
                                                                          "filter by."),
@@ -292,7 +312,6 @@ class ShelvingJobDiscrepancyParams(BaseModel):
     size_class_id: Optional[int] = None
     from_dt: Optional[datetime] = None
     to_dt: Optional[datetime] = None
-    user_id: Optional[int] = None
 
 
 class OpenLocationParams:
@@ -315,6 +334,12 @@ class OpenLocationParams:
         show_partial: Optional[bool] = False,
         owner_id: list[int] = Query(default=None),
         size_class_id: list[int] = Query(default=None),
+        include_sub_tiers: bool = Query(default=False, description="Include child owner tiers"),
+        # Search filter params for server-side filtering
+        location_search: Optional[str] = Query(default=None, description="Search shelf location"),
+        shelf_barcode_search: Optional[str] = Query(default=None, description="Search shelf barcode"),
+        owner_search: Optional[str] = Query(default=None, description="Search owner name"),
+        size_class_search: Optional[str] = Query(default=None, description="Search size class"),
     ):
         self.building_id = building_id
         self.module_id = module_id
@@ -327,6 +352,11 @@ class OpenLocationParams:
         self.show_partial = show_partial
         self.owner_id = owner_id
         self.size_class_id = size_class_id
+        self.include_sub_tiers = include_sub_tiers
+        self.location_search = location_search
+        self.shelf_barcode_search = shelf_barcode_search
+        self.owner_search = owner_search
+        self.size_class_search = size_class_search
 
 
 class SortParams(BaseModel):
@@ -356,12 +386,14 @@ class AccessionedItemsParams:
         to_dt: Optional[datetime] = Query(
             default=None, description="End " "accessioned date to " "filter by."
         ),
+        include_sub_tiers: bool = Query(default=False, description="Include child owner tiers"),
     ):
         self.owner_id = owner_id
         self.size_class_id = size_class_id
         self.media_type_id = media_type_id
         self.from_dt = from_dt
         self.to_dt = to_dt
+        self.include_sub_tiers = include_sub_tiers
 
 
 class AisleItemsCountParams(BaseModel):
@@ -397,6 +429,7 @@ class NonTrayItemsCountParams:
         to_dt: datetime = Query(
             default=None, description="End shelved date to " "filter by."
         ),
+        include_sub_tiers: bool = Query(default=False, description="Include child owner tiers"),
     ):
         self.building_id = building_id
         self.module_id = module_id
@@ -406,6 +439,7 @@ class NonTrayItemsCountParams:
         self.aisle_num_to = aisle_num_to
         self.from_dt = from_dt
         self.to_dt = to_dt
+        self.include_sub_tiers = include_sub_tiers
 
 
 class TrayItemCountParams:
@@ -432,6 +466,7 @@ class TrayItemCountParams:
         to_dt: datetime = Query(
             default=None, description="End shelved date to " "filter by."
         ),
+        include_sub_tiers: bool = Query(default=False, description="Include child owner tiers"),
     ):
         self.building_id = building_id
         self.module_id = module_id
@@ -440,6 +475,7 @@ class TrayItemCountParams:
         self.aisle_num_to = aisle_num_to
         self.from_dt = from_dt
         self.to_dt = to_dt
+        self.include_sub_tiers = include_sub_tiers
 
 
 class UserJobItemsCountParams:
@@ -458,10 +494,15 @@ class UserJobItemsCountParams:
         to_dt: datetime = Query(
             default=None, description="End created date to " "filter by."
         ),
+        # Search filter params for server-side filtering
+        user_name_search: Optional[str] = Query(default=None, description="Search user name"),
+        job_type_search: Optional[str] = Query(default=None, description="Search job type"),
     ):
         self.user_id = user_id
         self.from_dt = from_dt
         self.to_dt = to_dt
+        self.user_name_search = user_name_search
+        self.job_type_search = job_type_search
 
 
 class VerificationChangesParams:
@@ -490,7 +531,7 @@ class RetrievalCountParams:
     def __init__(
         self,
         owner_id: list[int] = Query(
-            default=None, description="ID of the user to filter jobs."
+            default=None, description="ID of the owner to filter jobs."
         ),
         from_dt: datetime = Query(
             default=None, description="Start created date to " "filter by."
@@ -498,10 +539,12 @@ class RetrievalCountParams:
         to_dt: datetime = Query(
             default=None, description="End created date to " "filter by."
         ),
+        include_sub_tiers: bool = Query(default=False, description="Include child owner tiers"),
     ):
         self.owner_id = owner_id
         self.from_dt = from_dt
         self.to_dt = to_dt
+        self.include_sub_tiers = include_sub_tiers
 
 
 class BatchUploadParams:
@@ -533,28 +576,6 @@ class BatchUploadParams:
         self.file_type = file_type
 
 
-class NotShelvedParams:
-    """
-    Query params for Not Shelved Report.
-    """
-
-    def __init__(
-        self,
-        container_type: str = Query(
-            ..., description="Container type: 'Tray', 'NonTray', or 'Both'"
-        ),
-        from_dt: datetime = Query(
-            ..., description="Start accession date to filter by."
-        ),
-        to_dt: datetime = Query(
-            ..., description="End accession date to filter by."
-        ),
-    ):
-        self.container_type = container_type
-        self.from_dt = from_dt
-        self.to_dt = to_dt
-
-
 class MoveDiscrepancyParams:
     def __init__(
         self,
@@ -581,3 +602,97 @@ class MoveDiscrepancyParams:
         self.container_type_id = container_type_id
         self.from_dt = from_dt
         self.to_dt = to_dt
+
+
+class VerificationReportParams:
+    """
+    Query params for Verification Status Report.
+    """
+    def __init__(
+        self,
+        from_dt: datetime = Query(
+            default=None, description="Start date to filter by."
+        ),
+        to_dt: datetime = Query(
+            default=None, description="End date to filter by."
+        ),
+        container_type: str = Query(
+            default="Tray", description="Container Type (Tray or Non-Tray)."
+        ),
+        # Search filter params for server-side filtering
+        barcode_search: Optional[str] = Query(default=None, description="Search barcode"),
+        owner_search: Optional[str] = Query(default=None, description="Search owner name"),
+    ):
+        self.from_dt = from_dt
+        self.to_dt = to_dt
+        self.container_type = container_type
+        self.barcode_search = barcode_search
+        self.owner_search = owner_search
+
+
+class WithdrawnItemsReportParams:
+    """
+    Query params for Withdrawn Items Report.
+    """
+    def __init__(
+        self,
+        from_dt: datetime = Query(
+            default=None, description="Start withdrawal date to filter by."
+        ),
+        to_dt: datetime = Query(
+            default=None, description="End withdrawal date to filter by."
+        ),
+        owner_id: list[int] = Query(
+            default=None, description="ID of the owner to filter items."
+        ),
+        container_type: str = Query(
+            default=None, description="Container Type (Tray, Non-Tray, or None for All)."
+        ),
+        include_sub_tiers: bool = Query(default=False, description="Include child owner tiers"),
+    ):
+        self.from_dt = from_dt
+        self.to_dt = to_dt
+        self.owner_id = owner_id
+        self.container_type = container_type
+        self.include_sub_tiers = include_sub_tiers
+
+
+class WorkerEfficiencyParams:
+    def __init__(
+        self,
+        from_dt: Optional[datetime] = Query(None, description="Start date for efficiency analysis."),
+        to_dt: Optional[datetime] = Query(None, description="End date for efficiency analysis."),
+        user_id: Optional[List[int]] = Query(None, description="Users to include in report."),
+        job_type: Optional[List[str]] = Query(None, description="Job types to include in report (Shelving, Accession, PickList, Verification)."),
+    ):
+        self.from_dt = from_dt
+        self.to_dt = to_dt
+        self.user_id = user_id
+        self.job_type = job_type
+
+
+class InventoryHotZoneParams:
+    def __init__(
+        self,
+        from_dt: Optional[datetime] = Query(None, description="Start date for activity heatmap."),
+        to_dt: Optional[datetime] = Query(None, description="End date for activity heatmap."),
+        building_id: Optional[int] = Query(None, description="Filter by building."),
+    ):
+        self.from_dt = from_dt
+        self.to_dt = to_dt
+        self.building_id = building_id
+
+
+class CapacityForecastParams:
+    def __init__(
+        self,
+        building_id: Optional[int] = Query(None, description="Filter by building."),
+        owner_id: Optional[int] = Query(None, description="Filter by owner."),
+        include_sub_owners: bool = Query(False, description="Include child owners in growth calculation."),
+        lookback_days: int = Query(90, description="Number of days to look back for growth calculation."),
+    ):
+        self.building_id = building_id
+        self.owner_id = owner_id
+        self.include_sub_owners = include_sub_owners
+        self.lookback_days = lookback_days
+

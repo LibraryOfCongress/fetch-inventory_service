@@ -1,7 +1,6 @@
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import select
 
-from app.models.ladder_numbers import LadderNumber
 from app.models.ladders import Ladder
 
 
@@ -21,7 +20,6 @@ def load_ladder(
     current_side_id,
     row_num,
     session,
-    ladder_number_dict
 ):
     """
     Loads and creates a unique ladder if it doesn't exist.
@@ -108,22 +106,15 @@ def load_ladder(
         # session.expire_all()
         return [success, failure, error, is_new_ladder_created, processed_ladder_id]
 
-    # lookup ladder_number_id
-    ladder_number_id = ladder_number_dict.get(ladder_number)
-    # ladder_number_id = (
-    #     session.query(LadderNumber.id)
-    #     .filter(LadderNumber.number == ladder_number).scalar()
-    # )
-
-    if ladder_number_id and current_side_id:
+    if ladder_number and current_side_id:
         # valid location to attempt ladder creation
         success = 1
         failure = 0
         # create or skip if exists
         processed_ladder = session.execute((
             insert(Ladder)
-            .values(ladder_number_id = ladder_number_id, side_id = current_side_id)
-            .on_conflict_do_nothing(index_elements=["ladder_number_id", "side_id"])
+            .values(ladder_number = ladder_number, side_id = current_side_id)
+            .on_conflict_do_nothing(index_elements=["ladder_number", "side_id"])
             .returning(Ladder.id)
         )).fetchone()
 
@@ -134,7 +125,7 @@ def load_ladder(
             is_new_ladder_created = 0 # new ladder not created
             processed_ladder = session.execute(
                 select(Ladder.id).where(
-                    (Ladder.ladder_number_id == ladder_number_id) &
+                    (Ladder.ladder_number == ladder_number) &
                     (Ladder.side_id == current_side_id)
                 )
             ).fetchone()

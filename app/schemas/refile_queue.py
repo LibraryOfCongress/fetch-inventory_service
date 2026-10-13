@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.container_types import ContainerTypeDetailReadOutput
@@ -10,12 +10,13 @@ from app.schemas.container_types import ContainerTypeDetailReadOutput
 class RefileQueueInput(BaseModel):
     barcode_value: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "barcode_value": "1234567890"
             }
         }
+    )
 
 
 class RefileQueueListOutput(BaseModel):
@@ -43,8 +44,8 @@ class RefileQueueListOutput(BaseModel):
     scanned_for_refile_queue: Optional[bool] = None
     scanned_for_refile_queue_dt: Optional[datetime] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "shelf_position_id": 1,
@@ -68,6 +69,7 @@ class RefileQueueListOutput(BaseModel):
                 "scanned_for_refile_queue_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class NestedShelfNumberForRefileQueue(BaseModel):
@@ -81,12 +83,12 @@ class NestedShelfPositionNumberForRefileQueue(BaseModel):
 class NestedShelfForRefileQueue(BaseModel):
     id: int
     barcode: Optional[BarcodeDetailReadOutput] = None
-    shelf_number: NestedShelfNumberForRefileQueue
+    shelf_number: int
 
 
 class ShelfPositionNestedForRefileQueue(BaseModel):
     id: int
-    shelf_position_number: NestedShelfPositionNumberForRefileQueue
+    position_number: int
     shelf: NestedShelfForRefileQueue
     location: Optional[str] = None
     internal_location: Optional[str] = None
@@ -119,8 +121,7 @@ class TrayNestedForRefileQueue(BaseModel):
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NonTrayNestedForRefileQueue(BaseModel):
@@ -135,16 +136,15 @@ class NonTrayNestedForRefileQueue(BaseModel):
     container_type: Optional[ContainerTypeDetailReadOutput]
     scanned_for_shelving: Optional[bool] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RefileQueueWriteOutput(BaseModel):
     item: Optional[TrayNestedForRefileQueue] = None
     non_tray_item: Optional[NonTrayNestedForRefileQueue] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "items": {
                     "id": 1,
@@ -171,14 +171,10 @@ class RefileQueueWriteOutput(BaseModel):
                         },
                         "shelf_position": {
                             "id": 1,
-                            "shelf_position_number": {
-                                "number": 1
-                            },
+                            "position_number": 1,
                             "shelf": {
                                 "id": 1,
-                                "shelf_number": {
-                                    "number": 1
-                                },
+                                "shelf_number": 1,
                                 "barcode": {
                                     "id": "550e8400-e29b-41d4-a716-446655440000",
                                     "value": "5901234123457",
@@ -229,14 +225,10 @@ class RefileQueueWriteOutput(BaseModel):
                     "shelf_position_id": 1,
                     "shelf_position": {
                         "id": 1,
-                        "shelf_position_number": {
-                            "number": 1
-                        },
+                        "position_number": 1,
                         "shelf": {
                             "id": 1,
-                            "shelf_number": {
-                                "number": 1
-                            },
+                            "shelf_number": 1,
                             "barcode": {
                                 "id": "550e8400-e29b-41d4-a716-446655440000",
                                 "value": "5901234123457",
@@ -274,3 +266,4 @@ class RefileQueueWriteOutput(BaseModel):
                 }
             }
         }
+    )

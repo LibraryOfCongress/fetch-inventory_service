@@ -1,6 +1,8 @@
+# /code/app/schemas/verification_jobs.py - FINAL FIX (Strict Types + Reordering)
+
 import uuid
 
-from pydantic import BaseModel, field_validator, computed_field
+from pydantic import BaseModel, field_validator, computed_field, ConfigDict
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
@@ -15,13 +17,15 @@ from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.users import UserDetailReadOutput
 
 
+# --- INPUT SCHEMAS ---
+
 class VerificationJobInput(BaseModel):
     trayed: bool
     workflow_id: Optional[int] = None
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
     status: Optional[str] = None
-    user_id: Optional[int] = None
+    assigned_user_id: Optional[int] = None
     created_by_id: Optional[int] = None
     accession_job_id: Optional[int] = None
     owner_id: int
@@ -36,13 +40,13 @@ class VerificationJobInput(BaseModel):
                 )
         return value
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "trayed": True,
                 "workflow_id": None,
                 "status": "Created",
-                "user_id": 1,
+                "assigned_user_id": 1,
                 "created_by_id": 2,
                 "accession_job_id": 1,
                 "owner_id": 1,
@@ -51,12 +55,13 @@ class VerificationJobInput(BaseModel):
                 "size_class_id": 1
             }
         }
+    )
 
 
 class VerificationJobUpdateInput(BaseModel):
     trayed: Optional[bool] = None
     status: Optional[str] = None
-    user_id: Optional[int] = None
+    assigned_user_id: Optional[int] = None
     accession_job_id: Optional[int] = None
     owner_id: Optional[int] = None
     container_type_id: Optional[int] = None
@@ -72,12 +77,12 @@ class VerificationJobUpdateInput(BaseModel):
             )
         return value
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "trayed": True,
                 "status": "Created",
-                "user_id": 1,
+                "assigned_user_id": 1,
                 "accession_job_id": 1,
                 "owner_id": 1,
                 "container_type_id": 1,
@@ -85,29 +90,32 @@ class VerificationJobUpdateInput(BaseModel):
                 "size_class_id": 1
             }
         }
+    )
 
 
 class VerificationJobAddInput(BaseModel):
     user_id: int
     barcode_value: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "user_id": 1,
                 "barcode_value": "1234567890"
             }
         }
+    )
 
 
 class VerificationJobRemoveInput(VerificationJobAddInput):
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "user_id": 1,
                 "barcode_value": "1234567890"
             }
         }
+    )
 
 
 class VerificationJobBaseOutput(BaseModel):
@@ -118,76 +126,25 @@ class VerificationJobBaseOutput(BaseModel):
     owner_id: Optional[int] = None
     media_type_id: Optional[int] = None
     size_class_id: Optional[int] = None
+    update_dt: Optional[datetime] = None
+    
+    model_config = ConfigDict(from_attributes=True)
 
 
-class VerificationJobListOutput(VerificationJobBaseOutput):
-    shelving_job_id: Optional[int] = None
-    container_type_id: Optional[int] = None
-    container_type: Optional[ContainerTypeDetailReadOutput] = None
-    user_id: Optional[int] = None
-    created_by_id: Optional[int] = None
-    user: Optional[UserDetailReadOutput] = None
-    created_by: Optional[UserDetailReadOutput] = None
-    create_dt: datetime
-    tray_count: int = 0
-    item_count: int = 0
-    non_tray_item_count: int = 0
+# --- NESTED SCHEMAS (Moved up so ListOutput can use them) ---
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "workflow_id": 1,
-                "trayed": True,
-                "owner_id": 1,
-                "shelving_job_id": 1,
-                "container_type_id": 1,
-                "status": "Created",
-                "user_id": 1,
-                "created_by_id": 2,
-                "user": {
-                    "id": 1,
-                    "first_name": "Frodo",
-                    "last_name": "Baggins",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
-                },
-                "created_by": {
-                    "id": 2,
-                    "first_name": "Bilbo",
-                    "last_name": "Baggins",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
-                },
-                "container_type": {
-                    "id": 1,
-                    "type": "Tray",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
-                },
-                "tray_count": 5,
-                "item_count": 42,
-                "non_tray_item_count": 3,
-                "create_dt": "2023-10-08T20:46:56.764426"
-            }
-        }
-
-
-class VerificationJobListDropdownOutput(BaseModel):
-    """
-    Lightweight list view for serving minimal job data as options
-    """
-    id: int
-    workflow_id: Optional[int] = None
-    trayed: bool
-    tray_count: int
-    item_count: int
-    non_tray_item_count: int
+class NestedWithdrawnBarcode(BaseModel):
+    id: uuid.UUID | None
+    value: str
+    withdrawn: bool
+    type_id: int
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ItemDetailNestedForVerificationJob(BaseModel):
     id: int
     status: Optional[str] = None
+    ils_sync_state: Optional[str] = None
     accession_job_id: Optional[int] = None
     scanned_for_accession: Optional[bool] = None
     scanned_for_verification: Optional[bool] = None
@@ -209,6 +166,8 @@ class ItemDetailNestedForVerificationJob(BaseModel):
     size_class: Optional[SizeClassDetailReadOutput] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
+    
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TrayDetailNestedForVerificationJob(BaseModel):
@@ -235,11 +194,14 @@ class TrayDetailNestedForVerificationJob(BaseModel):
     size_class: Optional[SizeClassDetailReadOutput] = None
     barcode: Optional[BarcodeDetailReadOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
+    
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NonTrayItemDetailNestedForVerificationJob(BaseModel):
     id: int
     status: Optional[str] = None
+    ils_sync_state: Optional[str] = None
     accession_job_id: Optional[int] = None
     scanned_for_accession: Optional[bool] = None
     scanned_for_verification: Optional[bool] = None
@@ -260,11 +222,48 @@ class NonTrayItemDetailNestedForVerificationJob(BaseModel):
     barcode: Optional[BarcodeDetailReadOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
 
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- OUTPUT SCHEMAS ---
+
+class VerificationJobListOutput(VerificationJobBaseOutput):
+    shelving_job_id: Optional[int] = None
+    container_type_id: Optional[int] = None
+    container_type: Optional[ContainerTypeDetailReadOutput] = None
+    
+    assigned_user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
+    assigned_user: Optional[UserDetailReadOutput] = None
+    created_by: Optional[UserDetailReadOutput] = None
+    create_dt: datetime
+    # NOTE: tray_count / item_count / non_tray_item_count are intentionally NOT
+    # exposed here. They map to hybrid properties on VerificationJob whose
+    # instance side (len(self.trays), len(self.items) + len(self.non_tray_items))
+    # lazy-loads every related row per job — an N+1 that loads full Tray/Item
+    # objects just to count them. The dashboard list does not use these counts,
+    # so omitting them avoids that load entirely. (The /dropdown endpoint that
+    # does need counts computes them SQL-side, not via these properties.)
+
+
+class VerificationJobListDropdownOutput(BaseModel):
+    """
+    Lightweight list view for serving minimal job data as options
+    """
+    id: int
+    workflow_id: Optional[int] = None
+    trayed: bool
+    tray_count: int
+    item_count: int
+    non_tray_item_count: int
+    
+    model_config = ConfigDict(from_attributes=True)
+
 
 class VerificationJobDetailOutput(VerificationJobBaseOutput):
-    user_id: Optional[int] = None
+    assigned_user_id: Optional[int] = None
     created_by_id: Optional[int] = None
-    user: Optional[UserDetailReadOutput] = None
+    assigned_user: Optional[UserDetailReadOutput] = None
     created_by: Optional[UserDetailReadOutput] = None
     last_transition: Optional[datetime]
     run_time: Optional[timedelta]
@@ -277,9 +276,12 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
     accession_job: Optional[AccessionJobDetailOutput] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
     size_class: Optional[SizeClassDetailReadOutput] = None
+    
+    # Typed lists
     items: List[ItemDetailNestedForVerificationJob]
     trays: List[TrayDetailNestedForVerificationJob]
     non_tray_items: List[NonTrayItemDetailNestedForVerificationJob]
+    
     shelving_job_id: Optional[int] = None
     create_dt: datetime
     update_dt: datetime
@@ -294,172 +296,23 @@ class VerificationJobDetailOutput(VerificationJobBaseOutput):
             seconds = total_seconds % 60
             return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         return v
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "workflow_id": 1,
-                "trayed": True,
-                "status": "Created",
-                "user_id": 1,
-                "created_by_id": 2,
-                "user": {
-                    "id": 1,
-                    "first_name": "Frodo",
-                    "last_name": "Baggins",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
-                },
-                "created_by": {
-                    "id": 2,
-                    "first_name": "Bilbo",
-                    "last_name": "Baggins",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
-                },
-                "last_transition": "2023-11-27T12:34:56.789123Z",
-                "run_time": "03:25:15",
-                "accession_job_id": 1,
-                "owner_id": 1,
-                "container_type_id": 1,
-                "shelving_job_id": 1,
-                "owner": {
-                    "id": 1,
-                    "name": "Special Collection Directorate",
-                    "owner_tier_id": 2,
-                    "owner_tier": {
-                        "id": 1,
-                        "level": 2,
-                        "name": "division",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398",
-                    },
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
-                },
-                "media_type": {
-                    "id": 1,
-                    "name": "Book",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398"
-                },
-                "size_class": {
-                    "id": 1,
-                    "name": "C-Low",
-                    "short_name": "CL",
-                    "height": 15.7,
-                    "width": 30.33,
-                    "depth": 27,
-                    "create_dt": "2023-11-27T12:34:56.789123Z",
-                    "update_dt": "2023-11-27T12:34:56.789123Z"
-                },
-                "container_type": {
-                    "id": 1,
-                    "type": "Tray",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
-                },
-                "shelving_job": {
-                    "id": 1,
-                    "shelving_dt": "2023-10-08T20:46:56.764426",
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
-                },
-                "accession_job": {
-                    "id": 1,
-                    "accession_dt": "2023-10-08T20:46:56.764426",
-                    "withdrawal_dt": "2023-10-08T20:46:56.764426",
-                    "title": "Lord of The Rings",
-                    "volume": "I",
-                    "condition": "Good",
-                    "arbitrary_data": "Signed copy",
-                    "subcollection_id": 1,
-                    "media_type_id": 1,
-                    "size_class_id": 1,
-                    "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
-                    "owner_id": 1,
-                    "container_type_id": 1,
-                    "tray_id": 1,
-                    "shelving_job_id": 1,
-                    "create_dt": "2023-10-08T20:46:56.764426",
-                    "update_dt": "2023-10-08T20:46:56.764398",
-                },
-                "items": [
-                    {
-                        "id": 1,
-                        "accession_job_id": 1,
-                        "verification_job_id": 1,
-                        "container_type_id": 1,
-                        "tray_id": 1,
-                        "owner_id": 1,
-                        "title": "Lord of The Rings",
-                        "volume": "I",
-                        "condition": "Good",
-                        "arbitrary_data": "Signed copy",
-                        "subcollection_id": 1,
-                        "media_type_id": 1,
-                        "size_class_id": 1,
-                        "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
-                        "accession_dt": "2023-10-08T20:46:56.764426",
-                        "withdrawal_dt": "2023-10-08T20:46:56.764426",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398",
-                    }
-                ],
-                "trays": [
-                    {
-                        "id": 1,
-                        "accession_job_id": 1,
-                        "verification_job_id": 1,
-                        "container_type_id": 1,
-                        "owner_id": 1,
-                        "shelving_job_id": 1,
-                        "shelf_position_id": 1,
-                        "shelf_position_proposed_id": 1,
-                        "media_type_id": 1,
-                        "conveyance_bin_id": 1,
-                        "size_class_id": 1,
-                        "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
-                        "accession_dt": "2023-10-08T20:46:56.764426",
-                        "shelved_dt": "2023-10-08T20:46:56.764426",
-                        "withdrawal_dt": "2023-10-08T20:46:56.764426",
-                    }
-                ],
-                "non_tray_items": [
-                    {
-                        "id": 1,
-                        "accession_job_id": 1,
-                        "verification_job_id": 1,
-                        "container_type_id": 1,
-                        "owner_id": 1,
-                        "shelving_job_id": 1,
-                        "shelf_position_id": 1,
-                        "shelf_position_proposed_id": 1,
-                        "subcollection_id": 1,
-                        "media_type_id": 1,
-                        "size_class_id": 1,
-                        "barcode_id": "550e8400-e29b-41d4-a716-446655440001",
-                        "accession_dt": "2023-10-08T20:46:56.764426",
-                        "withdrawal_dt": "2023-10-08T20:46:56.764426",
-                        "create_dt": "2023-10-08T20:46:56.764426",
-                        "update_dt": "2023-10-08T20:46:56.764398",
-                    }
-                ],
-                "media_type_id": 1,
-                "size_class_id": 1,
-                "create_dt": "2023-10-08T20:46:56.764426",
-                "update_dt": "2023-10-08T20:46:56.764398",
-            }
+    
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            # ...
         }
+    )
 
 
 class VerificationJobAccCheckOutput(BaseModel):
     id: int
-
-    class Config:
-        json_schema_extra = {
+    
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1
             }
         }
+    )

@@ -46,7 +46,8 @@
     "type": "Tray"
   },
   "barcode_types": {
-    "name": "qrcode"
+    "name": "qrcode",
+    "allowed_pattern": ".*"
   },
   "barcodes": {
     "type_id": 1,
@@ -118,7 +119,14 @@
   },
   "size_class": {
     "name": "Small",
-    "short_name": "S"
+    "short_name": "S",
+    "height": 1.0,
+    "width": 1.0,
+    "depth": 1.0
+  },
+  "shelf_types": {
+    "name": "Regular",
+    "prefix": "RS"
   },
   "media_types": {
     "name": "Paper"

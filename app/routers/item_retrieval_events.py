@@ -1,10 +1,16 @@
+# /code/app/routers/item_retrieval_events.py - REFACRORED TO SQLALCHEMY V2
+
 from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlmodel import Session, select
-
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
 
 from app.database.session import get_session
 from app.filter_params import SortParams
@@ -17,12 +23,14 @@ from app.schemas.item_retrieval_events import (
     ItemRetrievalEventDetailOutput,
 )
 from app.config.exceptions import NotFound
-from app.permissions import require_permissions
 
+
+from app.auth.dependencies import RequiresPermission
 
 router = APIRouter(
     prefix="/item-retrieval-events",
     tags=["Item retrieval events"],
+    dependencies=[Depends(RequiresPermission("can_access_reports"))],
 )
 
 
@@ -32,12 +40,6 @@ def get_item_retrieval_events(
 ):
     """
     Retrieve a list of all item retrieval evens.
-
-    **Args:**
-    - sort_params: The sorting parameters.
-
-    **Returns:**
-    - Item Retrieval Event List Output: A paginated list of Item Retrieval Events.
     """
     # Create a query to retrieve all Groups
     query = select(ItemRetrievalEvent)
@@ -58,12 +60,6 @@ def get_item_retrieval_event_detail(
 ):
     """
     Retrieve the details of a item retrieval even by its ID.
-
-    **Args:**
-    - id: The ID of the item retrieval even to retrieve.
-
-    **Returns:**
-    - Item Retrieval Event Detail Output: The details of the item retrieval even.
     """
     item_retrieval_event = session.get(ItemRetrievalEvent, id)
 
@@ -77,21 +73,9 @@ def get_item_retrieval_event_detail(
 def create_item_retrieval_event(
     item_retrieval_event: ItemRetrievalEventInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
 ):
     """
     Create a new item retrieval even.
-
-    **Args:**
-    - Item Retrieval Event Input: The input data for creating the
-    item retrieval even.
-
-    **Returns:**
-    - Item Retrieval Event Detail Output: The created item retrieval even.
-
-    **Raises:**
-    - HTTPException: If there is an integrity error during the creation of the
-    item retrieval even.
     """
     new_item_retrieval_event = ItemRetrievalEvent(**item_retrieval_event.model_dump())
     session.add(new_item_retrieval_event)
@@ -106,20 +90,9 @@ def update_item_retrieval_event(
     id: int,
     item_retrieval_event: ItemRetrievalEventUpdateInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
 ):
     """
     Update a item retrieval even by its ID.
-
-    **Args:**
-    - id: The ID of the item retrieval even to update.
-    - Item Retrieval Event Update Input: The updated item retrieval even data.
-
-    **Returns:**
-    - Item Retrieval Event Detail Output: The updated item retrieval even.
-
-    **Raises:**
-    - HTTPException: If the item retrieval even is not found or if an error occurs during the update.
     """
     existing_item_retrieval_event = session.get(ItemRetrievalEvent, id)
 
@@ -141,26 +114,15 @@ def update_item_retrieval_event(
 
 
 @router.delete("/{id}")
-def delete_item_retrieval_event(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))):
+def delete_item_retrieval_event(id: int, session: Session = Depends(get_session)):
     """
     Delete an item retrieval event by its ID.
-
-    **Args:**
-    - id: The ID of the item retrieval event to delete.
-
-    **Returns:**
-    - None: If the item retrieval event is deleted successfully.
-
-    **Raises:**
-    - HTTPException: If the item retrieval event is not found.
     """
     item_retrieval_event = session.get(ItemRetrievalEvent, id)
 
     if item_retrieval_event:
         session.delete(item_retrieval_event)
         session.commit()
-        return HTTPException(
-            status_code=204, detail=f"Item Retrieval Event ID {id} Deleted Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Item Retrieval Event ID {id} Not Found")

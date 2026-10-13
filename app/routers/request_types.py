@@ -1,14 +1,19 @@
+# /code/app/routers/request_types.py - REFACRORED TO SQLALCHEMY V2
+
 from typing import Optional
 
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends, Query
-from sqlmodel import Session, select
-from datetime import datetime, timezone
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.permissions import require_permissions
 from app.filter_params import SortParams
 from app.models.request_types import RequestType
 from app.schemas.request_types import (
@@ -26,9 +31,12 @@ from app.config.exceptions import (
 from app.sorting import BaseSorter
 
 
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
+
 router = APIRouter(
     prefix="/requests",
     tags=["requests"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -37,18 +45,9 @@ def get_request_type_list(
     session: Session = Depends(get_session),
     sort_params: SortParams = Depends(),
     search: Optional[str] = Query(None, description="Search by Request Type Type"),
-    _: bool = Depends(require_permissions("can_access_request", "can_search", any_of=True)),
 ) -> list:
     """
     Get a list of request types
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-    - search (Optional[str]): The search query.
-        - Type: The type of the request type
-
-    **Returns:**
-    - Request Type List Output: The paginated list of request types
     """
 
     # Create a query to select all Request Type
@@ -66,11 +65,7 @@ def get_request_type_list(
 
 
 @router.get("/types/{id}", response_model=RequestTypeDetailReadOutput)
-def get_request_type_detail(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_access_request", "can_search", any_of=True)),
-):
+def get_request_type_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve request type details by ID
     """
@@ -81,11 +76,9 @@ def get_request_type_detail(
     raise NotFound(detail=f"Request Type ID {id} Not Found")
 
 
-@router.post("/types", response_model=RequestTypeDetailWriteOutput, status_code=201)
+@router.post("/types", response_model=RequestTypeDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_request_type(
-    request_type_input: RequestTypeInput,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_groups_and_permissions")),
+    request_type_input: RequestTypeInput, session: Session = Depends(get_session)
 ) -> RequestType:
     """
     Create a Request Type
@@ -103,12 +96,11 @@ def create_request_type(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/types/{id}", response_model=RequestTypeDetailWriteOutput)
+@router.patch("/types/{id}", response_model=RequestTypeDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_request_type(
     id: int,
     request_type: RequestTypeUpdateInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_groups_and_permissions")),
 ):
     """
     Update an existing Request Type
@@ -131,16 +123,14 @@ def update_request_type(
 
         return existing_request_type
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/types/{id}")
-def delete_request_type(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_groups_and_permissions")),
-):
+@router.delete("/types/{id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_request_type(id: int, session: Session = Depends(get_session)):
     """
     Delete an Request Type by ID
     """
@@ -150,8 +140,6 @@ def delete_request_type(
         session.delete(request_type)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Request Type ID {id} Deleted Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Request Type ID {id} Not Found")

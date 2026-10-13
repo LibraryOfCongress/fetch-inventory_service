@@ -1,7 +1,7 @@
 import uuid
 
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timezone
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
@@ -35,8 +35,8 @@ class TrayInput(BaseModel):
     shelved_dt: Optional[datetime] = None
     withdrawal_dt: Optional[datetime] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
@@ -58,6 +58,7 @@ class TrayInput(BaseModel):
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class TrayMoveInput(BaseModel):
@@ -65,14 +66,15 @@ class TrayMoveInput(BaseModel):
     shelf_position_number: int
     assigned_user_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "shelf_barcode_value": "5901234123457",
                 "shelf_position_number": 1,
                 "user_id": 1
             }
         }
+    )
 
 
 class TrayUpdateInput(BaseModel):
@@ -97,8 +99,8 @@ class TrayUpdateInput(BaseModel):
     shelf_position_id: Optional[int] = None
     shelf_position_proposed_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
@@ -122,6 +124,7 @@ class TrayUpdateInput(BaseModel):
                 "withdrawal_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class NestedWithdrawnBarcode(BaseModel):
@@ -152,7 +155,7 @@ class NestedShelfForTray(BaseModel):
 class ShelfPositionNestedForTrayOutput(BaseModel):
     id: int
     shelf_id: int
-    shelf_position_number: NestedShelfPositionNumber
+    position_number: int
     location: Optional[str] = None
     internal_location: Optional[str] = None
     shelf: Optional[NestedShelfForTray] = None
@@ -160,7 +163,6 @@ class ShelfPositionNestedForTrayOutput(BaseModel):
 
 class TrayBaseOutput(TrayUpdateInput):
     id: int
-    items: List[ItemNestedForTrayOutput]
     barcode: Optional[BarcodeDetailReadOutput] = None
     withdrawn_barcode: Optional[BarcodeDetailReadOutput] = None
     media_type: Optional[MediaTypeDetailReadOutput] = None
@@ -171,8 +173,8 @@ class TrayBaseOutput(TrayUpdateInput):
 class TrayListOutput(TrayBaseOutput):
     owner: Optional[OwnerDetailReadOutput]
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": [
                 {
                     "accession_job_id": 1,
@@ -225,9 +227,7 @@ class TrayListOutput(TrayBaseOutput):
                     "shelf_position": {
                         "id": 1,
                         "shelf_id": 1,
-                        "shelf_position_number": {
-                            "number": 1
-                        }
+                        "position_number": 1
                     },
                     "accession_dt": "2023-10-08T20:46:56.764426",
                     "shelved_dt": "2023-10-08T20:46:56.764426",
@@ -266,17 +266,19 @@ class TrayListOutput(TrayBaseOutput):
                 }
             ]
         }
+    )
 
 
 class TrayDetailWriteOutput(TrayBaseOutput):
+    items: List[ItemNestedForTrayOutput]
     owner: Optional[OwnerDetailReadOutput]
     container_type: Optional[ContainerTypeDetailReadOutput]
     shelving_job: Optional[ShelvingJobBaseOutput] = None
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
@@ -293,9 +295,7 @@ class TrayDetailWriteOutput(TrayBaseOutput):
                 "shelf_position": {
                     "id": 1,
                     "shelf_id": 1,
-                    "shelf_position_number": {
-                        "number": 1
-                    }
+                    "position_number": 1
                 },
                 "media_type_id": 1,
                 "conveyance_bin_id": 1,
@@ -381,6 +381,7 @@ class TrayDetailWriteOutput(TrayBaseOutput):
                 }
             }
         }
+    )
 
 
 class TrayDetailReadOutput(TrayDetailWriteOutput):
@@ -388,8 +389,8 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
     accession_job: Optional[AccessionJobBaseOutput] = None
     verification_job: Optional[VerificationJobBaseOutput] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "accession_job_id": 1,
                 "scanned_for_accession": False,
@@ -407,9 +408,7 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
                     "shelf_id": 1,
                     "location": "Cabin Branch-04-57-L-23-10-08",
                     "internal_location": "01-04-57-L-23-10-08",
-                    "shelf_position_number": {
-                        "number": 1
-                    }
+                    "position_number": 1
                 },
                 "shelf_position_proposed_id": 1,
                 "media_type_id": 1,
@@ -510,3 +509,4 @@ class TrayDetailReadOutput(TrayDetailWriteOutput):
                 }
             }
         }
+    )

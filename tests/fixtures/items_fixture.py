@@ -1,7 +1,7 @@
 import pytest
 import logging
 
-from tests.fixtures.configtest import (
+from tests.conftest import (
     CREATE_DATA_SAMPLER_FIXTURE,
     UPDATE_DATA_SAMPLER_FIXTURE,
     EMPTY_RESPONSE,
