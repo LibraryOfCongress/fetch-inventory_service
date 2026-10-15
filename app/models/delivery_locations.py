@@ -1,35 +1,46 @@
+# /app/models/delivery_locations.py - REFACRORED TO SQLALCHEMY V2
+
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, String, VARCHAR, TIMESTAMP, DateTime, func, Column
 
-
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Relationship
+# REMOVED: from sqlmodel import SQLModel, Field, Relationship
+
+# NEW IMPORT: Import the Base class you created
+from app.database.base import Base
+
+if TYPE_CHECKING:
+    from app.models.requests import Request
+    from app.models.owner_delivery_locations import OwnerDeliveryLocation
 
 
-class DeliveryLocation(SQLModel, table=True):
+class DeliveryLocation(Base): # <--- Inherit from Base
     """
     Model represents delivery locations for requests.
-
-          id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
     """
 
+    # NOTE: __tablename__ is handled by Base, but since it's "delivery_locations" and
+    # Base's default pluralization will result in "deliverylocationss", we must override.
     __tablename__ = "delivery_locations"
-    # __table_args__ = (
-    # )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True))
-    name: Optional[str] = Field(
-        sa_column=sa.Column(sa.VARCHAR(50), nullable=True, unique=True, default=None)
-    )
-    address: str = Field(
-        sa_column=sa.Column(sa.VARCHAR(250), nullable=False, unique=False, default=None)
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    requests: List["Request"] = Relationship(back_populates="delivery_location")
+    # Name field (VARCHAR(50), unique)
+    name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, unique=True, default=None)
+
+    # Address field (VARCHAR(250))
+    address: Mapped[str] = mapped_column(String(250), nullable=False, unique=False, default=None)
+    
+    # REMOVED: create_dt and update_dt are handled by the Base class.
+
+    # --- RELATIONSHIPS ---
+    requests: Mapped[List["Request"]] = relationship(back_populates="delivery_location")
+    
+    # Owner-DeliveryLocation many-to-many relationship
+    owner_delivery_locations: Mapped[List["OwnerDeliveryLocation"]] = relationship(
+        back_populates="delivery_location",
+        cascade="all, delete-orphan"
+    )

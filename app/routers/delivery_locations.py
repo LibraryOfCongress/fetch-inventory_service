@@ -1,14 +1,19 @@
+# /code/app/routers/delivery_locations.py - REFACRORED TO SQLALCHEMY V2
+
 from typing import Optional
 
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends, Query
-from sqlmodel import Session, select
-from datetime import datetime, timezone
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.permissions import require_permissions
 from app.filter_params import SortParams
 from app.models.delivery_locations import DeliveryLocation
 from app.schemas.delivery_locations import (
@@ -25,9 +30,12 @@ from app.config.exceptions import (
 )
 from app.sorting import BaseSorter
 
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
+
 router = APIRouter(
     prefix="/requests",
     tags=["requests"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -38,25 +46,25 @@ def get_delivery_location_list(
     search: Optional[str] = Query(
         None, description="Search by Request " "Delivery Locations Name"
     ),
-    _: bool = Depends(require_permissions("can_access_request", "can_search", any_of=True)),
+    owner_id: Optional[int] = Query(None, description="Filter by owner ID"),
 ) -> list:
     """
-    Get a list of delivery locations
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-    - search (Optional[str]): The search query.
-        - Name: The name of the delivery location.
-
-     **Returns:**
-    - Delivery Location List Output: A paginated list of Delivery Location.
+    Get a list of delivery locations.
+    Optionally filter by owner_id to get only locations allowed for that owner.
     """
+    from app.models.owner_delivery_locations import OwnerDeliveryLocation
 
     # Create a query to retrieve all Delivery Location
     query = select(DeliveryLocation)
 
     if search:
         query = query.where(DeliveryLocation.name.icontains(search))
+    
+    # Filter by owner if specified
+    if owner_id is not None:
+        query = query.join(OwnerDeliveryLocation).where(
+            OwnerDeliveryLocation.owner_id == owner_id
+        )
 
     # Validate and Apply sorting based on sort_params
     if sort_params.sort_by:
@@ -68,11 +76,7 @@ def get_delivery_location_list(
 
 
 @router.get("/locations/{id}", response_model=DeliveryLocationDetailReadOutput)
-def get_delivery_location_detail(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_access_request", "can_search", any_of=True)),
-):
+def get_delivery_location_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve delivery location details by ID
     """
@@ -84,12 +88,14 @@ def get_delivery_location_detail(
 
 
 @router.post(
-    "/locations", response_model=DeliveryLocationDetailWriteOutput, status_code=201
+    "/locations",
+    response_model=DeliveryLocationDetailWriteOutput,
+    status_code=201,
+    dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))],
 )
 def create_delivery_location(
     delivery_location_input: DeliveryLocationInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_groups_and_permissions")),
 ) -> DeliveryLocation:
     """
     Create a Request Type
@@ -107,12 +113,11 @@ def create_delivery_location(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/locations/{id}", response_model=DeliveryLocationDetailWriteOutput)
+@router.patch("/locations/{id}", response_model=DeliveryLocationDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_delivery_location(
     id: int,
     delivery_location: DeliveryLocationUpdateInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_groups_and_permissions")),
 ):
     """
     Update an existing Request Type
@@ -135,16 +140,14 @@ def update_delivery_location(
 
         return existing_delivery_location
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/locations/{id}")
-def delete_delivery_location(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_groups_and_permissions")),
-):
+@router.delete("/locations/{id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_delivery_location(id: int, session: Session = Depends(get_session)):
     """
     Delete an Request Type by ID
     """
@@ -154,8 +157,6 @@ def delete_delivery_location(
         session.delete(delivery_location)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Request Type ID {id} Deleted Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Request Type ID {id} Not Found")

@@ -1,14 +1,19 @@
+# /code/app/routers/container_types.py - REFACRORED TO SQLALCHEMY V2
+
 from typing import Optional
 
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends, Response, Query
-from sqlmodel import Session, select
-from datetime import datetime, timezone
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate 
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.permissions import require_permissions
 from app.filter_params import SortParams
 from app.models.container_types import ContainerType
 
@@ -25,6 +30,8 @@ from app.config.exceptions import (
 )
 from app.sorting import BaseSorter
 
+from app.auth.dependencies import RequiresPermission
+
 router = APIRouter(
     prefix="/container-types",
     tags=["container types"],
@@ -36,18 +43,9 @@ def get_container_type_list(
     session: Session = Depends(get_session),
     sort_params: SortParams = Depends(),
     search: Optional[str] = Query(None, description="Search by Container Type Type"),
-    _: bool = Depends(require_permissions("can_manage_locations")),
 ) -> list:
     """
     Retrieve a list of container types.
-
-    **Parameters:**
-    - sort_params (SortParams): The sorting parameters.
-    - search (Optional[str]): The search query.
-        - Type: The type of the container type.
-
-    **Returns:**
-    - Container Type List Output: A list of container types.
     """
 
     # Create a query to retrieve all Container Type
@@ -66,22 +64,9 @@ def get_container_type_list(
 
 
 @router.get("/{id}", response_model=ContainerTypeDetailReadOutput)
-def get_container_type_detail(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
-):
+def get_container_type_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve details of a specific container type by ID.
-
-    **Args:**
-    - id: The ID of the container type to retrieve.
-
-    **Returns:**
-    - Container Type Detail Read Output: The details of the container type.
-
-    **Raises:**
-    - HTTPException: If the container type with the specified ID is not found.
     """
     container_type = session.get(ContainerType, id)
     if container_type:
@@ -90,22 +75,12 @@ def get_container_type_detail(
     raise NotFound(detail=f"Container Type ID {id} Not Found")
 
 
-@router.post("/", response_model=ContainerTypeDetailWriteOutput, status_code=201)
+@router.post("/", response_model=ContainerTypeDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_container_type(
-    container_type_input: ContainerTypeInput,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
+    container_type_input: ContainerTypeInput, session: Session = Depends(get_session)
 ):
     """
     Create a new container type record.'
-
-    **Args:**
-    - Container Type Input: The input data for the new container type.
-
-    **Returns:**
-    - Container Type: The newly created container type.
-
-    **type**: Required varchar 25
     """
     try:
         new_container_type = ContainerType(**container_type_input.model_dump())
@@ -120,22 +95,12 @@ def create_container_type(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/{id}", response_model=ContainerTypeDetailWriteOutput)
+@router.patch("/{id}", response_model=ContainerTypeDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_container_type(
-    id: int,
-    container_type: ContainerTypeInput,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
+    id: int, container_type: ContainerTypeInput, session: Session = Depends(get_session)
 ):
     """
     Update an existing container type in the database.
-
-    **Parameters:**
-    - id: The id of the container type to update.
-    - Container Type Input: The updated container type data.
-
-    **Returns:**
-    - Container Type Detail Write Output: The updated container type.
     """
     try:
         existing_container_type = session.get(ContainerType, id)
@@ -156,24 +121,16 @@ def update_container_type(
 
         return existing_container_type
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/{id}", status_code=204)
-def delete_container_type(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
-):
+@router.delete("/{id}", status_code=204, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_container_type(id: int, session: Session = Depends(get_session)):
     """
     Deletes a container type from the database by its ID.
-
-    **Args:**
-    - id: The ID of the container type to delete.
-
-    **Raises:**
-    - HTTPException: If the container type with the given ID is not found.
     """
     container_type = session.get(ContainerType, id)
 
@@ -181,8 +138,6 @@ def delete_container_type(
         session.delete(container_type)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Container Type ID {id} Deleted Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Container Type ID {id} Not Found")

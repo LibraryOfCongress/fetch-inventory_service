@@ -1,48 +1,62 @@
+# /app/models/container_types.py - FINAL CORRECTED V2
+
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import SmallInteger, String, VARCHAR, Integer
 
-
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Relationship
+
+from app.database.base import Base
+
+# --- CRITICAL: DEFER IMPORTS TO BREAK CIRCULARITY ---
+if TYPE_CHECKING:
+    from app.models.shelves import Shelf
+    from app.models.accession_jobs import AccessionJob
+    from app.models.verification_jobs import VerificationJob
+    from app.models.move_discrepancies import MoveDiscrepancy
+    from app.models.trays import Tray # <--- ADDED
+    from app.models.non_tray_items import NonTrayItem # <--- ADDED
+# -----------------------------------------------------
 
 
-class ContainerType(SQLModel, table=True):
+class ContainerType(Base): 
     """
     Model to represent container types.
-
-    Container Types have owners.
-    Container Types are tracked on shelves for types a Shelf accepts.
-    Container Types are tracked on trays for container type it is.
-    Container Types are tracked on items and the value is inherited from the tray.
-
-    Container Types are tracked on non-trays(non-trayed-items), and the value is not inherited.
-
-      id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
     """
-
+    # Explicit table name to ensure FK strings work
     __tablename__ = "container_types"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
-    type: str = Field(sa_column=sa.Column(sa.VARCHAR(25), nullable=False, unique=True))
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    # Primary Key
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, autoincrement=True)
+
+    # Type field
+    type: Mapped[str] = mapped_column(String(25), nullable=False, unique=True)
+    
+    # --- RELATIONSHIPS ---
+    
+    # Shelves
+    shelves: Mapped[List["Shelf"]] = relationship(back_populates="container_type")
+    
+    # Accession Jobs
+    accession_jobs: Mapped[List["AccessionJob"]] = relationship(
+        back_populates="container_type",
+        primaryjoin="AccessionJob.container_type_id==ContainerType.id",
     )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # Verification Jobs
+    verification_jobs: Mapped[List["VerificationJob"]] = relationship(
+        back_populates="container_type",
+        primaryjoin="VerificationJob.container_type_id==ContainerType.id",
+    )
+    
+    # Move Discrepancies
+    move_discrepancies: Mapped[List["MoveDiscrepancy"]] = relationship(
+        back_populates="container_type",
+        primaryjoin="MoveDiscrepancy.container_type_id==ContainerType.id",
+        lazy="selectin"
     )
 
-    # shelves assigned this container type
-    shelves: List["Shelf"] = Relationship(back_populates="container_type")
-    # accession jobs for this container type
-    accession_jobs: List["AccessionJob"] = Relationship(back_populates="container_type")
-    verification_jobs: List["VerificationJob"] = Relationship(
-        back_populates="container_type"
-    )
-    move_discrepancies: List["MoveDiscrepancy"] = Relationship(
-        back_populates="container_type",
-        sa_relationship_kwargs={
-            "primaryjoin": "MoveDiscrepancy.container_type_id==ContainerType.id",
-            "lazy": "selectin"
-        }
-    )
+    # CRITICAL FIX: Add missing inverse relationships for Tray and NonTrayItem
+    trays: Mapped[List["Tray"]] = relationship(back_populates="container_type")
+    non_tray_items: Mapped[List["NonTrayItem"]] = relationship(back_populates="container_type")

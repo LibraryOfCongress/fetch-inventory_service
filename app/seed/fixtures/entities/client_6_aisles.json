@@ -8,12 +8,7 @@
           "module_number": "6"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 57
-        }
-      }
+      "aisle_number": 57
     },
     {
       "!module_id": {
@@ -22,12 +17,7 @@
           "module_number": "6"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 58
-        }
-      }
+      "aisle_number": 58
     },
     {
       "!module_id": {
@@ -36,12 +26,7 @@
           "module_number": "6"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 59
-        }
-      }
+      "aisle_number": 59
     },
     {
       "!module_id": {
@@ -50,12 +35,7 @@
           "module_number": "6"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 60
-        }
-      }
+      "aisle_number": 60
     },
     {
       "!module_id": {
@@ -64,12 +44,7 @@
           "module_number": "6"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 61
-        }
-      }
+      "aisle_number": 61
     },
     {
       "!module_id": {
@@ -78,12 +53,7 @@
           "module_number": "6"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 62
-        }
-      }
+      "aisle_number": 62
     },
     {
       "!module_id": {
@@ -92,12 +62,7 @@
           "module_number": "6"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 63
-        }
-      }
+      "aisle_number": 63
     },
     {
       "!module_id": {
@@ -106,12 +71,7 @@
           "module_number": "6"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 64
-        }
-      }
+      "aisle_number": 64
     },
     {
       "!module_id": {
@@ -120,12 +80,7 @@
           "module_number": "6"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 65
-        }
-      }
+      "aisle_number": 65
     }
   ]
 }

@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, constr, condecimal
+from pydantic import BaseModel, constr, condecimal, ConfigDict
 from datetime import datetime, timezone
 
 
@@ -10,8 +10,8 @@ class SizeClassInput(BaseModel):
     width: Optional[condecimal(decimal_places=2)] = None
     depth: Optional[condecimal(decimal_places=2)] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "C-Low",
                 "short_name": "CL",
@@ -20,12 +20,13 @@ class SizeClassInput(BaseModel):
                 "depth": 27
             }
         }
+    )
 
 
 class SizeClassUpdateInput(SizeClassInput):
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "C-Low",
                 "short_name": "CL",
@@ -34,17 +35,19 @@ class SizeClassUpdateInput(SizeClassInput):
                 "depth": 27
             }
         }
+    )
 
 
 class SizeClassBaseOutput(BaseModel):
     id: int
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1
             }
         }
+    )
 
 
 class SizeClassListOutput(SizeClassBaseOutput):
@@ -54,8 +57,8 @@ class SizeClassListOutput(SizeClassBaseOutput):
     width: Optional[condecimal(decimal_places=2)] = None
     depth: Optional[condecimal(decimal_places=2)] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "C-Low",
@@ -65,6 +68,7 @@ class SizeClassListOutput(SizeClassBaseOutput):
                 "depth": 27
             }
         }
+    )
 
 
 class SizeClassDetailWriteOutput(SizeClassBaseOutput):
@@ -76,8 +80,8 @@ class SizeClassDetailWriteOutput(SizeClassBaseOutput):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "C-Low",
@@ -89,12 +93,13 @@ class SizeClassDetailWriteOutput(SizeClassBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
+    )
 
 
 class SizeClassDetailReadOutput(SizeClassDetailWriteOutput):
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "C-Low",
@@ -106,3 +111,4 @@ class SizeClassDetailReadOutput(SizeClassDetailWriteOutput):
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
+    )

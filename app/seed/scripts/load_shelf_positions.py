@@ -2,7 +2,6 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import select
 
 from app.models.shelf_positions import ShelfPosition
-from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_types import ShelfType
 
 
@@ -11,7 +10,6 @@ def load_shelf_positions(
     current_shelf_type_id,
     row_num,
     session,
-    shelf_position_number_dict,
     shelf_type_max_cap_dict
 ):
     """
@@ -58,39 +56,17 @@ def load_shelf_positions(
     for i in range(shelf_type_max_capacity_value):
     # for i in range(shelf_type.max_capacity):
         try:
-            # get shelf_position_number
             position_number = i + 1
-            shelf_position_number_id = shelf_position_number_dict.get(position_number)
-            # shelf_position_number_id = (
-            #     session.query(ShelfPositionNumber.id)
-            #     .filter(ShelfPositionNumber.number == position_number).scalar()
-            # )
-            if not shelf_position_number_id:
-                failed_records += 1
-                errors.append(
-                    {
-                        "row": row_num,
-                        "shelf_id": current_shelf_id,
-                        "shelf_position_number": position_number,
-                        "reason": f"Unregistered shelf_position_number"
-                    }
-                )
-                continue
 
-            # create shelf_position
+            # create shelf_position with direct position_number
             new_shelf_position = session.execute((
                 insert(ShelfPosition)
-                .values(shelf_id = current_shelf_id, shelf_position_number_id = shelf_position_number_id)
+                .values(shelf_id = current_shelf_id, position_number = position_number)
                 .returning(ShelfPosition.id)
             )).fetchone()
 
             session.commit()
             new_records_created += 1
-
-            # MOVING LOCATION GEN TO NEW SCRIPT
-            # generate shelf_position.location and shelf_position.internal_location
-            # position_to_update = session.query(ShelfPosition).filter(ShelfPosition.id == new_shelf_position[0]).first()
-            # position_to_update.update_position_address(session=session)
 
             session.commit()
 

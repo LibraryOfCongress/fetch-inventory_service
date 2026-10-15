@@ -1,7 +1,7 @@
 import uuid
 
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timezone
 
 
@@ -9,13 +9,14 @@ class BarcodeInput(BaseModel):
     value: str
     type: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "value": "5901234123457",
                 "type": "Tray"
             }
         }
+    )
 
 
 class BarcodeMutationInput(BaseModel):
@@ -30,14 +31,15 @@ class BarcodeUpdateInput(BaseModel):
     type: Optional[str] = None
     withdrawn: Optional[bool] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "value": "5901234123457",
                 "type": "Item",
                 "withdrawn": True
             }
         }
+    )
 
 
 class BarcodeListOutput(BaseModel):
@@ -45,14 +47,15 @@ class BarcodeListOutput(BaseModel):
     value: str
     type_id: int
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "value": "5901234123457",
                 "type_id": 1
             }
         }
+    )
 
 
 class NestedBarcodeTypeOutputForBarcode(BaseModel):
@@ -69,8 +72,8 @@ class BarcodeDetailWriteOutput(BaseModel):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "value": "5901234123457",
@@ -83,11 +86,12 @@ class BarcodeDetailWriteOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class BarcodeDetailReadOutput(BarcodeDetailWriteOutput):
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "value": "5901234123457",
@@ -100,3 +104,4 @@ class BarcodeDetailReadOutput(BarcodeDetailWriteOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )

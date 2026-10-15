@@ -65,5 +65,6 @@ security_log_route_filter = [
     '/auth',
     '/groups',
     '/users',
-    '/permissions'
+    '/permissions',
+    '/reporting'
 ]

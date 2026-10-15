@@ -1,4 +1,5 @@
 stages:
+  - test
   - build
   - build_deploy_prod
   - trigger
@@ -6,11 +7,81 @@ stages:
   - controls
   - sonarqube
 
+# Manual "build any branch for any target" control. On the Run Pipeline screen
+# (CI/CD > Pipelines > Run pipeline) pick a branch, then choose a target here;
+# GitLab renders this as a dropdown. The matching build_image_<target> (and
+# deploy_<target>) jobs then appear as manual ▶ buttons in the pipeline.
+# Leave on "none" for normal pushes/MRs (no build/deploy jobs are added).
+variables:
+  DEPLOY_TARGET:
+    value: "none"
+    options:
+      - "none"
+      - "dev"
+      - "test"
+      - "stage"
+      - "prod"
+    description: "Manual build/deploy target for the selected branch (none = no deploy build)."
+
+# Run the pytest suite automatically on every merge request. Mirrors the env
+# contract of docker-compose.test.yml (the local runner) but uses a native
+# GitLab `postgres` service instead of DinD + bind mounts, which don't survive
+# the DinD daemon boundary. conftest.py (TESTS_USE_EXTERNAL_DB=1) waits for the
+# service, creates the DB if needed, runs `alembic upgrade head`, then tests.
+test_mr:
+  stage: test
+  image: python:3.11.4-slim
+  services:
+    - name: postgres:15
+      alias: test_db
+  variables:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    POSTGRES_DB: test_database
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  cache:
+    key:
+      files:
+        - poetry.lock
+    paths:
+      - .cache/pip
+  before_script:
+    # The app-facing env (DB URLs, secret) is exported here rather than under
+    # `variables:` on purpose. GitLab UI-defined project/group CI/CD variables
+    # OUTRANK .gitlab-ci.yml `variables:`, and this project defines names like
+    # TEST_DATABASE_URL whose values are full `KEY=value` env-file lines (the
+    # build jobs `echo $TEST_DATABASE_URL >> .env`), which aren't valid
+    # SQLAlchemy URLs. Exporting in the job shell wins over those, so conftest /
+    # pydantic-settings read the test DB and not an inherited env-file line.
+    - export DATABASE_URL="postgresql://postgres:postgres@test_db:5432/test_database"
+    - export TEST_DATABASE_URL="$DATABASE_URL"
+    - export MIGRATION_URL="$DATABASE_URL"
+    - export JWT_SECRET_KEY="test-secret"
+    - export APP_ENVIRONMENT="test"
+    - export TESTS_USE_EXTERNAL_DB="1"
+    - export PYTHONPATH="$CI_PROJECT_DIR"
+    # Export deps the same way the Containerfiles do (deps only, not the root
+    # package — its setuptools-scm build needs git tags we don't have here).
+    - pip install poetry==1.6.1
+    - poetry export -f requirements.txt --output requirements.txt --without-hashes
+    - pip install -r requirements.txt
+  script:
+    - pytest tests -ra --junitxml=tests/reports/junit.xml
+  artifacts:
+    when: always
+    reports:
+      junit: tests/reports/junit.xml
+    paths:
+      - tests/reports/junit.xml
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
 build_image_dev:
   stage: build
   image: docker:latest
   services:
-    - docker:dind
+    - docker:29.6.2-dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:latest
   script:
@@ -34,15 +105,17 @@ build_image_dev:
     - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
     - docker push $IMAGE_FULL_TAG
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop'
+    # Manual dev build for ANY branch: set DEPLOY_TARGET=dev on Run pipeline.
+    - if: '$DEPLOY_TARGET == "dev"'
       when: manual
       allow_failure: true
+    - when: never
 
 build_demo:
   stage: build
   image: docker:latest
   services:
-    - docker:dind
+    - docker:29.6.2-dind
   variables:
     IMAGE_FULL_TAG: git.example.com:4567/fetch/inventory_service:demo
   script:
@@ -74,7 +147,7 @@ build_mr:
   stage: build
   image: docker:latest
   services:
-    - docker:dind
+    - docker:29.6.2-dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   script:
@@ -106,7 +179,7 @@ build_image_test:
   stage: build
   image: docker:latest
   services:
-    - docker:dind
+    - docker:29.6.2-dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/test:latest
   script:
@@ -130,13 +203,17 @@ build_image_test:
     - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
     - docker push $IMAGE_FULL_TAG
   rules:
+    # Manual test build for ANY branch via the dropdown...
+    - if: '$DEPLOY_TARGET == "test"'
+      when: manual
+    # ...plus the existing automatic build on test/develop.
     - if: $CI_COMMIT_BRANCH == 'test' || $CI_COMMIT_BRANCH == 'develop'
 
 build_image_staging:
   stage: build
   image: docker:latest
   services:
-    - docker:dind
+    - docker:29.6.2-dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/stage:latest
   script:
@@ -160,6 +237,10 @@ build_image_staging:
     - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
     - docker push $IMAGE_FULL_TAG
   rules:
+    # Manual stage build for ANY branch via the dropdown...
+    - if: '$DEPLOY_TARGET == "stage"'
+      when: manual
+    # ...plus the existing staging-branch build (manual).
     - if: '$CI_COMMIT_BRANCH == "staging"'
       when: manual
 
@@ -167,7 +248,7 @@ build_image_prod:
   stage: build
   image: docker:latest
   services:
-    - docker:dind
+    - docker:29.6.2-dind
   variables:
     IMAGE_FULL_TAG: $CI_REGISTRY_IMAGE/prod:latest
   script:
@@ -191,9 +272,12 @@ build_image_prod:
     - docker build --no-cache -t $IMAGE_FULL_TAG -f Dockerfile .
     - docker push $IMAGE_FULL_TAG
   rules:
-    - if: '$PROD_BUILD =~ /^TRUE$/'
+    # Manual prod build for ANY branch via the dropdown...
+    - if: '$DEPLOY_TARGET == "prod"'
       when: manual
-    - when: never
+    # ...plus the main-branch build (manual), same shape as staging.
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
 
 deploy_dev:
   stage: deploy
@@ -211,8 +295,10 @@ deploy_dev:
     - kubectl -n fetch rollout restart deployment/inventory-service
     - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop'
+    # Manual dev deploy for ANY branch: set DEPLOY_TARGET=dev (run build_image_dev first).
+    - if: '$DEPLOY_TARGET == "dev"'
       when: manual
+    - when: never
 
 deploy_demo:
   stage: deploy
@@ -247,6 +333,10 @@ deploy_test:
     - kubectl -n fetch rollout restart deployment/inventory-service
     - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
+    # Manual test deploy for ANY branch via the dropdown...
+    - if: '$DEPLOY_TARGET == "test"'
+      when: manual
+    # ...plus the existing develop test deploy (manual).
     - if: $CI_COMMIT_BRANCH == 'develop'
       when: manual
 
@@ -266,6 +356,10 @@ deploy_stage:
     - kubectl -n fetch rollout restart deployment/inventory-service
     - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
+    # Manual stage deploy for ANY branch via the dropdown...
+    - if: '$DEPLOY_TARGET == "stage"'
+      when: manual
+    # ...plus the existing staging-branch deploy.
     - if: $CI_COMMIT_BRANCH == 'staging'
       when: manual
 
@@ -285,9 +379,12 @@ deploy_prod:
     - kubectl -n fetch rollout restart deployment/inventory-service
     - kubectl -n fetch rollout status deployment/inventory-service --timeout=120s
   rules:
-    - if: '$PROD_BUILD =~ /^TRUE$/'
+    # Manual prod deploy for ANY branch via the dropdown...
+    - if: '$DEPLOY_TARGET == "prod"'
       when: manual
-    - when: never
+    # ...plus the main-branch deploy (manual), same shape as staging.
+    - if: $CI_COMMIT_BRANCH == 'main'
+      when: manual
 
 sonarqube_run:
   stage: sonarqube

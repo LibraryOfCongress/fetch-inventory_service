@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.non_tray_items import NonTrayItemDetailReadOutput
 from app.schemas.owners import OwnerDetailReadOutput
@@ -14,14 +14,15 @@ class NonTrayItemRetrievalEventInput(BaseModel):
     owner_id: Optional[int] = None
     pick_list_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "non_tray_item_id": 1,
                 "owner_id": 1,
                 "pick_list_id": 1,
             }
         }
+    )
 
 
 class NonTrayItemRetrievalEventUpdateInput(BaseModel):
@@ -30,8 +31,8 @@ class NonTrayItemRetrievalEventUpdateInput(BaseModel):
     pick_list_id: Optional[int] = None
     update_dt: Optional[datetime] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "non_tray_item_id": 1,
                 "owner_id": 1,
@@ -40,6 +41,7 @@ class NonTrayItemRetrievalEventUpdateInput(BaseModel):
                 "update_dt": "2023-11-27T12:34:56.789123Z"
             }
         }
+    )
 
 
 class NonTrayItemRetrievalEventBaseOutput(BaseModel):
@@ -48,8 +50,8 @@ class NonTrayItemRetrievalEventBaseOutput(BaseModel):
     owner_id: Optional[int] = None
     pick_list_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "non_tray_item_id": 1,
@@ -57,11 +59,12 @@ class NonTrayItemRetrievalEventBaseOutput(BaseModel):
                 "pick_list_id": 1
             }
         }
+    )
 
 
 class NonTrayItemRetrievalEventListOutput(NonTrayItemRetrievalEventBaseOutput):
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "non_tray_item_id": 1,
@@ -69,6 +72,7 @@ class NonTrayItemRetrievalEventListOutput(NonTrayItemRetrievalEventBaseOutput):
                 "pick_list_id": 1
             }
         }
+    )
 
 
 class NonTrayItemRetrievalEventDetailOutput(NonTrayItemRetrievalEventBaseOutput):
@@ -79,8 +83,8 @@ class NonTrayItemRetrievalEventDetailOutput(NonTrayItemRetrievalEventBaseOutput)
     owner: Optional[OwnerDetailReadOutput] = None
     pick_list: Optional[PickListDetailOutput] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "non_tray_item_id": 1,
@@ -107,9 +111,7 @@ class NonTrayItemRetrievalEventDetailOutput(NonTrayItemRetrievalEventBaseOutput)
                     "shelf_position": {
                         "id": 1,
                         "shelf_id": 1,
-                        "shelf_position_number": {
-                            "number": 1
-                        }
+                        "position_number": 1
                     },
                     "shelf_position_proposed_id": 1,
                     "container_type_id": 2,
@@ -278,3 +280,4 @@ class NonTrayItemRetrievalEventDetailOutput(NonTrayItemRetrievalEventBaseOutput)
                 }
             }
         }
+    )

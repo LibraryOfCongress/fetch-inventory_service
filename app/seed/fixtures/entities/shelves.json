@@ -17,12 +17,6 @@
           "type": "Tray"
         }
       },
-      "!shelf_number_id": {
-        "model": "app.models.shelf_numbers.ShelfNumber",
-        "filter": {
-          "number": 1
-        }
-      },
       "!shelf_type_id": {
         "model": "app.models.shelf_types.ShelfType",
         "filter": {
@@ -40,7 +34,8 @@
         "filter": {
           "id": 1
         }
-      }
+      },
+      "shelf_number": 1
     }
   ]
 }

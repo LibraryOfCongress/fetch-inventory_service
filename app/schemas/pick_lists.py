@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel, field_validator, computed_field
+from pydantic import BaseModel, field_validator, computed_field, ConfigDict
 from datetime import datetime, timezone, timedelta
 
 from app.models.pick_lists import PickListStatus
@@ -16,17 +16,18 @@ class PickListInput(BaseModel):
     request_ids: list[int]
     errored_request_ids: Optional[list[int]] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "request_ids": [1, 2, 3],
                 "errored_request_ids": [4, 5, 6]
             }
         }
+    )
 
 
 class PickListUpdateInput(BaseModel):
-    user_id: Optional[int] = None
+    assigned_user_id: Optional[int] = None
     created_by_id: Optional[int] = None
     status: Optional[str] = None
     building_id: Optional[int] = None
@@ -43,10 +44,10 @@ class PickListUpdateInput(BaseModel):
             )
         return value
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
-                "user_id": 1,
+                "assigned_user_id": 1,
                 "created_by_id": 2,
                 "status": "Created",
                 "building_id": 1,
@@ -55,16 +56,17 @@ class PickListUpdateInput(BaseModel):
                 "run_timestamp": "2023-11-27T12:34:56.789123Z"
             }
         }
+    )
 
 
 class PickListUpdateRequestInput(BaseModel):
     run_timestamp: Optional[datetime] = None
     status: Optional[str] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
-                "user_id": 1,
+                "assigned_user_id": 1,
                 "created_by_id": 2,
                 "building_id": 1,
                 "status": "Out",
@@ -81,28 +83,24 @@ class PickListUpdateRequestInput(BaseModel):
                 "scanned_for_retrieval": False,
             }
         }
+    )
 
 
 class PickListBaseOutput(BaseModel):
     id: int
-    user_id: Optional[int] = None
+    assigned_user_id: Optional[int] = None
     created_by_id: Optional[int] = None
-    user: Optional[UserListOutput] = None
+    assigned_user: Optional[UserListOutput] = None
     created_by: Optional[UserListOutput] = None
     building_id: Optional[int] = None
     status: str
     last_transition: Optional[datetime] = None
     run_time: Optional[timedelta] = None
-    requests: Optional[list[RequestDetailReadOutputNoPickList]] = None
-    withdraw_jobs: Optional[list[WithdrawJobBaseOutput]] = None
+    request_count: int = 0
     building: Optional[BuildingBaseOutput] = None
     create_dt: datetime
     update_dt: datetime
 
-    @computed_field(title='Request Count')
-    @property
-    def request_count(self) -> int:
-        return len(self.requests)
 
     @field_validator("run_time")
     @classmethod
@@ -115,13 +113,13 @@ class PickListBaseOutput(BaseModel):
             return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
-                "user_id": 1,
+                "assigned_user_id": 1,
                 "created_by_id": 2,
-                "user": {
+                "assigned_user": {
                     "id": 1,
                     "first_name": "John",
                     "last_name": "Doe",
@@ -140,17 +138,18 @@ class PickListBaseOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class PickListListOutput(PickListBaseOutput):
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
-                "user_id": 1,
+                "assigned_user_id": 1,
                 "created_by_id": 2,
-                "user": {
+                "assigned_user": {
                     "id": 1,
                     "first_name": "John",
                     "last_name": "Doe",
@@ -184,10 +183,11 @@ class PickListListOutput(PickListBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class PickListDetailOutput(PickListBaseOutput):
-    user: Optional[UserDetailReadOutput] = None
+    assigned_user: Optional[UserDetailReadOutput] = None
     created_by: Optional[UserDetailReadOutput] = None
     requests: Optional[list[RequestDetailReadOutputNoPickList]] = None
     withdraw_jobs: Optional[list[WithdrawJobDetailOutput]] = None
@@ -195,15 +195,15 @@ class PickListDetailOutput(PickListBaseOutput):
     building: Optional[BuildingBaseOutput] = None
     errored_request_ids: Optional[list[int]] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "Created",
                 "request_count": 1,
-                "user_id": 1,
+                "assigned_user_id": 1,
                 "created_by_id": 2,
-                "user": {
+                "assigned_user": {
                     "id": 1,
                     "name": "Bilbo Baggins",
                     "create_dt": "2023-10-08T20:46:56.764426",
@@ -242,3 +242,4 @@ class PickListDetailOutput(PickListBaseOutput):
                 "errored_request_ids": [4, 5, 6]
             }
         }
+    )

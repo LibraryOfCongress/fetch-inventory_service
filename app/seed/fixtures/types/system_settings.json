@@ -1,0 +1,15 @@
+{
+    "model": "app.models.system_settings.SystemSetting",
+    "data": [
+        {
+            "key": "shelf_position_auto_assign_direction",
+            "value": "low_to_high",
+            "description": "Direction for auto-assigning shelf positions during shelving. Options: low_to_high, high_to_low"
+        },
+        {
+            "key": "allow_child_owner_shelving",
+            "value": "false",
+            "description": "Allow child owner items to be shelved on parent owner shelves"
+        }
+    ]
+}

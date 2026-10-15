@@ -1,9 +1,15 @@
+# /code/app/routers/sides.py - REFACRORED TO SQLALCHEMY V2
+
 from typing import Optional
 
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlmodel import Session, select
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
@@ -27,11 +33,13 @@ from app.config.exceptions import (
     InternalServerError,
 )
 from app.sorting import BaseSorter
-from app.permissions import require_permissions
+
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
 
 router = APIRouter(
     prefix="/sides",
     tags=["sides"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -44,16 +52,6 @@ def get_side_list(
 ) -> list:
     """
     Get a paginated list of sides from the database.
-
-    **Parameters:**
-    - params: The filter parameters.
-    - sort_params: The sorting parameters.
-    - search: The search query.
-        - Orientation: The orientation of the side.
-
-
-    **Returns**:
-    - Side List Output: A paginated list of sides.
     """
     # Create a query to select all sides from the database
     query = (
@@ -87,15 +85,6 @@ def get_side_list(
 def get_side_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve the details of a side by its ID.
-
-    **Args**:
-    - id: The ID of the side.
-
-    **Returns**:
-    - Side Detail Read Output: The details of the side.
-
-    **Raises**:
-    - HTTPException: If the side is not found.
     """
     side = session.get(Side, id)
 
@@ -105,24 +94,10 @@ def get_side_detail(id: int, session: Session = Depends(get_session)):
     raise NotFound(detail=f"Side ID {id} Not Found")
 
 
-@router.post("/", response_model=SideDetailWriteOutput, status_code=201)
-def create_side(side_input: SideInput, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))):
+@router.post("/", response_model=SideDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_locations"))])
+def create_side(side_input: SideInput, session: Session = Depends(get_session)):
     """
     Create a new side record.
-
-    **Parameters**:
-    - Side Input: The input data for the new side.
-
-    **Returns**:
-    - Side Detail Write Output: The newly created side record.
-
-    **Notes**:
-    - **aisle_id**: Required integer id for an aisle the side belongs to.
-    - **side_orientation_id**: Required integer id for orientation
-
-    **Constraints**:
-    - Aisle and Side Orientation form a unique together constraint. For example, there
-    cannot exist two left sides within one aisle.
     """
     try:
         # Create a new side
@@ -137,20 +112,12 @@ def create_side(side_input: SideInput, session: Session = Depends(get_session), 
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/{id}", response_model=SideDetailWriteOutput)
+@router.patch("/{id}", response_model=SideDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_locations"))])
 def update_side(
-    id: int, side: SideUpdateInput, session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_manage_locations")),
+    id: int, side: SideUpdateInput, session: Session = Depends(get_session)
 ):
     """
     Update a side record in the database.
-
-    **Parameters**:
-    - id: The ID of the side record to update.
-    - Side Update Input: The updated side data.
-
-    **Returns**:
-    - Side Detail Write Output: The updated side record.
     """
     try:
         # Get the existing side record from the database
@@ -174,24 +141,16 @@ def update_side(
 
         return existing_side
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/{id}")
-def delete_side(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))):
+@router.delete("/{id}", dependencies=[Depends(RequiresPermission("can_manage_locations"))])
+def delete_side(id: int, session: Session = Depends(get_session)):
     """
     Delete a side by its ID.
-
-    **Parameters**:
-    - id: The ID of the side to delete.
-
-    **Returns**:
-    - Response: A 204 No Content response if the side is deleted successfully.
-
-    **Raises**:
-    - HTTPException: If the side ID is missing or not an integer, or if the side is
-    not found.
     """
     side = session.get(Side, id)
 
@@ -199,9 +158,6 @@ def delete_side(id: int, session: Session = Depends(get_session), _: bool = Depe
         session.delete(side)
         session.commit()
 
-        return HTTPException(
-            status_code=204,
-            detail=f"Side id {id} Deleted Successfully",
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Side ID {id} Not Found")

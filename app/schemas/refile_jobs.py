@@ -1,5 +1,5 @@
-from typing import Optional
-from pydantic import BaseModel, field_validator, computed_field
+from typing import Optional, Any
+from pydantic import BaseModel, field_validator, computed_field, ConfigDict, Field
 from datetime import timedelta, datetime
 
 from app.models.refile_jobs import RefileJobStatus
@@ -12,8 +12,8 @@ class RefileJobInput(BaseModel):
     created_by_id: Optional[int] = None
     barcode_values: list[str]
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "barcode_values": [
                     "1234567890",
@@ -23,6 +23,7 @@ class RefileJobInput(BaseModel):
                 ]
             }
         }
+    )
 
 
 class RefileJobUpdateInput(BaseModel):
@@ -40,8 +41,8 @@ class RefileJobUpdateInput(BaseModel):
             )
         return value
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "assigned_user_id": 1,
                 "created_by_id": 2,
@@ -49,6 +50,7 @@ class RefileJobUpdateInput(BaseModel):
                 "status": "Created"
             }
         }
+    )
 
 
 class RefileJobBaseOutput(BaseModel):
@@ -118,8 +120,9 @@ class RefileJobBaseOutput(BaseModel):
     def container_shelved_refiled_count(self) -> int:
         return self.item_shelved_refiled_count + self.non_tray_item_shelved_refiled_count
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "assigned_user_id": 1,
@@ -137,16 +140,19 @@ class RefileJobBaseOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764426"
             }
         }
+    )
 
 
 class RefileJobListOutput(RefileJobBaseOutput):
     assigned_user: Optional[UserDetailReadOutput] = None
     created_by: Optional[UserDetailReadOutput] = None
-    items: Optional[list] = None
-    non_tray_items: Optional[list] = None
+    # Exclude raw items from JSON serialization - only counts are needed for list view
+    items: Optional[Any] = Field(default=None, exclude=True)
+    non_tray_items: Optional[Any] = Field(default=None, exclude=True)
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "assigned_user_id": 1,
@@ -224,6 +230,7 @@ class RefileJobListOutput(RefileJobBaseOutput):
                 "non_tray_item_shelved_refiled_count": 1
             }
         }
+    )
 
 
 class NestedShelfNumberForRefileJob(BaseModel):
@@ -242,12 +249,12 @@ class NestedBuildingForRefileJob(BaseModel):
 class NestedShelfForRefileJob(BaseModel):
     id: int
     barcode: Optional[BarcodeDetailReadOutput] = None
-    shelf_number: NestedShelfNumberForRefileJob
+    shelf_number: int
 
 
 class ShelfPositionNestedForRefileJob(BaseModel):
     id: int
-    shelf_position_number: NestedShelfPositionNumberForRefileJob
+    position_number: int
     shelf: NestedShelfForRefileJob
     location: Optional[str] = None
     internal_location: Optional[str] = None
@@ -317,8 +324,9 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
     non_tray_items: Optional[list[NonTrayNestedForRefileJob]] = None
     refile_job_items: Optional[list[NestedForRefileJob]] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "assigned_user_id": 1,
@@ -370,14 +378,10 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                             "shelf_position": {
                                 "location": "Cabin Branch-04-57-L-23-10-08",
                                 "internal_location": "01-04-57-L-23-10-08",
-                                "shelf_position_number": {
-                                    "number": 1
-                                },
+                                "position_number": 1,
                                 "shelf": {
                                     "id": 1,
-                                    "shelf_number": {
-                                        "number": 1
-                                    },
+                                    "shelf_number": 1,
                                     "barcode": {
                                         "id": "550e8400-e29b-41d4-a716-446655440000",
                                         "value": "5901234123457",
@@ -425,14 +429,10 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                         "shelf_position": {
                             "location": "Cabin Branch-04-57-L-23-10-08",
                             "internal_location": "01-04-57-L-23-10-08",
-                            "shelf_position_number": {
-                                "number": 1
-                            },
+                            "position_number": 1,
                             "shelf": {
                                 "id": 1,
-                                "shelf_number": {
-                                    "number": 1
-                                },
+                                "shelf_number": 1,
                                 "barcode": {
                                     "id": "550e8400-e29b-41d4-a716-446655440000",
                                     "value": "5901234123457",
@@ -492,14 +492,10 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                             "shelf_position": {
                                 "location": "Cabin Branch-04-57-L-23-10-08",
                                 "internal_location": "01-04-57-L-23-10-08",
-                                "shelf_position_number": {
-                                    "number": 1
-                                },
+                                "position_number": 1,
                                 "shelf": {
                                     "id": 1,
-                                    "shelf_number": {
-                                        "number": 1
-                                    },
+                                    "shelf_number": 1,
                                     "barcode": {
                                         "id": "550e8400-e29b-41d4-a716-446655440000",
                                         "value": "5901234123457",
@@ -518,14 +514,10 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                         "shelf_position": {
                             "location": "Cabin Branch-04-57-L-23-10-08",
                             "internal_location": "01-04-57-L-23-10-08",
-                            "shelf_position_number": {
-                                "number": 1
-                            },
+                            "position_number": 1,
                             "shelf": {
                                 "id": 1,
-                                "shelf_number": {
-                                    "number": 1
-                                },
+                                "shelf_number": 1,
                                 "barcode": {
                                     "id": "550e8400-e29b-41d4-a716-446655440000",
                                     "value": "5901234123457",
@@ -562,3 +554,4 @@ class RefileJobDetailOutput(RefileJobBaseOutput):
                 "non_tray_item_shelved_refiled_count": 1
             }
         }
+    )

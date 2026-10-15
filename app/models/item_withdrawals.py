@@ -1,33 +1,24 @@
+# /app/models/item_withdrawals.py - FINAL CORRECTED V2
+
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped
+from sqlalchemy.schema import UniqueConstraint
 
-from sqlmodel import Field, SQLModel
+from app.database.base import Base
+from app.models.withdraw_jobs import WithdrawJob 
+from app.models.link_tables import ItemWithdrawalTable # CRITICAL IMPORT
+
+if TYPE_CHECKING:
+    from app.models.items import Item
 
 
-class ItemWithdrawal(SQLModel, table=True):
-    """
-    Model to represent the item_withdrawals table.
-        Item withdrawals have a barcode, and while they may be a container,
-        we view these as a standalone entity and ignore their contents.
+class ItemWithdrawal(Base): 
+    # CRITICAL FIX: Explicitly link the class to the external Table object
+    __table__ = ItemWithdrawalTable 
 
-      id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
-    """
-
-    __tablename__ = "item_withdrawals"
-    __table_args__ = (
-        sa.UniqueConstraint("item_id", "withdraw_job_id", name="uix_item_withdrawals"),
-    )
-
-    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
-    item_id: int = Field(default=None, nullable=False, foreign_key="items.id")
-    withdraw_job_id: int = Field(
-        default=None, nullable=False, foreign_key="withdraw_jobs.id"
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
+    # NOTE: These Mapped columns are retained for ORM type-checking and property access
+    id: Mapped[Optional[int]]
+    item_id: Mapped[int]
+    withdraw_job_id: Mapped[int]

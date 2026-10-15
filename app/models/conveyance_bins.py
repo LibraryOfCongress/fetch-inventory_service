@@ -1,34 +1,42 @@
+# /code/app/models/conveyance_bins.py - REFACRORED TO SQLALCHEMY V2
+
 import uuid
 import sqlalchemy as sa
-
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 
 from typing import Optional, List
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Relationship
+# REMOVED: from sqlmodel import SQLModel, Field, Relationship
+
+# NEW IMPORT: Import the Base class you created
+from app.database.base import Base
 
 
-class ConveyanceBin(SQLModel, table=True):
+class ConveyanceBin(Base): # <--- Inherit from Base
     """
-    Model to represent the Conveyance Bin table. AKA 'Over The Road' bin.
-
-      id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
+    Model to represent the Conveyance Bin table.
     """
 
+    # NOTE: __tablename__ is handled by Base.
     __tablename__ = "conveyance_bins"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True))
-    barcode_id: uuid.UUID = Field(
-        foreign_key="barcodes.id", nullable=False, unique=True, default=None
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
+    # Primary Key
+    id: Mapped[Optional[int]] = mapped_column(Integer, primary_key=True)
 
-    trays: List["Tray"] = Relationship(back_populates="conveyance_bin")
-    barcode: Optional["Barcode"] = Relationship(
-        sa_relationship_kwargs={"uselist": False}
+    # Foreign Key (UUID)
+    barcode_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("barcodes.id"),
+        nullable=False,
+        unique=True,
+        default=None,
+    )
+    
+    # REMOVED: create_dt and update_dt are handled by the Base class.
+
+    # --- RELATIONSHIPS ---
+    trays: Mapped[List["Tray"]] = relationship(back_populates="conveyance_bin")
+    barcode: Mapped[Optional["Barcode"]] = relationship(
+        uselist=False # One-to-One relationship
     )

@@ -57,6 +57,10 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Generated test reports (junit xml, html); keep the dir, ignore its contents
+tests/reports/*
+!tests/reports/.gitkeep
+
 # Translations
 *.mo
 *.pot
@@ -242,3 +246,9 @@ fabric.properties
 # Self signed certs
 cert.pem
 key.pem
+
+# App data and exports
+app/data/
+
+# Generated seed fixtures
+app/seed/fixtures/entities/gen_*.json

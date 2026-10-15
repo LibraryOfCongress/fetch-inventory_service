@@ -1,13 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+# /code/app/routers/accession_jobs.py - FINAL CHECKED V2
+
+from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import not_, or_, func, text
-from sqlmodel import Session, select
+from fastapi_pagination.ext.sqlalchemy import paginate 
+from sqlalchemy.orm import Session, selectinload 
+from sqlalchemy import select, not_, or_, func, text, update 
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.permissions import require_permissions
 from app.filter_params import SortParams, JobFilterParams
 from app.models.accession_jobs import AccessionJob
 from app.models.barcodes import Barcode
@@ -30,10 +32,15 @@ from app.schemas.accession_jobs import (
     AccessionJobDetailOutput,
 )
 from app.utilities import start_session_with_audit_info
+from app.services.audit_service import log_audit_event, AuditEventType
+
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
+from app.utils.job_assignment import auto_assign_on_start, update_status_on_assignment
 
 router = APIRouter(
     prefix="/accession-jobs",
     tags=["accession jobs"],
+    dependencies=[Depends(RequiresPermission("can_access_accession"))],
 )
 
 
@@ -41,60 +48,44 @@ router = APIRouter(
 def get_accession_job_list(
     session: Session = Depends(get_session),
     params: JobFilterParams = Depends(),
-    sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_accession")),
+    sort_params: SortParams = Depends()
 ) -> list:
     """
     Retrieve a paginated list of accession jobs.
-
-    **Params**
-    - params: The filter parameters.
-        - queue: Filters out cancelled Acc Jobs and Acc Jobs where Verification has started.
-        - workflow_id: The ID of the workflow.
-        - created_by_id: The ID of the user who created the pick list.
-        - user_id: The ID of the user.
-        - assigned_user: The name of the assigned user.
-        - status: The status of the accession job list.
-        - from_dt: The start date.
-        - to_dt: The end date.
-    - sort_params: The sort parameters.
-        - sort_by: The field to sort by.
-        - sort_order: The order to sort by.
-
-    **Returns:**
-    - list: A paginated list of accession jobs.
     """
     try:
-        query = select(AccessionJob)
+        # Without these the AccessionJobListOutput.tray_count / .item_count
+        # hybrid properties fall through to `len(self.trays)` etc. at
+        # serialization time, which lazy-loads three relationships per row
+        # (~150 queries per 50-row page). With selectinload, that collapses
+        # to 3 IN-clause queries.
+        query = select(AccessionJob).options(
+            selectinload(AccessionJob.assigned_user),
+            selectinload(AccessionJob.created_by),
+            selectinload(AccessionJob.trays),
+            selectinload(AccessionJob.items),
+            selectinload(AccessionJob.non_tray_items),
+        )
 
         if params.queue:
-            # queue is the default view on the accession job screen
-            # It is not used in advanced search on jobs
-            # hide cancelled jobs
-            query = query.where(AccessionJob.status != "Cancelled")
-            # Filter to exclude Accession Jobs with a related Verification Job not in
-            # 'Created' status
             subquery = (
                 select(VerificationJob.accession_job_id)
                 .where(VerificationJob.status != "Created")
                 .distinct()
             )
 
-            # Construct the main query
             query = query.where(
-                # Use NOT EXISTS to exclude AccessionJobs with related VerificationJobs not in 'created' status
                 or_(
                     AccessionJob.id.not_in(subquery),
-                    # AccessionJobs without related VerificationJobs not in 'created' status
-                    not_(subquery.exists()),  # Or no related VerificationJobs at all
+                    not_(subquery.exists()),
                 )
             )
         if params.status and len(list(filter(None, params.status))) > 0:
             query = query.where(AccessionJob.status.in_(params.status))
         if params.workflow_id:
             query = query.where(AccessionJob.workflow_id == params.workflow_id)
-        if params.user_id:
-            query = query.where(AccessionJob.user_id.in_(params.user_id))
+        if params.assigned_user_id:
+            query = query.where(AccessionJob.assigned_user_id == params.assigned_user_id)
         if params.assigned_user:
             assigned_user_subquery = (
                 select(User.id)
@@ -105,14 +96,14 @@ def get_accession_job_list(
                     )
                 .distinct()
             )
-            query = query.where(AccessionJob.user_id.in_(assigned_user_subquery))
+            query = query.where(AccessionJob.assigned_user_id.in_(assigned_user_subquery))
         if params.container_type:
             subquery = (
                 select(ContainerType.id)
                 .where(ContainerType.type == params.container_type)
                 .distinct()
             )
-            query = query.where(AccessionJob.container_type_id == subquery)
+            query = query.where(AccessionJob.container_type_id == subquery.scalar_subquery())
         if params.trayed is not None:
             query = query.where(AccessionJob.trayed == params.trayed)
         if params.created_by_id:
@@ -122,7 +113,6 @@ def get_accession_job_list(
         if params.to_dt:
             query = query.where(AccessionJob.create_dt <= params.to_dt)
 
-        # Validate and Apply sorting based on sort_params
         if sort_params.sort_by:
             sorter = BaseSorter(AccessionJob)
             query = sorter.apply_sorting(query, sort_params)
@@ -133,22 +123,9 @@ def get_accession_job_list(
 
 
 @router.get("/{id}", response_model=AccessionJobDetailOutput)
-def get_accession_job_detail(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_access_accession")),
-):
+def get_accession_job_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieves the accession job detail for the given ID.
-
-    **Args:**
-    - id: The ID of the accession job.
-
-    **Returns:**
-    - Accession Job Detail Output: The accession job detail.
-
-    **Raises:**
-    - HTTPException: If the accession job with the given ID is not found.
     """
     accession_job = session.get(AccessionJob, id)
 
@@ -160,25 +137,15 @@ def get_accession_job_detail(
 
 @router.get("/workflow/{id}", response_model=AccessionJobDetailOutput)
 def get_accession_job_detail_by_workflow(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_access_accession")),
+    id: int, session: Session = Depends(get_session)
 ):
     """
     Retrieves the accession job detail for the given workflow id.
-
-    **Args:**
-    - id: The ID of the accession job workflow.
-
-    **Returns:**
-    - Accession Job Detail Output: The accession job detail.
-
-    **Raises:**
-    - HTTPException: If the accession job with the given ID is not found.
     """
-    accession_job = session.exec(
+    # V2 FIX
+    accession_job = session.execute(
         select(AccessionJob).where(AccessionJob.workflow_id == id)
-    ).first()
+    ).scalars().first()
 
     if accession_job:
         return accession_job
@@ -186,44 +153,32 @@ def get_accession_job_detail_by_workflow(
     raise NotFound(detail=f"Accession Job ID {id} Not Found")
 
 
-@router.post("/", response_model=AccessionJobDetailOutput, status_code=201)
+@router.post("/", response_model=AccessionJobDetailOutput, status_code=201,
+             dependencies=[Depends(RequiresPermission("can_access_accession"))])
 def create_accession_job(
-    accession_job_input: AccessionJobInput,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_access_accession")),
+    accession_job_input: AccessionJobInput, session: Session = Depends(get_session)
 ) -> AccessionJob:
     """
     Create a new accession job:
-
-    **Args:**
-    - Accession Job Input: The input data for creating the
-    accession job.
-
-    **Returns:**
-    - Accession Job: The created accession job.
-
-    **Raises:**
-    - HTTPException: If there is an integrity error during the creation of the
-    accession job.
     """
     try:
         new_accession_job = AccessionJob(**accession_job_input.model_dump())
-        # Set container_type_id based on trayed status
+        
+        # V2 FIX
         if new_accession_job.trayed:
             container_type = (
-                session.query(ContainerType)
-                .filter(ContainerType.type == "Tray")
+                session.execute(select(ContainerType).filter(ContainerType.type == "Tray"))
+                .scalars()
                 .first()
             )
         else:
             container_type = (
-                session.query(ContainerType)
-                .filter(ContainerType.type == "Non-Tray")
+                session.execute(select(ContainerType).filter(ContainerType.type == "Non-Tray"))
+                .scalars()
                 .first()
             )
         new_accession_job.container_type_id = container_type.id
 
-        # generate a new workflow and attach
         workflow = Workflow()
         audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"})
         session.add(workflow)
@@ -234,6 +189,15 @@ def create_accession_job(
         start_session_with_audit_info(audit_info, session)
         session.commit()
         session.refresh(new_accession_job)
+
+        log_audit_event(
+            session,
+            AuditEventType.JOB_CREATED,
+            f"Accession Job {new_accession_job.id} created",
+            job_type="accession_jobs",
+            job_id=new_accession_job.id,
+        )
+        session.commit()
 
         return new_accession_job
 
@@ -247,102 +211,122 @@ def update_accession_job(
     accession_job: AccessionJobUpdateInput,
     session: Session = Depends(get_session),
     background_tasks: BackgroundTasks = None,
-    _: bool = Depends(require_permissions("can_access_accession")),
+    current_user: User = Depends(get_current_user_with_permissions),
 ):
     """
     Update an existing accession job with the provided data.
-
-    ***Parameters:**
-    - id: The ID of the accession job to be updated.
-    - accession job: The data to update the accession job with.
-
-    **Returns:**
-    - HTTPException: If the accession job is not found or if an error occurs during
-    the update.
+    
+    Includes auto-assignment logic:
+    - When a user starts a job (status → Running), auto-assign to them if unassigned
+    - Prevent users from starting jobs assigned to others
+    - When manager assigns a user, auto-update status to Assigned
     """
     existing_accession_job = session.get(AccessionJob, id)
-
-    # capture original status for process check
-    original_status = existing_accession_job.status
 
     if not existing_accession_job:
         raise NotFound(detail=f"Accession Job ID {id} Not Found")
 
+    original_status = existing_accession_job.status
+    original_assigned_user_id = existing_accession_job.assigned_user_id
     mutated_data = accession_job.model_dump(exclude_unset=True)
+    
+    # Handle auto-assignment when user starts job
+    new_status = mutated_data.get("status")
+    if new_status:
+        auto_assign_on_start(
+            existing_accession_job, 
+            new_status, 
+            current_user.id
+        )
+    
+    # Handle status update when manager assigns user
+    new_assigned_user_id = mutated_data.get("assigned_user_id")
+    if new_assigned_user_id is not None and "status" not in mutated_data:
+        update_status_on_assignment(
+            existing_accession_job,
+            new_assigned_user_id,
+            original_status
+        )
 
     for key, value in mutated_data.items():
         setattr(existing_accession_job, key, value)
 
-    # setting the update_dt to now
     setattr(existing_accession_job, "update_dt", datetime.now(timezone.utc))
-    # Update container_type_id based on trayed status
+    
+    # V2 FIX
     if existing_accession_job.trayed:
         container_type = (
-            session.query(ContainerType).filter(ContainerType.type == "Tray").first()
+            session.execute(select(ContainerType).filter(ContainerType.type == "Tray"))
+            .scalars()
+            .first()
         )
     else:
         container_type = (
-            session.query(ContainerType)
-            .filter(ContainerType.type == "Non-Tray")
+            session.execute(select(ContainerType).filter(ContainerType.type == "Non-Tray"))
+            .scalars()
             .first()
         )
     setattr(existing_accession_job, "container_type_id", container_type.id)
 
     existing_accession_job = commit_record(session, existing_accession_job)
 
-    # conditional to avoid transaction concurrency issues
-    # Guard: only trigger completion if transitioning TO Completed, not if already Completed
+    # Log status change if status was updated
+    new_status = mutated_data.get("status")
+    if new_status and new_status != original_status:
+        log_audit_event(
+            session,
+            AuditEventType.JOB_STATUS_CHANGED,
+            f"Status changed from {original_status} to {new_status}",
+            job_type="accession_jobs",
+            job_id=id,
+        )
+        session.commit()
+
     if mutated_data.get("status") == "Completed" and original_status != "Completed":
+        # V2 BATCH UPDATE FIX
         if existing_accession_job.items:
             items_barcode_ids = [
                 item.barcode_id for item in existing_accession_job.items
             ]
-
-            session.query(Barcode).filter(
-                Barcode.id.in_(items_barcode_ids), Barcode.withdrawn == True
-            ).update(
-                {"withdrawn": False, "update_dt": datetime.now(timezone.utc)},
-                synchronize_session=False,
+            session.execute(
+                update(Barcode)
+                .where(Barcode.id.in_(items_barcode_ids), Barcode.withdrawn == True)
+                .values(withdrawn=False, update_dt=datetime.now(timezone.utc))
             )
 
         if existing_accession_job.non_tray_items:
             non_tray_items_barcode_ids = [
                 item.barcode_id for item in existing_accession_job.non_tray_items
             ]
-
-            session.query(Barcode).filter(
-                Barcode.id.in_(non_tray_items_barcode_ids), Barcode.withdrawn == True
-            ).update(
-                {"withdrawn": False, "update_dt": datetime.now(timezone.utc)},
-                synchronize_session=False,
+            session.execute(
+                update(Barcode)
+                .where(Barcode.id.in_(non_tray_items_barcode_ids), Barcode.withdrawn == True)
+                .values(withdrawn=False, update_dt=datetime.now(timezone.utc))
             )
+
         if existing_accession_job.trays:
             trays_barcode_ids = [
                 tray.barcode_id for tray in existing_accession_job.trays
             ]
-
-            session.query(Barcode).filter(
-                Barcode.id.in_(trays_barcode_ids), Barcode.withdrawn == True
-            ).update(
-                {"withdrawn": False, "update_dt": datetime.now(timezone.utc)},
-                synchronize_session=False,
+            session.execute(
+                update(Barcode)
+                .where(Barcode.id.in_(trays_barcode_ids), Barcode.withdrawn == True)
+                .values(withdrawn=False, update_dt=datetime.now(timezone.utc))
             )
 
             for tray in existing_accession_job.trays:
                 if tray.items:
                     items_barcode_ids = [item.barcode_id for item in tray.items]
-
-                    session.query(Barcode).filter(
-                        Barcode.id.in_(items_barcode_ids), Barcode.withdrawn == True
-                    ).update(
-                        {"withdrawn": False, "update_dt": datetime.now(timezone.utc)},
-                        synchronize_session=False,
+                    session.execute(
+                        update(Barcode)
+                        .where(Barcode.id.in_(items_barcode_ids), Barcode.withdrawn == True)
+                        .values(withdrawn=False, update_dt=datetime.now(timezone.utc))
                     )
 
         audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
         background_tasks.add_task(
             complete_accession_job,
-            existing_accession_job, 
+            existing_accession_job.id, 
             original_status,
             audit_info=audit_info
         )
@@ -351,7 +335,7 @@ def update_accession_job(
         audit_info = getattr(session, "audit_info", {"name": "System", "id": "0"}).copy()
         background_tasks.add_task(
             manage_accession_job_transition,
-            existing_accession_job,
+            existing_accession_job.id,
             original_status,
             audit_info=audit_info
         )
@@ -362,28 +346,24 @@ def update_accession_job(
     return existing_accession_job
 
 
-@router.delete("/{id}", status_code=204)
-def delete_accession_job(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_cancel_accession")),
-):
+@router.delete("/{id}", status_code=204, dependencies=[Depends(RequiresPermission("can_cancel_accession"))])
+def delete_accession_job(id: int, session: Session = Depends(get_session)):
     """
     Delete an accession job by its ID.
-    **Args:**
-    - id: The ID of the accession job to be deleted.
-
-    **Returns:**
-    - HTTPException: An HTTP exception indicating the result of the deletion.
     """
     accession_job = session.get(AccessionJob, id)
 
     if accession_job:
+        log_audit_event(
+            session,
+            AuditEventType.JOB_DELETED,
+            f"Accession Job {id} deleted",
+            job_type="accession_jobs",
+            job_id=id,
+        )
         session.delete(accession_job)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Accession Job id {id} Deleted Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Accession Job ID {id} Not Found")

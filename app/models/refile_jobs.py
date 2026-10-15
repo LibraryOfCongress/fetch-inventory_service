@@ -1,74 +1,98 @@
+# /app/models/refile_jobs.py - FINAL TABLE NAME FIX
+
 from enum import Enum
-
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import SmallInteger, Integer, Enum as SQLEnum, Interval, TIMESTAMP, ForeignKey
 
-
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, timezone, timedelta
-from sqlmodel import SQLModel, Field, Relationship
 
-from app.models.refile_items import RefileItem
-from app.models.refile_non_tray_items import RefileNonTrayItem
+from app.database.base import Base
+from app.models.users import User
+
+# Import the link tables for M2M
+from app.models.link_tables import RefileItemTable, RefileNonTrayItemTable
+
+# --- CRITICAL: DEFER IMPORTS TO BREAK CIRCULARITY ---
+if TYPE_CHECKING:
+    from app.models.non_tray_items import NonTrayItem 
+    from app.models.items import Item
+# -----------------------------------------------------
 
 
 class RefileJobStatus(str, Enum):
     Created = "Created"
+    Assigned = "Assigned"
     Paused = "Paused"
     Running = "Running"
     Completed = "Completed"
 
 
-class RefileJob(SQLModel, table=True):
+class RefileJob(Base): 
     """
     Model to represent refile jobs table
     """
-
+    # CRITICAL FIX: Explicitly match the table name used in link_tables.py FKs
     __tablename__ = "refile_jobs"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True))
-    assigned_user_id: Optional[int] = Field(
-        default=None, foreign_key="users.id", nullable=True
-    )
-    created_by_id: Optional[int] = Field(foreign_key="users.id", nullable=True)
-    run_time: Optional[timedelta] = Field(sa_column=sa.Column(sa.Interval, nullable=True))
-    status: str = Field(
-        sa_column=sa.Column(
-            sa.Enum(
-                RefileJobStatus,
-                nullable=False,
-                name="refile_job_status_enum",
-            )
+    # Primary Key
+    id: Mapped[Optional[int]] = mapped_column(SmallInteger, primary_key=True)
+    
+    # Foreign Keys to User
+    assigned_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+    # Run Time (timedelta -> Interval)
+    run_time: Mapped[Optional[timedelta]] = mapped_column(Interval, nullable=True)
+    
+    # Status (Enum)
+    status: Mapped[str] = mapped_column(
+        SQLEnum(
+            RefileJobStatus,
+            nullable=False,
+            name="refile_job_status_enum",
         ),
         default=RefileJobStatus.Created,
     )
-    last_transition: Optional[datetime] = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # Last Transition (datetime)
+    last_transition: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), 
+        nullable=False, 
+        default=lambda: datetime.now(timezone.utc)
     )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # --- RELATIONSHIPS (Many-to-Many via Link Tables) ---
+    
+    # Items
+    items: Mapped[List["Item"]] = relationship(
+        back_populates="refile_jobs", 
+        secondary=RefileItemTable, # Use Table Object
+        primaryjoin="RefileJob.id == refile_items.c.refile_job_id",
+        secondaryjoin="Item.id == refile_items.c.item_id",         
     )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    items: List["Item"] = Relationship(
-        back_populates="refile_jobs", link_model=RefileItem
-    )
-    non_tray_items: List["NonTrayItem"] = Relationship(
-        back_populates="refile_jobs", link_model=RefileNonTrayItem
+    
+    # NonTrayItems
+    non_tray_items: Mapped[List["NonTrayItem"]] = relationship(
+        back_populates="refile_jobs", 
+        secondary=RefileNonTrayItemTable, # Use Table Object
+        primaryjoin="RefileJob.id == refile_non_tray_items.c.refile_job_id", 
+        secondaryjoin="NonTrayItem.id == refile_non_tray_items.c.non_tray_item_id", 
     )
 
-    assigned_user: Optional["User"] = Relationship(
+    # --- RELATIONSHIPS (Self-Referential User Links) ---
+    
+    # Assigned User
+    assigned_user: Mapped[Optional["User"]] = relationship(
         back_populates="refile_jobs",
-        sa_relationship_kwargs={
-            "primaryjoin": "RefileJob.assigned_user_id==User.id",
-            "lazy": "selectin"
-        }
+        primaryjoin="RefileJob.assigned_user_id==User.id",
+        lazy="selectin"
     )
 
-    created_by: Optional["User"] = Relationship(
+    # Created By
+    created_by: Mapped[Optional["User"]] = relationship(
         back_populates="created_refile_jobs",
-        sa_relationship_kwargs={
-            "primaryjoin": "RefileJob.created_by_id==User.id",
-            "lazy": "selectin"
-        }
+        primaryjoin="RefileJob.created_by_id==User.id",
+        lazy="selectin"
     )

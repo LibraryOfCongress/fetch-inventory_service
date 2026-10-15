@@ -1,0 +1,56 @@
+# Dedicated stack for running the test suite (local + GitLab CI).
+#
+# Local:
+#   docker compose -f docker-compose.test.yml up --build \
+#       --abort-on-container-exit --exit-code-from test_runner
+#   docker compose -f docker-compose.test.yml down -v
+#
+# The runner reuses the application image (app/, migrations/, alembic.ini are
+# baked in); the tests/ tree is mounted because the image does not COPY it.
+name: inventory-service-tests
+
+services:
+  test_db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: test_database
+    tmpfs:
+      - /var/lib/postgresql/data  # ephemeral: no leftover volume between runs
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d test_database"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  test_runner:
+    build:
+      context: .
+      dockerfile: images/api.local.Containerfile
+    depends_on:
+      test_db:
+        condition: service_healthy
+    environment:
+      JWT_SECRET_KEY: test-secret
+      APP_ENVIRONMENT: test
+      PYTHONPATH: /code
+      TESTS_USE_EXTERNAL_DB: "1"
+      TEST_DATABASE_URL: postgresql://postgres:postgres@test_db:5432/test_database
+      DATABASE_URL: postgresql://postgres:postgres@test_db:5432/test_database
+      MIGRATION_URL: postgresql://postgres:postgres@test_db:5432/test_database
+    # Bind-mount source so local edits are picked up without rebuilding the image.
+    # The image still bakes these in at build time, so CI can run the built image
+    # as-is; the mounts only overlay the working copy for local iteration.
+    volumes:
+      - ./app:/code/app
+      - ./migrations:/code/migrations
+      - ./alembic.ini:/code/alembic.ini
+      - ./tests:/code/tests
+      - ./pytest.ini:/code/pytest.ini
+    working_dir: /code
+    command:
+      - pytest
+      - tests
+      - -ra
+      - --junitxml=tests/reports/junit.xml

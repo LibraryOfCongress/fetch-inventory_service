@@ -1,6 +1,41 @@
-from typing import Optional
-from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime, timezone
+
+class ScheduledExportCreate(BaseModel):
+    name: str
+    dataset: str
+    filters: Dict[str, Any]
+    schedule_type: str = "once" # once, recurring
+    frequency: Optional[str] = None # daily, weekly, monthly
+    retention_days: int = 7
+    start_at: datetime
+
+class ScheduledExportRead(BaseModel):
+    id: int
+    name: str
+    dataset: str
+    filters: Dict[str, Any]
+    schedule_type: str
+    frequency: Optional[str]
+    retention_days: int
+    is_active: bool
+    last_run_at: Optional[datetime]
+    next_run_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ExportHistoryRead(BaseModel):
+    id: int
+    scheduled_export_id: Optional[int]
+    filename: str
+    status: str
+    error_message: Optional[str]
+    file_size_bytes: Optional[int]
+    expires_at: datetime
+    create_dt: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 from app.schemas.barcodes import BarcodeDetailReadOutput
 from app.schemas.size_class import SizeClassDetailReadOutput
@@ -14,8 +49,9 @@ class AccessionItemsDetailOutput(BaseModel):
     media_type_name: Optional[str] = "All"
     count: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "owner_name": "All",
                 "size_class_name": "All",
@@ -25,6 +61,7 @@ class AccessionItemsDetailOutput(BaseModel):
                 "count": 100,
             }
         }
+    )
 
 
 class ShelvingJobDiscrepancyBaseOutput(BaseModel):
@@ -32,7 +69,7 @@ class ShelvingJobDiscrepancyBaseOutput(BaseModel):
     shelving_job_id: int
     tray_id: Optional[int] = None
     non_tray_item_id: Optional[int] = None
-    user_id: Optional[int] = None
+    assigned_user_id: Optional[int] = None
     owner_id: Optional[int] = None
     size_class_id: Optional[int] = None
     assigned_location: Optional[str] = None
@@ -77,14 +114,15 @@ class ShelvingJobDiscrepancyOutput(ShelvingJobDiscrepancyBaseOutput):
     owner: Optional[NestedOwnerSJobDiscrepancy] = None
     size_class: Optional[NestedSizeClassSJobDiscrepancy] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "shelving_job_id": 1,
                 "tray_id": 1,
                 "non_tray_item_id": None,
-                "user_id": 1,
+                "assigned_user_id": 1,
                 "owner_id": 1,
                 "size_class_id": 1,
                 "error": "Location Discrepancy - Position or Shelf does not match Job assignment.",
@@ -105,6 +143,7 @@ class ShelvingJobDiscrepancyOutput(ShelvingJobDiscrepancyBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
+    )
 
 
 class NestedBarcodeOpenLocations(BaseModel):
@@ -147,8 +186,9 @@ class AisleDetailReportItemCountOutput(BaseModel):
     tray_count: Optional[int] = 0
     total_item_count: Optional[int] = 0
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "aisle_id": 1,
                 "aisle_number": 1,
@@ -159,6 +199,7 @@ class AisleDetailReportItemCountOutput(BaseModel):
                 "total_item_count": 1,
             }
         }
+    )
 
 
 class NonTrayItemCountReadOutput(BaseModel):
@@ -167,8 +208,9 @@ class NonTrayItemCountReadOutput(BaseModel):
     size_class_short_name: Optional[str] = "All"
     non_tray_item_count: Optional[int] = 0
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "size_class_id": 1,
                 "size_class_name": "C-Low",
@@ -176,6 +218,7 @@ class NonTrayItemCountReadOutput(BaseModel):
                 "non_tray_item_count": 1,
             }
         }
+    )
 
 
 class TrayItemCountReadOutput(BaseModel):
@@ -185,8 +228,9 @@ class TrayItemCountReadOutput(BaseModel):
     tray_count: Optional[int] = 0
     tray_item_count: Optional[int] = 0
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "size_class_id": 1,
                 "size_class_name": "C-Low",
@@ -195,6 +239,7 @@ class TrayItemCountReadOutput(BaseModel):
                 "tray_item_count": 1,
             }
         }
+    )
 
 
 class UserJobItemCountReadOutput(BaseModel):
@@ -202,14 +247,16 @@ class UserJobItemCountReadOutput(BaseModel):
     job_type: str
     total_items_processed: Optional[int] = 0
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "user_name": "Bilbo Baggins",
                 "job_type": "Shelving",
                 "total_items_processed": 1,
             }
         }
+    )
 
 
 class VerificationChangesOutput(BaseModel):
@@ -220,8 +267,9 @@ class VerificationChangesOutput(BaseModel):
     item_barcode: Optional[str] = None
     action: Optional[str] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "workflow_id": 1,
                 "completed_dt": "2023-10-08T20:46:56.764426",
@@ -231,6 +279,7 @@ class VerificationChangesOutput(BaseModel):
                 "action": "Added",
             }
         }
+    )
 
 
 class RetrievalItemCountReadOutput(BaseModel):
@@ -238,21 +287,16 @@ class RetrievalItemCountReadOutput(BaseModel):
     total_item_retrieved_count: Optional[int] = 0
     max_retrieved_count: Optional[int] = 0
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "owner_name": "Bilbo Baggins",
                 "total_item_retrieved_count": 1,
                 "max_retrieved_count": 1,
             }
         }
-
-
-class NotShelvedOutput(BaseModel):
-    barcode_value: Optional[str] = None
-    owner_name: Optional[str] = None
-    workflow_id: Optional[int] = None
-    accession_dt: Optional[datetime] = None
+    )
 
 
 class MoveDiscrepancyBaseOutput(BaseModel):
@@ -269,8 +313,8 @@ class MoveDiscrepancyBaseOutput(BaseModel):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "tray_id": 1,
@@ -287,6 +331,7 @@ class MoveDiscrepancyBaseOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764426",
             }
         }
+    )
 
 
 class NestedUserMoveDiscrepancy(BaseModel):
@@ -330,8 +375,9 @@ class MoveDiscrepancyOutput(MoveDiscrepancyBaseOutput):
     owner: Optional[NestedOwnerMoveDiscrepancy] = None
     size_class: Optional[NestedSizeClassMoveDiscrepancy] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "tray_id": 1,
@@ -382,3 +428,122 @@ class MoveDiscrepancyOutput(MoveDiscrepancyBaseOutput):
                 },
             }
         }
+    )
+
+
+class VerificationStatusReportOutput(BaseModel):
+    barcode: str
+    owner: str
+    verification_job_id: int
+    verification_dt: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "barcode": "12345",
+                "owner": "Bilbo Baggins",
+                "verification_job_id": 1,
+                "verification_dt": "2023-10-08T20:46:56.764426",
+            }
+        }
+    )
+
+
+class WithdrawnItemsReportOutput(BaseModel):
+    barcode: Optional[str] = None
+    owner: Optional[str] = None
+    withdrawn_location: Optional[str] = None
+    withdrawal_dt: Optional[datetime] = None
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "barcode": "12345678901",
+                "owner": "Library of Congress",
+                "withdrawn_location": "Fort Meade-1-1-L-27-1-8",
+                "withdrawal_dt": "2023-10-08T20:46:56.764426",
+            }
+        }
+    )
+
+
+class NestedDeliveryLocationShippingBinsReport(BaseModel):
+    name: Optional[str] = None
+
+
+class ShippingBinsReportOutput(BaseModel):
+    barcode: str
+    shipping_job_id: int
+    create_dt: datetime
+    item_count: int
+    delivery_location: Optional[NestedDeliveryLocationShippingBinsReport] = None
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "barcode": "12345678901",
+                "shipping_job_id": 1,
+                "create_dt": "2023-10-08T20:46:56.764426",
+                "item_count": 10,
+                "delivery_location": {
+                    "name": "Fort Meade",
+                },
+            }
+        }
+    )
+
+
+# --- FACILITY INTELLIGENCE SCHEMAS ---
+
+class WorkerEfficiencyOutput(BaseModel):
+    user_id: int
+    user_name: str
+    job_type: str
+    total_jobs: int
+    total_items_processed: int
+    total_active_time: Optional[str] = None  # Formatted HH:MM:SS; None for users with no tracked activity
+    items_per_hour: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InventoryHotZoneOutput(BaseModel):
+    building_name: str
+    aisle_number: int
+    retrieval_count: int
+    percent_of_total: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CapacityForecastOutput(BaseModel):
+    size_class_name: str
+    current_available_space: int
+    avg_monthly_accession_rate: float
+    estimated_runway_months: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CapacityForecastHeightOutput(BaseModel):
+    shelf_height: float
+    current_available_space: int
+    avg_monthly_accession_rate: float
+    estimated_runway_months: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DailyPulseOutput(BaseModel):
+    accessioned_today: int
+    shelved_today: int
+    retrieved_today: int
+    verified_today: int
+    pending_requests: int
+    backlog_verification_jobs: int
+
+    model_config = ConfigDict(from_attributes=True)
+

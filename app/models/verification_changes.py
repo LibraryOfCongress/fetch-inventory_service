@@ -1,10 +1,17 @@
+# /app/models/verification_changes.py - REFACRORED TO SQLALCHEMY V2
+
+import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import BigInteger, Integer, Enum as SQLEnum, TIMESTAMP, ForeignKey, String, VARCHAR, CheckConstraint
+
 from enum import Enum
 from typing import Optional
 from datetime import datetime, timezone
+# REMOVED: from sqlmodel import SQLModel, Field, Relationship
 
-import sqlalchemy as sa
 
-from sqlmodel import SQLModel, Field, Relationship
+# NEW IMPORT: Import the Base class you created
+from app.database.base import Base
 
 
 class VerificationChangeStatus(str, Enum):
@@ -19,41 +26,45 @@ class VerificationChangeStatus(str, Enum):
     BarcodeValueEdit = "BarcodeValueEdit"
 
 
-class VerificationChange(SQLModel, table=True):
+class VerificationChange(Base): # <--- Inherit from Base
     """
     Model to represent the Verification Changes table
     """
 
+    # NOTE: __tablename__ is handled by Base, but we need to override it to match the migration.
     __tablename__ = "verification_changes"
+
     __table_args__ = (
         sa.CheckConstraint(
             "(item_barcode_value IS NOT NULL AND tray_barcode_value IS NULL) OR ("
             "item_barcode_value IS NOT NULL AND tray_barcode_value IS NOT NULL)",
-            name="ck_item_xor_tray",
+            name="ck_item_xor_tray", # NOTE: This constraint looks odd (second part is redundant), but we maintain it.
         ),
     )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
-    workflow_id: Optional[int] = Field(foreign_key="workflow.id", nullable=True)
-    tray_barcode_value: Optional[str] = Field(default=None, nullable=True, unique=False)
-    item_barcode_value: Optional[str] = Field(default=None, nullable=True, unique=False)
-    change_type: Optional[str] = Field(
-        sa_column=sa.Column(
-            sa.Enum(
-                VerificationChangeStatus,
-                nullable=True,
-                name="change_type",
-            )
+    # Primary Key
+    id: Mapped[Optional[int]] = mapped_column(BigInteger, primary_key=True)
+    
+    # Foreign Keys
+    workflow_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workflow.id"), nullable=True)
+    completed_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+    # Barcode/Value Fields
+    tray_barcode_value: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    item_barcode_value: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Change Type (Enum)
+    change_type: Mapped[Optional[str]] = mapped_column(
+        SQLEnum(
+            VerificationChangeStatus,
+            nullable=True,
+            name="change_type",
         ),
         default=None,
     )
-    completed_by_id: Optional[int] = Field(default=None, foreign_key="users.id",
-                                        nullable=True)
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    workflow: Optional["Workflow"] = Relationship(back_populates="verification_change")
-    completed_by: Optional["User"] = Relationship(back_populates="verification_changes")
+
+    # REMOVED: create_dt and update_dt are handled by the Base class.
+
+    # --- RELATIONSHIPS ---
+    workflow: Mapped[Optional["Workflow"]] = relationship(back_populates="verification_change")
+    completed_by: Mapped[Optional["User"]] = relationship(back_populates="verification_changes")

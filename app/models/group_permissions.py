@@ -1,21 +1,35 @@
-from typing import Optional
+# /code/app/models/group_permissions.py - REFACRORED TO SQLALCHEMY V2
 
 import sqlalchemy as sa
-from sqlalchemy import UniqueConstraint
-from sqlmodel import SQLModel, Field
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import SmallInteger, ForeignKey
+from sqlalchemy.schema import UniqueConstraint
+
+from typing import Optional
+# REMOVED: from sqlmodel import SQLModel, Field
+
+# NEW IMPORT: Import the Base class you created
+from app.database.base import Base
 
 
-class GroupPermission(SQLModel, table=True):
+class GroupPermission(Base): # <--- Inherit from Base
     """
     Class to represent Group Permissions.
-    - many-to-many relationship between Groups and Permissions
     """
-
     __tablename__ = "group_permissions"
+    # NOTE: __tablename__ is handled by Base.
     __table_args__ = (
         UniqueConstraint("permission_id", "group_id", name="uq_permission_id_group_id"),
     )
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True), default=None)
-    group_id: Optional[int] = Field(foreign_key="groups.id", nullable=False)
-    permission_id: Optional[int] = Field(foreign_key="permissions.id", nullable=False)
+    # Primary Key
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, autoincrement=True)
+
+    # Foreign Keys
+    group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), nullable=False)
+    permission_id: Mapped[int] = mapped_column(ForeignKey("permissions.id"), nullable=False)
+    
+    # CRITICAL FIX: Explicitly remove the audit columns inherited from Base
+    # because the database table for this link model does not have them.
+    create_dt = None
+    update_dt = None

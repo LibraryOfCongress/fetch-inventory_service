@@ -1,28 +1,30 @@
 from typing import Optional, List
-from pydantic import BaseModel, conint
+from pydantic import BaseModel, conint, ConfigDict
 from datetime import datetime, timezone
 
 
 class RequestTypeInput(BaseModel):
     type: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "type": "General Delivery"
             }
         }
+    )
 
 
 class RequestTypeUpdateInput(BaseModel):
     type: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "type": "General Delivery"
             }
         }
+    )
 
 
 class RequestTypeBaseOutput(BaseModel):
@@ -31,21 +33,22 @@ class RequestTypeBaseOutput(BaseModel):
 
 
 class RequestTypeListOutput(RequestTypeBaseOutput):
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "type": "General Delivery"
             }
         }
+    )
 
 
 class RequestTypeDetailWriteOutput(RequestTypeBaseOutput):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "type": "General Delivery",
@@ -53,12 +56,13 @@ class RequestTypeDetailWriteOutput(RequestTypeBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class RequestTypeDetailReadOutput(RequestTypeDetailWriteOutput):
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "type": "General Delivery",
@@ -66,3 +70,4 @@ class RequestTypeDetailReadOutput(RequestTypeDetailWriteOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )

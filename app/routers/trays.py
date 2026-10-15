@@ -1,20 +1,29 @@
+# /code/app/routers/trays.py - REFACRORED TO SQLALCHEMY V2
+
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlmodel import Session, select
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session, selectinload # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select, update # select/update imported from sqlalchemy now
 from datetime import datetime, timezone
+from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session, commit_record
-from app.permissions import require_permissions
 from app.filter_params import SortParams, ItemFilterParams
 from app.events import update_shelf_space_after_tray
 from app.logger import inventory_logger
+from app.models.aisles import Aisle
+from app.models.ladders import Ladder
+from app.models.modules import Module
 from app.models.move_discrepancies import MoveDiscrepancy
 from app.models.non_tray_items import NonTrayItem
 from app.models.owners import Owner
-from app.models.shelf_position_numbers import ShelfPositionNumber
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
+from app.models.sides import Side
 from app.models.shelving_job_discrepancies import ShelvingJobDiscrepancy
 from app.models.shelving_jobs import ShelvingJob
 from app.models.size_class import SizeClass
@@ -35,8 +44,12 @@ from app.schemas.trays import (
 from app.config.exceptions import (
     NotFound,
     ValidationException,
+    InternalServerError,
 )
 from app.sorting import BaseSorter, ItemSorter
+
+from app.auth.dependencies import RequiresPermission
+from app.services.audit_service import log_audit_event, AuditEventType
 
 router = APIRouter(
     prefix="/trays",
@@ -44,53 +57,62 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=Page[TrayListOutput])
+@router.get("/", response_model=Page[TrayListOutput], dependencies=[Depends(RequiresPermission("can_access_tray_detail"))])
 def get_tray_list(
     session: Session = Depends(get_session),
     params: ItemFilterParams = Depends(),
     sort_params: SortParams = Depends(),
-    _: bool = Depends(require_permissions("can_access_tray_detail"))
 ) -> list:
     """
     Get a paginated list of trays from the database
-
-    **Parameters:**
-    - owner_id (int): The ID of the owner to filter by.
-    - size_class_id (int): The ID of the size class to filter by.
-    - media_type_id (int): The ID of the media type to filter by.
-    - from_dt (datetime): The start date to filter by.
-    - to_dt (datetime): The end date to filter by.
-    - sort_params (SortParams): The sorting parameters.
-
-    **Returns:**
-    - Tray List Output: The paginated list of trays.
     """
     # Create a query to select all trays from the database
-    query = select(Tray)
+    shelf_load = selectinload(Tray.shelf_position).selectinload(ShelfPosition.shelf)
+    shelf_ladder_side_load = shelf_load.selectinload(Shelf.ladder).selectinload(Ladder.side)
+    owner_parent_load = selectinload(Tray.owner).selectinload(Owner.parent_owner)
+    owner_grandparent_load = owner_parent_load.selectinload(Owner.parent_owner)
+
+    query = select(Tray).options(
+        selectinload(Tray.barcode).selectinload(Barcode.type),
+        selectinload(Tray.withdrawn_barcode).selectinload(Barcode.type),
+        selectinload(Tray.media_type),
+        selectinload(Tray.size_class),
+        shelf_load.selectinload(Shelf.barcode).selectinload(Barcode.type),
+        shelf_ladder_side_load.selectinload(Side.side_orientation),
+        shelf_ladder_side_load.selectinload(Side.aisle)
+        .selectinload(Aisle.module)
+        .selectinload(Module.building),
+        selectinload(Tray.owner).selectinload(Owner.owner_tier),
+        selectinload(Tray.owner).selectinload(Owner.children),
+        owner_parent_load.selectinload(Owner.owner_tier),
+        owner_parent_load.selectinload(Owner.children),
+        owner_grandparent_load.selectinload(Owner.owner_tier),
+        owner_grandparent_load.selectinload(Owner.children),
+    )
 
     if params.barcode_value:
         barcode_value_subquery = select(Barcode.id).where(
             Barcode.value.in_(params.barcode_value)
-        )
+        ).scalar_subquery()
         query = query.where(Tray.barcode_id.in_(barcode_value_subquery))
     if params.owner_id:
         query = query.where(Tray.owner_id.in_(params.owner_id))
     if params.owner:
-        owner_subquery = select(Owner.id).where(Owner.name.in_(params.owner))
+        owner_subquery = select(Owner.id).where(Owner.name.in_(params.owner)).scalar_subquery()
         query = query.where(Tray.owner_id.in_(owner_subquery))
     if params.size_class_id:
         query = query.where(Tray.size_class_id.in_(params.size_class_id))
     if params.size_class:
-        size_class_subquery = select(Tray.size_class_id).where(
-            Tray.size_class.in_(params.size_class)
-        )
+        size_class_subquery = select(SizeClass.id).where(
+            SizeClass.name.in_(params.size_class) # Use SizeClass.name
+        ).scalar_subquery()
         query = query.where(Tray.size_class_id.in_(size_class_subquery))
     if params.media_type_id:
         query = query.where(Tray.media_type_id.in_(params.media_type_id))
     if params.media_type:
-        media_type_subquery = select(Tray.media_type_id).where(
-            Tray.media_type.in_(params.media_type)
-        )
+        media_type_subquery = select(MediaType.id).where(
+            MediaType.name.in_(params.media_type)
+        ).scalar_subquery()
         query = query.where(Tray.media_type_id.in_(media_type_subquery))
     if params.from_dt:
         query = query.where(Tray.accession_dt >= params.from_dt)
@@ -105,8 +127,8 @@ def get_tray_list(
     return paginate(session, query)
 
 
-@router.get("/{id}", response_model=TrayDetailReadOutput)
-def get_tray_detail(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_access_tray_detail"))):
+@router.get("/{id}", response_model=TrayDetailReadOutput, dependencies=[Depends(RequiresPermission("can_access_tray_detail"))])
+def get_tray_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve the details of a tray by its ID
     """
@@ -118,21 +140,22 @@ def get_tray_detail(id: int, session: Session = Depends(get_session), _: bool = 
     raise NotFound(detail=f"Tray ID {id} Not Found")
 
 
-@router.get("/barcode/{value}", response_model=TrayDetailReadOutput)
-def get_tray_by_barcode_value(value: str, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_access_tray_detail"))):
+@router.get("/barcode/{value}", response_model=TrayDetailReadOutput, dependencies=[Depends(RequiresPermission("can_access_tray_detail"))])
+def get_tray_by_barcode_value(value: str, session: Session = Depends(get_session)):
     """
     Retrieve a tray using a barcode value
-
-    **Parameters:**
-    - value (str): The value of the barcode to retrieve.
     """
     if not value:
         raise ValidationException(detail="Tray barcode value is required")
 
+    # V2 FIX: session.query().join().filter().first() -> session.execute(select(...)).scalars().first()
     tray = (
-        session.query(Tray)
-        .join(Barcode, Tray.barcode_id == Barcode.id)
-        .filter(Barcode.value == value)
+        session.execute(
+            select(Tray)
+            .join(Barcode, Tray.barcode_id == Barcode.id)
+            .filter(Barcode.value == value)
+        )
+        .scalars()
         .first()
     )
     if not tray:
@@ -140,19 +163,18 @@ def get_tray_by_barcode_value(value: str, session: Session = Depends(get_session
     return tray
 
 
-@router.post("/", response_model=TrayDetailWriteOutput, status_code=201)
-def create_tray(
-    tray_input: TrayInput,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_access_accession")),
-):
+@router.post("/", response_model=TrayDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_access_accession"))])
+def create_tray(tray_input: TrayInput, session: Session = Depends(get_session)):
     """
     Create a new tray record
     """
     # Check if a tray with the same barcode already exists
     if tray_input.barcode_id:
+        # V2 FIX: session.query().filter().first() -> session.execute(select(...)).scalars().first()
         existing_tray = (
-            session.query(Tray).filter(Tray.barcode_id == tray_input.barcode_id).first()
+            session.execute(select(Tray).filter(Tray.barcode_id == tray_input.barcode_id))
+            .scalars()
+            .first()
         )
 
         if existing_tray:
@@ -166,54 +188,47 @@ def create_tray(
     new_tray.withdrawal_dt = None
 
     # default to tray container_type
+    # V2 FIX: session.query().filter().first() -> session.execute(select(...)).scalars().first()
     container_type = (
-        session.query(ContainerType).filter(ContainerType.type == "Tray").first()
+        session.execute(select(ContainerType).filter(ContainerType.type == "Tray"))
+        .scalars()
+        .first()
     )
     # trays are created at accession, set accession date
     if not new_tray.accession_dt:
         new_tray.accession_dt = datetime.now(timezone.utc)
     new_tray.container_type_id = container_type.id
-
-    # check if existing withdrawn tray with this barcode
-    previous_tray = session.exec(
-        select(Tray).where(Tray.withdrawn_barcode_id == new_tray.barcode_id)
-    ).first()
-    if previous_tray:
-        # use existing, and patch values
-        for field, value in new_tray.model_dump(exclude={"id"}).items():
-            setattr(previous_tray, field, value)
-        new_tray = previous_tray
-        new_tray.scanned_for_verification = False
-        new_tray.scanned_for_shelving = False
-        new_tray.scanned_for_refile_queue = False
-        new_tray.withdrawn_barcode_id = None
-        new_tray.withdrawal_dt = None
-        barcode = session.exec(select(Barcode).where(Barcode.id == new_tray.barcode_id)).first()
-        barcode.withdrawn = False
-        session.add(barcode)
-
     session.add(new_tray)
+    update_shelf_space_after_tray(session, new_tray, None, None)
     session.commit()
     session.refresh(new_tray)
 
-    update_shelf_space_after_tray(new_tray, None, None)
+    tray_barcode = new_tray.barcode.value if new_tray.barcode else str(new_tray.id)
+    log_audit_event(
+        session,
+        AuditEventType.ENTITY_CREATED,
+        f"Tray {tray_barcode} scanned for accession",
+        entity_type="trays",
+        entity_id=new_tray.id,
+        job_type="accession_jobs" if new_tray.accession_job_id else None,
+        job_id=new_tray.accession_job_id,
+    )
+    session.commit()
 
     return new_tray
 
 
 # In trays.py, replace the existing update_tray function with this one
 
-@router.patch("/{id}", response_model=TrayDetailWriteOutput)
+@router.patch("/{id}", response_model=TrayDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_access_accession", "can_access_verification", "can_edit_tray", any_of=True))])
 def update_tray(
     id: int,
     tray: TrayUpdateInput,
     session: Session = Depends(get_session),
     background_tasks: BackgroundTasks = None,
-    _: bool = Depends(require_permissions("can_access_accession", "can_access_verification", any_of=True)),
 ):
     """
     Update a tray record in the database.
-    This now correctly includes the item_id when creating VerificationChange records.
     """
     existing_tray = session.get(Tray, id)
     if not existing_tray:
@@ -239,12 +254,12 @@ def update_tray(
                 item_barcode = session.get(Barcode, item.barcode_id)
                 new_verification_changes.append(
                     VerificationChange(
-                        item_id=item.id,  # <-- THE FIX
+                        item_id=item.id,
                         workflow_id=verification_job.workflow_id,
                         tray_barcode_value=tray_barcode.value,
                         item_barcode_value=item_barcode.value,
                         change_type="OwnerEdit",
-                        completed_by_id=verification_job.user_id,
+                        completed_by_id=verification_job.assigned_user_id,
                     )
                 )
 
@@ -254,12 +269,12 @@ def update_tray(
                 item_barcode = session.get(Barcode, item.barcode_id)
                 new_verification_changes.append(
                     VerificationChange(
-                        item_id=item.id,  # <-- THE FIX
+                        item_id=item.id,
                         workflow_id=verification_job.workflow_id,
                         tray_barcode_value=tray_barcode.value,
                         item_barcode_value=item_barcode.value,
                         change_type="SizeClassEdit",
-                        completed_by_id=verification_job.user_id,
+                        completed_by_id=verification_job.assigned_user_id,
                     )
                 )
 
@@ -269,12 +284,12 @@ def update_tray(
                 item_barcode = session.get(Barcode, item.barcode_id)
                 new_verification_changes.append(
                     VerificationChange(
-                        item_id=item.id,  # <-- THE FIX
+                        item_id=item.id,
                         workflow_id=verification_job.workflow_id,
                         tray_barcode_value=tray_barcode.value,
                         item_barcode_value=item_barcode.value,
                         change_type="MediaTypeEdit",
-                        completed_by_id=verification_job.user_id,
+                        completed_by_id=verification_job.assigned_user_id,
                     )
                 )
     
@@ -298,36 +313,65 @@ def update_tray(
     setattr(existing_tray, "update_dt", datetime.now(timezone.utc))
 
     session.add(existing_tray)
+    update_shelf_space_after_tray(
+        session, existing_tray, existing_tray.shelf_position_id, tray.shelf_position_id
+    )
     session.commit()
     session.refresh(existing_tray)
 
-    update_shelf_space_after_tray(
-        existing_tray, existing_tray.shelf_position_id, tray.shelf_position_id
+    # Determine active job context for this tray update
+    tray_job_type = None
+    tray_job_id = None
+    if existing_tray.verification_job_id:
+        tray_job_type = "verification_jobs"
+        tray_job_id = existing_tray.verification_job_id
+    elif existing_tray.shelving_job_id:
+        tray_job_type = "shelving_jobs"
+        tray_job_id = existing_tray.shelving_job_id
+    elif existing_tray.accession_job_id:
+        tray_job_type = "accession_jobs"
+        tray_job_id = existing_tray.accession_job_id
+
+    tray_bc = existing_tray.barcode.value if existing_tray.barcode else str(id)
+    log_audit_event(
+        session,
+        AuditEventType.ENTITY_UPDATED,
+        f"Tray {tray_bc} updated",
+        entity_type="trays",
+        entity_id=id,
+        job_type=tray_job_type,
+        job_id=tray_job_id,
     )
+    session.commit()
 
     return existing_tray
 
 
-@router.delete("/{id}")
-def delete_tray(
-    id: int,
-    session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_access_accession")),
-):
+@router.delete("/{id}", dependencies=[Depends(RequiresPermission("can_access_accession"))])
+def delete_tray(id: int, session: Session = Depends(get_session)):
     """
     Delete a tray by its ID
     """
     tray = session.get(Tray, id)
 
     if tray:
-        items_to_delete = session.exec(
-            select(Item).where(Item.tray_id == id).distinct()
-        )
+        # V2 FIX: session.exec().all() -> session.execute(select(...)).scalars().all()
+        items_to_delete = session.execute(
+            select(Item).where(Item.tray_id == id)
+        ).scalars().all()
         for item in items_to_delete:
             session.delete(item)
             session.commit()
 
-        update_shelf_space_after_tray(None, None, tray.shelf_position_id)
+        update_shelf_space_after_tray(session, None, None, tray.shelf_position_id)
+        tray_del_bc = tray.barcode.value if tray.barcode else str(id)
+        log_audit_event(
+            session,
+            AuditEventType.ENTITY_DELETED,
+            f"Tray {tray_del_bc} deleted",
+            entity_type="trays",
+            entity_id=id,
+        )
         session.delete(tray)
         session.commit()
 
@@ -337,35 +381,27 @@ def delete_tray(
         session.delete(session.get(Barcode, tray.barcode_id))
         session.commit()
 
-        return HTTPException(
-            status_code=204,
-            detail=f"Tray id {id} Deleted Successfully",
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Tray ID {id} Not Found")
 
 
-@router.post("/move/{barcode_value}", response_model=TrayDetailReadOutput)
+@router.post("/move/{barcode_value}", response_model=TrayDetailReadOutput, dependencies=[Depends(RequiresPermission("can_move_trays_and_items"))])
 def move_tray(
     barcode_value: str,
     tray_input: TrayMoveInput,
     session: Session = Depends(get_session),
-    _: bool = Depends(require_permissions("can_move_trays_and_items"))
 ):
     """
     Move a tray from one location to another.
-
-    **Parameters:**
-    - barcode_value: The value of the tray to move.
-
-    **Returns:**
-    - Tray Detail Write Output: The updated tray details.
     """
     # Retrieve the non_tray_item and shelves in a single query
+    # V2 FIX: session.query().join().filter().first() -> session.execute(select(...)).scalars().first()
     tray = (
-        session.query(Tray)
+        session.execute(select(Tray)
         .join(Barcode, Tray.barcode_id == Barcode.id)
-        .filter(Barcode.value == barcode_value)
+        .filter(Barcode.value == barcode_value))
+        .scalars()
         .first()
     )
     if not tray:
@@ -374,29 +410,31 @@ def move_tray(
         )
 
         # Retrieve the non_tray_item and shelves in a single query
+    # V2 FIX
     src_shelf = (
-        session.query(Shelf)
-        .join(ShelfPosition, tray.shelf_position_id == ShelfPosition.id)
-        .filter(ShelfPosition.shelf_id == Shelf.id)
+        session.execute(select(Shelf)
+        .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id)
+        .filter(ShelfPosition.shelf_id == Shelf.id))
+        .scalars()
         .first()
     )
 
     # Retrieve the destination shelf
+    # V2 FIX
     dest_shelf = (
-        session.query(Shelf)
+        session.execute(select(Shelf)
         .join(ShelfPosition, ShelfPosition.shelf_id == Shelf.id)
         .join(Barcode, Shelf.barcode_id == Barcode.id)
-        .filter(Barcode.value == tray_input.shelf_barcode_value)
+        .filter(Barcode.value == tray_input.shelf_barcode_value))
+        .scalars()
         .first()
     )
 
     current_assigned_location = None
     original_assigned_location = None
     if src_shelf:
-        shelf_position = tray.shelf_position
-        shelf_position_number = shelf_position.shelf_position_number
         original_assigned_location = (src_shelf.location + "-" + str(
-            shelf_position_number.number))
+            tray.shelf_position.position_number))
     if dest_shelf:
         current_assigned_location = (dest_shelf.location + "-" + str(
             tray_input.shelf_position_number))
@@ -466,17 +504,22 @@ def move_tray(
         != dest_shelf.shelf_type.size_class_id
         or src_shelf.owner_id != dest_shelf.owner_id
     ):
+        # V2 FIX
         tray_size_class = (
-            session.query(SizeClass).where(SizeClass.id == tray.size_class_id).first()
+            session.execute(select(SizeClass).where(SizeClass.id == tray.size_class_id)).scalars().first()
         )
+        # V2 FIX
         destination_size_class = (
-            session.query(SizeClass)
-            .where(SizeClass.id == dest_shelf.shelf_type.size_class_id)
+            session.execute(select(SizeClass)
+            .where(SizeClass.id == dest_shelf.shelf_type.size_class_id))
+            .scalars()
             .first()
         )
-        tray_owner = session.query(Owner).where(Owner.id == tray.owner_id).first()
+        # V2 FIX
+        tray_owner = session.execute(select(Owner).where(Owner.id == tray.owner_id)).scalars().first()
+        # V2 FIX
         destination_owner = (
-            session.query(Owner).where(Owner.id == dest_shelf.owner_id).first()
+            session.execute(select(Owner).where(Owner.id == dest_shelf.owner_id)).scalars().first()
         )
         # Create a Discrepancy
         discrepancy_error = "Unknown"
@@ -528,24 +571,20 @@ def move_tray(
     destination_shelf_positions = dest_shelf.shelf_positions
     destination_shelf_position_id = None
     for destination_shelf_position in destination_shelf_positions:
-        shel_position_number = (
-            session.query(ShelfPositionNumber)
-            .filter(
-                ShelfPositionNumber.id
-                == destination_shelf_position.shelf_position_number_id
-            )
-            .first()
-        )
-        if shel_position_number.number == tray_input.shelf_position_number:
+        if destination_shelf_position.position_number == tray_input.shelf_position_number:
             destination_shelf_position_id = destination_shelf_position.id
+            # V2 FIX
             tray_shelf_position = (
-                session.query(Tray)
-                .filter(Tray.shelf_position_id == destination_shelf_position.id)
+                session.execute(select(Tray)
+                .filter(Tray.shelf_position_id == destination_shelf_position.id))
+                .scalars()
                 .first()
             )
+            # V2 FIX
             non_tray_shelf_position = (
-                session.query(NonTrayItem)
-                .filter(NonTrayItem.shelf_position_id == destination_shelf_position.id)
+                session.execute(select(NonTrayItem)
+                .filter(NonTrayItem.shelf_position_id == destination_shelf_position.id))
+                .scalars()
                 .first()
             )
 
@@ -576,10 +615,33 @@ def move_tray(
     tray.update_dt = update_dt
 
     session.add(tray)
+    update_shelf_space_after_tray(
+        session, tray, destination_shelf_position_id, old_shelf_position_id
+    )
     session.commit()
 
-    update_shelf_space_after_tray(
-        tray, destination_shelf_position_id, old_shelf_position_id
+    # Determine active job context for this tray move
+    tray_job_type = None
+    tray_job_id = None
+    if tray.verification_job_id:
+        tray_job_type = "verification_jobs"
+        tray_job_id = tray.verification_job_id
+    elif tray.shelving_job_id:
+        tray_job_type = "shelving_jobs"
+        tray_job_id = tray.shelving_job_id
+    elif tray.accession_job_id:
+        tray_job_type = "accession_jobs"
+        tray_job_id = tray.accession_job_id
+
+    log_audit_event(
+        session,
+        AuditEventType.ENTITY_MOVED,
+        f"Tray {barcode_value} moved to position {tray_input.shelf_position_number} on shelf {tray_input.shelf_barcode_value}",
+        entity_type="trays",
+        entity_id=tray.id,
+        job_type=tray_job_type,
+        job_id=tray_job_id,
     )
+    session.commit()
 
     return tray

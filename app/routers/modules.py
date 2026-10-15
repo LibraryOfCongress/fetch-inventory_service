@@ -1,18 +1,28 @@
 import logging
 
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlmodel import Session, select
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate 
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy import select, func # select is imported from sqlalchemy now
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
 from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.permissions import require_permissions
 from app.filter_params import SortParams, ModuleFilterParams
 from app.models.modules import Module
 from app.models.buildings import Building
+from app.models.aisles import Aisle
+from app.models.sides import Side
+from app.models.ladders import Ladder
+from app.models.shelves import Shelf
+from app.models.shelf_positions import ShelfPosition
+from app.models.trays import Tray
+from app.models.non_tray_items import NonTrayItem
 from app.schemas.modules import (
     ModuleInput,
     ModuleUpdateInput,
@@ -25,9 +35,12 @@ from app.sorting import BaseSorter
 
 LOGGER = logging.getLogger("router.modules")
 
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
+
 router = APIRouter(
     prefix="/modules",
     tags=["modules"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -37,19 +50,9 @@ def get_module_list(
     params: ModuleFilterParams = Depends(),
     sort_params: SortParams = Depends(),
     search: Optional[str] = Query(None, description="Search by Module Number"),
-    _: bool = Depends(require_permissions("can_manage_locations"))
 ) -> list:
     """
     Retrieve a paginated list of modules.
-
-    **Parameters:**
-    - building_name (str): The name of the building to filter by.
-    - sort_params (SortParams): The sorting parameters.
-    - search (Optional[str]): The search query.
-        - Number: The number of the module to search for.
-
-    **Returns:**
-    - Module List Output: The paginated list of modules.
     """
     # Create a query to select all Module
     query = select(Module).join(Building, Module.building_id == Building.id)
@@ -71,19 +74,11 @@ def get_module_list(
 
 
 @router.get("/{id}", response_model=ModuleDetailReadOutput)
-def get_module_detail(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))):
+def get_module_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve module details by ID.
-
-    **Parameters:**
-    - id: The ID of the module to retrieve.
-
-    **Returns:**
-    - Module Detail Read Output: The module details.
-
-    **Raises:**
-    - HTTPException: If the module with the specified ID is not found.
     """
+    # session.get() is compatible with SQLAlchemy V2
     module = session.get(Module, id)
 
     if module:
@@ -92,25 +87,12 @@ def get_module_detail(id: int, session: Session = Depends(get_session), _: bool 
     raise NotFound(detail=f"Module ID {id} Not Found")
 
 
-@router.post("/", response_model=ModuleDetailWriteOutput, status_code=201)
+@router.post("/", response_model=ModuleDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_locations"))])
 def create_module(
-    module_input: ModuleInput, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))
+    module_input: ModuleInput, session: Session = Depends(get_session)
 ) -> Module:
     """
     Create a module:
-
-    **Args:**
-    - ModuleInput: Input data for the new module.
-
-    **Returns:**
-    - Module: The newly created module.
-
-    **Raises:**
-    - HTTPException: If an error occurs during module creation.
-
-    **Notes:**
-    - **building_id**: Required integer id for related building
-    - **module_number**: Required unique string for each module
     """
     try:
         new_module = Module(**module_input.model_dump())
@@ -124,22 +106,12 @@ def create_module(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/{id}", response_model=ModuleDetailWriteOutput)
+@router.patch("/{id}", response_model=ModuleDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_locations"))])
 def update_module(
-    id: int, module: ModuleUpdateInput, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))
+    id: int, module: ModuleUpdateInput, session: Session = Depends(get_session)
 ):
     """
     Update a module by its ID.
-
-    **Args:**
-    - id: The ID of the module to update.
-    - Module Update Input: The updated module data.
-
-    **Returns:**
-    - Module Detail Write Output: The updated module.
-
-    **Raises:**
-    - HTTPException: If the module is not found.
     """
     existing_module = session.get(Module, id)
 
@@ -160,27 +132,36 @@ def update_module(
     return existing_module
 
 
-@router.delete("/{id}")
-def delete_module(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_locations"))):
+@router.delete("/{id}", dependencies=[Depends(RequiresPermission("can_manage_locations"))])
+def delete_module(id: int, session: Session = Depends(get_session)):
     """
     Delete a module by its ID.
-
-    **Args:**
-    - id: The ID of the module.
-
-    **Raises:**
-    - HTTPException: If the module is not found.
-
-    **Returns:**
-    - None
     """
     module = session.get(Module, id)
     if module:
+        # Check for items on any shelf in this module
+        items_count_query = (
+            select(func.count(ShelfPosition.id))
+            .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
+            .join(Ladder, Shelf.ladder_id == Ladder.id)
+            .join(Side, Ladder.side_id == Side.id)
+            .join(Aisle, Side.aisle_id == Aisle.id)
+            .where(Aisle.module_id == id)
+            .where(
+                (ShelfPosition.tray != None) | (ShelfPosition.non_tray_item != None)
+            )
+        )
+        items_count = session.execute(items_count_query).scalar()
+
+        if items_count > 0:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot delete Module {module.module_number}: {items_count} items are shelved in its aisles."
+            )
+
         session.delete(module)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Module ID {id} Deleted Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Module ID {id} Not Found")

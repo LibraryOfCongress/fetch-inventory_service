@@ -4,17 +4,17 @@
     {
       "name": "Collections & Management",
       "!owner_tier_id": {
-          "model": "app.models.owner_tiers.OwnerTier",
-          "filter": {
-            "level": 2
-          }
-        },
-        "!parent_owner_id": {
-          "model":"app.models.owners.Owner",
-          "filter": {
-            "name": "Library of Congress"
-          }
+        "model": "app.models.owner_tiers.OwnerTier",
+        "filter": {
+          "level": 2
         }
+      },
+      "!parent_owner_id": {
+        "model": "app.models.owners.Owner",
+        "filter": {
+          "name": "Library of Congress"
+        }
+      }
     },
     {
       "name": "Congressional Research Services",
@@ -25,7 +25,7 @@
         }
       },
       "!parent_owner_id": {
-        "model":"app.models.owners.Owner",
+        "model": "app.models.owners.Owner",
         "filter": {
           "name": "Library of Congress"
         }
@@ -40,7 +40,7 @@
         }
       },
       "!parent_owner_id": {
-        "model":"app.models.owners.Owner",
+        "model": "app.models.owners.Owner",
         "filter": {
           "name": "Brethren of the Coast"
         }
@@ -55,7 +55,7 @@
         }
       },
       "!parent_owner_id": {
-        "model":"app.models.owners.Owner",
+        "model": "app.models.owners.Owner",
         "filter": {
           "name": "Consortium of Hobbits"
         }

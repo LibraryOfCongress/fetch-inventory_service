@@ -1,0 +1,2303 @@
+{
+  "alembic_version": {
+    "columns": {
+      "version_num": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "barcode_types": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('barcode_types_id_seq'::regclass)"
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      },
+      "allowed_pattern": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "aisles": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('aisles_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "module_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "aisle_number_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "sort_priority": {
+        "type": "smallint",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "barcodes": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": "NO",
+        "default": "gen_random_uuid()"
+      },
+      "type_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "withdrawn": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": "false"
+      },
+      "value": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "aisle_numbers": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('aisle_numbers_id_seq'::regclass)"
+      },
+      "number": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "buildings": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('buildings_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "side_orientations": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('side_orientations_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "sides": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('sides_id_seq'::regclass)"
+      },
+      "aisle_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "side_orientation_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "ladder_numbers": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('ladder_numbers_id_seq'::regclass)"
+      },
+      "number": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "modules": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('modules_id_seq'::regclass)"
+      },
+      "building_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "module_number": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "ladders": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('ladders_id_seq'::regclass)"
+      },
+      "ladder_number_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "side_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "sort_priority": {
+        "type": "smallint",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "container_types": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('container_types_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "type": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "shelf_numbers": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('shelf_numbers_id_seq'::regclass)"
+      },
+      "number": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "shelf_position_numbers": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('shelf_position_numbers_id_seq'::regclass)"
+      },
+      "number": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "accession_jobs": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('accession_jobs_id_seq'::regclass)"
+      },
+      "trayed": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": null
+      },
+      "user_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "run_time": {
+        "type": "interval",
+        "nullable": "NO",
+        "default": "'00:00:00'::interval"
+      },
+      "last_transition": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "container_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "media_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "size_class_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "workflow_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "created_by_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "owners": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('owners_id_seq'::regclass)"
+      },
+      "owner_tier_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "parent_owner_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "owner_tiers": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('owner_tiers_id_seq'::regclass)"
+      },
+      "level": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "shelf_positions": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('shelf_positions_id_seq'::regclass)"
+      },
+      "shelf_position_number_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "shelf_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "internal_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "media_types": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('media_types_id_seq'::regclass)"
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "conveyance_bins": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('conveyance_bins_id_seq'::regclass)"
+      },
+      "barcode_id": {
+        "type": "uuid",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "subcollections": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('subcollections_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "verification_jobs": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('verification_jobs_id_seq'::regclass)"
+      },
+      "trayed": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "user_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "last_transition": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "run_time": {
+        "type": "interval",
+        "nullable": "NO",
+        "default": "'00:00:00'::interval"
+      },
+      "accession_job_id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "container_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "shelving_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": null
+      },
+      "media_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "size_class_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "workflow_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "created_by_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "trays": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('trays_id_seq'::regclass)"
+      },
+      "accession_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "verification_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "container_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "barcode_id": {
+        "type": "uuid",
+        "nullable": "YES",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "shelf_position_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "accession_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "shelved_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawal_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "media_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "conveyance_bin_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "size_class_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "scanned_for_accession": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "collection_accessioned": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "scanned_for_verification": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "collection_verified": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "shelving_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "shelf_position_proposed_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "scanned_for_shelving": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": "false"
+      },
+      "withdrawn_barcode_id": {
+        "type": "uuid",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_internal_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_loc_bcodes": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "items": {
+    "columns": {
+      "scanned_for_refile_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "barcode_id": {
+        "type": "uuid",
+        "nullable": "YES",
+        "default": null
+      },
+      "tray_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "scanned_for_accession": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "scanned_for_verification": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "scanned_for_refile_queue": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": "false"
+      },
+      "scanned_for_refile_queue_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_barcode_id": {
+        "type": "uuid",
+        "nullable": "YES",
+        "default": null
+      },
+      "scanned_for_refile": {
+        "type": "boolean",
+        "nullable": "YES",
+        "default": null
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('items_id_seq'::regclass)"
+      },
+      "subcollection_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "accession_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "verification_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "accession_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawal_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "media_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "container_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "size_class_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": null
+      },
+      "title": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "volume": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "condition": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "arbitrary_data": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_internal_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_loc_bcodes": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "shelving_jobs": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('shelving_jobs_id_seq'::regclass)"
+      },
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": null
+      },
+      "user_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "run_time": {
+        "type": "interval",
+        "nullable": "YES",
+        "default": null
+      },
+      "last_transition": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "building_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "origin": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": "'Verification'::shelving_origin"
+      },
+      "created_by_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "permissions": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('permissions_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      },
+      "description": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "size_class": {
+    "columns": {
+      "depth": {
+        "type": "numeric",
+        "nullable": "NO",
+        "default": null
+      },
+      "width": {
+        "type": "numeric",
+        "nullable": "NO",
+        "default": null
+      },
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('size_class_id_seq'::regclass)"
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "height": {
+        "type": "numeric",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      },
+      "short_name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "group_permissions": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('group_permissions_id_seq'::regclass)"
+      },
+      "group_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "permission_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "delivery_locations": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('delivery_locations_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "address": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "priorities": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('priorities_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "value": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "request_types": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('request_types_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "type": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "users": {
+    "columns": {
+      "fetch_auth_expiration": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('users_id_seq'::regclass)"
+      },
+      "fetch_auth_token": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "first_name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      },
+      "last_name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      },
+      "email": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "pick_lists": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('pick_lists_id_seq'::regclass)"
+      },
+      "user_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": null
+      },
+      "building_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "last_transition": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "run_time": {
+        "type": "interval",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "created_by_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "groups": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('groups_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "user_groups": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('user_groups_id_seq'::regclass)"
+      },
+      "user_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "group_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "non_tray_items": {
+    "columns": {
+      "scanned_for_refile_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "barcode_id": {
+        "type": "uuid",
+        "nullable": "YES",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "container_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "subcollection_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "accession_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "verification_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "accession_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawal_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "media_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "size_class_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": null
+      },
+      "scanned_for_accession": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "scanned_for_verification": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": null
+      },
+      "shelving_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "shelf_position_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "shelf_position_proposed_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "scanned_for_shelving": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": "false"
+      },
+      "scanned_for_refile_queue": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": "false"
+      },
+      "scanned_for_refile_queue_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_barcode_id": {
+        "type": "uuid",
+        "nullable": "YES",
+        "default": null
+      },
+      "shelved_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "YES",
+        "default": null
+      },
+      "scanned_for_refile": {
+        "type": "boolean",
+        "nullable": "YES",
+        "default": null
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('non_tray_items_id_seq'::regclass)"
+      },
+      "condition": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_internal_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_loc_bcodes": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdrawn_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "item_withdrawals": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('item_withdrawals_id_seq'::regclass)"
+      },
+      "item_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "withdraw_job_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "requests": {
+    "columns": {
+      "requested_by_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "request_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "item_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "non_tray_item_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "delivery_location_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "priority_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": "'New'::request_status"
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('requests_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "building_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "pick_list_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "fulfilled": {
+        "type": "boolean",
+        "nullable": "NO",
+        "default": "false"
+      },
+      "batch_upload_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "external_request_id": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "requestor_name": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "refile_jobs": {
+    "columns": {
+      "id": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "nextval('refile_jobs_id_seq'::regclass)"
+      },
+      "assigned_user_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "run_time": {
+        "type": "interval",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": "'Created'::refile_job_status_enum"
+      },
+      "last_transition": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "created_by_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "non_tray_item_withdrawals": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('non_tray_item_withdrawals_id_seq'::regclass)"
+      },
+      "non_tray_item_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "withdraw_job_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "refile_items": {
+    "columns": {
+      "item_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "refile_job_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('refile_items_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": "CURRENT_TIMESTAMP"
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": "CURRENT_TIMESTAMP"
+      }
+    }
+  },
+  "refile_non_tray_items": {
+    "columns": {
+      "non_tray_item_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "refile_job_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('refile_non_tray_items_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": "CURRENT_TIMESTAMP"
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": "CURRENT_TIMESTAMP"
+      }
+    }
+  },
+  "tray_withdrawals": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('tray_withdrawals_id_seq'::regclass)"
+      },
+      "tray_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "withdraw_job_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "withdraw_jobs": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('withdraw_jobs_id_seq'::regclass)"
+      },
+      "assigned_user_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "last_transition": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "run_time": {
+        "type": "interval",
+        "nullable": "NO",
+        "default": null
+      },
+      "pick_list_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": "'Created'::withdraw_status"
+      },
+      "created_by_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "workflow": {
+    "columns": {
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('workflow_id_seq'::regclass)"
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "batch_uploads": {
+    "columns": {
+      "status": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": "'New'::batch_upload_status_enum"
+      },
+      "user_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "withdraw_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('batch_uploads_id_seq'::regclass)"
+      },
+      "file_size": {
+        "type": "bigint",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "file_name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      },
+      "file_type": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "items_retrieval_events": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('items_retrieval_events_id_seq'::regclass)"
+      },
+      "item_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "pick_list_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "non_tray_items_retrieval_events": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('non_tray_items_retrieval_events_id_seq'::regclass)"
+      },
+      "non_tray_item_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "pick_list_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "shelf_types": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('shelf_types_id_seq'::regclass)"
+      },
+      "size_class_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "max_capacity": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "type": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "shelves": {
+    "columns": {
+      "available_space": {
+        "type": "smallint",
+        "nullable": "NO",
+        "default": "0"
+      },
+      "barcode_id": {
+        "type": "uuid",
+        "nullable": "YES",
+        "default": null
+      },
+      "height": {
+        "type": "numeric",
+        "nullable": "NO",
+        "default": null
+      },
+      "width": {
+        "type": "numeric",
+        "nullable": "NO",
+        "default": null
+      },
+      "depth": {
+        "type": "numeric",
+        "nullable": "NO",
+        "default": null
+      },
+      "container_type_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "shelf_number_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "ladder_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "sort_priority": {
+        "type": "smallint",
+        "nullable": "YES",
+        "default": null
+      },
+      "shelf_type_id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": null
+      },
+      "id": {
+        "type": "integer",
+        "nullable": "NO",
+        "default": "nextval('shelves_id_seq'::regclass)"
+      },
+      "internal_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "shelving_job_discrepancies": {
+    "columns": {
+      "assigned_user_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "shelving_job_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "tray_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "non_tray_item_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "size_class_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('shelving_job_discrepancies_id_seq'::regclass)"
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "error": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "assigned_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "pre_assigned_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "verification_changes": {
+    "columns": {
+      "change_type": {
+        "type": "USER-DEFINED",
+        "nullable": "YES",
+        "default": null
+      },
+      "workflow_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('verification_changes_id_seq'::regclass)"
+      },
+      "completed_by_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "tray_barcode_value": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "item_barcode_value": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  },
+  "audit_log": {
+    "columns": {
+      "original_values": {
+        "type": "json",
+        "nullable": "NO",
+        "default": null
+      },
+      "new_values": {
+        "type": "json",
+        "nullable": "NO",
+        "default": null
+      },
+      "updated_at": {
+        "type": "timestamp without time zone",
+        "nullable": "NO",
+        "default": "CURRENT_TIMESTAMP"
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('audit_log_id_seq'::regclass)"
+      },
+      "updated_by": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      },
+      "last_action": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "updated_by_user_id": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "table_name": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      },
+      "record_id": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      },
+      "operation_type": {
+        "type": "character varying",
+        "nullable": "NO",
+        "default": null
+      }
+    }
+  },
+  "move_discrepancies": {
+    "columns": {
+      "update_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "tray_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "item_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "non_tray_item_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "container_type_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "assigned_user_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "owner_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "size_class_id": {
+        "type": "integer",
+        "nullable": "YES",
+        "default": null
+      },
+      "create_dt": {
+        "type": "timestamp with time zone",
+        "nullable": "NO",
+        "default": null
+      },
+      "id": {
+        "type": "bigint",
+        "nullable": "NO",
+        "default": "nextval('move_discrepancies_id_seq'::regclass)"
+      },
+      "error": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "original_assigned_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      },
+      "current_assigned_location": {
+        "type": "character varying",
+        "nullable": "YES",
+        "default": null
+      }
+    }
+  }
+}

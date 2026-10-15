@@ -1,32 +1,31 @@
-import sqlalchemy as sa
+# /app/models/side_orientations.py - ULTIMATE, FINAL CORRECTED V2
 
+import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import SmallInteger, String, VARCHAR, Integer, ForeignKey # <-- Ensure ForeignKey is imported
+from sqlalchemy.schema import UniqueConstraint # <-- Ensure UniqueConstraint is imported
 
 from typing import Optional, List
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy.schema import UniqueConstraint
+
+from app.database.base import Base
 
 
-class SideOrientation(SQLModel, table=True):
+class SideOrientation(Base): 
     """
     Model to represent the side orientations (Left, Right).
-        SideOrientation is a Side configuration in an Aisle.
-
-      id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
     """
 
     __tablename__ = "side_orientations"
-    __table_args__ = (UniqueConstraint("name", name="uq_side_orientation_name"),)
+    # Primary Key
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, autoincrement=True)
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.SmallInteger, primary_key=True), default=None)
-    name: str = Field(sa_column=sa.Column(sa.VARCHAR(5), nullable=False, index=True))
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-
+    # Name field (unique)
+    name: Mapped[str] = mapped_column(String(25), nullable=False, unique=True)
+    
+    # --- RELATIONSHIPS ---
     # Sides in xyz orientation
-    sides: List["Side"] = Relationship(back_populates="side_orientation")
+    sides: Mapped[List["Side"]] = relationship(
+        back_populates="side_orientation",
+        primaryjoin="Side.side_orientation_id==SideOrientation.id" # <-- FINAL FIX
+    )

@@ -4,7 +4,7 @@ from sqlalchemy import event
 from sqlalchemyseed import load_entities_from_json, HybridSeeder
 from sqlalchemy.orm import Session
 
-from app.events import generate_location, generate_shelf_location
+
 from app.models.shelf_positions import ShelfPosition
 from app.models.shelves import Shelf
 from app.seed.seeder_session import get_session
@@ -88,7 +88,7 @@ def generate_shelf_barcodes_for_system():
 
 
 def enable_shelf_insert_listener():
-    event.listen(Shelf, "after_insert", generate_shelf_location)
+    pass
 
 def generate_shelves_for_system():
     inventory_logger.info("Generating shelves")
@@ -137,7 +137,7 @@ def generate_shelves_for_system():
                 shelf["!shelf_type_id"]["filter"]["id"] = shelf_type_id
                 # get max Ok,
                 shelf["!owner_id"]["filter"]["name"] = owner
-                old_shelf_num = shelf["!shelf_number_id"]["filter"]["number"]
+                old_shelf_num = shelf.get("shelf_number", 1)
                 # if old_shelf_num == 1:
                 #     if i > 0: #skip first pass
                 #         new_shelf_num = 2
@@ -153,7 +153,7 @@ def generate_shelves_for_system():
                     new_shelf_num = 1
                 else:
                     new_shelf_num = old_shelf_num + 1
-                shelf["!shelf_number_id"]["filter"]["number"] = new_shelf_num
+                shelf["shelf_number"] = new_shelf_num
                 old_ladder_id = shelf["!ladder_id"]["filter"]["id"]
                 if new_shelf_num == 1:
                     if i > 0:  # skip first pass
@@ -176,42 +176,44 @@ def generate_shelves_for_system():
 
 
 def enable_after_insert_listener():
-    event.listen(ShelfPosition, "after_insert", generate_location)
+    pass
 
 
 def generate_shelf_positions_for_system():
-    inventory_logger.info("Generating shelf positions")
-    shelf_pos_session = get_seeder_session()
-    shelf_pos_seeder = HybridSeeder(shelf_pos_session)
-    shelf_pos_fixture_path = os.path.join(
-        current_dir, "fixtures", "entities", "shelf_positions.json"
-    )
+    """
+    Generates ShelfPosition rows for every shelf in the database.
+    The number of positions per shelf is determined by the shelf's
+    ShelfType.max_capacity (instead of using a hardcoded template).
+    """
+    inventory_logger.info("Generating shelf positions (dynamic capacity)")
+    session = get_seeder_session()
 
-    enable_after_insert_listener()
+    from app.models.shelves import Shelf
+    from app.models.shelf_types import ShelfType
+    from app.models.shelf_positions import ShelfPosition
 
-    with open(shelf_pos_fixture_path, "r") as file:
-        template_dict = json.load(file)
-        # we need 3 positions per shelf, template has 3
-        # 8 pos * 2432
-        num_shelves = 2432
-        for i in range(0, num_shelves):
-            shelf_pos_dict = template_dict.copy()
-            for shelf_position in shelf_pos_dict["data"]:
-                old_shelf_id = shelf_position["!shelf_id"]["filter"]["id"]
-                if i > 0:
-                    shelf_position["!shelf_id"]["filter"]["id"] = 1 + old_shelf_id
-            generated_file_path = os.path.join(
-                current_dir, "fixtures", "entities", "gen_shelf_positions.json"
+    # Query all shelves with their shelf_type eagerly loaded
+    shelves = session.query(Shelf).join(ShelfType).all()
+    total = len(shelves)
+
+    for idx, shelf in enumerate(shelves):
+        max_cap = shelf.shelf_type.max_capacity
+        for pos_num in range(1, max_cap + 1):
+            sp = ShelfPosition(
+                shelf_id=shelf.id,
+                position_number=pos_num,
             )
-            with open(generated_file_path, "w") as file:
-                json.dump(shelf_pos_dict, file)
-            # And seed
+            session.add(sp)
 
+        if (idx + 1) % 100 == 0 or (idx + 1) == total:
             inventory_logger.info(
-                f"\nGenerating {i + 1} of {num_shelves} shelf positions"
+                f"\nGenerating positions: {idx + 1} of {total} shelves "
+                f"(last shelf had {max_cap} positions)"
             )
-            shelf_pos_seeder.seed(load_entities_from_json(generated_file_path))
-            shelf_pos_seeder.session.commit()
+            session.flush()
+
+    session.commit()
+    inventory_logger.info(f"Shelf position generation complete for {total} shelves.")
 
 
 # Tuple-List of fixtures to load
@@ -221,7 +223,6 @@ fake_data = [
     ("entities", "tier_two_owners.json"),
     ("entities", "buildings.json"),
     ("entities", "modules.json"),
-    ("types", "aisle_numbers.json"),
     ("entities", "fort_meade_aisles.json"),  # 2 modules
     ("types", "side_orientations.json"),
     ("entities", "sides.json"),
@@ -230,10 +231,7 @@ fake_data = [
     ("types", "media_types.json"),
     ("types", "container_types.json"),
     ("types", "barcode_types.json"),
-    ("types", "ladder_numbers.json"),
-    ("types", "shelf_position_numbers.json"),
-    ("types", "shelf_numbers.json"),
-    ("types", "permissions.json"),
+    # ("types", "permissions.json"),  # Removed - permissions are seeded automatically by API startup
     ("entities", "users.json"),
     ("entities", "groups.json"),
     ("entities", "group_permissions.json"),
@@ -244,7 +242,7 @@ fake_data = [
 ]
 
 
-def seed_fake_data():
+def seed_fake_data(lightweight=False):
     inventory_logger.disabled = False
     inventory_logger.info("Staring process to seed fake data...")
     session = get_seeder_session()
@@ -257,6 +255,10 @@ def seed_fake_data():
 
         seeder.seed(load_seed(elements[0], elements[1]))
         seeder.session.commit()
+        
+    if lightweight:
+        inventory_logger.info("Skipping heavy generation loops for lightweight seed.")
+        return
     """
     Ladders would need either 8 files,
     so instead we'll script to generate ladders 1-38
@@ -268,7 +270,7 @@ def seed_fake_data():
     generate_shelf_barcodes_for_system()
     # 2432 shelves (8 shelves per ladder)
     generate_shelves_for_system()
-    # 41040 shelf positions (3 positions per shelf) to match capacity=3
+    # shelf positions (dynamic: based on shelf_type.max_capacity per shelf)
     generate_shelf_positions_for_system()
     # set available space on shelves
     load_available_space_calc()

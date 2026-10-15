@@ -1,30 +1,39 @@
+# /code/app/models/permissions.py - REFACRORED TO SQLALCHEMY V2
+
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, String, VARCHAR
 
-
-from datetime import datetime, timezone
 from typing import Optional, List
+from datetime import datetime, timezone
+# REMOVED: from sqlmodel import SQLModel, Field, Relationship
 
-from sqlmodel import SQLModel, Field, Relationship
-from app.models.group_permissions import GroupPermission
+# NEW IMPORT: Import the Base class you created
+from app.database.base import Base
+from app.models.group_permissions import GroupPermission # Dependency
 
 
-class Permission(SQLModel, table=True):
+class Permission(Base): # <--- Inherit from Base
     """
     Model to represent the Permissions table.
     """
 
-    __tablename__ = "permissions"
+    # NOTE: __tablename__ is handled by Base.
+    # __tablename__ = "permissions"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
-    name: str = Field(sa_column=sa.Column(sa.VARCHAR(50), nullable=False, unique=True))
-    description: str = Field(sa_column=sa.Column(sa.VARCHAR(255), nullable=True))
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    
+    # Name field (unique)
+    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    
+    # Description field
+    description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # REMOVED: create_dt and update_dt are inherited from Base
 
-    groups: List["Group"] = Relationship(
-        back_populates="permissions", link_model=GroupPermission
+    # --- RELATIONSHIP (Many-to-Many) ---
+    groups: Mapped[List["Group"]] = relationship(
+        back_populates="permissions", 
+        secondary=GroupPermission.__table__ # Use the __table__ attribute of the link model
     )

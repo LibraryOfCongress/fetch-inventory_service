@@ -1,28 +1,30 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timezone
 
 
 class SubcollectionInput(BaseModel):
     name: Optional[str] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "A Song of Ice and Fire"
             }
         }
+    )
 
 
 class SubcollectionUpdateInput(BaseModel):
     name: Optional[str] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "A Song of Ice and Fire"
             }
         }
+    )
 
 
 class SubcollectionBaseReadOutput(BaseModel):
@@ -31,13 +33,14 @@ class SubcollectionBaseReadOutput(BaseModel):
 
 
 class SubcollectionListOutput(SubcollectionBaseReadOutput):
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "A Song of Ice and Fire"
             }
         }
+    )
 
 
 class SubcollectionDetailWriteOutput(BaseModel):
@@ -46,8 +49,8 @@ class SubcollectionDetailWriteOutput(BaseModel):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "A Song of Ice and Fire",
@@ -55,6 +58,7 @@ class SubcollectionDetailWriteOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class SubcollectionDetailReadOutput(BaseModel):
@@ -65,8 +69,8 @@ class SubcollectionDetailReadOutput(BaseModel):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "A Song of Ice and Fire",
@@ -80,3 +84,4 @@ class SubcollectionDetailReadOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, constr, ConfigDict
 from app.schemas.size_class import SizeClassListOutput, SizeClassDetailReadOutput
 
 
@@ -10,14 +10,15 @@ class ShelfTypeInput(BaseModel):
     size_class_id: int
     max_capacity: int
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "type": "Tray",
                 "size_class_id": 1,
                 "max_capacity": 1
             }
         }
+    )
 
 
 class ShelfTypeUpdateInput(BaseModel):
@@ -26,14 +27,15 @@ class ShelfTypeUpdateInput(BaseModel):
     size_class_id: Optional[int] = None
     # update_dt: Optional[datetime] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "type": "Full",
                 "size_class_id": 1,
                 "max_capacity": 30
             }
         }
+    )
 
 
 class ShelfTypeReadOutput(BaseModel):
@@ -46,8 +48,8 @@ class ShelfTypeListOutput(ShelfTypeReadOutput):
     max_capacity: int
     size_class: Optional[SizeClassListOutput] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "type": "Long",
@@ -60,6 +62,7 @@ class ShelfTypeListOutput(ShelfTypeReadOutput):
                 }
             }
         }
+    )
 
 
 class ShelfTypeDetailOutput(ShelfTypeReadOutput):
@@ -69,8 +72,8 @@ class ShelfTypeDetailOutput(ShelfTypeReadOutput):
     update_dt: Optional[datetime] = None
     create_dt: Optional[datetime] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "type": "Long",
@@ -90,3 +93,4 @@ class ShelfTypeDetailOutput(ShelfTypeReadOutput):
                 "create_dt": "2023-11-27T12:34:56.789123Z"
             }
         }
+    )

@@ -8,12 +8,7 @@
           "module_number": "2"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 6
-        }
-      }
+      "aisle_number": 6
     },
     {
       "!module_id": {
@@ -22,12 +17,7 @@
           "module_number": "2"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 7
-        }
-      }
+      "aisle_number": 7
     },
     {
       "!module_id": {
@@ -36,12 +26,7 @@
           "module_number": "2"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 8
-        }
-      }
+      "aisle_number": 8
     },
     {
       "!module_id": {
@@ -50,12 +35,7 @@
           "module_number": "2"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 9
-        }
-      }
+      "aisle_number": 9
     },
     {
       "!module_id": {
@@ -64,12 +44,7 @@
           "module_number": "2"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 10
-        }
-      }
+      "aisle_number": 10
     }
   ]
 }

@@ -1,37 +1,49 @@
-import sqlalchemy as sa
+# /app/models/modules.py - REFACRORED TO SQLALCHEMY V2
 
+import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, String, VARCHAR, ForeignKey, UniqueConstraint
 
 from typing import Optional, List
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Relationship
+# REMOVED: from sqlmodel import SQLModel, Field, Relationship
 
-from app.models.buildings import Building
+# NEW IMPORT: Import the Base class you created
+from app.database.base import Base
+from app.models.buildings import Building # Keep this import for the relationship
 
 
-class Module(SQLModel, table=True):
+class Module(Base): # <--- Inherit from Base
     """
     Model to represent the Modules table.
     Modules belong to Buildings and have a Module Number.
-
-      id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
     """
 
-    __tablename__ = "modules"
+    # NOTE: __tablename__ is handled by Base.
+    # __tablename__ = "modules"
 
-    id: Optional[int] = Field(sa_column=sa.Column(sa.Integer, primary_key=True), default=None)
-    building_id: int = Field(foreign_key="buildings.id", nullable=False)
-    module_number: str = Field(
-        sa_column=sa.Column(sa.VARCHAR(50), nullable=True, unique=True)
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    # module_number must be unique within a building
+    __table_args__ = (
+        UniqueConstraint('building_id', 'module_number', name='uq_modules_building'),
     )
 
-    # building in a module
-    building: Building = Relationship(back_populates="modules")
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Foreign Key to Building
+    building_id: Mapped[int] = mapped_column(ForeignKey("buildings.id"), nullable=False)
+
+    # Module Number field
+    module_number: Mapped[str] = mapped_column(String(50), nullable=True)
+    
+    # REMOVED: create_dt and update_dt are handled by the Base class.
+
+    # --- RELATIONSHIPS ---
+    # building in a module (One-to-One/One-to-Many back-populating)
+    building: Mapped["Building"] = relationship(back_populates="modules")
+    
     # aisles in a module
-    aisles: List["Aisle"] = Relationship(back_populates="module")
+    aisles: Mapped[List["Aisle"]] = relationship(
+        back_populates="module",
+        cascade="all, delete-orphan"
+    )

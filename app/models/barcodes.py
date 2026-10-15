@@ -1,46 +1,85 @@
+# /app/models/barcodes.py - FINAL, UNBREAKABLE FIX FOR AmbiguousForeignKeysError
+
 import uuid
 import sqlalchemy as sa
-
-import uuid as uuid_pkg
-
-from typing import Optional
-from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Relationship
-
-
+from sqlalchemy.orm import Mapped, mapped_column, relationship, backref
+from sqlalchemy import BigInteger, VARCHAR, TIMESTAMP, ForeignKey, Boolean, Integer, String, CheckConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 
+from typing import Optional, List
+from datetime import datetime, timezone
+from app.database.base import Base 
+from app.models.barcode_types import BarcodeType # Imported for the unbreakable FK
 
-class Barcode(SQLModel, table=True):
+
+class Barcode(Base): # <--- Inherit from Base
     """
     Model to represent the Barcode table.
-
-    id: Optional is declared only for Python's needs before a db object is
-        created. This field cannot be null in the database.
     """
 
-    __tablename__ = "barcodes"
+    # --- CORE FIELDS ---
+    id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=None,
+        server_default=text("gen_random_uuid()")
+    )
+    
+    value: Mapped[str] = mapped_column(
+        String(255), 
+        nullable=False,
+        unique=True
+    )
+    
+    withdrawn: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+    
+    # Foreign Key to BarcodeType
+    # CRITICAL FIX: Use BarcodeType.__table__.c.id for explicit, unbreakable reference
+    type_id: Mapped[int] = mapped_column(
+        ForeignKey(BarcodeType.__table__.c.id), 
+        nullable=False
+    )
+    
+    # --- RELATIONSHIPS ---
 
-    id: Optional[uuid.UUID] = Field(
-        default_factory=uuid.uuid4,
-        sa_column=sa.Column(
-            UUID(as_uuid=True),
-            primary_key=True,
-            unique=True,
-            index=True,
-            server_default=sa.text("gen_random_uuid()")
-        )
-    )
-    value: str = Field(
-        sa_column=sa.Column(sa.VARCHAR(255), nullable=False, unique=True)
-    )
-    withdrawn: bool = Field(default=False, nullable=False)
-    type_id: int = Field(foreign_key="barcode_types.id")
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    # Problem relationship: fixed with explicit foreign_keys list
+    type: Mapped[Optional["BarcodeType"]] = relationship(
+        back_populates="barcodes",
+        foreign_keys=[type_id] 
     )
 
-    type: Optional["BarcodeType"] = Relationship(back_populates="barcodes")
+    # --- INVERSE RELATIONSHIPS (CRITICAL AMBIGUITY FIX) ---
+    # NOTE: primaryjoin is used to explicitly tell SQLAlchemy which FK to use.
+    
+    barcode_item: Mapped[List["Item"]] = relationship(
+        back_populates="barcode", 
+        viewonly=True, 
+        uselist=False,
+        primaryjoin="Item.barcode_id==Barcode.id"
+    )
+    withdrawn_item: Mapped[List["Item"]] = relationship(
+        back_populates="withdrawn_barcode", 
+        viewonly=True, 
+        uselist=False,
+        primaryjoin="Item.withdrawn_barcode_id==Barcode.id"
+    )
+    barcode_tray: Mapped[List["Tray"]] = relationship(
+        back_populates="barcode", viewonly=True, uselist=False,
+        primaryjoin="Tray.barcode_id==Barcode.id"
+    )
+    withdrawn_tray: Mapped[List["Tray"]] = relationship(
+        back_populates="withdrawn_barcode", viewonly=True, uselist=False,
+        primaryjoin="Tray.withdrawn_barcode_id==Barcode.id"
+    )
+    barcode_non_tray_item: Mapped[List["NonTrayItem"]] = relationship(
+        back_populates="barcode", viewonly=True, uselist=False,
+        primaryjoin="NonTrayItem.barcode_id==Barcode.id"
+    )
+    withdrawn_non_tray_item: Mapped[List["NonTrayItem"]] = relationship(
+        back_populates="withdrawn_barcode", viewonly=True, uselist=False,
+        primaryjoin="NonTrayItem.withdrawn_barcode_id==Barcode.id"
+    )

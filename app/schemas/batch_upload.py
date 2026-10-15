@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional, List
 
-from pydantic import BaseModel, field_validator, PositiveInt, PositiveFloat, computed_field
+from pydantic import BaseModel, field_validator, PositiveInt, PositiveFloat, computed_field, ConfigDict
 
 from app.schemas.requests import RequestListOutput
 from app.schemas.users import UserDetailWriteOutput
@@ -12,12 +12,13 @@ from app.models.batch_upload import BatchUploadStatus
 class BatchUploadInput(BaseModel):
     user_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "user_id": 1
             }
         }
+    )
 
 
 class BatchUploadUpdateInput(BaseModel):
@@ -37,8 +38,8 @@ class BatchUploadUpdateInput(BaseModel):
             )
         return value
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "New",
                 "file_name": "test.csv",
@@ -47,6 +48,7 @@ class BatchUploadUpdateInput(BaseModel):
                 "withdraw_job_id": 1
             }
         }
+    )
 
 
 class BatchUploadBaseOutput(BaseModel):
@@ -70,8 +72,8 @@ class BatchUploadListOutput(BatchUploadBaseOutput):
     def request_count(self) -> int:
         return len(self.requests)
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "New",
@@ -86,6 +88,7 @@ class BatchUploadListOutput(BatchUploadBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class BatchUploadDetailOutput(BatchUploadBaseOutput):
@@ -93,15 +96,18 @@ class BatchUploadDetailOutput(BatchUploadBaseOutput):
     file_name: str
     file_size: Optional[int] = None
     file_type: Optional[str] = None
+    # Outcome of async processing, polled by the frontend:
+    # {"message", "shelves_created", "error_count", "errors": [{line, error}]}
+    result: Optional[dict] = None
     withdraw_job_id: Optional[int] = None
     requests: Optional[List[RequestListOutput]] = None
     withdraw_job: Optional[WithdrawJobBaseOutput] = None
-    user: Optional[object] = None
+    user: Optional[UserDetailWriteOutput] = None
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "status": "New",
@@ -150,6 +156,7 @@ class BatchUploadDetailOutput(BatchUploadBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class LocationManagementSpreadSheetInput(BaseModel):
@@ -166,8 +173,8 @@ class LocationManagementSpreadSheetInput(BaseModel):
     depth: Optional[PositiveFloat] = None
     shelf_barcode: Optional[str] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "ladder_number": 1,
                 "ladder_sort_priority": 1,
@@ -183,3 +190,4 @@ class LocationManagementSpreadSheetInput(BaseModel):
                 "shelf_barcode": "RS123450"
             }
         }
+    )

@@ -1,28 +1,30 @@
 from typing import Optional, List
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, constr, ConfigDict
 from datetime import datetime, timezone
 
 
 class BuildingInput(BaseModel):
     name: constr(max_length=25, strict=False) = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Southpoint Circle"
             }
         }
+    )
 
 
 class BuildingUpdateInput(BaseModel):
     name: Optional[constr(max_length=25, strict=False)] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Southpoint Circle"
             }
         }
+    )
 
 
 class BuildingBaseOutput(BaseModel):
@@ -34,8 +36,8 @@ class BuildingBaseOutput(BaseModel):
 
 class BuildingListOutput(BuildingBaseOutput):
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": [
                 {
                     "id": 1,
@@ -45,12 +47,13 @@ class BuildingListOutput(BuildingBaseOutput):
                 }
             ]
         }
+    )
 
 
 class BuildingDetailWriteOutput(BuildingBaseOutput):
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Southpoint Circle",
@@ -58,6 +61,7 @@ class BuildingDetailWriteOutput(BuildingBaseOutput):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class AisleNumberNestedForBuilding(BaseModel):
@@ -66,7 +70,7 @@ class AisleNumberNestedForBuilding(BaseModel):
 
 class AisleNestedForBuilding(BaseModel):
     id: int
-    aisle_number: AisleNumberNestedForBuilding
+    aisle_number: int
 
 
 class ModuleNestedForBuilding(BaseModel):
@@ -81,8 +85,8 @@ class BuildingDetailReadOutput(BuildingBaseOutput):
     update_dt: datetime
     modules: List[ModuleNestedForBuilding]
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Southpoint Circle",
@@ -98,3 +102,4 @@ class BuildingDetailReadOutput(BuildingBaseOutput):
                 ]
             }
         }
+    )

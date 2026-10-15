@@ -1,51 +1,55 @@
 from typing import Optional
-from pydantic import BaseModel, constr, conint
+from pydantic import BaseModel, constr, conint, ConfigDict
 from datetime import datetime, timezone
 
 
 class PermissionInput(BaseModel):
     name: constr(max_length=50)
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "test"
             }
         }
+    )
 
 
 class PermissionUpdateInput(BaseModel):
     name: Optional[constr(max_length=50)] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "test"
             }
         }
+    )
 
 
 class PermissionBaseReadOutput(BaseModel):
     id: int
     name: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "test"
             }
         }
+    )
 
 
 class PermissionListOutput(PermissionBaseReadOutput):
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "test"
             }
         }
+    )
 
 
 class PermissionDetailWriteOutput(BaseModel):
@@ -55,8 +59,8 @@ class PermissionDetailWriteOutput(BaseModel):
     update_dt: datetime
     groups: list
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "test",
@@ -70,11 +74,12 @@ class PermissionDetailWriteOutput(BaseModel):
                 }]
             }
         }
+    )
 
 
 class PermissionDetailReadOutput(PermissionDetailWriteOutput):
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "test",
@@ -88,3 +93,4 @@ class PermissionDetailReadOutput(PermissionDetailWriteOutput):
                 }]
             }
         }
+    )

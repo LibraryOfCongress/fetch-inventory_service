@@ -1,37 +1,24 @@
+# /app/models/non_tray_Item_withdrawal.py - FINAL CIRCULAR IMPORT FIX (REVERTED FOR M2M)
+
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional 
 import sqlalchemy as sa
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import BigInteger, ForeignKey
+from sqlalchemy.schema import UniqueConstraint
 
-from sqlmodel import Field, SQLModel
+from app.database.base import Base
+from app.models.withdraw_jobs import WithdrawJob 
+from app.models.link_tables import (
+    NonTrayItemWithdrawalTable,
+)
 
+class NonTrayItemWithdrawal(Base): 
 
-class NonTrayItemWithdrawal(SQLModel, table=True):
-    """
-    Model to represent the non_tray_item_withdrawals table.
-        Non Tray Item withdrawals have a barcode, and while they may be a container,
-        we view these as a standalone entity and ignore their contents.
+    # CRITICAL FIX: Explicitly link the class to the external Table object
+    __table__ = NonTrayItemWithdrawalTable 
 
-      id: Optional is declared only for Python's needs before a db object is
-          created. This field cannot be null in the database.
-    """
-
-    __tablename__ = "non_tray_item_withdrawals"
-    __table_args__ = (
-        sa.UniqueConstraint(
-            "non_tray_item_id", "withdraw_job_id", name="uix_non_tray_item_withdrawals"
-        ),
-    )
-
-    id: Optional[int] = Field(sa_column=sa.Column(sa.BigInteger, primary_key=True), default=None)
-    non_tray_item_id: int = Field(
-        default=None, nullable=False, foreign_key="non_tray_items.id"
-    )
-    withdraw_job_id: int = Field(
-        default=None, nullable=False, foreign_key="withdraw_jobs.id"
-    )
-    create_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
-    update_dt: datetime = Field(
-        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    )
+    # Mapped columns are retained for type-checking and property access
+    id: Mapped[Optional[int]]
+    non_tray_item_id: Mapped[int]
+    withdraw_job_id: Mapped[int]

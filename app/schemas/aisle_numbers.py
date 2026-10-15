@@ -1,16 +1,22 @@
-from pydantic import BaseModel, conint
+# /code/app/schemas/aisle_numbers.py - REFACRORED TO PYDANTIC V2
+
+from pydantic import BaseModel, conint, Field, ConfigDict # <-- ADDED Field
 from datetime import datetime, timezone
+from typing import List, Annotated # <-- ADDED Annotated
 
 
+# CRITICAL V2 FIX: Replaced V1 'conint' with V2 Annotated[int, Field(...)]
 class AisleNumberInput(BaseModel):
-    number: conint(ge=0, le=32767)
+    # SmallInteger in SQL is 32767 max
+    number: Annotated[int, Field(ge=0, le=32767)]
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "number": 1
             }
         }
+    )
 
 
 class AisleNumberBaseOutput(BaseModel):
@@ -22,13 +28,14 @@ class AisleNumberListOutput(AisleNumberBaseOutput):
     id: int
     number: int
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "number": 1
             }
         }
+    )
 
 
 class AisleNumberDetailOutput(AisleNumberBaseOutput):
@@ -36,8 +43,8 @@ class AisleNumberDetailOutput(AisleNumberBaseOutput):
     update_dt: datetime
     aisles: list
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "number": 1,
@@ -61,3 +68,4 @@ class AisleNumberDetailOutput(AisleNumberBaseOutput):
                 ]
             }
         }
+    )

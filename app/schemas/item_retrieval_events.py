@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.owners import OwnerDetailReadOutput
 from app.schemas.items import ItemDetailReadOutput
@@ -13,14 +13,15 @@ class ItemRetrievalEventInput(BaseModel):
     owner_id: Optional[int] = None
     pick_list_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "item_id": 1,
                 "owner_id": 1,
                 "pick_list_id": 1,
             }
         }
+    )
 
 
 class ItemRetrievalEventUpdateInput(BaseModel):
@@ -29,8 +30,8 @@ class ItemRetrievalEventUpdateInput(BaseModel):
     pick_list_id: Optional[int] = None
     update_dt: Optional[datetime] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "item_id": 1,
                 "owner_id": 1,
@@ -38,6 +39,7 @@ class ItemRetrievalEventUpdateInput(BaseModel):
                 "update_dt": "2023-11-27T12:34:56.789123Z"
             }
         }
+    )
 
 
 class ItemRetrievalEventBaseOutput(BaseModel):
@@ -46,8 +48,8 @@ class ItemRetrievalEventBaseOutput(BaseModel):
     owner_id: Optional[int] = None
     pick_list_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "item_id": 1,
@@ -55,11 +57,12 @@ class ItemRetrievalEventBaseOutput(BaseModel):
                 "pick_list_id": 1
             }
         }
+    )
 
 
 class ItemRetrievalEventListOutput(ItemRetrievalEventBaseOutput):
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "item_id": 1,
@@ -67,6 +70,7 @@ class ItemRetrievalEventListOutput(ItemRetrievalEventBaseOutput):
                 "pick_list_id": 1
             }
         }
+    )
 
 
 class ItemRetrievalEventDetailOutput(ItemRetrievalEventBaseOutput):
@@ -76,8 +80,8 @@ class ItemRetrievalEventDetailOutput(ItemRetrievalEventBaseOutput):
     owner: Optional[OwnerDetailReadOutput] = None
     pick_list: Optional[PickListDetailOutput] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "item_id": 1,
@@ -257,3 +261,4 @@ class ItemRetrievalEventDetailOutput(ItemRetrievalEventBaseOutput):
                 }
             }
         }
+    )

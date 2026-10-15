@@ -6,7 +6,6 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models.shelves import Shelf
 from app.models.shelf_types import ShelfType
-from app.models.shelf_numbers import ShelfNumber
 from app.models.barcodes import Barcode
 from app.models.barcode_types import BarcodeType
 from app.models.container_types import ContainerType
@@ -42,7 +41,6 @@ def load_shelf(
     shelf_container_type,
     row_num,
     session,
-    shelf_number_dict,
     container_type_dict,
     owners_dict,
     barcode_types_dict,
@@ -76,45 +74,9 @@ def load_shelf(
     if owner_name == "Vertrans History Project":
         owner_name = "Veterans History Project"
 
-    # satisfy shelf_number_id
+    # satisfy shelf_number
     shelf_number = int(shelf_number)
-    if is_shelf_number_valid(shelf_number):
-        # get shelf_number object
-        shelf_number_id = shelf_number_dict.get(shelf_number)
-        # shelf_number_id = (
-        #     session.query(ShelfNumber.id)
-        #     .filter(ShelfNumber.number == shelf_number).scalar()
-        # )
-        if not shelf_number_id:
-            # create a shelf_number object
-            try:
-                # new_shelf_number_instance = ShelfNumber(number=shelf_number)
-                # session.add(new_shelf_number_instance)
-                # session.commit()
-                # shelf_number_id = new_shelf_number_instance.id
-                # ^ kept for ref. below version should handle parallel processing race condition
-                new_shelf_number_instance = session.execute((
-                    insert(ShelfNumber)
-                    .values(number=shelf_number)
-                    .on_conflict_do_nothing(index_elements=["number"])
-                    .returning(ShelfNumber.id)
-                )).fetchone()
-                session.commit()
-                shelf_number_id = new_shelf_number_instance[0]
-            except Exception as e:
-                success = 0
-                failure = 1
-                is_new_shelf_created = 0
-                error = {
-                    "row": row_num,
-                    "shelf_number": shelf_number,
-                    "barcode": shelf_barcode_value,
-                    "owner": owner_name,
-                    "type": shelf_legacy_type,
-                    "reason": f"{e}"
-                }
-                return [success, failure, error, is_new_shelf_created, processed_shelf_id, processed_shelf_type_id]
-    else:
+    if not is_shelf_number_valid(shelf_number):
         success = 0
         failure = 1
         is_new_shelf_created = 0
@@ -339,7 +301,7 @@ def load_shelf(
             .values(
                 barcode_id = barcode_id,
                 ladder_id = current_ladder_id,
-                shelf_number_id = shelf_number_id,
+                shelf_number = shelf_number,
                 owner_id = owner_id,
                 container_type_id = container_type_id,
                 shelf_type_id = shelf_type_id,

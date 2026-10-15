@@ -1,3 +1,5 @@
+# /app/utilities.py - FULL REFACRORED TO SQLALCHEMY V2
+
 import math
 from datetime import timedelta, datetime
 from enum import Enum
@@ -8,24 +10,22 @@ import logging
 import pandas as pd
 import pytz
 from datetime import timezone
-from sqlalchemy import and_, text, asc, desc, func, column, or_
-from sqlalchemy.orm import joinedload, aliased, RelationshipProperty
+# UPDATED IMPORTS: Remove sqlmodel, import select from sqlalchemy, Session from sqlalchemy.orm
+from sqlalchemy import and_, text, asc, desc, func, column, or_, not_, select, cast, String, update
+from sqlalchemy.orm import joinedload, aliased, RelationshipProperty, Session # Session is now imported from sqlalchemy.orm
 from sqlalchemy.inspection import inspect
-from sqlalchemy.sql import not_
-from sqlmodel import select, Session
 from fastapi import Header, Depends
 
 from app.database.session import get_session, session_manager
 from app.config.exceptions import NotFound, BadRequest
 from app.logger import inventory_logger
-from app.models.aisle_numbers import AisleNumber
+
 from app.models.barcodes import Barcode
 from app.models.buildings import Building
 from app.models.container_types import ContainerType
 from app.models.delivery_locations import DeliveryLocation
 from app.models.item_withdrawals import ItemWithdrawal
 from app.models.items import Item
-from app.models.ladder_numbers import LadderNumber
 from app.models.media_types import MediaType
 from app.models.modules import Module
 from app.models.aisles import Aisle
@@ -35,8 +35,8 @@ from app.models.owners import Owner
 from app.models.priorities import Priority
 from app.models.request_types import RequestType
 from app.models.requests import Request
-from app.models.shelf_numbers import ShelfNumber
-from app.models.shelf_position_numbers import ShelfPositionNumber
+
+from app.models.shelf_positions import ShelfPosition
 from app.models.side_orientations import SideOrientation
 from app.models.sides import Side
 from app.models.ladders import Ladder
@@ -48,6 +48,7 @@ from app.models.tray_withdrawal import TrayWithdrawal
 from app.models.trays import Tray
 from app.models.users import User
 from app.models.withdraw_jobs import WithdrawJob
+from app.models.owner_delivery_locations import OwnerDeliveryLocation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,22 +56,13 @@ LOGGER = logging.getLogger(__name__)
 def get_module_shelf_position(session, shelf_position):
     """
     Retrieves the module associated with a given shelf position.
-    **Args:**
-    -  Shelf Position: The shelf position object containing the shelf ID.
-
-    **Returns:**
-    - Module: The module associated with the shelf position.
-
-    **Raises:**
-    - NotFound: If any of the related objects (shelf, ladder, side, aisle, module)
-    are not found.
     """
-    shelf = (
-        session.query(Shelf)
+
+    shelf = session.scalars(
+        select(Shelf)
         .options(joinedload(Shelf.ladder))
-        .filter(Shelf.id == shelf_position.shelf_id)
-        .first()
-    )
+        .where(Shelf.id == shelf_position.shelf_id)
+    ).first()
 
     if not shelf:
         raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
@@ -98,23 +90,11 @@ def get_module_shelf_position(session, shelf_position):
     return module
 
 
-def get_location(session, shelf_position):
+def get_location(session: Session, shelf_position):
     """
     Retrieves the related location data for a given shelf position.
-
-    **Args:**
-    - shelf_position (ShelfPosition): The shelf position object containing the
-    shelf ID.
-
-    **Returns:**
-    dict: A dictionary containing the related location data. The dictionary has the
-    following keys:
-    - "aisle" (Aisle): The aisle object associated with the shelf position.
-    - "ladder" (Ladder): The ladder object associated with the shelf position.
-    - "shelf" (Shelf): The shelf object associated with the shelf position.
-
-    **Raises:**
-    - NotFound: If any of the related objects (shelf, ladder, aisle) are not found.
+    REFACTORED: Removed separate queries for lookup tables (AisleNumber, LadderNumber, ShelfNumber).
+    Numbers are now direct fields on the entity models.
     """
     shelf_query = select(Shelf).filter(Shelf.id == shelf_position.shelf_id)
 
@@ -132,9 +112,10 @@ def get_location(session, shelf_position):
         .where(Aisle.id == Side.aisle_id)
     )
 
-    shelf = session.exec(shelf_query).first()
-    ladder = session.exec(ladder_query).first()
-    aisle = session.exec(aisle_query).first()
+    # --- EXECUTION ---
+    shelf = session.execute(shelf_query).scalars().first()
+    ladder = session.execute(ladder_query).scalars().first()
+    aisle = session.execute(aisle_query).scalars().first()
 
     if not shelf:
         raise NotFound(detail=f"Shelf ID {shelf_position.shelf_id} Not Found")
@@ -145,34 +126,16 @@ def get_location(session, shelf_position):
     if not aisle:
         raise NotFound(detail=f"Aisle ID {ladder.aisle_id} Not Found")
 
-    shelf_number_query = select(ShelfNumber).where(
-        ShelfNumber.id == shelf.shelf_number_id
-    )
-
-    ladder_number_query = select(LadderNumber).where(
-        LadderNumber.id == ladder.ladder_number_id
-    )
-
-    aisle_number_query = select(AisleNumber).where(
-        AisleNumber.id == aisle.aisle_number_id
-    )
-
-    shelf_number = session.exec(shelf_number_query).first()
-    ladder_number = session.exec(ladder_number_query).first()
-    aisle_number = session.exec(aisle_number_query).first()
-
+    # Numbers are now direct fields on the entity objects — no separate lookup queries needed
     return {
         "aisle": aisle,
         "ladder": ladder,
         "shelf": shelf,
-        "shelf_number": shelf_number,
-        "ladder_number": ladder_number,
-        "aisle_number": aisle_number,
     }
 
 
 def process_containers_for_shelving(
-    session,
+    session: Session,
     container_type,
     containers,
     shelving_job_id,
@@ -183,23 +146,9 @@ def process_containers_for_shelving(
     ladder_id,
 ):
     """
-    Given a container and location params,
-    assigns an available shelf position id
+    Assigns an available shelf position id
     to both a container's proposed and actual shelf position.
-    Shelving Job completion later updates the actual shelf position
-    if needed.
-
-    Size classes among containers within the job can vary.
-
-    params:
-        - session is db session yielded in path operation
-        - container_type tracks 'Tray' or 'Non-Tray'
-        - Containers can either be tray or non-tray-item list
-        - location id's are integers
-
-    returns:
-        - Nothing
-        - Commits transactions
+    CRITICAL: session.exec() converted to session.execute()
     """
 
     # Initial filter conditions
@@ -222,8 +171,7 @@ def process_containers_for_shelving(
         select(
             ShelfPosition.id.label("shelf_position_id"),
             ShelfPosition.shelf_id,
-            ShelfPosition.location,
-            ShelfPositionNumber.number,
+            ShelfPosition.position_number.label("number"),
             Shelf.owner_id,
             Shelf.ladder_id,
             Ladder.side_id,
@@ -231,10 +179,6 @@ def process_containers_for_shelving(
             Aisle.module_id,
             Module.building_id,
             ShelfType.size_class_id,
-        )
-        .join(
-            ShelfPositionNumber,
-            ShelfPositionNumber.id == ShelfPosition.shelf_position_number_id,
         )
         .join(Shelf, Shelf.id == ShelfPosition.shelf_id)
         .join(ShelfType, ShelfType.id == Shelf.shelf_type_id)
@@ -285,12 +229,14 @@ def process_containers_for_shelving(
                     *conditions,
                 )
             )
-            .order_by(asc(ShelfPosition.location))
+            .order_by(ShelfPosition.id)
             .limit(num_to_assign)
         )
 
-        # Execute the query.
-        fetched_available_shelf_query = session.exec(available_shelf_query).all()
+        # --- EXECUTION CONVERSION ---
+        # Old: session.exec(available_shelf_query).all()
+        # New: session.execute(available_shelf_query).all()
+        fetched_available_shelf_query = session.execute(available_shelf_query).all()
 
         if len(fetched_available_shelf_query) < num_to_assign:
             raise NotFound(
@@ -330,8 +276,10 @@ def process_containers_for_shelving(
             )
         )
 
-        # Execute the query.
-        shelf_positions = session.exec(available_positions_query).all()
+        # --- EXECUTION CONVERSION ---
+        # Old: session.exec(available_positions_query).all()
+        # New: session.execute(available_positions_query).scalars().all()
+        shelf_positions = session.execute(available_positions_query).scalars().all()
 
         if len(shelf_positions) < num_to_assign:
             raise NotFound(
@@ -447,6 +395,24 @@ def get_refile_queue(params):
             NonTrayItem.container_type_id.in_(container_type_subquery)
         )
 
+    # Barcode value filtering - starts with matching
+    if params.barcode_value:
+        item_query_conditions.append(
+            Barcode.value.like(f"{params.barcode_value}%")
+        )
+        non_tray_item_query_conditions.append(
+            Barcode.value.like(f"{params.barcode_value}%")
+        )
+
+    # Item location filtering - case-insensitive contains matching
+    if params.item_location:
+        item_query_conditions.append(
+            ShelfPosition.location.ilike(f"%{params.item_location}%")
+        )
+        non_tray_item_query_conditions.append(
+            ShelfPosition.location.ilike(f"%{params.item_location}%")
+        )
+
     # Get items scanned for refile queue
     item_query_conditions.append(Item.scanned_for_refile_queue == True)
     non_tray_item_query_conditions.append(NonTrayItem.scanned_for_refile_queue == True)
@@ -456,17 +422,24 @@ def get_refile_queue(params):
             Item.id.label("id"),
             Barcode.value.label("barcode_value"),
             ShelfPosition.id.label("shelf_position_id"),
-            ShelfPosition.location.label("location"),
-            ShelfPosition.internal_location.label("internal_location"),
-            ShelfPositionNumber.number.label("shelf_position_number"),
+            func.concat(
+                 Building.name, "-", Module.module_number, "-", Aisle.aisle_number, "-",
+                 func.substr(cast(SideOrientation.name, String), 1, 1), "-", Ladder.ladder_number, "-",
+                 Shelf.shelf_number, "-", ShelfPosition.position_number
+            ).label("location"),
+            func.concat(
+                 cast(Building.id, String), "-", cast(Module.id, String), "-", cast(Aisle.id, String), "-", cast(Side.id, String), "-",
+                 cast(Ladder.id, String), "-", cast(Shelf.id, String), "-", cast(ShelfPosition.id, String)
+            ).label("internal_location"),
+            ShelfPosition.position_number.label("shelf_position_number"),
             ShelfPosition.shelf_id.label("shelf_id"),
-            ShelfNumber.number.label("shelf_number"),
+            Shelf.shelf_number.label("shelf_number"),
             Ladder.id.label("ladder_id"),
-            LadderNumber.number.label("ladder_number"),
+            Ladder.ladder_number.label("ladder_number"),
             Side.id.label("side_id"),
             SideOrientation.name.label("side_orientation"),
             Aisle.id.label("aisle_id"),
-            AisleNumber.number.label("aisle_number"),
+            Aisle.aisle_number.label("aisle_number"),
             Module.id.label("module_id"),
             Module.module_number.label("module_number"),
             Item.scanned_for_refile_queue.label("scanned_for_refile_queue"),
@@ -480,18 +453,11 @@ def get_refile_queue(params):
         .join(Tray, Item.tray_id == Tray.id)
         .join(ContainerType, Tray.container_type_id == ContainerType.id)
         .join(ShelfPosition, Tray.shelf_position_id == ShelfPosition.id)
-        .join(
-            ShelfPositionNumber,
-            ShelfPosition.shelf_position_number_id == ShelfPositionNumber.id,
-        )
         .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
-        .join(ShelfNumber, Shelf.shelf_number_id == ShelfNumber.id)
         .join(Ladder, Shelf.ladder_id == Ladder.id)
-        .join(LadderNumber, Ladder.ladder_number_id == LadderNumber.id)
         .join(Side, Ladder.side_id == Side.id)
         .join(SideOrientation, Side.side_orientation_id == SideOrientation.id)
         .join(Aisle, Side.aisle_id == Aisle.id)
-        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
         .join(Module, Aisle.module_id == Module.id)
         .join(Building, Module.building_id == Building.id)
         .join(MediaType, Item.media_type_id == MediaType.id)
@@ -507,17 +473,24 @@ def get_refile_queue(params):
             NonTrayItem.id.label("id"),
             Barcode.value.label("barcode_value"),
             ShelfPosition.id.label("shelf_position_id"),
-            ShelfPosition.location.label("location"),
-            ShelfPosition.internal_location.label("internal_location"),
-            ShelfPositionNumber.number.label("shelf_position_number"),
+            func.concat(
+                 Building.name, "-", Module.module_number, "-", Aisle.aisle_number, "-",
+                 func.substr(cast(SideOrientation.name, String), 1, 1), "-", Ladder.ladder_number, "-",
+                 Shelf.shelf_number, "-", ShelfPosition.position_number
+            ).label("location"),
+            func.concat(
+                 cast(Building.id, String), "-", cast(Module.id, String), "-", cast(Aisle.id, String), "-", cast(Side.id, String), "-",
+                 cast(Ladder.id, String), "-", cast(Shelf.id, String), "-", cast(ShelfPosition.id, String)
+            ).label("internal_location"),
+            ShelfPosition.position_number.label("shelf_position_number"),
             ShelfPosition.shelf_id.label("shelf_id"),
-            ShelfNumber.number.label("shelf_number"),
+            Shelf.shelf_number.label("shelf_number"),
             Ladder.id.label("ladder_id"),
-            LadderNumber.number.label("ladder_number"),
+            Ladder.ladder_number.label("ladder_number"),
             Side.id.label("side_id"),
             SideOrientation.name.label("side_orientation"),
             Aisle.id.label("aisle_id"),
-            AisleNumber.number.label("aisle_number"),
+            Aisle.aisle_number.label("aisle_number"),
             Module.id.label("module_id"),
             Module.module_number.label("module_number"),
             NonTrayItem.scanned_for_refile_queue.label("scanned_for_refile_queue"),
@@ -531,19 +504,12 @@ def get_refile_queue(params):
         )
         .select_from(NonTrayItem)
         .join(ShelfPosition, NonTrayItem.shelf_position_id == ShelfPosition.id)
-        .join(
-            ShelfPositionNumber,
-            ShelfPosition.shelf_position_number_id == ShelfPositionNumber.id,
-        )
         .join(ContainerType, NonTrayItem.container_type_id == ContainerType.id)
         .join(Shelf, ShelfPosition.shelf_id == Shelf.id)
-        .join(ShelfNumber, Shelf.shelf_number_id == ShelfNumber.id)
         .join(Ladder, Shelf.ladder_id == Ladder.id)
-        .join(LadderNumber, Ladder.ladder_number_id == LadderNumber.id)
         .join(Side, Ladder.side_id == Side.id)
         .join(SideOrientation, Side.side_orientation_id == SideOrientation.id)
         .join(Aisle, Side.aisle_id == Aisle.id)
-        .join(AisleNumber, Aisle.aisle_number_id == AisleNumber.id)
         .join(Module, Aisle.module_id == Module.id)
         .join(Building, Module.building_id == Building.id)
         .join(MediaType, NonTrayItem.media_type_id == MediaType.id)
@@ -584,13 +550,12 @@ def get_refile_queue(params):
 
 
 # Request Batch Upload Helper Functions
-def _fetch_existing_data(session, model, values, column):
-    return session.query(model).filter(column.in_(values)).all()
+    return session.scalars(select(model).where(column.in_(values))).all()
 
 
 def _fetch_building_id_from_item(session, item_id, item_type):
     if item_type == "Item":
-        item = session.query(Item).get(item_id)
+        item = session.get(Item, item_id)
         if item and item.tray:
             tray = item.tray
             if tray.shelf_position_id and tray.shelf_position:
@@ -608,7 +573,7 @@ def _fetch_building_id_from_item(session, item_id, item_type):
                                     if module.building_id:
                                         return module.building_id
     else:
-        non_tray_item = session.query(NonTrayItem).get(item_id)
+        non_tray_item = session.get(NonTrayItem, item_id)
         if (
             non_tray_item
             and non_tray_item.shelf_position_id
@@ -680,12 +645,10 @@ def _validate_items(session, items, request_data, errors):
         row_index = request_data[
             request_data["Item Barcode"].astype(str) == barcode_value
         ].index[0]
-        item = session.query(Item).filter(Item.barcode_id == barcode_id).first()
-        non_tray_item = (
-            session.query(NonTrayItem)
-            .filter(NonTrayItem.barcode_id == barcode_id)
-            .first()
-        )
+        item = session.scalars(select(Item).where(Item.barcode_id == barcode_id)).first()
+        non_tray_item = session.scalars(
+            select(NonTrayItem).where(NonTrayItem.barcode_id == barcode_id)
+        ).first()
 
         if item:
             _validate_item(
@@ -755,17 +718,15 @@ def _validate_item(
         return
 
     if item_type == "Items":
-        existing_request = (
-            session.query(Request)
-            .filter(Request.item_id == item.id, Request.fulfilled == False)
-            .first()
-        )
+        existing_request = session.scalars(
+            select(Request)
+            .where(Request.item_id == item.id, Request.fulfilled == False)
+        ).first()
     elif item_type == "Non tray item":
-        existing_request = (
-            session.query(Request)
-            .filter(Request.non_tray_item_id == item.id, Request.fulfilled == False)
-            .first()
-        )
+        existing_request = session.scalars(
+            select(Request)
+            .where(Request.non_tray_item_id == item.id, Request.fulfilled == False)
+        ).first()
 
     if existing_request or item.status == "Requested":
         errors.append(
@@ -808,15 +769,13 @@ def _validate_item(
 
 
 def _fetch_tray_shelf_position(session, tray_id):
-    return session.query(ShelfPosition).join(Tray).filter(Tray.id == tray_id).first()
+    return session.scalars(select(ShelfPosition).join(Tray).where(Tray.id == tray_id)).first()
 
 
 def _fetch_non_tray_shelf_position(session, shelf_position_id):
-    return (
-        session.query(ShelfPosition)
-        .filter(ShelfPosition.id == shelf_position_id)
-        .first()
-    )
+    return session.scalars(
+        select(ShelfPosition).where(ShelfPosition.id == shelf_position_id)
+    ).first()
 
 
 def validate_request_data(session, request_data: pd.DataFrame):
@@ -911,15 +870,68 @@ def validate_request_data(session, request_data: pd.DataFrame):
         barcodes_errored_indices.add(index)
         errored_indices.add(index)
 
+    # --- OPTIMIZED BULK FETCHING ---
+    # 1. Fetch all Barcodes
+    barcode_values = request_data["Item Barcode"].astype(str).tolist()
     barcodes = _fetch_existing_data(
         session,
         Barcode,
-        request_data["Item Barcode"].astype(str).tolist(),
+        barcode_values,
         Barcode.value,
     )
+    barcode_dict = {b.value: b.id for b in barcodes}
+
+    # 2. Fetch all Items and NonTrayItems with eager loading
+    item_ids = [b.id for b in barcodes]
+    
+    # Fetch Items with their Trays and ShelfPositions (limit round trips)
+    items = session.scalars(
+        select(Item)
+        .options(
+            joinedload(Item.tray).joinedload(Tray.shelf_position)
+        )
+        .where(Item.barcode_id.in_(item_ids))
+    ).all()
+    item_map = {item.barcode_id: item for item in items}
+
+    # Fetch NonTrayItems with ShelfPositions
+    non_tray_items = session.scalars(
+        select(NonTrayItem)
+        .options(joinedload(NonTrayItem.shelf_position))
+        .where(NonTrayItem.barcode_id.in_(item_ids))
+    ).all()
+    non_tray_item_map = {nti.barcode_id: nti for nti in non_tray_items}
+
+    # 3. Fetch all Active Requests for these items
+    # Collect all relevant Item / NonTrayItem IDs
+    found_item_ids = [i.id for i in items]
+    found_non_tray_ids = [nti.id for nti in non_tray_items]
+
+    active_requests = session.scalars(
+        select(Request)
+        .where(
+            or_(
+                Request.item_id.in_(found_item_ids),
+                Request.non_tray_item_id.in_(found_non_tray_ids)
+            )
+        )
+        .where(Request.fulfilled == False)
+    ).all()
+    
+    # Create sets of "requested" IDs for O(1) lookup
+    requested_item_ids = {r.item_id for r in active_requests if r.item_id}
+    requested_non_tray_ids = {r.non_tray_item_id for r in active_requests if r.non_tray_item_id}
 
     barcodes_errored_indices.update(
-        _validate_items(session, barcodes, request_data, errors)
+        _validate_items(
+            request_data, 
+            barcode_dict, 
+            item_map, 
+            non_tray_item_map, 
+            requested_item_ids, 
+            requested_non_tray_ids, 
+            errors
+        )
     )
     errored_indices.update(barcodes_errored_indices)
 
@@ -931,30 +943,186 @@ def validate_request_data(session, request_data: pd.DataFrame):
     return good_df, errored_df, {"errors": errors}
 
 
+def _validate_items(
+    request_data,
+    barcode_dict,
+    item_map,
+    non_tray_item_map,
+    requested_item_ids,
+    requested_non_tray_ids,
+    errors
+):
+    errored_indices = set()
+    barcode_values = set(request_data["Item Barcode"].astype(str))
+    missing_barcodes = barcode_values - barcode_dict.keys()
+
+    if missing_barcodes:
+        for barcode in missing_barcodes:
+            index = request_data[
+                request_data["Item Barcode"].astype(str) == barcode
+            ].index[0]
+            errors.append(
+                {
+                    "line": int(index) + 2,
+                    "barcode_value": barcode,
+                    "error": f"""Item with Barcode {barcode} not found"""
+                }
+            )
+            errored_indices.add(index)
+
+    # Validate existing barcodes
+    for barcode_value, barcode_id in barcode_dict.items():
+        # We only care about barcodes present in this upload file
+        if barcode_value not in barcode_values:
+            continue
+
+        row_index = request_data[
+            request_data["Item Barcode"].astype(str) == barcode_value
+        ].index[0]
+        
+        item = item_map.get(barcode_id)
+        non_tray_item = non_tray_item_map.get(barcode_id)
+
+        if item:
+            _validate_item(
+                item,
+                row_index,
+                barcode_value,
+                errors,
+                errored_indices,
+                "Items",
+                requested_item_ids
+            )
+        elif non_tray_item:
+            _validate_item(
+                non_tray_item,
+                row_index,
+                barcode_value,
+                errors,
+                errored_indices,
+                "Non tray item",
+                requested_non_tray_ids
+            )
+        else:
+            errors.append(
+                {
+                    "line": int(row_index) + 2,
+                    "barcode_value": barcode_value,
+                    "error": f"No items or non_trays found with barcode.",
+                }
+            )
+            errored_indices.add(row_index)
+
+    return errored_indices
+
+
+def _validate_item(
+    item, 
+    row_index, 
+    barcode_value, 
+    errors, 
+    errored_indices, 
+    item_type,
+    requested_ids  # Set of IDs that have active requests
+):
+    if item.status == "Out":
+        errors.append(
+            {
+                "line": int(row_index) + 2,
+                "barcode_value": barcode_value,
+                "error": f"{item_type} {barcode_value} status is not shelved",
+            }
+        )
+        errored_indices.add(row_index)
+        return
+    if item.status == "PickList":
+        errors.append(
+            {
+                "line": int(row_index) + 2,
+                "barcode_value": barcode_value,
+                "error": f"{item_type} {barcode_value} is already in pick list and cannot be requested",
+            }
+        )
+        errored_indices.add(row_index)
+        return
+    if item.status == "Withdrawn":
+        errors.append(
+            {
+                "line": int(row_index) + 2,
+                "barcode_value": barcode_value,
+                "error": f"{item_type} {barcode_value} has already been withdrawn",
+            }
+        )
+        errored_indices.add(row_index)
+        return
+
+    # Check overlap with existing requests using passed set (no separate query)
+    is_already_requested = item.id in requested_ids
+
+    if is_already_requested or item.status == "Requested":
+        errors.append(
+            {
+                "line": int(row_index) + 2,
+                "barcode_value": barcode_value,
+                "error": f"{item_type} {barcode_value} is already requested",
+            }
+        )
+        errored_indices.add(row_index)
+        return
+
+    if item_type == "Items":
+        # Access pre-fetched relationship (no separate query)
+        tray = item.tray
+        shelf_position = tray.shelf_position if tray else None
+
+        if (
+            not shelf_position
+            or not tray.scanned_for_shelving
+            or not tray.shelf_position_id
+        ):
+            errors.append(
+                {
+                    "line": int(row_index) + 2,
+                    "barcode_value": barcode_value,
+                    "error": f"{item_type} {barcode_value} is not shelved",
+                }
+            )
+            errored_indices.add(row_index)
+    else:
+        if not item.scanned_for_shelving or not item.shelf_position_id:
+            errors.append(
+                {
+                    "line": int(row_index) + 2,
+                    "barcode_value": barcode_value,
+                    "error": f"{item_type} {barcode_value} is not shelved",
+                }
+            )
+            errored_indices.add(row_index)
+
+
 def process_request_data(session, request_df: pd.DataFrame, batch_upload_id, requested_by_id):
     building_id = None
-    barcodes = _fetch_existing_data(
-        session, Barcode, request_df["Item Barcode"].astype(str).tolist(), Barcode.value
-    )
-    barcode_dict = _map_values_to_ids(barcodes, "value", "id")
-    items = _fetch_existing_data(session, Item, barcode_dict.values(), Item.barcode_id)
-    non_tray_items = _fetch_existing_data(
-        session, NonTrayItem, barcode_dict.values(), NonTrayItem.barcode_id
-    )
+    barcodes = request_df["Item Barcode"].tolist()
+    barcode_objs = _fetch_existing_data(session, Barcode, barcodes, Barcode.value)
+    barcode_dict = {b.value: str(b.id) for b in barcode_objs}
+    items = session.scalars(select(Item).where(Item.barcode_id.in_(
+        select(Barcode.id).where(Barcode.value.in_(barcodes))
+    ))).all()
+    non_tray_items = session.scalars(select(NonTrayItem).where(NonTrayItem.barcode_id.in_(
+        select(Barcode.id).where(Barcode.value.in_(barcodes))
+    ))).all()
 
     if items:
-        items_ids = [item.id for item in items]
-        session.query(Item).filter(Item.id.in_(items_ids)).update(
-            {"status": "Requested"}, synchronize_session=False
+        item_ids = [item.id for item in items]
+        session.execute(
+            update(Item).where(Item.id.in_(item_ids)).values(status="Requested")
         )
-        session.commit()
 
     if non_tray_items:
         non_tray_items_ids = [item.id for item in non_tray_items]
-        session.query(NonTrayItem).filter(
-            NonTrayItem.id.in_(non_tray_items_ids)
-        ).update({"status": "Requested"}, synchronize_session=False)
-        session.commit()
+        session.execute(
+            update(NonTrayItem).where(NonTrayItem.id.in_(non_tray_items_ids)).values(status="Requested")
+        )
 
     priorities = _fetch_existing_data(
         session, Priority, request_df["Priority"].tolist(), Priority.value
@@ -973,8 +1141,8 @@ def process_request_data(session, request_df: pd.DataFrame, batch_upload_id, req
     request_type_dict = _map_values_to_ids(request_types, "type", "id")
     delivery_location_dict = _map_values_to_ids(delivery_locations, "name", "id")
 
-    item_dict = _map_values_to_ids(items, "barcode_id", "id")
-    non_tray_item_dict = _map_values_to_ids(non_tray_items, "barcode_id", "id")
+    item_dict = {str(item.barcode_id): item.id for item in items}
+    non_tray_item_dict = {str(item.barcode_id): item.id for item in non_tray_items}
 
     request_df["priority_id"] = request_df["Priority"].map(priority_dict)
     request_df["request_type_id"] = request_df["Request Type"].map(request_type_dict)
@@ -1052,7 +1220,7 @@ COMPLETED_STATUS = "Completed"
 
 
 def _get_shelf_position(session: Session, tray_id: int):
-    return session.query(ShelfPosition).join(Tray).filter(Tray.id == tray_id).first()
+    return session.scalars(select(ShelfPosition).join(Tray).where(Tray.id == tray_id)).first()
 
 
 def _get_existing_withdrawals(session: Session, item_ids, item_type):
@@ -1060,11 +1228,10 @@ def _get_existing_withdrawals(session: Session, item_ids, item_type):
         "Item": ItemWithdrawal,
         "NonTrayItem": NonTrayItemWithdrawal,
     }
-    return (
-        session.query(model_map[item_type])
-        .filter(model_map[item_type].item_id.in_(item_ids))
-        .all()
-    )
+    return session.scalars(
+        select(model_map[item_type])
+        .where(model_map[item_type].item_id.in_(item_ids))
+    ).all()
 
 
 def _validate_withdraw_job_existing_item(existing_withdraws, job_id, status):
@@ -1096,17 +1263,17 @@ def _validate_withdraw_item(session, item, withdraw_job_id, barcode, index, erro
     _validate_item_status(
         item, index, item_errors, "Item must have status of ['In', 'Out']"
     )
-    shelf_position = (
-        session.query(ShelfPosition).join(Tray).filter(Tray.id == item.tray_id).first()
-    )
+    shelf_position = session.scalars(
+        select(ShelfPosition).join(Tray).where(Tray.id == item.tray_id)
+    ).first()
     if validate_item_not_shelved(shelf_position):
         errors.append({"line": int(index), "error": "Item is not shelved"})
-    existing_withdrawals = (
-        session.query(WithdrawJob)
+    
+    existing_withdrawals = session.scalars(
+        select(WithdrawJob)
         .join(ItemWithdrawal, WithdrawJob.id == ItemWithdrawal.withdraw_job_id)
-        .filter(ItemWithdrawal.item_id == item.id)
-        .all()
-    )
+        .where(ItemWithdrawal.item_id == item.id)
+    ).all()
     if _validate_withdraw_job_existing_item(
         existing_withdrawals, withdraw_job_id, "Completed"
     ):
@@ -1139,30 +1306,32 @@ def process_withdraw_job_data(
     # Fetch all necessary data in batch
     items = {
         item.barcode_id: item
-        for item in session.query(Item).filter(Item.barcode_id.in_(barcode_ids)).all()
+        for item in session.scalars(select(Item).where(Item.barcode_id.in_(barcode_ids))).all()
     }
     non_tray_items = {
         non_tray_item.barcode_id: non_tray_item
-        for non_tray_item in session.query(NonTrayItem)
-        .filter(NonTrayItem.barcode_id.in_(barcode_ids))
-        .all()
+        for non_tray_item in session.scalars(
+            select(NonTrayItem).where(NonTrayItem.barcode_id.in_(barcode_ids))
+        ).all()
     }
 
     # Fetch existing withdrawals in one batch query
     existing_withdrawals = {
         non_tray_item_id: withdraw_job_id
-        for non_tray_item_id, withdraw_job_id in session.query(
-            NonTrayItemWithdrawal.non_tray_item_id,
-            NonTrayItemWithdrawal.withdraw_job_id,
-        )
-        .filter(
-            NonTrayItemWithdrawal.non_tray_item_id.in_(
-                [item.id for item in non_tray_items.values()]  # Extract `id` values
+        for non_tray_item_id, withdraw_job_id in session.execute(
+            select(
+                NonTrayItemWithdrawal.non_tray_item_id,
+                NonTrayItemWithdrawal.withdraw_job_id,
             )
-        )
-        .all()
+            .where(
+                NonTrayItemWithdrawal.non_tray_item_id.in_(
+                    [item.id for item in non_tray_items.values()]  # Extract `id` values
+                )
+            )
+        ).all()
     }
 
+    # ... (rest of function is untouched) ...
     # Use a set for duplicate checks in withdraw_trays
     withdraw_tray_set = {(tw.tray_id, tw.withdraw_job_id) for tw in withdraw_trays}
 
@@ -1240,25 +1409,31 @@ def process_withdraw_job_data(
     return withdraw_items, withdraw_non_tray_items, withdraw_trays, {"errors": errors}
 
 
-async def start_session_with_user_id(audit_info: dict, session):
+async def start_session_with_user_id(audit_info: dict, session: Session):
     """
     This method is to add the user info for any database change.
     """
     setattr(session, "audit_info", audit_info)
     # sanitize names before execution
     stmt = text("select set_config('audit.user_name', :user_name, true)")
-    # session.execute(text(f"select set_config('audit.user_name', '{audit_info['name']}', true)"))
+    # NOTE: session.execute(stmt, ...) is V2 compatible
     session.execute(stmt, {"user_name": audit_info["name"]})
-    session.execute(text(f"select set_config('audit.user_id', '{audit_info['id']}', true)"))
+    
+    # CRITICAL FIX: Parameterized query to prevent SQL Injection
+    stmt_id = text("select set_config('audit.user_id', :user_id, true)")
+    session.execute(stmt_id, {"user_id": str(audit_info["id"])})
 
 
-def start_session_with_audit_info(audit_info: dict, session):
+def start_session_with_audit_info(audit_info: dict, session: Session):
     setattr(session, "audit_info", audit_info)
     # sanitize names before execution
     stmt = text("select set_config('audit.user_name', :user_name, true)")
-    # session.execute(text(f"select set_config('audit.user_name', '{audit_info['name']}', true)"))
+    # NOTE: session.execute(stmt, ...) is V2 compatible
     session.execute(stmt, {"user_name": audit_info["name"]})
-    session.execute(text(f"select set_config('audit.user_id', '{audit_info['id']}', true)"))
+    
+    # CRITICAL FIX: Parameterized query to prevent SQL Injection
+    stmt_id = text("select set_config('audit.user_id', :user_id, true)")
+    session.execute(stmt_id, {"user_id": str(audit_info["id"])})
 
 
 async def set_session_to_request(
@@ -1272,24 +1447,29 @@ async def set_session_to_request(
         await start_session_with_user_id(audit_info, session=request.state.db_session)
 
     return request
-    # if request.method != "GET":
-    #     with session_manager() as session:
-    #         request.state.db_session = session
-    #         session.exec(text(f"select set_config('audit.user_id', '{user_email}', true)"))
-    #         # await start_session_with_user_id(user_email, session=session)  # Explicitly pass session
-    # return request
 
 
 def get_sortable_fields(model):
     """
     Dynamically retrieves all column names from the SQLAlchemy model.
     """
+    # NOTE: inspect(model).c is V2 compatible
     return {column.key for column in inspect(model).c}
+
+
+_SORT_ALIASES = {
+    "request_type", "barcode_value", "building_name", "priority",
+    "media_type", "delivery_location", "owner", "size_class",
+    "size_class_short_name", "shelf_type", "container_type", "request_count",
+}
 
 
 def get_sorted_query(model, query, sort_params):
     """
     Sorts the query based on the provided sort parameters.
+    NOTE: This complex query builder uses V1-style query modification.
+    It should still work, but it's a future candidate for full V2 refactoring
+    using the select() statement for everything.
     """
     if sort_params.sort_order not in ["asc", "desc"]:
         raise BadRequest(
@@ -1297,16 +1477,24 @@ def get_sorted_query(model, query, sort_params):
         )
 
     sortable_fields = get_sortable_fields(model)
+    # Reject sort_by values that are neither a column on the model nor a known
+    # alias. (Without this check, unknown sort_by previously fell through the
+    # alias cascade silently and the query was returned unsorted — the function's
+    # tail `else: raise BadRequest` is unreachable because the outer if/elif is
+    # exhaustive.)
+    if sort_params.sort_by not in sortable_fields and sort_params.sort_by not in _SORT_ALIASES:
+        raise BadRequest(detail=f"Invalid sort parameter: {sort_params.sort_by}")
+
     if sort_params.sort_by not in sortable_fields:
         if sort_params.sort_order == "asc":
             if sort_params.sort_by == "request_type":
-                query = query.join(RequestType).order_by(asc(RequestType.name))
+                query = query.join(RequestType).order_by(asc(RequestType.type)) # Fixed to Type
             if sort_params.sort_by == "barcode_value":
                 query = query.join(Barcode).order_by(asc(Barcode.value))
             if sort_params.sort_by == "building_name":
                 query = query.join(Building).order_by(asc(Building.name))
             if sort_params.sort_by == "priority":
-                query = query.join(Priority).order_by(asc(Priority.name))
+                query = query.join(Priority).order_by(asc(Priority.value)) # Fixed to Value
             if sort_params.sort_by == "media_type":
                 query = query.join(MediaType).order_by(asc(MediaType.name))
             if sort_params.sort_by == "delivery_location":
@@ -1327,13 +1515,13 @@ def get_sorted_query(model, query, sort_params):
                 query = query.join(Request).order_by(asc(func.count(Request.id)))
         else:
             if sort_params.sort_by == "request_type":
-                query = query.join(RequestType).order_by(desc(RequestType.name))
+                query = query.join(RequestType).order_by(desc(RequestType.type)) # Fixed to Type
             if sort_params.sort_by == "barcode_value":
                 query = query.join(Barcode).order_by(desc(Barcode.value))
             if sort_params.sort_by == "building_name":
                 query = query.join(Building).order_by(desc(Building.name))
             if sort_params.sort_by == "priority":
-                query = query.join(Priority).order_by(desc(Priority.name))
+                query = query.join(Priority).order_by(desc(Priority.value)) # Fixed to Value
             if sort_params.sort_by == "media_type":
                 query = query.join(MediaType).order_by(desc(MediaType.name))
             if sort_params.sort_by == "delivery_location":
@@ -1371,3 +1559,31 @@ def get_sorted_query(model, query, sort_params):
 def is_tz_naive(dt: datetime) -> bool:
     """Checks if a date is timezone naive"""
     return dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None
+
+
+def check_batch_completion(session: Session, batch_upload_id: int):
+    """
+    Checks if all requests in a batch are completed.
+    If so, updates the batch status to 'Completed'.
+    Uses an optimized EXISTS query for performance.
+    """
+    from app.models.batch_upload import BatchUpload, BatchUploadStatus
+    from sqlalchemy import update, select
+
+    # Check if there are ANY requests in this batch that are NOT completed
+    # effectively: if exists(select 1 from requests where batch_id=X and status != 'Completed')
+    has_incomplete_requests = session.execute(
+        select(1).select_from(Request).where(
+            Request.batch_upload_id == batch_upload_id,
+            Request.status != "Completed"
+        ).limit(1)
+    ).scalar()
+
+    if not has_incomplete_requests:
+        # All requests are completed (or there are no requests), mark batch as Completed
+        session.execute(
+            update(BatchUpload)
+            .where(BatchUpload.id == batch_upload_id)
+            .values(status=BatchUploadStatus.Completed, update_dt=datetime.now(timezone.utc))
+        )
+        session.commit()

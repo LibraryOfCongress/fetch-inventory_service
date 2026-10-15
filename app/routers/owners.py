@@ -1,14 +1,19 @@
+# /code/app/routers/owners.py - REFACRORED TO SQLALCHEMY V2
+
 from typing import Optional, Union
 
+from fastapi.responses import Response
 from fastapi import APIRouter, HTTPException, Depends, Query
-from sqlmodel import Session, select
-from datetime import datetime, timezone
 from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlmodel import paginate
+# CRITICAL FIX: Changed from .ext.sqlmodel to .ext.sqlalchemy
+from fastapi_pagination.ext.sqlalchemy import paginate
+# CRITICAL FIX: Replaced from sqlmodel import Session, select
+from sqlalchemy.orm import Session # Session is imported from sqlalchemy.orm now
+from sqlalchemy import select     # select is imported from sqlalchemy now
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.database.session import get_session
-from app.permissions import require_permissions
 from app.filter_params import SortParams
 from app.models.owners import Owner
 from app.models.owner_tiers import OwnerTier
@@ -27,9 +32,12 @@ from app.config.exceptions import (
 )
 from app.sorting import BaseSorter
 
+from app.auth.dependencies import RequiresPermission, get_current_user_with_permissions
+
 router = APIRouter(
     prefix="/owners",
     tags=["owners"],
+    dependencies=[Depends(get_current_user_with_permissions)],
 )
 
 
@@ -41,20 +49,9 @@ def get_owner_list(
     parent_owner: Optional[str] = Query(None),
     sort_params: SortParams = Depends(),
     search: Optional[str] = Query(None, description="Search by Owner name"),
-    _: bool = Depends(require_permissions("can_manage_owners"))
 ) -> list:
     """
     Get a list of owners.
-
-    **Parameters:**
-    - owner_tier_id (int): The ID of the owner tier to filter by.
-    - parent_owner_id (int): The ID of the parent owner to filter by.
-    - sort_params (SortParams): The sorting parameters.
-    - search (Optional[str]): The search query.
-        - Name: Filter by owner name.
-
-    **Returns:**
-    - Owner List Output: The paginated list of owners.
     """
     # Create a query to select all Owner
     query = select(Owner)
@@ -70,8 +67,10 @@ def get_owner_list(
         query = query.where(Owner.parent_owner_id.is_(None))
     elif parent_owner_id is not None:
         query = query.where(Owner.parent_owner_id == int(parent_owner_id))
+        
     if parent_owner is not None:
-        parent_owner_subquery = select(Owner.id).where(Owner.name == parent_owner)
+        # V2 FIX: Use scalar_subquery() for subquery in WHERE clause
+        parent_owner_subquery = select(Owner.id).where(Owner.name == parent_owner).scalar_subquery()
         query = query.where(Owner.parent_owner_id == parent_owner_subquery)
 
     # Validate and Apply sorting based on sort_params
@@ -83,18 +82,9 @@ def get_owner_list(
 
 
 @router.get("/{id}", response_model=OwnerDetailReadOutput)
-def get_owner_detail(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_owners"))):
+def get_owner_detail(id: int, session: Session = Depends(get_session)):
     """
     Retrieve owner details by ID.
-
-    **Args:**
-    - id: The ID of the owner to retrieve.
-
-    **Returns:**
-    - Owner Detail Read Output: The owner details.
-
-    **Raises:**
-    - HTTPException: If the owner is not found.
     """
     owner = session.get(Owner, id)
     if owner:
@@ -103,26 +93,12 @@ def get_owner_detail(id: int, session: Session = Depends(get_session), _: bool =
     raise NotFound(detail=f"Owner ID {id} Not Found")
 
 
-@router.post("/", response_model=OwnerDetailWriteOutput, status_code=201)
+@router.post("/", response_model=OwnerDetailWriteOutput, status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def create_owner(
-    owner_input: OwnerInput, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_owners"))
+    owner_input: OwnerInput, session: Session = Depends(get_session)
 ) -> Owner:
     """
     Create an owner:
-
-    **Args:**
-    - Owner Input: The input data for creating the owner.
-
-    **Returns:**
-    - Owner Detail Write Output: The created owner.
-
-    **Raises:**
-    - None
-
-    **Notes:**
-    - **name**: Required string
-    - **owner_tier_id**: Required integer id for related owner tier
-    - **parent_owner_id**: Optional integer id for parent_owner
     """
     try:
         new_owner = Owner(**owner_input.model_dump())
@@ -130,17 +106,20 @@ def create_owner(
         # Check if the parent_owner_id is set
         if new_owner.parent_owner_id is not None:
             # Retrieve the parent owner
-            parent_owner = session.exec(
+            # CRITICAL V2 FIX: session.exec().first() -> session.execute(query).scalars().first()
+            parent_owner = session.execute(
                 select(Owner).where(Owner.id == new_owner.parent_owner_id)
-            ).first()
+            ).scalars().first()
             if parent_owner is None:
                 raise NotFound(detail=f"Owner ID {id} Not Found")
 
             # query new_owner.owner_tier to get proposed tier level
+            # CRITICAL V2 FIX: session.exec().first() -> session.execute(query).scalars().first()
             new_owner_tier_level = (
-                session.exec(
+                session.execute(
                     select(OwnerTier).where(OwnerTier.id == new_owner.owner_tier_id)
                 )
+                .scalars()
                 .first()
                 .level
             )
@@ -161,23 +140,12 @@ def create_owner(
         raise ValidationException(detail=f"{e}")
 
 
-@router.patch("/{id}", response_model=OwnerDetailWriteOutput)
+@router.patch("/{id}", response_model=OwnerDetailWriteOutput, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
 def update_owner(
-    id: int, owner: OwnerUpdateInput, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_owners"))
+    id: int, owner: OwnerUpdateInput, session: Session = Depends(get_session)
 ):
     """
     Update an existing owner.
-
-    **Args:**
-    - id: The ID of the owner to be updated.
-    - Owner Update Input: The updated owner information.
-
-    **Returns:**
-    - Owner Detail Write Output: The updated owner object.
-
-    Raises:
-    - HTTPException: If the owner with the given ID is not found.
-    - HTTPException: If an error occurs during the update process.
     """
     try:
         existing_owner = session.get(Owner, id)
@@ -193,9 +161,10 @@ def update_owner(
         # Check if the parent_owner_id is set
         if existing_owner.parent_owner_id is not None:
             # Retrieve the parent owner
-            parent_owner = session.exec(
+            # CRITICAL V2 FIX: session.exec().first() -> session.execute(query).scalars().first()
+            parent_owner = session.execute(
                 select(Owner).where(Owner.id == existing_owner.parent_owner_id)
-            ).first()
+            ).scalars().first()
             if parent_owner is None:
                 raise NotFound(detail="Parent Owner Not Found")
 
@@ -212,23 +181,16 @@ def update_owner(
 
         return existing_owner
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise InternalServerError(detail=f"{e}")
 
 
-@router.delete("/{id}")
-def delete_owner(id: int, session: Session = Depends(get_session), _: bool = Depends(require_permissions("can_manage_owners"))):
+@router.delete("/{id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def delete_owner(id: int, session: Session = Depends(get_session)):
     """
     Delete an owner by their ID.
-
-    **Args:**
-    - id: The ID of the owner to delete.
-
-    **Returns:**
-    - None
-
-    **Raises:**
-    - HTTPException: If the owner with the given ID does not exist.
     """
     owner = session.get(Owner, id)
 
@@ -236,8 +198,102 @@ def delete_owner(id: int, session: Session = Depends(get_session), _: bool = Dep
         session.delete(owner)
         session.commit()
 
-        return HTTPException(
-            status_code=204, detail=f"Owner ID {id} Deleted Successfully"
-        )
+        return Response(status_code=204)
 
     raise NotFound(detail=f"Owner ID {id} Not Found")
+
+
+# --- Owner-DeliveryLocation Association Endpoints ---
+
+
+@router.get("/{id}/delivery-locations", response_model=list)
+def get_owner_delivery_locations(id: int, session: Session = Depends(get_session)):
+    """
+    Get all delivery locations associated with an owner.
+    """
+    from app.models.owner_delivery_locations import OwnerDeliveryLocation
+    from app.models.delivery_locations import DeliveryLocation
+    
+    owner = session.get(Owner, id)
+    if not owner:
+        raise NotFound(detail=f"Owner ID {id} Not Found")
+    
+    # Query delivery locations for this owner
+    locations = session.execute(
+        select(DeliveryLocation)
+        .join(OwnerDeliveryLocation)
+        .where(OwnerDeliveryLocation.owner_id == id)
+    ).scalars().all()
+    
+    return [{"id": loc.id, "name": loc.name, "address": loc.address} for loc in locations]
+
+
+@router.post("/{id}/delivery-locations", status_code=201, dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def add_owner_delivery_location(
+    id: int,
+    delivery_location_id: int,
+    session: Session = Depends(get_session)
+):
+    """
+    Add a delivery location to an owner's allowed locations.
+    """
+    from app.models.owner_delivery_locations import OwnerDeliveryLocation
+    from app.models.delivery_locations import DeliveryLocation
+    
+    owner = session.get(Owner, id)
+    if not owner:
+        raise NotFound(detail=f"Owner ID {id} Not Found")
+    
+    delivery_location = session.get(DeliveryLocation, delivery_location_id)
+    if not delivery_location:
+        raise NotFound(detail=f"Delivery Location ID {delivery_location_id} Not Found")
+    
+    # Check if association already exists
+    existing = session.execute(
+        select(OwnerDeliveryLocation).where(
+            OwnerDeliveryLocation.owner_id == id,
+            OwnerDeliveryLocation.delivery_location_id == delivery_location_id
+        )
+    ).scalars().first()
+    
+    if existing:
+        raise ValidationException(detail="This delivery location is already associated with this owner")
+    
+    # Create association
+    new_association = OwnerDeliveryLocation(
+        owner_id=id,
+        delivery_location_id=delivery_location_id
+    )
+    session.add(new_association)
+    session.commit()
+    session.refresh(new_association)
+    
+    return {"id": new_association.id, "owner_id": id, "delivery_location_id": delivery_location_id}
+
+
+@router.delete("/{id}/delivery-locations/{delivery_location_id}", dependencies=[Depends(RequiresPermission("can_manage_list_configurations"))])
+def remove_owner_delivery_location(
+    id: int,
+    delivery_location_id: int,
+    session: Session = Depends(get_session)
+):
+    """
+    Remove a delivery location from an owner's allowed locations.
+    """
+    from app.models.owner_delivery_locations import OwnerDeliveryLocation
+    
+    association = session.execute(
+        select(OwnerDeliveryLocation).where(
+            OwnerDeliveryLocation.owner_id == id,
+            OwnerDeliveryLocation.delivery_location_id == delivery_location_id
+        )
+    ).scalars().first()
+    
+    if not association:
+        raise NotFound(detail="Association not found")
+    
+    session.delete(association)
+    session.commit()
+    
+    return {"detail": "Delivery location removed from owner"}
+

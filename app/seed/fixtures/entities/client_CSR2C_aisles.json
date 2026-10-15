@@ -8,12 +8,7 @@
           "module_number": "CSR2C"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 37
-        }
-      }
+      "aisle_number": 37
     },
     {
       "!module_id": {
@@ -22,12 +17,7 @@
           "module_number": "CSR2C"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 38
-        }
-      }
+      "aisle_number": 38
     },
     {
       "!module_id": {
@@ -36,12 +26,7 @@
           "module_number": "CSR2C"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 39
-        }
-      }
+      "aisle_number": 39
     },
     {
       "!module_id": {
@@ -50,12 +35,7 @@
           "module_number": "CSR2C"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 40
-        }
-      }
+      "aisle_number": 40
     },
     {
       "!module_id": {
@@ -64,12 +44,7 @@
           "module_number": "CSR2C"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 41
-        }
-      }
+      "aisle_number": 41
     },
     {
       "!module_id": {
@@ -78,12 +53,7 @@
           "module_number": "CSR2C"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 42
-        }
-      }
+      "aisle_number": 42
     },
     {
       "!module_id": {
@@ -92,12 +62,7 @@
           "module_number": "CSR2C"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 43
-        }
-      }
+      "aisle_number": 43
     },
     {
       "!module_id": {
@@ -106,12 +71,7 @@
           "module_number": "CSR2C"
         }
       },
-      "!aisle_number_id": {
-        "model": "app.models.aisle_numbers.AisleNumber",
-        "filter": {
-          "number": 44
-        }
-      }
+      "aisle_number": 44
     }
   ]
 }

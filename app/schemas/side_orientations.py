@@ -1,53 +1,57 @@
 import uuid
 
 from typing import Optional
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, constr, ConfigDict
 from datetime import datetime, timezone
 
 
 class SideOrientationInput(BaseModel):
     name: constr(max_length=5) | None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Right",
             }
         }
+    )
 
 
 class SideOrientationUpdateInput(BaseModel):
     name: Optional[constr(max_length=5)] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Right",
             }
         }
+    )
 
 
 class SideOrientationBaseReadOutput(BaseModel):
     id: int
     name: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Left",
             }
         }
+    )
 
 
 class SideOrientationListOutput(SideOrientationBaseReadOutput):
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Left",
             }
         }
+    )
 
 
 class SideOrientationDetailWriteOutput(BaseModel):
@@ -56,8 +60,8 @@ class SideOrientationDetailWriteOutput(BaseModel):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Left",
@@ -65,14 +69,15 @@ class SideOrientationDetailWriteOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
+    )
 
 
 class SideOrientationDetailReadOutput(SideOrientationBaseReadOutput):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Right",
@@ -80,3 +85,4 @@ class SideOrientationDetailReadOutput(SideOrientationBaseReadOutput):
                 "update_dt": "2023-10-08T20:46:56.764398",
             }
         }
+    )

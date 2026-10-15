@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timezone
 
 
@@ -6,13 +6,14 @@ class BarcodeTypesInput(BaseModel):
     name: str
     allowed_pattern: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Item",
                 "allowed_pattern": "^.{25}$"
             }
         }
+    )
 
 
 class BarcodeTypesListOutput(BaseModel):
@@ -20,14 +21,15 @@ class BarcodeTypesListOutput(BaseModel):
     name: str
     allowed_pattern: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Item",
                 "allowed_pattern": "^.{25}$"
             }
         }
+    )
 
 
 class BarcodeTypesDetailWriteOutput(BaseModel):
@@ -37,8 +39,8 @@ class BarcodeTypesDetailWriteOutput(BaseModel):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Item",
@@ -47,6 +49,7 @@ class BarcodeTypesDetailWriteOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
 
 
 class BarcodeTypesDetailReadOutput(BaseModel):
@@ -56,8 +59,8 @@ class BarcodeTypesDetailReadOutput(BaseModel):
     create_dt: datetime
     update_dt: datetime
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Item",
@@ -66,3 +69,4 @@ class BarcodeTypesDetailReadOutput(BaseModel):
                 "update_dt": "2023-10-08T20:46:56.764398"
             }
         }
+    )
