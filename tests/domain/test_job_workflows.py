@@ -307,8 +307,16 @@ def _complete_accession_via_api(client, job_id):
     return resp.json()
 
 
-def _complete_verification_via_api(client, vj_id):
-    """PATCH verification job to Completed via API."""
+def _mark_trays_scanned_for_verification(session, vj_id):
+    """Simulate scanning every tray on the verification job."""
+    for tray in session.query(Tray).filter_by(verification_job_id=vj_id):
+        tray.scanned_for_verification = True
+    session.commit()
+
+
+def _complete_verification_via_api(client, session, vj_id):
+    """Scan the job's trays, then PATCH verification job to Completed via API."""
+    _mark_trays_scanned_for_verification(session, vj_id)
     _override_auth()
     resp = client.patch(f"/verification-jobs/{vj_id}", json={"status": "Completed"})
     assert resp.status_code == 200, f"Complete verification failed: {resp.text}"
@@ -413,7 +421,7 @@ def test_verification_completion_sets_verified_status(
     assert item.status == ItemStatus.Accessioned
 
     # Complete verification via API
-    _complete_verification_via_api(client, vj.id)
+    _complete_verification_via_api(client, session, vj.id)
 
     session.expire_all()
     item = session.get(Item, item.id)
@@ -532,7 +540,44 @@ def test_verification_completion_blocked_until_failed_lookup_item_deleted(
     resp = client.delete(f"/verification-jobs/{vj.id}/items/{barcode_value}")
     assert resp.status_code == 200, f"Delete item from job failed: {resp.text}"
 
-    _complete_verification_via_api(client, vj.id)  # now succeeds (asserts 200 internally)
+    _complete_verification_via_api(client, session, vj.id)  # now succeeds (asserts 200 internally)
+
+
+def test_verification_completion_blocked_by_unscanned_tray(
+    client: TestClient, session: Session, test_database
+):
+    """
+    FETCH-1770: a Verification Job can't complete while any tray on it has
+    scanned_for_verification=False.
+    """
+    job_data = _create_accession_job_via_api(client, session, trayed=True, suffix="VTS1")
+    job_id = job_data["id"]
+    tray, item = _add_tray_with_item(session, job_id)
+
+    _complete_accession_via_api(client, job_id)
+
+    session.expire_all()
+    vj = (
+        session.execute(
+            select(VerificationJob).where(VerificationJob.accession_job_id == job_id)
+        ).scalars().first()
+    )
+    tray = session.get(Tray, tray.id)
+    assert tray.verification_job_id == vj.id
+    tray.scanned_for_verification = False
+    session.commit()
+    tray_barcode = tray.barcode.value
+
+    _override_auth()
+    resp = client.patch(f"/verification-jobs/{vj.id}", json={"status": "Completed"})
+    assert resp.status_code == 422, f"Expected completion to be blocked, got: {resp.text}"
+    assert tray_barcode in resp.json()["detail"]
+
+    session.expire_all()
+    vj = session.get(VerificationJob, vj.id)
+    assert vj.status != "Completed", "Blocked completion must not mutate job status"
+
+    _complete_verification_via_api(client, session, vj.id)  # scans tray, then succeeds
 
 
 def test_shelving_completion_sets_in_status(
@@ -554,7 +599,7 @@ def test_shelving_completion_sets_in_status(
             select(VerificationJob).where(VerificationJob.accession_job_id == job_id)
         ).scalars().first()
     )
-    _complete_verification_via_api(client, vj.id)
+    _complete_verification_via_api(client, session, vj.id)
 
     session.expire_all()
     item = session.get(Item, item.id)
@@ -615,7 +660,7 @@ def test_full_item_lifecycle_accession_through_shelving(
             select(VerificationJob).where(VerificationJob.accession_job_id == job_id)
         ).scalars().first()
     )
-    _complete_verification_via_api(client, vj.id)
+    _complete_verification_via_api(client, session, vj.id)
 
     session.expire_all()
     item = session.get(Item, item.id)
@@ -675,7 +720,7 @@ def test_full_non_tray_item_lifecycle_accession_through_shelving(
         ).scalars().first()
     )
     assert vj is not None
-    _complete_verification_via_api(client, vj.id)
+    _complete_verification_via_api(client, session, vj.id)
 
     session.expire_all()
     nti = session.get(NonTrayItem, nti.id)
@@ -726,7 +771,7 @@ def _setup_shelved_item(client, session, suffix):
     vj = session.execute(
         select(VerificationJob).where(VerificationJob.accession_job_id == job_id)
     ).scalars().first()
-    _complete_verification_via_api(client, vj.id)
+    _complete_verification_via_api(client, session, vj.id)
     session.expire_all()
 
     user = _get_or_create_user(session)
