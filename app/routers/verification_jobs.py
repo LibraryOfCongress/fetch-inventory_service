@@ -353,6 +353,26 @@ def update_verification_job(
                     )
                 )
 
+            # Block completion while any tray on this job hasn't been scanned
+            # for verification.
+            unscanned_tray_barcodes = list(session.execute(
+                select(func.coalesce(Barcode.value, func.concat("Tray ID ", Tray.id)))
+                .select_from(Tray)
+                .outerjoin(Barcode, Tray.barcode_id == Barcode.id)
+                .where(
+                    Tray.verification_job_id == id,
+                    Tray.scanned_for_verification.is_(False),
+                )
+            ).scalars().all())
+
+            if unscanned_tray_barcodes:
+                raise ValidationException(
+                    detail=(
+                        f"Cannot complete Verification Job {id}: tray(s) not yet "
+                        f"scanned for verification: {', '.join(unscanned_tray_barcodes)}"
+                    )
+                )
+
         # Handle auto-assignment when user starts job
         new_status = mutated_data.get("status")
         if new_status:
